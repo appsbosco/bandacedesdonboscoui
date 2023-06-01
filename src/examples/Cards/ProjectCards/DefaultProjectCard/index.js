@@ -270,7 +270,7 @@ DefaultProjectCard.propTypes = {
         "white",
       ]).isRequired,
       label: PropTypes.string.isRequired,
-      icon: PropTypes.string.isRequired,
+      icon: PropTypes.string,
       onClick: PropTypes.func,
     })
   ).isRequired,
