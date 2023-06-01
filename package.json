@@ -6,8 +6,8 @@
   "description": "Aplicación oficial de la Banda CEDES Don Bosco",
   "repository": {},
   "engines": {
-    "node": "14 || 15 || 16",
-    "npm": ">=6"
+    "node": "18.x",
+        "npm": ">=6"
   },
   "dependencies": {
     "@apollo/client": "^3.7.14",
@@ -32,6 +32,7 @@
     "graphql": "^16.6.0",
     "https": "^1.0.0",
     "moment": "^2.29.4",
+    "node": "^20.2.0",
     "node-fetch": "^3.3.1",
     "prop-types": "15.8.1",
     "react": "18.2.0",
