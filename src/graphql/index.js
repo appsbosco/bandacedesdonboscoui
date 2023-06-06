@@ -149,7 +149,7 @@ const EventsCalendar = () => {
     refetch();
   };
 
-  if (loading) return "Loading...";
+  if (loading) return "Cargando...";
   if (error) return `Error! ${error.message}`;
 
   const onSelectEvent = (event) => {

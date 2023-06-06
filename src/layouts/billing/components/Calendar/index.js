@@ -149,7 +149,7 @@ const EventsCalendar = () => {
     handleCloseModal();
   };
 
-  if (loading) return "Loading...";
+  if (loading) return "Cargando...";
   if (error) return `Error! ${error.message}`;
 
   const eventStyleGetter = (event, start, end, isSelected) => {

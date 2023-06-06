@@ -32,6 +32,8 @@ import curved9 from "assets/images/curved-images/curved-6.jpg";
 import * as yup from "yup";
 import InputField from "../components/InputField";
 import MultiStepForm, { FormStep } from "../components/MultiStepForm";
+import { useContext } from "react";
+import UserContext from "UserContext";
 
 const AUTH_USER = gql`
   mutation authUser($input: AuthInput) {
@@ -42,6 +44,8 @@ const AUTH_USER = gql`
 `;
 
 const SignIn = () => {
+  const { refreshUserData } = useContext(UserContext);
+
   // Use navigate to redirect user to sign in page
   const navigate = useNavigate();
 
@@ -114,7 +118,7 @@ const SignIn = () => {
             });
 
             // User registered successfully
-            setMessage(`Autenticado correctamente: Bienvenido! `);
+            setMessage(`Autenticado correctamente. Bienvenido! `);
 
             // Save token in local storage
             const { token } = data.authUser;
@@ -131,6 +135,7 @@ const SignIn = () => {
               setMessage(null);
             }, 4000);
           }
+          refreshUserData();
         }}
       >
         {/*Account Details */}

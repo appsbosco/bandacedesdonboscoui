@@ -303,7 +303,7 @@ const Overview = () => {
   values.forEach((item) => {});
 
   // Handle loading state
-  if (userLoading || medicalRecordLoading) return <p>Loading...</p>;
+  if (userLoading || medicalRecordLoading) return <p>Cargando...</p>;
 
   // Handle error state
   // if (userError || medicalRecordError) return <p>Error!</p>;

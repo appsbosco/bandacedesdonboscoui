@@ -10,6 +10,7 @@ import client from "config/apollo";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { UserProvider } from "./UserContext";
 
 const rootElement = document.getElementById("root");
 
@@ -17,7 +18,10 @@ const renderApp = () => (
   <BrowserRouter>
     <SoftUIControllerProvider>
       <ApolloProvider client={client}>
-        <App />
+        <UserProvider>
+          <App />
+        </UserProvider>
+
         <ToastContainer />
       </ApolloProvider>
     </SoftUIControllerProvider>

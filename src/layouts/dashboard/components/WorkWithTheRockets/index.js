@@ -50,8 +50,8 @@ function WorkWithTheRockets() {
           </SoftBox>
           <SoftBox mb={2}>
             <SoftTypography variant="body2" color="white">
-              Deseamos que este espacio virtual sea un lugar de encuentro para todos. la familia
-              CEDES Don Bosco. Les invitamos a explorar cada sección de la página.
+              Deseamos que este espacio virtual sea un lugar de encuentro para toda la familia de la
+              Banda CEDES Don Bosco. Les invitamos a explorar cada sección de la página.
             </SoftTypography>
           </SoftBox>
           <SoftTypography

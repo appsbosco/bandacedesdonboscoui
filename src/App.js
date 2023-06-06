@@ -1,3 +1,4 @@
+App.js;
 import { useEffect, useMemo, useState } from "react";
 
 // react-router components
@@ -30,8 +31,34 @@ import { setMiniSidenav, setOpenConfigurator, useSoftUIController } from "contex
 
 // Images
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
-import routes from "routes";
+import routes, {
+  protectedRoutes,
+  attendanceRoutes,
+  adminRoutes,
+  staffRoutes,
+  membersRoutes,
+  principalRoutes,
+} from "routes";
+import { gql, useQuery } from "@apollo/client";
 
+const GET_USERS_BY_ID = gql`
+  query getUser {
+    getUser {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+    }
+  }
+`;
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
   const { miniSidenav, direction, layout, openConfigurator, sidenavColor } = controller;
@@ -95,13 +122,26 @@ export default function App() {
       return null;
     });
 
-  // Filter out "sign-in" and "sign-up" routes
-  const filteredRoutes = routes.filter(
-    (route) =>
-      route.route !== "/authentication/sign-in" &&
-      route.route !== "/authentication/sign-up" &&
-      route.route !== "/"
-  );
+  const { data: userData, loading, error } = useQuery(GET_USERS_BY_ID);
+
+  // Handle loading state
+  if (loading) return <div></div>; // Replace with your loading component
+  if (error) return <div>Error: {error.message}</div>; // Replace with your error handling component
+
+  const userRole = userData?.getUser?.role;
+  // Now, userRole is guaranteed to be defined before rendering any routes.
+  let renderedRoutes = null;
+
+  if (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") {
+    const adminRoutes = [...routes, ...protectedRoutes];
+    renderedRoutes = getRoutes(adminRoutes);
+  } else if (userRole === "Principal de sección" || userRole === "Asistente de sección") {
+    const attendanceRoutesFiltered = [...routes, ...attendanceRoutes];
+    renderedRoutes = getRoutes(attendanceRoutesFiltered);
+  } else {
+    renderedRoutes = getRoutes(routes);
+  }
+
   const configsButton = (
     <SoftBox
       display="flex"
@@ -126,28 +166,39 @@ export default function App() {
     </SoftBox>
   );
 
+  const navRoutes =
+    userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística"
+      ? adminRoutes
+      : userRole === "Principal de sección" || userRole === "Asistente de sección"
+      ? principalRoutes
+      : userRole === "Staff"
+      ? staffRoutes
+      : membersRoutes;
+
+  // Filter out "sign-in" and "sign-up" routes
+  const filteredNavRoutes = navRoutes.filter((route) => {
+    return route.route !== "/authentication/sign-in" && route.route !== "/authentication/sign-up";
+  });
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {layout === "dashboard" &&
-        pathname !== "/authentication/sign-in" &&
-        pathname !== "/authentication/sign-up" &&
-        pathname !== "/" && (
-          <>
-            <Sidenav
-              color={sidenavColor}
-              brand={brand}
-              brandName="BCDB"
-              routes={filteredRoutes}
-              onMouseEnter={handleOnMouseEnter}
-              onMouseLeave={handleOnMouseLeave}
-            />
-            <Configurator />
-            {configsButton}
-          </>
-        )}
+      {layout === "dashboard" && (
+        <>
+          <Sidenav
+            color={sidenavColor}
+            brand={brand}
+            brandName="BCDB"
+            routes={filteredNavRoutes}
+            onMouseEnter={handleOnMouseEnter}
+            onMouseLeave={handleOnMouseLeave}
+          />
+          <Configurator />
+          {configsButton}
+        </>
+      )}
       <Routes>
-        {getRoutes(routes)}
+        {renderedRoutes.map((route) => route)}
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
     </ThemeProvider>

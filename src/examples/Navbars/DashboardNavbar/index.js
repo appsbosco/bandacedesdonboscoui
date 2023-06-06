@@ -161,13 +161,13 @@ function DashboardNavbar({ absolute, light, isMini }) {
                   >
                     account_circle
                   </Icon>
-                  <SoftTypography
+                  {/* <SoftTypography
                     variant="button"
                     fontWeight="medium"
                     color={light ? "white" : "dark"}
                   >
                     Hola! User
-                  </SoftTypography>
+                  </SoftTypography> */}
                 </IconButton>
               </Link>
               <IconButton
