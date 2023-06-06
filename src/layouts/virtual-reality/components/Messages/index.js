@@ -24,7 +24,7 @@ import SoftAvatar from "components/SoftAvatar";
 
 // Images
 import team1 from "assets/images/team-1.jpg";
-import team2 from "assets/images/team-2.jpg";
+
 import team3 from "assets/images/team-3.jpg";
 import team4 from "assets/images/team-4.jpg";
 
@@ -52,7 +52,7 @@ function Messages() {
             <SoftAvatar src={team1} alt="team-1" size="sm" sx={messagesAvatarStyles} />
           </Tooltip>
           <Tooltip title="1 New Messages" placement="top">
-            <SoftAvatar src={team2} alt="team-2" size="sm" sx={messagesAvatarStyles} />
+            <SoftAvatar src={} alt="team-2" size="sm" sx={messagesAvatarStyles} />
           </Tooltip>
           <Tooltip title="13 New Messages" placement="top">
             <SoftAvatar src={team3} alt="team-3" size="sm" sx={messagesAvatarStyles} />

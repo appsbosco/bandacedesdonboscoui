@@ -29,33 +29,54 @@ const formatDateString = (dateString) => {
   return `${day}/${month}/${year}`;
 };
 
+const getAttendanceDisplayString = (attendance) => {
+  switch (attendance) {
+    case "present":
+      return "Presente";
+    case "absent":
+      return "Ausente";
+    case "justified_absence":
+      return "Ausencia justificada";
+    case "unjustified_absence":
+      return "Ausencia injustificada";
+    case "justified_withdrawal":
+      return "Retiro justificado";
+    case "unjustified_withdrawal":
+      return "Retiro injustificado";
+    default:
+      return "";
+  }
+};
+
 const AttendanceHistoryTable = () => {
   const { loading, error, data, refetch } = useQuery(GET_ALL_ATTENDANCE, {
     notifyOnNetworkStatusChange: true,
   });
-  console.log(data);
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
 
-  const rows = data.getAllAttendance.map((attendance) => ({
-    id: attendance.id || uuidv4(),
-    username:
-      attendance.user.name +
-      " " +
-      attendance.user.firstSurName +
-      " " +
-      attendance.user.secondSurName,
-    instrument: attendance.user.instrument,
-    date: formatDateString(attendance.date),
-    attended: attendance.attended === "true" ? "Presente" : "Ausente",
-  }));
+  const rows = data.getAllAttendance
+    .slice()
+    .reverse() // Reverse the order of the array
+    .map((attendance) => ({
+      id: attendance.id || uuidv4(),
+      username:
+        attendance.user.name +
+        " " +
+        attendance.user.firstSurName +
+        " " +
+        attendance.user.secondSurName,
+      instrument: attendance.user.instrument,
+      date: formatDateString(attendance.date),
+      attended: getAttendanceDisplayString(attendance.attended),
+    }));
 
   const columns = [
     { field: "username", headerName: "Integrante", width: 300 },
     { field: "instrument", headerName: "Instrumento", width: 150 },
-
     { field: "date", headerName: "Fecha", width: 150 },
-    { field: "attended", headerName: "Asistencia", width: 150 },
+    { field: "attended", headerName: "Asistencia", width: 200 },
   ];
 
   return (

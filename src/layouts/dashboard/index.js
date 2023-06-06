@@ -33,6 +33,7 @@ import WorkWithTheRockets from "layouts/dashboard/components/WorkWithTheRockets"
 import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/home-decor-1.jpg";
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
+import moment from "moment";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -123,9 +124,23 @@ const Dashboard = () => {
     refetchQueries: [{ query: GET_EVENTS }],
   });
 
+  const formatTimeTo12Hour = (time) => {
+    return moment(time, "HH:mm").format("h:mma");
+  };
+
   const handleOpenModal = (type, event = null) => {
     setModalType(type);
     setSelectedEvent(event);
+
+    if (event) {
+      setSelectedEvent((prevEvent) => ({
+        ...prevEvent,
+        time: formatTimeTo12Hour(event.time),
+        departure: formatTimeTo12Hour(event.departure),
+        arrival: formatTimeTo12Hour(event.arrival),
+      }));
+    }
+
     setOpenModal(true);
   };
 

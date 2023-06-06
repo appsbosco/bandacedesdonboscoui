@@ -8,6 +8,9 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import { SoftUIControllerProvider } from "context";
 import client from "config/apollo";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const rootElement = document.getElementById("root");
 
 const renderApp = () => (
@@ -15,6 +18,7 @@ const renderApp = () => (
     <SoftUIControllerProvider>
       <ApolloProvider client={client}>
         <App />
+        <ToastContainer />
       </ApolloProvider>
     </SoftUIControllerProvider>
   </BrowserRouter>

@@ -217,11 +217,26 @@ const EventsCalendar = () => {
     handleCloseModal();
   };
 
+  const formatTimeTo12Hour = (time) => {
+    return moment(time, "HH:mm").format("h:mma");
+  };
+
   const handleOpenModal = (type, event = null) => {
     setModalType(type);
     setSelectedEvent(event);
+
+    if (event) {
+      setSelectedEvent((prevEvent) => ({
+        ...prevEvent,
+        time: formatTimeTo12Hour(event.time),
+        departure: formatTimeTo12Hour(event.departure),
+        arrival: formatTimeTo12Hour(event.arrival),
+      }));
+    }
+
     setOpenModal(true);
   };
+
   const handleCloseModal = () => {
     setOpenModal(false);
     setModalType(null);
@@ -441,7 +456,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
             label=""
             type="time"
             fullWidth
-            value={time}
+            value={moment(time, "HH:mm").format("h:mma")}
             onChange={(e) => setTime(e.target.value)}
           />
         </div>

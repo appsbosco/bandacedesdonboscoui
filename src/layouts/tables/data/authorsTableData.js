@@ -6,7 +6,7 @@ import SoftAvatar from "components/SoftAvatar";
 import SoftBadge from "components/SoftBadge";
 
 // Images
-import team2 from "assets/images/team-2.jpg";
+
 import team3 from "assets/images/team-3.jpg";
 import team4 from "assets/images/team-4.jpg";
 
@@ -52,7 +52,7 @@ const authorsTableData = {
 
   rows: [
     {
-      author: <Author image={team2} name="John Michael" email="john@creative-tim.com" />,
+      author: <Author image={} name="John Michael" email="john@creative-tim.com" />,
       function: <Function job="Manager" org="Organization" />,
       status: (
         <SoftBadge variant="gradient" badgeContent="online" color="success" size="xs" container />
@@ -150,7 +150,7 @@ const authorsTableData = {
       ),
     },
     {
-      author: <Author image={team2} name="Richard Gran" email="richard@creative-tim.com" />,
+      author: <Author image={} name="Richard Gran" email="richard@creative-tim.com" />,
       function: <Function job="Manager" org="Executive" />,
       status: (
         <SoftBadge

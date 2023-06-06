@@ -55,7 +55,6 @@ import {
 
 // Images
 import logoSpotify from "assets/images/small-logos/logo-spotify.svg";
-import team2 from "assets/images/team-2.jpg";
 
 function DashboardNavbar({ absolute, light, isMini }) {
   const [navbarType, setNavbarType] = useState();
@@ -109,7 +108,7 @@ function DashboardNavbar({ absolute, light, isMini }) {
       sx={{ mt: 2 }}
     >
       <NotificationItem
-        image={<img src={team2} alt="person" />}
+        image={<img alt="person" />}
         title={["New message", "from Laur"]}
         date="13 minutes ago"
         onClick={handleCloseMenu}

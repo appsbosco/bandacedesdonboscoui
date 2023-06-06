@@ -88,9 +88,24 @@ const ReactCalendar = () => {
     refetchQueries: [{ query: GET_EVENTS }],
   });
 
+  const formatTimeTo12Hour = (time) => {
+    return moment(time, "HH:mm").format("h:mma");
+  };
+
   const handleEventClick = (event) => {
     setSelectedEvent(event);
+
+    if (event) {
+      setSelectedEvent((prevEvent) => ({
+        ...prevEvent,
+        time: formatTimeTo12Hour(event.time),
+        departure: formatTimeTo12Hour(event.departure),
+        arrival: formatTimeTo12Hour(event.arrival),
+      }));
+    }
+
     setOpenModal(true);
+
     setModalType("details");
   };
 
@@ -315,9 +330,9 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <TextField
             margin="dense"
             label=""
-            type="time"
+            type="text"
             fullWidth
-            value={time}
+            value={moment(time, "HH:mm").format("h:mma")}
             onChange={(e) => setTime(e.target.value)}
           />
         </div>

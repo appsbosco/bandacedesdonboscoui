@@ -22,7 +22,6 @@ import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
 // Images
-import ivancik from "assets/images/ivancik.jpg";
 
 function WorkWithTheRockets() {
   return (
@@ -40,7 +39,7 @@ function WorkWithTheRockets() {
               `${linearGradient(
                 rgba(gradients.dark.main, 0.8),
                 rgba(gradients.dark.state, 0.8)
-              )}, url(${ivancik})`,
+              )}, url(${""})`,
             backgroundSize: "cover",
           }}
         >

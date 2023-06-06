@@ -15,7 +15,7 @@ import logoSpotify from "assets/images/small-logos/logo-spotify.svg";
 import logoJira from "assets/images/small-logos/logo-jira.svg";
 import logoInvesion from "assets/images/small-logos/logo-invision.svg";
 import team1 from "assets/images/team-1.jpg";
-import team2 from "assets/images/team-2.jpg";
+
 import team3 from "assets/images/team-3.jpg";
 import team4 from "assets/images/team-4.jpg";
 
@@ -60,7 +60,7 @@ export default function data() {
           <SoftBox display="flex" py={1}>
             {avatars([
               [team1, "Ryan Tompson"],
-              [team2, "Romina Hadid"],
+              [, "Romina Hadid"],
               [team3, "Alexander Smith"],
               [team4, "Jessica Doe"],
             ])}
@@ -82,7 +82,7 @@ export default function data() {
         members: (
           <SoftBox display="flex" py={1}>
             {avatars([
-              [team2, "Romina Hadid"],
+              [, "Romina Hadid"],
               [team4, "Jessica Doe"],
             ])}
           </SoftBox>
@@ -126,7 +126,7 @@ export default function data() {
             {avatars([
               [team4, "Jessica Doe"],
               [team3, "Alexander Smith"],
-              [team2, "Romina Hadid"],
+              [, "Romina Hadid"],
               [team1, "Ryan Tompson"],
             ])}
           </SoftBox>

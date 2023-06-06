@@ -4,6 +4,8 @@ import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -66,7 +68,11 @@ const AttendanceTable = () => {
 
   useEffect(() => {
     if (data) {
-      setAttendanceData(data.getUsers.map((user) => ({ userId: user.id, attended: "false" })));
+      const initialAttendanceData = data.getUsers.map((user) => ({
+        userId: user.id,
+        attended: "present", // Change the initial value to the default value you want
+      }));
+      setAttendanceData(initialAttendanceData);
     }
   }, [data]);
 
@@ -75,7 +81,10 @@ const AttendanceTable = () => {
 
     if (existingAttendanceIndex !== -1) {
       const updatedAttendanceData = [...attendanceData];
-      updatedAttendanceData[existingAttendanceIndex].attended = attended;
+      updatedAttendanceData[existingAttendanceIndex] = {
+        ...updatedAttendanceData[existingAttendanceIndex],
+        attended,
+      };
       setAttendanceData(updatedAttendanceData);
     } else {
       setAttendanceData([...attendanceData, { userId, attended }]);
@@ -93,14 +102,17 @@ const AttendanceTable = () => {
 
       if (user.instrument === userInstrument) {
         try {
-          await addAttendance({ variables: { input: { user: userId, date, attended } } });
+          await addAttendance({
+            variables: { input: { user: userId, date, attended } },
+          });
+          toast.success("Attendance saved successfully");
         } catch (error) {
           console.error(error);
         }
       }
     }
 
-    refetch(); // Manually trigger a refetch of the GET_ALL_ATTENDANCE query
+    refetch();
   };
 
   if (loading) return <p>Loading...</p>;
@@ -115,15 +127,19 @@ const AttendanceTable = () => {
       renderCell: (params) => {
         const user = params.row;
         const attendance = attendanceData.find((item) => item.userId === user.id);
-        const attended = attendance ? attendance.attended : "false";
+        const selectedStatus = attendance?.attended || "";
 
         return (
           <Select
-            value={attended}
+            value={selectedStatus}
             onChange={(event) => handleAttendanceChange(user.id, event.target.value)}
           >
-            <MenuItem value={"true"}>Presente</MenuItem>
-            <MenuItem value={"false"}>Ausente</MenuItem>
+            <MenuItem value="present">Presente</MenuItem>
+            <MenuItem value="absent">Ausente</MenuItem>
+            <MenuItem value="justified_absence">Ausencia justificada</MenuItem>
+            <MenuItem value="unjustified_absence">Ausencia injustificada</MenuItem>
+            <MenuItem value="justified_withdrawal">Retiro justificado</MenuItem>
+            <MenuItem value="unjustified_withdrawal">Retiro injustificado</MenuItem>
           </Select>
         );
       },

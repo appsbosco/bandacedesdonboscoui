@@ -96,9 +96,12 @@ export default function App() {
     });
 
   // Filter out "sign-in" and "sign-up" routes
-  const filteredRoutes = routes.filter((route) => {
-    return route.route !== "/authentication/sign-in" && route.route !== "/authentication/sign-up";
-  });
+  const filteredRoutes = routes.filter(
+    (route) =>
+      route.route !== "/authentication/sign-in" &&
+      route.route !== "/authentication/sign-up" &&
+      route.route !== "/"
+  );
   const configsButton = (
     <SoftBox
       display="flex"
@@ -126,20 +129,23 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {layout === "dashboard" && (
-        <>
-          <Sidenav
-            color={sidenavColor}
-            brand={brand}
-            brandName="BCDB"
-            routes={filteredRoutes}
-            onMouseEnter={handleOnMouseEnter}
-            onMouseLeave={handleOnMouseLeave}
-          />
-          <Configurator />
-          {configsButton}
-        </>
-      )}
+      {layout === "dashboard" &&
+        pathname !== "/authentication/sign-in" &&
+        pathname !== "/authentication/sign-up" &&
+        pathname !== "/" && (
+          <>
+            <Sidenav
+              color={sidenavColor}
+              brand={brand}
+              brandName="BCDB"
+              routes={filteredRoutes}
+              onMouseEnter={handleOnMouseEnter}
+              onMouseLeave={handleOnMouseLeave}
+            />
+            <Configurator />
+            {configsButton}
+          </>
+        )}
       <Routes>
         {getRoutes(routes)}
         <Route path="*" element={<Navigate to="/dashboard" />} />
