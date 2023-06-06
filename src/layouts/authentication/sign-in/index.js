@@ -135,11 +135,7 @@ const SignIn = () => {
       >
         {/*Account Details */}
 
-        <FormStep
-          stepName="Account Details"
-          onSubmit={() => console.log("Step 1")}
-          validationSchema={validationSchema}
-        >
+        <FormStep stepName="Account Details" validationSchema={validationSchema}>
           <SoftBox component="form" role="form">
             <SoftBox mb={2}>
               <SoftBox mb={1} ml={0.5}>

@@ -243,8 +243,6 @@ const EventsCalendar = () => {
     setSelectedEvent(null);
   };
 
-  console.log(events);
-
   return (
     <div style={{ height: "80vh" }}>
       <Calendar

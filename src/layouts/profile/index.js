@@ -81,8 +81,9 @@ const CREATE_MEDICAL_RECORD = gql`
       bloodType
       familyMemberName
       familyMemberNumber
-      familyMemberRelationship
       familyMemberNumberId
+      familyMemberRelationship
+      familyMemberOccupation
       sex
       identification
       illness
@@ -104,6 +105,7 @@ const GET_MEDICAL_RECORD_BY_USER = gql`
       familyMemberNumber
       familyMemberNumberId
       familyMemberRelationship
+      familyMemberOccupation
       illness
       medicine
       medicineOnTour
@@ -134,6 +136,7 @@ const UPDATE_MEDICAL_RECORD = gql`
       familyMemberName
       familyMemberNumber
       familyMemberRelationship
+      familyMemberOccupation
       familyMemberNumberId
       sex
       identification
@@ -223,6 +226,7 @@ const Overview = () => {
 
   const handleAddMedicalRecord = async (medicalRecordData) => {
     await addMedicalRecord({ variables: { input: medicalRecordData } });
+    console.log(medicalRecordData);
     handleCloseModal();
   };
 
@@ -253,6 +257,7 @@ const Overview = () => {
   let familyMemberNumber;
   let familyMemberNumberId;
   let familyMemberRelationship;
+  let familyMemberOccupation;
   let illness = [];
   let medicine = [];
   let medicineOnTour = [];
@@ -270,6 +275,7 @@ const Overview = () => {
     familyMemberNumber = record.familyMemberNumber;
     familyMemberNumberId = record.familyMemberNumberId;
     familyMemberRelationship = record.familyMemberRelationship;
+    familyMemberOccupation = record.familyMemberOccupation;
     illness = record.illness || []; // collect all illnesses
     medicine = record.medicine || []; // collect all medicines
     medicineOnTour = record.medicineOnTour || []; // collect all medicines on tour
@@ -294,9 +300,7 @@ const Overview = () => {
   }, {});
 
   const values = Object.values(inventoryObject);
-  values.forEach((item) => {
-    console.log(item);
-  });
+  values.forEach((item) => {});
 
   // Handle loading state
   if (userLoading || medicalRecordLoading) return <p>Loading...</p>;
@@ -444,6 +448,7 @@ const Overview = () => {
                       familyMemberNumber,
                       familyMemberNumberId,
                       familyMemberRelationship,
+                      familyMemberOccupation,
                       illness,
                       medicine,
                       medicineOnTour,
@@ -518,6 +523,14 @@ const Overview = () => {
                           </SoftTypography>
                           <SoftTypography variant="body2" fontWeight="regular" ml={1}>
                             {familyMemberRelationship}
+                          </SoftTypography>
+                        </SoftBox>
+                        <SoftBox display="flex" py={1} pr={2}>
+                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
+                            Ocupación del encargado:
+                          </SoftTypography>
+                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                            {familyMemberOccupation}
                           </SoftTypography>
                         </SoftBox>
                         <SoftBox display="flex" py={1} pr={2}>
@@ -616,7 +629,6 @@ const Overview = () => {
                   inventoryData.getInventoryByUser &&
                   inventoryData.getInventoryByUser.length > 0 ? (
                     inventoryData.getInventoryByUser.map((item) => {
-                      console.log("item", inventoryData.getInventoryByUser);
                       const { brand, model, numberId, serie, details, mainteinance, condition } =
                         item;
 

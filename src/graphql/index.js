@@ -118,7 +118,6 @@ const EventsCalendar = () => {
             input: eventForm,
           },
         });
-        console.log("Updated event:", data.updateEvent);
       } catch (error) {
         console.error("Update event error:", error.message);
       }

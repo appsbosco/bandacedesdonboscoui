@@ -221,11 +221,7 @@ const SignUp = () => {
       >
         {/*Account Details */}
 
-        <FormStep
-          stepName="Account Details"
-          onSubmit={() => console.log("Step 1")}
-          validationSchema={validationSchema}
-        >
+        <FormStep stepName="Account Details" validationSchema={validationSchema}>
           <SoftBox component="form" role="form">
             <SoftBox mb={2}>
               <SoftBox mb={1} ml={0.5}>
@@ -283,7 +279,6 @@ const SignUp = () => {
         {/* General Details */}
         <FormStep
           stepName="General Info"
-          onSubmit={() => console.log("Step 2")}
           validationSchema={validationSchemaGeneralDetails}
           disabled={message === "User already registered"} // Disable the step if the error message is "User already registered"
         >
@@ -352,11 +347,7 @@ const SignUp = () => {
         </FormStep>
 
         {/* Student Details */}
-        <FormStep
-          stepName="Student Details"
-          onSubmit={() => console.log("Step 2")}
-          validationSchema={validationSchemaStudentDetails}
-        >
+        <FormStep stepName="Student Details" validationSchema={validationSchemaStudentDetails}>
           <SoftBox component="form" role="form">
             <SoftBox mb={2}>
               <SoftBox mb={1} ml={0.5}>

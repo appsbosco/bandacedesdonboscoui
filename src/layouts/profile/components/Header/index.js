@@ -89,7 +89,6 @@ const Header = () => {
     instrument,
   } = data?.getUser || {};
 
-  console.log(data);
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
     function handleTabsOrientation() {

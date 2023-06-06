@@ -71,7 +71,6 @@ const Tables = () => {
     // Handle error state
   }
 
-  console.log(data); //
   return (
     <DashboardLayout>
       <DashboardNavbar />

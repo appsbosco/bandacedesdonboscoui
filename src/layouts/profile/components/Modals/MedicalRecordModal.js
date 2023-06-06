@@ -31,6 +31,9 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
   const [familyMemberRelationship, setFamilyMemberRelationship] = useState(
     initialValues ? initialValues.familyMemberRelationship : ""
   );
+  const [familyMemberOccupation, setFamilyMemberOccupation] = useState(
+    initialValues ? initialValues.familyMemberOccupation : ""
+  );
   const [illness, setIllness] = useState(initialValues ? initialValues.illness : "");
   const [medicine, setMedicine] = useState(initialValues ? initialValues.medicine : "");
   const [medicineOnTour, setMedicineOnTour] = useState(
@@ -47,6 +50,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
       familyMemberNumber,
       familyMemberNumberId,
       familyMemberRelationship,
+      familyMemberOccupation,
       illness,
       medicine,
       medicineOnTour,
@@ -142,6 +146,17 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
+            Ocupación del encargado
+          </SoftTypography>
+        </SoftBox>
+        <TextField
+          name="familyMemberOccupation"
+          value={familyMemberOccupation}
+          onChange={(e) => setFamilyMemberOccupation(e.target.value)}
+          fullWidth
+        />
+        <SoftBox mb={1} ml={0.5}>
+          <SoftTypography component="label" variant="caption" fontWeight="bold">
             Enfermedades
           </SoftTypography>
         </SoftBox>
@@ -199,6 +214,7 @@ MedicalRecordModal.propTypes = {
     familyMemberNumber: PropTypes.string,
     familyMemberNumberId: PropTypes.string,
     familyMemberRelationship: PropTypes.string,
+    familyMemberOccupation: PropTypes.string,
     illness: PropTypes.string,
     medicine: PropTypes.string,
     medicineOnTour: PropTypes.string,
@@ -218,6 +234,7 @@ MedicalRecordModal.defaultProps = {
     familyMemberNumber: "",
     familyMemberNumberId: "",
     familyMemberRelationship: "",
+    familyMemberOccupation: "",
     illness: "",
     medicine: "",
     medicineOnTour: "",

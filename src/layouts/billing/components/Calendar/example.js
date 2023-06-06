@@ -135,7 +135,6 @@ const ReactCalendar = () => {
   };
 
   const events = eventData ? eventData.getEvents : [];
-  console.log(events);
   return (
     <div>
       <Calendar
