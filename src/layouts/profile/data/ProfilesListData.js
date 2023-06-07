@@ -46,7 +46,7 @@ const ProfilesListData = [
   {
     image: ivana,
     name: "Ivanna",
-    description: "About files I can..",
+    description: "Nosotros files I can..",
     action: {
       type: "internal",
       route: "/pages/Profile/Profile-overview",

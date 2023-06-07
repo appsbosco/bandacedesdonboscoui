@@ -67,7 +67,7 @@ function Bill({ name, company, email, vat, noGutter }) {
         </SoftBox>
         <SoftBox mb={1} lineHeight={0}>
           <SoftTypography variant="caption" color="text">
-            Company Name:&nbsp;&nbsp;&nbsp;
+            Company Nombre:&nbsp;&nbsp;&nbsp;
             <SoftTypography variant="caption" fontWeight="medium" textTransform="capitalize">
               {company}
             </SoftTypography>

@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/main.css" />
+
+    <!-- AlpineJS -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="./images/favicon.ico" />
+
+    <!-- PAGE TITLE -->
+    <title>Blog - BCDB</title>
+    <meta
+      name="description"
+      content="Explore a diverse range of blog posts covering web development, design, content creation, business, programming tutorials, and more."
+    />
+  </head>
+
+  <body>
+    <!-- Navigation -->
+    <!-- 
+      The navigation uses Alpine.js for both the pages dropdown and the 
+      mobile navigation menu. If you're not familiar with Alpine you can 
+      check out their documentation here: https://alpinejs.dev/start-here
+    -->
+    <header class="h-24 bg-white border-b border-slate-200/80">
+      <div class="flex items-center w-full h-full max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
+        <nav class="relative z-50 flex items-center justify-between w-full">
+          <!-- Logo -->
+          <div class="flex items-center shrink-0">
+            <a href="index.html" aria-label="Home" class="flex items-center flex-shrink-0">
+              <img
+                src="./images/Logo-Banda-Cedes-Don-Bosco.png"
+                alt=""
+                class="w-auto h-8 sm:h-9 md:hidden lg:block lg:h-10"
+              />
+              <img
+                src="./images/logo-icon.png"
+                alt=""
+                class="hidden w-auto h-8 md:block lg:hidden"
+              />
+            </a>
+          </div>
+
+          <!-- Desktop navigation links -->
+          <div class="items-center hidden md:flex md:space-x-6 lg:space-x-8">
+            <a
+              href="index.html"
+              class="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[&quot;&quot;] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
+            >
+              Home
+            </a>
+            <a
+              href="about.html"
+              class="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[&quot;&quot;] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
+            >
+              Nosotros
+            </a>
+            <a
+              href="work.html"
+              class="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[&quot;&quot;] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
+            >
+              Work
+            </a>
+            <a
+              href="blog.html"
+              class="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[&quot;&quot;] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
+            >
+              Blog
+            </a>
+            <a
+              href="contact.html"
+              class="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[&quot;&quot;] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
+            >
+              Contacto
+            </a>
+
+            <!-- Template pages dropdown container -->
+            <div class="relative" x-data="{ open: false }">
+              <!-- Pages dropdown button -->
+              <button
+                type="button"
+                class="flex items-center font-medium duration-200 ease-in-out group"
+                :class="open ? 'text-slate-900' : 'text-slate-700  hover:text-slate-900'"
+                @click="open = true"
+              >
+                <span>Pages</span>
+
+                <!-- Heroicon name: solid/chevron-down -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-5 h-5 ml-2 duration-300"
+                  :class="open ? 'rotate-180 text-slate-900' : 'text-slate-600 group-hover:text-slate-800'"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </button>
+
+              <!-- Pages dropdown -->
+              <div
+                style="display: none"
+                class="absolute right-0 z-20 mt-3 w-52 space-y-1 rounded-lg bg-white p-2.5 drop-shadow filter"
+                x-show.transition="open"
+                @click.away="open = false"
+              >
+                <a
+                  href="index.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Home
+                </a>
+                <a
+                  href="about.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Nosotros
+                </a>
+                <a
+                  href="work.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Work
+                </a>
+                <a
+                  href="case-study.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Case study
+                </a>
+                <a
+                  href="blog.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Blog
+                </a>
+                <a
+                  href="article.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Blog post
+                </a>
+                <a
+                  href="contact.html"
+                  class="block py-3.5 px-5 font-medium rounded-md text-slate-700 transition duration-300 ease-in-out hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Contacto
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center">
+            <!-- Call to action -->
+            <a
+              class="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+              href="#0"
+            >
+              Contáctanos
+            </a>
+
+            <!-- Mobile menu button -->
+            <div class="ml-4 md:hidden" x-data="{ mobileMenuOpen: false }">
+              <button
+                class="relative z-50 flex items-center justify-center p-3 transition duration-300 ease-in-out rounded-full shadow-sm cursor-pointer group bg-slate-100/80 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-200/60 focus:outline-none md:hidden"
+                aria-label="Toggle Navigation"
+                @click="mobileMenuOpen=!mobileMenuOpen"
+              >
+                <span class="relative h-3.5 w-4 transform transition duration-500 ease-in-out">
+                  <span
+                    class="absolute block h-0.5 rotate-0 transform rounded-full bg-slate-700 opacity-100 transition-all duration-300 ease-in-out group-hover:bg-slate-900"
+                    :class="mobileMenuOpen ? 'top-1.5 left-1/2 w-0': 'top-0 left-0 w-full'"
+                  ></span>
+                  <span
+                    class="absolute left-0 top-1.5 block h-0.5 w-full transform rounded-full bg-slate-700 opacity-100 transition-all duration-300 ease-in-out group-hover:bg-slate-900"
+                    :class="mobileMenuOpen ? 'rotate-45': 'rotate-0'"
+                  ></span>
+                  <span
+                    class="absolute left-0 top-1.5 block h-0.5 w-full transform rounded-full bg-slate-700 opacity-100 transition-all duration-300 ease-in-out group-hover:bg-slate-900"
+                    :class="mobileMenuOpen ? '-rotate-45': 'rotate-0'"
+                  ></span>
+                  <span
+                    class="absolute block h-0.5 rotate-0 transform rounded-full bg-slate-700 opacity-100 transition-all duration-300 ease-in-out group-hover:bg-slate-900"
+                    :class="mobileMenuOpen ? 'top-1.5 left-1/2 w-0': 'left-0 top-3 w-full'"
+                  ></span>
+                </span>
+              </button>
+
+              <!-- Mobile menu container -->
+              <div class="md:hidden">
+                <!-- Background dark overlay when mobile menu is open -->
+                <div
+                  x-show="mobileMenuOpen"
+                  x-transition:enter="duration-200 ease-out"
+                  x-transition:enter-start="opacity-0"
+                  x-transition:enter-end="opacity-100"
+                  x-transition:leave="duration-150 ease-in"
+                  x-transition:leave-start="opacity-100"
+                  x-transition:leave-end="opacity-0"
+                  class="fixed inset-0 z-20 bg-opacity-50 bg-slate-900"
+                  style="display: none"
+                ></div>
+
+                <!-- Mobile menu popover -->
+                <div
+                  x-show="mobileMenuOpen"
+                  x-transition:enter="duration-300 ease-out"
+                  x-transition:enter-start="opacity-0 scale-90"
+                  x-transition:enter-end="opacity-100 scale-100"
+                  x-transition:leave="duration-200 ease-in"
+                  x-transition:leave-start="opacity-100 scale-100"
+                  x-transition:leave-end="opacity-0 scale-90"
+                  class="absolute inset-x-0 z-30 px-6 mt-4 overflow-hidden origin-top shadow-xl top-full rounded-2xl bg-slate-50 py-7 shadow-sky-100/40 ring-1 ring-slate-900/5"
+                  style="display: none"
+                  @click.away="mobileMenuOpen = false"
+                >
+                  <div>
+                    <!-- Mobile menu links -->
+                    <div class="flex flex-col space-y-4">
+                      <a
+                        href="index.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Home
+                      </a>
+                      <a
+                        href="about.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Nosotros
+                      </a>
+                      <a
+                        href="work.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Work
+                      </a>
+                      <a
+                        href="blog.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Blog
+                      </a>
+                      <a
+                        href="contact.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Contacto
+                      </a>
+
+                      <!-- Pages dropdown -->
+                      <div class="relative" x-data="{ open: false }">
+                        <button
+                          class="flex items-center w-full gap-2 text-base font-semibold duration-200 ease-in-out group"
+                          :class="open ? 'text-slate-900' : 'text-slate-700 hover:text-slate-900'"
+                          @click="open = !open"
+                        >
+                          <span>Pages</span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            class="w-5 h-5 duration-300"
+                            :class="open ? 'rotate-90 text-slate-900' : 'text-slate-700 group-hover:text-slate-900'"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </button>
+
+                        <!-- Dropdown links list -->
+                        <ul
+                          style="display: none"
+                          class="z-20 px-3 space-y-4"
+                          x-show.transition="open"
+                        >
+                          <li class="mt-4">
+                            <a
+                              href="index.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Home
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="about.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Nosotros
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="work.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Work
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="case-study.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Case study
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="blog.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Blog
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="article.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Blog post
+                            </a>
+                          </li>
+                          <li class="mt-4">
+                            <a
+                              href="contact.html"
+                              class="block font-medium transition duration-200 ease-in-out text-md text-slate-700 hover:text-slate-900"
+                            >
+                              Contacto
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Blog Hero -->
+    <section class="relative overflow-hidden bg-white lg:px-8">
+      <div
+        class="relative max-w-screen-xl px-5 py-16 mx-auto sm:px-6 lg:px-8 bg-slate-50 sm:py-24 lg:rounded-b-3xl lg:py-32"
+      >
+        <img src="./images/blog-hero-bg.svg" alt="" class="absolute inset-0 w-full h-full" />
+        <div class="relative flex flex-col items-center justify-center">
+          <h1 class="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl">
+            Welcome to
+
+            <!-- Highlighted text -->
+            <span class="relative whitespace-nowrap">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="249"
+                height="22"
+                viewBox="0 0 249 22"
+                fill="currentColor"
+                class="absolute top-2/3 left-0 h-[0.6em] w-full scale-110 fill-sky-200/75"
+              >
+                <path
+                  d="M247.564 18.5807C241.772 13.3568 232.473 12.7526 225.225 11.4427C217.124 9.97395 208.996 8.57031 200.846 7.46093C186.542 5.51302 172.169 4.08854 157.79 3.01562C126.033 0.645827 94.0929 0.0338481 62.3387 2.36979C42.1785 3.85416 22.008 5.90885 2.32917 10.8463C-0.0155171 11.4349 0.207047 14.6719 2.6889 14.7083C22.0261 14.9896 41.3866 12.6406 60.7109 11.8568C79.9471 11.0807 99.2274 10.6719 118.484 10.9557C142.604 11.3125 166.719 12.8333 190.722 15.5156C199.956 16.5469 209.195 17.6016 218.411 18.8255C227.864 20.0807 237.259 22 246.767 20.7422C247.709 20.6198 248.426 19.3568 247.564 18.5807Z"
+                />
+              </svg>
+              <span class="relative">my blog</span>
+            </span>
+          </h1>
+          <p class="max-w-xl mx-auto mt-6 text-lg leading-8 text-center text-slate-700">
+            Join me on my journey as I share my insights and experiences on web development,
+            business, and content creation.
+          </p>
+
+          <!-- Newsletter form -->
+          <form action="#" method="post" class="relative w-full max-w-lg mt-12">
+            <!-- Floating handwritten text with arrow -->
+            <div class="absolute hidden -left-48 -top-12 lg:flex xl:-left-72">
+              <span
+                class="inline-block max-w-[175px] -rotate-12 transform font-writing text-2xl text-slate-600"
+              >
+                Ponte en contacto con nosotros
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="91"
+                height="49"
+                viewBox="0 0 91 49"
+                fill="none"
+                class="relative left-0 w-20 h-auto -top-5 text-slate-600"
+              >
+                <g clip-path="url(#clip0_324_1142)">
+                  <path
+                    d="M1.69238 27.312C20.3067 17.6575 42.2779 13.0915 62.6792 20.3817C68.653 22.5164 74.9261 26.8457 79.7975 31.004C80.8268 31.8828 81.6964 32.9264 82.5869 33.944C83.4001 34.8733 83.6539 26.1696 83.7375 25.1594C84.6308 14.3591 83.4075 25.9604 83.6012 30.1072C83.7516 33.3254 84.9068 36.8047 84.5415 40.0293C84.2474 42.6259 79.3878 40.8403 77.6335 40.5719C75.8298 40.2959 63.737 40.239 66.2469 36.714C70.7498 30.3895 77.2856 27.0444 83.4264 22.7486"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </g>
+                <defs>
+                  <clipPath id="clip0_324_1142">
+                    <rect
+                      width="85"
+                      height="29"
+                      fill="white"
+                      transform="translate(83 49) rotate(-165.831)"
+                    />
+                  </clipPath>
+                </defs>
+              </svg>
+            </div>
+
+            <!-- Email input -->
+            <input
+              type="email"
+              class="h-12 w-full rounded-full border-0 bg-white/95 py-3.5 pl-5 pr-32 text-sm leading-5 text-slate-900 placeholder-slate-400 shadow-md shadow-sky-100/50 outline-none ring-1 ring-slate-900/5 duration-200 ease-in-out focus:border-0 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-900/20 sm:pl-6 sm:text-md"
+              required
+              placeholder="Enter your email"
+              autocomplete="email"
+            />
+            <button
+              type="submit"
+              class="absolute inline-flex items-center h-10 px-5 text-sm font-semibold transition duration-200 ease-in-out rounded-full outline-none right-1 top-1 bg-slate-900 text-sky-50 hover:bg-sky-800 focus:outline-none sm:px-7 sm:text-md"
+            >
+              Subscribe
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Articles -->
+    <section id="articles" class="py-16 overflow-hidden bg-white sm:py-24 lg:py-28">
+      <!-- Container -->
+      <div class="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
+        <h2 class="text-4xl font-semibold text-center font-display text-slate-900 sm:text-5xl">
+          Latest Articles
+        </h2>
+
+        <!-- Tabs -->
+        <ul class="flex flex-wrap items-center justify-center gap-2 mt-9">
+          <!-- Active: "bg-slate-50 text-sky-800 shadow-sm shadow-sky-100/50 ring-1 ring-slate-900/5", Inactive: "bg-white text-slate-700 duration-200 ease-in-out hover:bg-slate-50/95", Default: "inline-block rounded-full px-5 py-1.5 text-md font-medium transition" -->
+
+          <li>
+            <!-- Active tab -->
+            <a
+              href="#0"
+              class="inline-block rounded-full px-5 py-1.5 text-md font-medium transition bg-slate-50 text-sky-800 shadow-sm shadow-sky-100/50 ring-1 ring-slate-900/5"
+            >
+              All Articles
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="#0"
+              class="bg-white text-slate-700 duration-200 ease-in-out hover:bg-slate-50/95 inline-block rounded-full px-5 py-1.5 text-md font-medium transition"
+            >
+              Web Development
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="#0"
+              class="bg-white text-slate-700 duration-200 ease-in-out hover:bg-slate-50/95 inline-block rounded-full px-5 py-1.5 text-md font-medium transition"
+            >
+              Business
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="#0"
+              class="bg-white text-slate-700 duration-200 ease-in-out hover:bg-slate-50/95 inline-block rounded-full px-5 py-1.5 text-md font-medium transition"
+            >
+              Tutorials
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="#0"
+              class="bg-white text-slate-700 duration-200 ease-in-out hover:bg-slate-50/95 inline-block rounded-full px-5 py-1.5 text-md font-medium transition"
+            >
+              Content Creation
+            </a>
+          </li>
+        </ul>
+
+        <!-- Articles list -->
+        <div
+          class="grid max-w-lg gap-8 mx-auto mt-14 sm:mt-16 md:mx-0 md:max-w-none md:grid-cols-2 lg:grid-cols-3 lg:gap-y-6 lg:gap-x-5 xl:gap-x-6 xl:gap-y-8"
+        >
+          <!-- 1st Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-01.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <polyline points="8.333,14 1,14 1,1 23,1 23,14 20,14 "></polyline>
+                    <line x1="13" y1="14" x2="19" y2="20" stroke="currentColor"></line>
+                    <polygon points=" 6,7 10,19 13,14 18,11 " stroke="currentColor"></polygon>
+                  </g>
+                </svg>
+                Web Development
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    ChatGPT : A Developer's Best Friend or Worst Enemy?
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Explore the pros and cons of ChatGPT as a tool for developers, and whether its
+                  AI-powered capabilities are a boon or a bane in the world of programming and
+                  software development.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-03-24">Mar 23, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  11 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 2nd Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-02.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M6,3H3C1.895,3,1,3.895,1,5 v0c0,1.105,0.895,2,2,2"></path>
+
+                    <polyline points=" 6,7 6,1 20,1 20,7 " stroke="currentColor"></polyline>
+
+                    <path d="M23,7H3 C1.895,7,1,6.105,1,5v15c0,1.657,1.343,3,3,3h19V7z"></path>
+
+                    <circle cx="17" cy="15" r="2"></circle>
+                  </g>
+                </svg>
+
+                Business
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    8 Ways Designers Can Make Money Online in 2022
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Learn how to leverage your skills and capitalize on various platforms to boost
+                  your income and thrive in the digital landscape.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-03-19">Mar 19, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  10 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 3rd Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-03.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <polyline points="8.333,14 1,14 1,1 23,1 23,14 20,14 "></polyline>
+                    <line x1="13" y1="14" x2="19" y2="20" stroke="currentColor"></line>
+                    <polygon points=" 6,7 10,19 13,14 18,11 " stroke="currentColor"></polygon>
+                  </g>
+                </svg>
+                Web Development
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    Will Artificial Intelligence Replace Designers?
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Breve cup lait affogato cortado grounds pumpkin filter. Robusta cappuccino french
+                  milk dark flavour brewed go caffeine a aromatic robust shot.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-03-24">Mar 4, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  9 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 4th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-04.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M3,13V5A2,2,0,0,1,5,3H19a2,2,0,0,1,2,2v8"></path>
+                    <path d="M23,17a4,4,0,0,1-4,4H5a4,4,0,0,1-4-4Z"></path>
+                    <polygon
+                      points="10 7 10 13 15 10 10 7"
+                      stroke="none"
+                      fill="currentColor"
+                    ></polygon>
+                  </g>
+                </svg>
+
+                Tutorials
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    How I Use Tailwind CSS To Design A Website From Scratch
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Learn how to design a responsive and visually appealing website from scratch using
+                  Tailwind CSS, a utility-first CSS framework that simplifies and streamlines the
+                  web development process.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-02-27">Feb 27, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  14 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 5th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-05.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M3,13V5A2,2,0,0,1,5,3H19a2,2,0,0,1,2,2v8"></path>
+                    <path d="M23,17a4,4,0,0,1-4,4H5a4,4,0,0,1-4-4Z"></path>
+                    <polygon
+                      points="10 7 10 13 15 10 10 7"
+                      stroke="none"
+                      fill="currentColor"
+                    ></polygon>
+                  </g>
+                </svg>
+
+                Tutorials
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    SEO in 2023 for Dummies
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Discover essential SEO strategies and techniques for 2023 to boost your website's
+                  visibility, improve user experience, and drive organic traffic in this
+                  comprehensive beginner's guide.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-02-19">Feb 19, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  15 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 6th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-06.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <polyline points="8.333,14 1,14 1,1 23,1 23,14 20,14 "></polyline>
+                    <line x1="13" y1="14" x2="19" y2="20" stroke="currentColor"></line>
+                    <polygon points=" 6,7 10,19 13,14 18,11 " stroke="currentColor"></polygon>
+                  </g>
+                </svg>
+                Web Development
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    Mistakes To Avoid When Displaying Errors On Forms
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Learn to improve user experience and form submission success by avoiding common
+                  mistakes and implementing best practices for displaying error messages on forms.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-01-29">Jan 29, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  12 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 7th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-07.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M6,3H3C1.895,3,1,3.895,1,5 v0c0,1.105,0.895,2,2,2"></path>
+
+                    <polyline points=" 6,7 6,1 20,1 20,7 " stroke="currentColor"></polyline>
+
+                    <path d="M23,7H3 C1.895,7,1,6.105,1,5v15c0,1.657,1.343,3,3,3h19V7z"></path>
+
+                    <circle cx="17" cy="15" r="2"></circle>
+                  </g>
+                </svg>
+
+                Business
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    How Much Money can you Make on Youtube Making Progamming Tutorials
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Discover the earning potential of creating programming tutorials on YouTube, along
+                  with tips and strategies to maximize your income and build a successful career in
+                  this niche.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-01-15">Jan 15, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  8 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 8th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-08.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M6,3H3C1.895,3,1,3.895,1,5 v0c0,1.105,0.895,2,2,2"></path>
+
+                    <polyline points=" 6,7 6,1 20,1 20,7 " stroke="currentColor"></polyline>
+
+                    <path d="M23,7H3 C1.895,7,1,6.105,1,5v15c0,1.657,1.343,3,3,3h19V7z"></path>
+
+                    <circle cx="17" cy="15" r="2"></circle>
+                  </g>
+                </svg>
+
+                Business
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    Doubling my Side Hustle Income: 2022 Income Report
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Discover the strategies, tactics and various systems I used as a side hustler to
+                  double my income in 2022.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-01-06">Jan 6, 2023</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  7 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 9th Article -->
+          <article
+            class="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
+          >
+            <!-- Image -->
+            <div class="w-full px-4 pt-4">
+              <a
+                href="article.html"
+                class="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="./images/articles/article-09.jpg"
+                  alt=""
+                  class="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div class="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            <!-- Content -->
+            <div class="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="#0"
+                class="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 text-sky-600"
+                >
+                  <g
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.75"
+                    transform="translate(0.5 0.5)"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <line x1="9" y1="14" x2="19" y2="14" stroke="currentColor"></line>
+                    <line x1="9" y1="18" x2="19" y2="18" stroke="currentColor"></line>
+                    <rect x="9" y="6" width="10" height="4" stroke="currentColor"></rect>
+                    <path d="M3,23a2.006,2.006,0,0,1-2-2V13H2"></path>
+                    <path d="M5,1V21a2.006,2.006,0,0,1-2,2H21a2.006,2.006,0,0,0,2-2V1Z"></path>
+                  </g>
+                </svg>
+
+                Content Creation
+              </a>
+              <div class="flex-1">
+                <h3
+                  class="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900"
+                >
+                  <a href="article.html">
+                    <span class="absolute inset-0"></span>
+                    Dealing with Online Hate as a Content Creator
+                  </a>
+                </h3>
+                <p class="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  Discover tips for dealing with online hate as a content creator, including
+                  developing a support system, implementing strong moderation and safety measures,
+                  practicing self-care, and engaging with constructive feedback.
+                </p>
+              </div>
+              <div class="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time datetime="2023-12-18">Dec 18, 2022</time>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.75"
+                    stroke="currentColor"
+                    class="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  5 minute read
+                </span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-center gap-2 mt-20">
+          <span
+            class="inline-flex items-center justify-center w-20 h-10 text-sm font-medium rounded-full shadow-sm bg-slate-50 text-slate-500/60 shadow-sky-100/50 ring-1 ring-slate-900/5"
+          >
+            Prev
+          </span>
+          <span
+            class="inline-flex items-center justify-center w-10 h-10 text-sm font-medium rounded-full shadow-sm bg-sky-600 text-sky-50 shadow-sky-100/50 ring-1 ring-slate-900/5"
+          >
+            1
+          </span>
+          <a
+            href="#0"
+            class="items-center justify-center hidden w-10 h-10 text-sm font-medium transition duration-200 ease-in-out rounded-full shadow-sm bg-slate-50 text-slate-700 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-100 hover:text-sky-700 sm:inline-flex"
+          >
+            2
+          </a>
+          <a
+            href="#0"
+            class="items-center justify-center hidden w-10 h-10 text-sm font-medium transition duration-200 ease-in-out rounded-full shadow-sm bg-slate-50 text-slate-700 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-100 hover:text-sky-700 sm:inline-flex"
+          >
+            3
+          </a>
+          <span
+            href="#0"
+            class="inline-flex items-center justify-center w-10 h-10 text-sm font-medium rounded-full shadow-sm bg-slate-50 text-slate-500/60 shadow-sky-100/50 ring-1 ring-slate-900/5"
+          >
+            ...
+          </span>
+          <a
+            href="#0"
+            class="inline-flex items-center justify-center w-10 h-10 text-sm font-medium transition duration-200 ease-in-out rounded-full shadow-sm bg-slate-50 text-slate-700 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-100 hover:text-sky-700"
+          >
+            5
+          </a>
+          <a
+            href="#0"
+            class="inline-flex items-center justify-center w-20 h-10 text-sm font-medium transition duration-200 ease-in-out rounded-full shadow-sm bg-slate-50 text-slate-700 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-100 hover:text-sky-700"
+          >
+            Next
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pt-20 pb-8 overflow-hidden bg-slate-900 sm:pt-24 sm:pb-12 lg:pt-32">
+      <!-- Container -->
+      <div class="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
+        <!-- Call to action -->
+        <div
+          class="grid items-center max-w-xl gap-5 mx-auto lg:mx-0 lg:max-w-none lg:grid-cols-12 lg:gap-12 xl:gap-20"
+        >
+          <div class="lg:col-span-7">
+            <h3
+              class="text-4xl font-semibold text-center text-white font-display sm:text-5xl lg:max-w-xl lg:text-left"
+            >
+              ¡ Hagamos algo grandioso juntos !
+            </h3>
+            <div class="hidden lg:block">
+              <!-- Call to action button for large screens -->
+              <a
+                href="#0"
+                class="mt-12 bg-white hover:bg-sky-50 text-slate-700 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+              >
+                Contáctanos
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-5 h-5"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+          <div class="flex flex-col items-center lg:col-span-5 lg:items-start">
+            <p class="text-lg text-center text-slate-50 lg:max-w-sm lg:text-left">
+              Estaremos encantados de responder tus preguntas y brindarte toda la información que
+              necesites.
+            </p>
+
+            <!-- Call to action button for small screens -->
+            <a
+              href="#0"
+              class="mt-10 inline-flex items-center justify-center gap-x-2.5 rounded-full bg-white py-3 px-7 text-md font-semibold leading-none text-slate-700 duration-200 ease-in-out hover:bg-sky-50 lg:hidden"
+            >
+              Contáctanos
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </a>
+
+            <!-- Social links -->
+            <div
+              class="mt-16 grid w-full max-w-sm grid-cols-2 gap-3.5 sm:max-w-none sm:grid-cols-3 lg:mt-8 lg:gap-2.5 xl:gap-3.5"
+            >
+              <!-- Email -->
+              <a
+                href="https://www.facebook.com/bcdbcr"
+                class="flex items-center justify-center gap-2.5 rounded-full border border-slate-600/90 py-2.5 text-sm text-slate-50 duration-200 ease-in-out hover:bg-slate-800 hover:text-white lg:gap-2 xl:gap-2.5"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-facebook"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"
+                  />
+                </svg>
+                Facebook
+              </a>
+
+              <!-- Instagram -->
+              <a
+                href="https://www.instagram.com/bandacedesdonbosco"
+                class="flex items-center justify-center gap-2.5 rounded-full border border-slate-600/90 py-2.5 text-sm text-slate-50 duration-200 ease-in-out hover:bg-slate-800 hover:text-white lg:gap-2 xl:gap-2.5"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="w-4 h-4 duration-200 ease-in-out shrink-0 text-slate-200 group-hover:fill-slate-100"
+                >
+                  <g>
+                    <path
+                      d="M12,2.982c2.937,0,3.285.011,4.445.064a6.072,6.072,0,0,1,2.042.379,3.4,3.4,0,0,1,1.265.823,3.4,3.4,0,0,1,.823,1.265,6.072,6.072,0,0,1,.379,2.042c.053,1.16.064,1.508.064,4.445s-.011,3.285-.064,4.445a6.072,6.072,0,0,1-.379,2.042,3.644,3.644,0,0,1-2.088,2.088,6.072,6.072,0,0,1-2.042.379c-1.16.053-1.508.064-4.445.064s-3.285-.011-4.445-.064a6.072,6.072,0,0,1-2.042-.379,3.4,3.4,0,0,1-1.265-.823,3.4,3.4,0,0,1-.823-1.265,6.072,6.072,0,0,1-.379-2.042c-.053-1.16-.064-1.508-.064-4.445s.011-3.285.064-4.445a6.072,6.072,0,0,1,.379-2.042,3.4,3.4,0,0,1,.823-1.265,3.4,3.4,0,0,1,1.265-.823,6.072,6.072,0,0,1,2.042-.379c1.16-.053,1.508-.064,4.445-.064M12,1c-2.987,0-3.362.013-4.535.066a8.108,8.108,0,0,0-2.67.511A5.625,5.625,0,0,0,1.577,4.8a8.108,8.108,0,0,0-.511,2.67C1.013,8.638,1,9.013,1,12s.013,3.362.066,4.535a8.108,8.108,0,0,0,.511,2.67A5.625,5.625,0,0,0,4.8,22.423a8.108,8.108,0,0,0,2.67.511C8.638,22.987,9.013,23,12,23s3.362-.013,4.535-.066a8.108,8.108,0,0,0,2.67-.511A5.625,5.625,0,0,0,22.423,19.2a8.108,8.108,0,0,0,.511-2.67C22.987,15.362,23,14.987,23,12s-.013-3.362-.066-4.535a8.108,8.108,0,0,0-.511-2.67A5.625,5.625,0,0,0,19.2,1.577a8.108,8.108,0,0,0-2.67-.511C15.362,1.013,14.987,1,12,1Z"
+                    ></path>
+                    <path
+                      d="M12,6.351A5.649,5.649,0,1,0,17.649,12,5.649,5.649,0,0,0,12,6.351Zm0,9.316A3.667,3.667,0,1,1,15.667,12,3.667,3.667,0,0,1,12,15.667Z"
+                    ></path>
+                    <circle cx="17.872" cy="6.128" r="1.32"></circle>
+                  </g>
+                </svg>
+
+                Instagram
+              </a>
+
+              <!-- Twitter -->
+              <a
+                href="https://wa.me/50660491166"
+                class="flex items-center justify-center gap-2.5 rounded-full border border-slate-600/90 py-2.5 text-sm text-slate-50 duration-200 ease-in-out hover:bg-slate-800 hover:text-white lg:gap-2 xl:gap-2.5"
+              >
+                <svg
+                  style="color: white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-whatsapp"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"
+                    fill="white"
+                  ></path>
+                </svg>
+
+                WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <hr class="w-full h-px mt-12 mb-6 border-slate-600/90 sm:mt-16 sm:mb-10" />
+
+        <!-- Footer links & copyright text -->
+        <div class="flex flex-col items-center justify-between md:flex-row">
+          <!-- Site links -->
+          <div class="flex items-center gap-6">
+            <a
+              href="index.html"
+              class="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
+            >
+              Home
+            </a>
+            <a
+              href="about.html"
+              class="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
+            >
+              Nosotros
+            </a>
+            <a
+              href="work.html"
+              class="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
+            >
+              Work
+            </a>
+            <a
+              href="blog.html"
+              class="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
+            >
+              Blog
+            </a>
+            <a
+              href="contact.html"
+              class="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
+            >
+              Contacto
+            </a>
+          </div>
+
+          <!-- Copyright text -->
+          <p class="mt-8 text-base text-slate-400/90 md:mt-0">
+            © 2023 Tailwind Awesome. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

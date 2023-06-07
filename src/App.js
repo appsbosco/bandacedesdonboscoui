@@ -199,7 +199,7 @@ export default function App() {
       )}
       <Routes>
         {renderedRoutes.map((route) => route)}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navigate to="landing/build/index.html" />} />
       </Routes>
     </ThemeProvider>
   );

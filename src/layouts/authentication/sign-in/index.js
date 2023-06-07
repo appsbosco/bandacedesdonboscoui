@@ -127,7 +127,7 @@ const SignIn = () => {
             //  Redirect to the login page
             setTimeout(() => {
               setMessage(null);
-              navigate("/");
+              navigate("/dashboard");
             }, 2000);
           } catch (error) {
             setMessage(error.message.replace("GraphQL error: ", ""));
