@@ -20,7 +20,7 @@
     <link rel="icon" type="image/x-icon" href="./images/favicon.ico" />
 
     <!-- PAGE TITLE -->
-    <title>Contáctanos - BCDB</title>
+    <title>Contacto me - BCDB</title>
     <meta
       name="description"
       content="Hi, I'm BCDB, a passionate developer, entrepreneur, and general technology enthusiast living in San Francisco."
@@ -43,7 +43,12 @@
               <img
                 src="./images/Logo-Banda-Cedes-Don-Bosco.png"
                 alt=""
-                class="w-auto h-12 sm:h-16 md:h-20 lg:h-24 xl:h-28"
+                class="w-auto h-8 sm:h-9 md:hidden lg:block lg:h-10"
+              />
+              <img
+                src="./images/logo-icon.png"
+                alt=""
+                class="hidden w-auto h-8 md:block lg:hidden"
               />
             </a>
           </div>
@@ -81,13 +86,6 @@
               Contacto
             </a>
 
-            <a
-              href="authentication/sign-up"
-              class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
-            >
-              Registrarse
-            </a>
-
             <!-- Template pages dropdown container -->
           </div>
 
@@ -95,9 +93,9 @@
             <!-- Call to action -->
             <a
               class="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
-              href="authentication/sign-in"
+              href="#0"
             >
-              Iniciar sesión
+              Contáctanos
             </a>
 
             <!-- Mobile menu button -->
@@ -170,7 +168,18 @@
                       >
                         Nosotros
                       </a>
-
+                      <a
+                        href="work.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Work
+                      </a>
+                      <a
+                        href="blog.html"
+                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                      >
+                        Blog
+                      </a>
                       <a
                         href="contact.html"
                         class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
@@ -178,12 +187,6 @@
                         Contacto
                       </a>
 
-                      <a
-                        href="authentication/sign-up"
-                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
-                      >
-                        Registrarse
-                      </a>
                       <!-- Pages dropdown -->
                     </div>
                   </div>
@@ -313,7 +316,7 @@
                   <div class="sm:pt-0.5">
                     <p class="text-lg font-display text-slate-900">Llámanos</p>
                     <p class="mt-2 text-base text-slate-600">
-                      Disponible los días de semana de 8 a.m. a 6 p.m.
+                      Disponible los días de semana de 6 a.m. a 6 p.m.
                     </p>
                     <a
                       href="tel:+13234567891"
@@ -340,7 +343,7 @@
               </p> -->
 
               <!-- Contacto form -->
-              <form action="#" method="POST" class="mt-10" id="contact-form">
+              <form action="#" method="POST" class="mt-10">
                 <div class="space-y-7">
                   <div>
                     <label for="name" class="block font-medium leading-6 text-md text-slate-900">
@@ -452,25 +455,19 @@
               </div>
 
               <!-- Email form -->
-              <form
-                action="#"
-                method="post"
-                class="relative z-10 w-full max-w-lg mt-10 lg:mt-0"
-                id="email-form"
-              >
+              <form action="#" method="post" class="relative z-10 w-full max-w-lg mt-10 lg:mt-0">
                 <input
                   type="email"
                   class="h-14 w-full rounded-full border-0 bg-white/10 py-3.5 pl-5 pr-32 text-sm leading-5 text-sky-50 placeholder-sky-100/90 outline-none ring-1 ring-white/25 backdrop-blur duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white/30 sm:pl-6"
                   required
-                  placeholder="Escriba su correo"
+                  placeholder="Enter your email"
                   autocomplete="email"
-                  id="email-input"
                 />
                 <button
                   type="submit"
                   class="absolute right-1.5 top-1.5 inline-flex h-11 items-center rounded-full bg-sky-900 py-3 px-5 text-sm font-semibold text-sky-50 outline-none transition duration-200 ease-in-out hover:bg-sky-800 focus:outline-none sm:px-7 sm:text-md"
                 >
-                  Enviar
+                  Subscribe
                 </button>
               </form>
             </div>
@@ -672,13 +669,6 @@
               >
                 Contacto
               </a>
-
-              <a
-                href="authentication/sign-up"
-                class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
-              >
-                Registrarse
-              </a>
             </div>
 
             <!-- Copyright text -->
@@ -688,59 +678,6 @@
           </div>
         </div>
       </footer>
-
-      <script>
-        // Function to send the form data via email
-        function sendEmail(formData) {
-          // Replace 'YOUR_EMAIL_ADDRESS' with the actual email address you want to receive the form data
-          const emailAddress = "chinchillajosue50@gmail.com";
-          const subject = "Contacto Banda CEDES Don Bosco";
-
-          // Compose the email body
-          let emailBody = "";
-          for (const field in formData) {
-            emailBody += `${field}: ${formData[field]}\n`;
-          }
-
-          // Send the email using a mailto link
-          const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(
-            subject
-          )}&body=${encodeURIComponent(emailBody)}`;
-          window.location.href = mailtoLink;
-        }
-
-        // Handle form submission
-        document.getElementById("contact-form").addEventListener("submit", function (event) {
-          event.preventDefault(); // Prevent the form from submitting
-
-          // Get the form data
-          const formData = {
-            Nombre: document.getElementById("name").value,
-            Correo: document.getElementById("email").value,
-            Celular: document.getElementById("phone").value,
-            Mensaje: document.getElementById("message").value,
-          };
-
-          sendEmail(formData); // Send the email with form data
-          // Optionally, you can show a success message or redirect the user to a thank you page here
-        });
-      </script>
-
-      <script>
-        // Handle form submission
-        document.getElementById("email-form").addEventListener("submit", function (event) {
-          event.preventDefault(); // Prevent the form from submitting
-
-          // Get the form data
-          const email = document.getElementById("email-input").value;
-
-          // Perform your desired action with the email
-          // For example, you can send it to a server using fetch or perform client-side validation
-
-          // Reset the form after submission (optional)
-          document.getElementById("email-form").reset();
-        });
-      </script>
     </section>
   </body>
 </html>

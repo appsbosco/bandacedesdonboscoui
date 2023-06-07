@@ -108,7 +108,7 @@ function PlatformSettings() {
           </SoftBox>
           <SoftBox width="80%" ml={2}>
             <SoftTypography variant="button" fontWeight="regular" color="text">
-              Enviar to newsletter
+              Subscribe to newsletter
             </SoftTypography>
           </SoftBox>
         </SoftBox>

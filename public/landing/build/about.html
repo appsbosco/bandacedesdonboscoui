@@ -43,7 +43,12 @@
               <img
                 src="./images/Logo-Banda-Cedes-Don-Bosco.png"
                 alt=""
-                class="w-auto h-12 sm:h-16 md:h-20 lg:h-24 xl:h-28"
+                class="w-auto h-8 sm:h-9 md:hidden lg:block lg:h-10"
+              />
+              <img
+                src="./images/logo-icon.png"
+                alt=""
+                class="hidden w-auto h-8 md:block lg:hidden"
               />
             </a>
           </div>
@@ -81,12 +86,6 @@
               Contacto
             </a>
 
-            <a
-              href="authentication/sign-up"
-              class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
-            >
-              Registrarse
-            </a>
             <!-- Template pages dropdown container -->
           </div>
 
@@ -94,9 +93,9 @@
             <!-- Call to action -->
             <a
               class="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
-              href="authentication/sign-in"
+              href="#0"
             >
-              Iniciar sesión
+              Contáctanos
             </a>
 
             <!-- Mobile menu button -->
@@ -188,12 +187,6 @@
                         Contacto
                       </a>
 
-                      <a
-                        href="authentication/sign-up"
-                        class="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
-                      >
-                        Registrarse
-                      </a>
                       <!-- Pages dropdown -->
                     </div>
                   </div>
@@ -418,25 +411,19 @@
               </div>
 
               <!-- Email form -->
-              <form
-                action="#"
-                method="post"
-                class="relative z-10 w-full max-w-lg mt-10 lg:mt-0"
-                id="email-form"
-              >
+              <form action="#" method="post" class="relative z-10 w-full max-w-lg mt-10 lg:mt-0">
                 <input
                   type="email"
                   class="h-14 w-full rounded-full border-0 bg-white/10 py-3.5 pl-5 pr-32 text-sm leading-5 text-sky-50 placeholder-sky-100/90 outline-none ring-1 ring-white/25 backdrop-blur duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white/30 sm:pl-6"
                   required
-                  placeholder="Escriba su correo"
+                  placeholder="Enter your email"
                   autocomplete="email"
-                  id="email-input"
                 />
                 <button
                   type="submit"
                   class="absolute right-1.5 top-1.5 inline-flex h-11 items-center rounded-full bg-sky-900 py-3 px-5 text-sm font-semibold text-sky-50 outline-none transition duration-200 ease-in-out hover:bg-sky-800 focus:outline-none sm:px-7 sm:text-md"
                 >
-                  Enviar
+                  Subscribe
                 </button>
               </form>
             </div>
@@ -650,21 +637,5 @@
         </div>
       </footer>
     </section>
-
-    <script>
-      // Handle form submission
-      document.getElementById("email-form").addEventListener("submit", function (event) {
-        event.preventDefault(); // Prevent the form from submitting
-
-        // Get the form data
-        const email = document.getElementById("email-input").value;
-
-        // Perform your desired action with the email
-        // For example, you can send it to a server using fetch or perform client-side validation
-
-        // Reset the form after submission (optional)
-        document.getElementById("email-form").reset();
-      });
-    </script>
   </body>
 </html>
