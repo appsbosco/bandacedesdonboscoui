@@ -200,8 +200,8 @@ export default function App() {
         </>
       )}
       <Routes>
+        <Route path="/" element={<Navigate to="/landing/build/index.html" />} />
         {renderedRoutes.map((route) => route)}
-        <Route path="*" element={<Navigate to="landing/build/index.html" />} />
         <Route path="/authentication/sign-up" component={SignUp} />
         <Route path="/authentication/sign-in" component={SignIn} />
       </Routes>
