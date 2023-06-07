@@ -67,7 +67,7 @@ function BuildByDevelopers() {
               </SoftBox>
               <SoftTypography
                 component="a"
-                href="#"
+                href="landing/build/about.html"
                 variant="button"
                 color="text"
                 fontWeight="medium"

@@ -56,7 +56,7 @@ function WorkWithTheRockets() {
           </SoftBox>
           <SoftTypography
             component="a"
-            href="#"
+            href="landing/build/index.html"
             variant="button"
             color="white"
             fontWeight="medium"

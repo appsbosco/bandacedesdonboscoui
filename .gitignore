@@ -27,3 +27,6 @@ yarn.lock
 commit.sh
 
 .vercel
+
+# Local Netlify folder
+.netlify
