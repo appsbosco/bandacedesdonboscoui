@@ -40,6 +40,8 @@ import routes, {
   principalRoutes,
 } from "routes";
 import { gql, useQuery } from "@apollo/client";
+import SignUp from "layouts/authentication/sign-up";
+import SignIn from "layouts/authentication/sign-in";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -200,6 +202,8 @@ export default function App() {
       <Routes>
         {renderedRoutes.map((route) => route)}
         <Route path="*" element={<Navigate to="landing/build/index.html" />} />
+        <Route path="/authentication/sign-up" component={SignUp} />
+        <Route path="/authentication/sign-in" component={SignIn} />
       </Routes>
     </ThemeProvider>
   );
