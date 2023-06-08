@@ -105,7 +105,7 @@ const AttendanceTable = () => {
           await addAttendance({
             variables: { input: { user: userId, date, attended } },
           });
-          toast.success("Attendance saved successfully");
+          toast.success("Guardado correctamente");
         } catch (error) {
           console.error(error);
         }
@@ -113,6 +113,7 @@ const AttendanceTable = () => {
     }
 
     refetch();
+    window.location.href = "/attendance-history"; // Replace 'https://example.com' with the URL of the desired page
   };
 
   if (loading) return <p>Cargando...</p>;

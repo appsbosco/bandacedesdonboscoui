@@ -228,7 +228,7 @@ const SignUp = () => {
               </span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left mb-6">
-              Ingrese los datos a continuación para ingresar al sistema.
+              Ingrese los datos a continuación para registrarse en el sistema.
             </p>
 
             {message && showMessage()}

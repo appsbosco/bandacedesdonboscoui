@@ -359,7 +359,7 @@ const Dashboard = () => {
                             <p className="max-w-2xl mx-auto mt-6 text-lg leading-8 text-center text-slate-700">
                               {selectedEvent.description}
                             </p>
-                            <div className="flex items-center justify-center gap-4 mt-8 text-md text-slate-500">
+                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8 mb-6 text-md text-slate-500">
                               <span className="flex items-center gap-2">
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -412,7 +412,7 @@ const Dashboard = () => {
                                 <strong>Hora:</strong> {selectedEvent.time}{" "}
                               </span>
                             </div>
-                            <div className="flex items-center justify-center gap-4 mt-8 text-md text-slate-500">
+                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8 mb-6 text-md text-slate-500">
                               <span className="flex items-center gap-2">
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -445,7 +445,7 @@ const Dashboard = () => {
                                     d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
                                   />
                                 </svg>
-                                <strong>Hora aproximada de llegada a CEDES:</strong>{" "}
+                                <strong>Hora aprox. llegada a CEDES:</strong>{" "}
                                 {selectedEvent.arrival}
                               </span>
                             </div>
@@ -558,7 +558,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
 
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora de salida de CEDES</label>
+            <label style={{ fontWeight: "bold" }}>Hora salida de CEDES</label>
           </div>
           <TextField
             margin="dense"

@@ -105,6 +105,25 @@ export default function App() {
   if (error) return <div>Error: {error.message}</div>;
 
   const userRole = userData?.getUser?.role;
+
+  // Check if user is authenticated
+  const isAuthenticated = localStorage.getItem("token"); // Modify this based on your token storage mechanism
+
+  // Redirect to login if not authenticated and trying to access /dashboard
+  const shouldRedirectToLogin =
+    !isAuthenticated &&
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/members") ||
+      pathname.startsWith("/inventory") ||
+      pathname.startsWith("/attendance") ||
+      pathname.startsWith("/attendance-history") ||
+      pathname.startsWith("/events") ||
+      pathname.startsWith("/Profile"));
+
+  if (shouldRedirectToLogin) {
+    return <Navigate to="/authentication/sign-in" />;
+  }
+
   let renderedRoutes = null;
 
   if (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") {

@@ -223,6 +223,10 @@ const Footer = () => {
               <p className="mt-8 text-base text-slate-400/90 md:mt-0">
                 Copyright © 2023 Banda CEDES Don Bosco. Todos los derechos reservados{" "}
               </p>
+
+              <p className="mt-8 text-base text-slate-400/90 md:mt-0">
+                Desarrollado por Josué Chinchilla Salazar{" "}
+              </p>
             </div>
           </div>
         </footer>

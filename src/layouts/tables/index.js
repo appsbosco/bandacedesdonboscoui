@@ -632,7 +632,7 @@ const Tables = () => {
                       </>
                     ) : (
                       <p style={{ fontWeight: 500 }}>
-                        Esta persona aún no ha llegado su ficha médica.
+                        Esta persona aún no ha llenado su ficha médica.
                       </p>
                     )}
                   </div>
