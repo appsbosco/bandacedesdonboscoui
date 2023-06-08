@@ -5,6 +5,8 @@ import Header from "./Header";
 import Footer from "components/Footer";
 import about from "../assets/images/about-hero-bg.svg";
 import aboutHero from "../assets/images/about.jpg";
+import mision from "../assets/images/mision.jpg";
+import vision from "../assets/images/vision.jpg";
 
 const About = () => {
   return (
@@ -33,19 +35,21 @@ const About = () => {
                 </svg>
                 <span className="relative">Historia </span>
               </span>
-              y versatilidad de la Banda CEDES Don Bosco
+              de la Banda CEDES Don Bosco
             </h1>
             <p className="mt-8 text-lg leading-8 text-slate-700">
-              La Banda de CEDES Don Bosco (BCDB) está formada por alumnos y exalumnos de CEDES Don
-              Bosco, con edades comprendidas entre los 9 y los 24 años. Está integrada
-              principalmente por estudiantes de la Escuela San Juan Bosco y el Colegio Técnico
-              Profesional Don Bosco.
+              La Banda de CEDES Don Bosco (BCDB) está conformada por alumnos y exalumnos de CEDES
+              Don Bosco con una edad promedio de 8 años a 24 años, específicamente de la Escuela San
+              Juan Bosco, del Colegio Técnico Profesional Don Bosco y del Centro de Formación
+              Profesional. La Banda fue creada desde los inicios del Colegio Técnico Don Bosco en
+              San José en el año 1965, antiguamente ubicado en barrio Don Bosco.
             </p>
             <p className="mt-6 text-lg leading-8 text-slate-700">
-              Fundada en 1965 en el barrio Don Bosco, actualmente CEDES Don Bosco se encuentra
-              ubicado en Concepción Arriba de Alajuelita. La BCDB ha participado en diversos
-              festivales a nivel nacional e internacional, destacando su presencia en países como El
-              Salvador, Panamá y Estados Unidos.
+              La BCDB ha participado en diferentes festivales tanto a nivel nacional como
+              internacional en países como, El Salvador, Panamá y Estados Unidos. A nivel nacional
+              ha participado en 16 ediciones del Festival de la Luz de la Municipalidad de San José
+              desde el año 1998, siendo ganadores de la edición del 2007 en la categoría “Mejor
+              Banda Colegial”.
             </p>
           </div>
         </div>
@@ -106,7 +110,7 @@ const About = () => {
             <div className="lg:order-2">
               <div className="max-w-2xl mx-auto lg:mx-0">
                 <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-                  Nuestra trayectoria
+                  Nuestra
                   <span className="relative whitespace-nowrap">
                     <svg
                       width="329"
@@ -135,32 +139,27 @@ const About = () => {
                       </g>
                     </svg>
 
-                    <span className="relative text-sky-700">por el tiempo</span>
+                    <span className="relative text-sky-700"> trayectoria</span>
                   </span>
                 </h2>
-                <p className="mt-6 text-lg leading-8 text-slate-700">
-                  Desde su creación en 1965, la Banda ha participado en diversos festivales a nivel
-                  nacional e internacional, en países como El Salvador, Panamá y Estados Unidos. A
-                  nivel nacional, hemos formado parte de 17 ediciones del Festival de la Luz de la
-                  Municipalidad de San José, ganando la categoría `Mejor Banda Colegial` en la
-                  edición de 2007.
+
+                <p className="mt-6 text-lg leading-8 text-slate-700 ">
+                  Por su gran profesionalismo la banda ha sido parte de eventos de gran relevancia
+                  en el país como la Inauguración del Estadio Nacional, Inauguración de los Juegos
+                  Centroamericanos y del Caribe, Inauguración del Campeonato Centroamericano y del
+                  Caribe de Atletismo NACAC, desfile del 120 Aniversario del Teatro Nacional, Primer
+                  Mega Banda de Marcha para el traspaso de poderes del segundo mandato de Oscar
+                  Arias, Mega Banda MEP del Festival Estudiantil de la Artes (FEA).
                 </p>
 
                 <p className="mt-6 text-lg leading-8 text-slate-700">
-                  Gracias a nuestro profesionalismo, hemos tenido el honor de participar en eventos
-                  de gran relevancia en el país, como la Inauguración del Estadio Nacional, los
-                  Juegos Centroamericanos y del Caribe, el Campeonato Centroamericano y del Caribe
-                  de Atletismo NACAC, el desfile del 120 Aniversario del Teatro Nacional, el
-                  traspaso de poderes del segundo mandato del presidente Oscar Arias, el Festival
-                  Estudiantil de las Artes (FEA) y muchos otros.
-                </p>
-                <p className="mt-6 text-lg leading-8 text-slate-700">
-                  La Banda de CEDES Don Bosco se destaca por su versatilidad en cuanto a repertorios
-                  y formatos de presentación. Actualmente, podemos presentarnos como Banda de
-                  Concierto (55 integrantes), Banda de Marcha (200 integrantes) y Big Band (22
-                  integrantes). Además, cada año formamos una Banda Inicial con nuevos prospectos
-                  que se integran a la banda de marcha. Actualmente, contamos con una Banda Inicial
-                  de 35 músicos en proceso de formación.
+                  La Banda de CEDES Don Bosco se caracteriza por su versatilidad tanto en
+                  repertorios como en su formato para las distintas presentaciones, actualmente se
+                  puede presentar bajo el formato de Banda de Concierto, Banda de Marcha y Big Band.
+                  La BCDB está conformada por: 4 Glockenspiel y 2 Xilófonos, 6 Snare Drum, 5 Tonal
+                  Bass Drum, 3 Tenor Tenors, 4 Platillos, 14 Color Guard, 115 Instrumentistas de
+                  Viento Madera-Metal, un director, un asistente y una comisión de 10 padres de
+                  familia. Total BCDB: 165 personas.
                 </p>
               </div>
             </div>
@@ -179,6 +178,75 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      <section className="py-16 overflow-hidden bg-white sm:pt-24 lg:pt-32">
+        <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <h2 className="text-5xl font-semibold font-display text-slate-900 sm:text-6xl lg:leading-none">
+                Misión y visión
+              </h2>
+
+              <p className="text-lg text-slate-700 lg:ml-auto lg:max-w-lg">
+                El propósito principal es impartir conocimientos musicales mediante la práctica de
+                un instrumento, con el fin de brindar un servicio alegre al Señor, siguiendo los
+                principios educativos de San Juan Bosco.
+              </p>
+            </div>
+
+            <div className="grid max-w-xl gap-12 mx-auto mt-12 sm:mt-16 lg:mx-0 lg:mt-24 lg:max-w-none lg:grid-cols-2 lg:gap-10 xl:gap-24 lg:pb-32">
+              <div className="flex flex-col gap-12 rounded-3xl bg-slate-50 px-7 py-12 sm:gap-14 sm:p-16 lg:py-14 lg:px-10 xl:gap-16 xl:p-16 rounded-tl-[64px]">
+                <a
+                  href=""
+                  className="relative order-1 block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+                >
+                  <img
+                    src={mision}
+                    alt=""
+                    className="object-cover object-top w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+                </a>
+                <div className="flex flex-col items-center order-2">
+                  <h3 className="text-center font-display text-[28px] font-medium text-slate-900">
+                    Misión
+                  </h3>
+                  <p className="mt-5 text-base leading-8 text-center text-slate-700">
+                    Enseñar el arte de la música a través de la ejecución de un instrumento musical
+                    con la finalidad de “servir al señor con alegría” mediante la pedagogía de San
+                    Juan Bosco.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-12 rounded-3xl bg-slate-50 px-7 py-12 sm:gap-14 sm:p-16 lg:py-14 lg:px-10 xl:gap-16 xl:p-16 transform rounded-br-[64px] lg:translate-y-24 xl:translate-y-32">
+                <a
+                  href=""
+                  className="relative order-2 block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+                >
+                  <img
+                    src={vision}
+                    alt=""
+                    className="object-cover object-top w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+                </a>
+                <div className="flex flex-col items-center order-1">
+                  <h3 className="text-center font-display text-[28px] font-medium text-slate-900">
+                    Visión
+                  </h3>
+                  <p className="mt-5 text-base leading-8 text-center text-slate-700">
+                    Ser una agrupación musical consolidada dentro del complejo educativo CEDES Don
+                    Bosco con el objetivo de apoyar la educación integral de los jóvenes y de
+                    proyección socio cultural.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </>
   );

@@ -48,6 +48,16 @@ const AUTH_USER = gql`
 `;
 
 const SignIn = () => {
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "viewport";
+    meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
+    document.head.appendChild(meta);
+
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
   const { refreshUserData } = useContext(UserContext);
 
   // Use navigate to redirect user to sign in page

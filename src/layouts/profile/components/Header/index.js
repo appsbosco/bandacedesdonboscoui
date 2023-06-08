@@ -40,7 +40,7 @@ import breakpoints from "assets/theme/base/breakpoints";
 
 // Images
 import { gql, useQuery } from "@apollo/client";
-import burceMars from "assets/images/bruce-mars.jpg";
+import avatar from "assets/images/avatar.png";
 import curved0 from "assets/images/curved-images/curved0.jpg";
 
 const GET_USERS_BY_ID = gql`
@@ -145,13 +145,7 @@ const Header = () => {
       >
         <Grid container spacing={3} alignItems="center">
           <Grid item>
-            <SoftAvatar
-              src={burceMars}
-              alt="Profile-image"
-              variant="rounded"
-              size="xl"
-              shadow="sm"
-            />
+            <SoftAvatar src={avatar} alt="Profile-image" variant="rounded" size="xl" shadow="sm" />
           </Grid>
           <Grid item>
             <SoftBox height="100%" mt={0.5} lineHeight={1}>
@@ -162,20 +156,6 @@ const Header = () => {
                 {instrument}
               </SoftTypography>
             </SoftBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={4} sx={{ ml: "auto" }}>
-            <AppBar position="static">
-              <Tabs
-                orientation={tabsOrientation}
-                value={tabValue}
-                onChange={handleSetTabValue}
-                sx={{ background: "transparent" }}
-              >
-                <Tab label="App" icon={<Cube />} />
-                <Tab label="Message" icon={<Document />} />
-                <Tab label="Settings" icon={<Settings />} />
-              </Tabs>
-            </AppBar>
           </Grid>
         </Grid>
       </Card>

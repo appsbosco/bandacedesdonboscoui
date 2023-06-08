@@ -28,7 +28,6 @@ const Values = () => {
 
                 <span className="relative text-sky-700"> valores </span>
               </span>
-              como banda
             </h2>
           </div>
           <div>

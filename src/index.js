@@ -11,20 +11,22 @@ import client from "config/apollo";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UserProvider } from "./UserContext";
+import MetaTagProvider from "MetaTagProvider";
 
 const rootElement = document.getElementById("root");
 
 const renderApp = () => (
   <BrowserRouter>
-    <SoftUIControllerProvider>
-      <ApolloProvider client={client}>
-        <UserProvider>
-          <App />
-        </UserProvider>
-
-        <ToastContainer />
-      </ApolloProvider>
-    </SoftUIControllerProvider>
+    <MetaTagProvider>
+      <SoftUIControllerProvider>
+        <ApolloProvider client={client}>
+          <UserProvider>
+            <App />
+          </UserProvider>
+          <ToastContainer />
+        </ApolloProvider>
+      </SoftUIControllerProvider>
+    </MetaTagProvider>
   </BrowserRouter>
 );
 

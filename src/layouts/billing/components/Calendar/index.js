@@ -11,7 +11,7 @@ import {
 } from "@material-ui/core";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Modal, Typography } from "@mui/material";
-import homeDecor1 from "assets/images/home-decor-1.jpg";
+import homeDecor1 from "assets/images/about.jpg";
 import gql from "graphql-tag";
 import moment from "moment";
 import "moment/locale/es";
@@ -19,7 +19,10 @@ import { useEffect, useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./style.css";
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
+import cover from "assets/images/about.jpg";
 const GET_USERS_BY_ID = gql`
   query getUser {
     getUser {
@@ -315,69 +318,130 @@ const EventsCalendar = () => {
               },
             }}
           >
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-              <Typography variant="h6" fontWeight="medium">
-                Detalles del evento
-              </Typography>
-              <IconButton onClick={handleCloseModal}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
+            <IconButton onClick={handleCloseModal}>
+              <CloseIcon />
+            </IconButton>
+            <main>
+              <article>
+                <header className="relative py-16 bg-white sm:pt-24 lg:pt-28">
+                  <div className="absolute inset-x-0 bottom-0 bg-white h-1/4"></div>
+                  <div className="relative max-w-6xl px-4 mx-auto text-center sm:px-6 lg:px-8">
+                    <a
+                      href="#0"
+                      className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
+                    >
+                      <LibraryMusicIcon />
+                      Banda de marcha
+                    </a>
+                    <h1 className="mt-6 text-4xl font-semibold leading-tight text-center font-display text-slate-900 sm:text-5xl sm:leading-tight">
+                      {selectedEvent.title}
+                    </h1>
+                    <p className="max-w-2xl mx-auto mt-6 text-lg leading-8 text-center text-slate-700">
+                      {selectedEvent.description}
+                    </p>
+                    <div className="flex items-center justify-center gap-4 mt-8 text-md text-slate-500">
+                      <span className="flex items-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.75"
+                          stroke="currentColor"
+                          className="w-6 h-6 text-slate-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                          />
+                        </svg>
+                        <time dateTime="2023-02-27">
+                          {" "}
+                          <strong>Fecha:</strong>{" "}
+                          {selectedEvent.date &&
+                            new Date(Number(selectedEvent.date)).toLocaleDateString("es-ES", {
+                              timeZone: "UTC", // Replace with the appropriate timezone
+                            })}
+                        </time>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <PlaceOutlinedIcon fontSize="medium" className="w-6 h-6 text-slate-400" />
+                        <strong>Lugar:</strong> {selectedEvent.place}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.75"
+                          stroke="currentColor"
+                          className="w-6 h-6 text-slate-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <strong>Hora:</strong> {selectedEvent.time}{" "}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 mt-8 text-md text-slate-500">
+                      <span className="flex items-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.75"
+                          stroke="currentColor"
+                          className="w-6 h-6 text-slate-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                          />
+                        </svg>
+                        <strong>Hora de salida de CEDES:</strong> {selectedEvent.departure}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.75"
+                          stroke="currentColor"
+                          className="w-6 h-6 text-slate-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <strong>Hora aproximada de llegada a CEDES:</strong> {selectedEvent.arrival}
+                      </span>
+                    </div>
+                    <div className="w-full max-w-4xl mx-auto mt-16">
+                      <div className="relative block w-full overflow-hidden shadow-lg aspect-w-16 aspect-h-9 rounded-3xl shadow-sky-100/50 md:aspect-w-3 md:aspect-h-2">
+                        <img
+                          src={cover}
+                          alt=""
+                          className="object-cover w-full rounded-3xl bg-slate-100"
+                        />
+                        <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-slate-900/10"></div>
+                      </div>
+                    </div>
+                  </div>
+                </header>
 
-            <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
-              {/* Replace 'image-url' with the actual URL of the image */}
-              <img
-                src={homeDecor1}
-                alt="Event"
-                style={{ width: "100%", maxWidth: "100%", height: "auto" }}
-              />
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Título:</strong> {selectedEvent.title}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Lugar:</strong> {selectedEvent.place}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Fecha:</strong>{" "}
-                {selectedEvent.date &&
-                  new Date(Number(selectedEvent.date)).toLocaleDateString("es-ES", {
-                    timeZone: "UTC", // Replace with the appropriate timezone
-                  })}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Hora:</strong> {selectedEvent.time}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Hora de salida de CEDES:</strong> {selectedEvent.departure}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Hora aproximada de llegada a CEDES:</strong> {selectedEvent.arrival}
-              </Typography>
-            </Box>
-
-            <Box mb={3}>
-              <Typography variant="body1">
-                <strong>Descripción:</strong> {selectedEvent.description}
-              </Typography>
-            </Box>
+                <div className="px-4 bg-white sm:px-6 lg:px-8">
+                  <div className="max-w-2xl mx-auto prose prose-lg">
+                    <p></p>
+                  </div>
+                </div>
+              </article>
+            </main>
           </Box>
         </Modal>
       )}

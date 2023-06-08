@@ -87,6 +87,21 @@ const AttendanceHistoryTable = () => {
 };
 
 const TableWithFilteringSorting = ({ data, columns }) => {
+  const renderHeader = (params) => {
+    return <div style={{ paddingLeft: "20px", fontWeight: "500" }}>{params.colDef.headerName}</div>;
+  };
+
+  const updatedColumns = columns.map((column, index) => {
+    if (index === 0) {
+      return {
+        ...column,
+        headerAlign: "left",
+        renderHeader: renderHeader,
+        renderCell: (params) => <div style={{ paddingLeft: "20px" }}>{params.value}</div>,
+      };
+    }
+    return column;
+  });
   return (
     <Box sx={{ height: 700, width: 1 }}>
       <DataGrid
@@ -96,8 +111,7 @@ const TableWithFilteringSorting = ({ data, columns }) => {
           },
         }}
         rows={data}
-        columns={columns}
-        checkboxSelection
+        columns={updatedColumns}
         components={{
           Toolbar: GridToolbar,
         }}
@@ -106,6 +120,7 @@ const TableWithFilteringSorting = ({ data, columns }) => {
           toolbar: {
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
+            printOptions: { hideFooter: true, hideToolbar: true },
           },
         }}
         localeText={esES.components.MuiDataGrid.defaultProps.localeText}
