@@ -25,6 +25,7 @@ import Configurator from "examples/Configurator";
 import { useSoftUIController } from "context";
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
 import Landing from "layouts/landing/Landing";
+import { setMiniSidenav, setOpenConfigurator } from "context";
 
 const GET_USERS_BY_ID = gql`
   query getUser {

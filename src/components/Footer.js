@@ -200,20 +200,20 @@ const Footer = () => {
             <div className="flex flex-col items-center justify-between md:flex-row">
               <div className="flex items-center gap-6">
                 <a
-                  href="index.html"
+                  href="/"
                   className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
                 >
                   Home
                 </a>
                 <a
-                  href="about.html"
+                  href="/nosotros"
                   className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
                 >
                   Nosotros
                 </a>
 
                 <a
-                  href="contact.html"
+                  href="/contacto"
                   className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
                 >
                   Contacto

@@ -177,8 +177,8 @@ const Overview = () => {
     role,
     instrument,
   } = userData?.getUser || {};
-  const userRole = userData?.getUser?.role;
 
+  const userRole = userData?.getUser?.role;
   // Call the second query after the first query's data is available
   const {
     data: medicalRecordData,
@@ -226,7 +226,6 @@ const Overview = () => {
 
   const handleAddMedicalRecord = async (medicalRecordData) => {
     await addMedicalRecord({ variables: { input: medicalRecordData } });
-    console.log(medicalRecordData);
     handleCloseModal();
   };
 

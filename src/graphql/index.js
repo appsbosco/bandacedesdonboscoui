@@ -128,7 +128,6 @@ const EventsCalendar = () => {
             input: eventForm,
           },
         });
-        console.log("Added event:", data.newEvent);
       } catch (error) {
         console.error("Add event error:", error.message);
       }

@@ -199,7 +199,7 @@ const Blog = () => {
               </a>
               <div className="flex-1">
                 <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
-                  <a href="article.html">
+                  <a href="">
                     <span className="absolute inset-0"></span>
                     Estadio Alejandro Morera Soto
                   </a>

@@ -82,7 +82,7 @@ const Hero = () => {
           </p>
           <div className="flex flex-wrap items-center justify-center mt-10 gap-y-6 gap-x-10 lg:justify-start">
             <a
-              href="contact.html"
+              href="/contacto"
               className="h-11 bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
             >
               Contáctanos

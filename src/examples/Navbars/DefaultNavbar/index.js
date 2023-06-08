@@ -102,7 +102,7 @@ function DefaultNavbar({ transparent, light, action }) {
           <DefaultNavbarLink
             icon="account_circle"
             name="Registrarse"
-            route="/authentication/sign-up"
+            route="/profile"
             light={light}
           />
           {/* <DefaultNavbarLink

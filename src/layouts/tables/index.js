@@ -113,12 +113,18 @@ const Tables = () => {
   // Filter users by role
   const musiciansData =
     data?.getUsers.filter(
-      (user) => user.role === "Principal de sección" || user.role === "Integrante BCDB"
+      (user) =>
+        user.role === "Principal de sección" ||
+        user.role === "Integrante BCDB" ||
+        user.role === "Asistente de sección"
     ) || [];
 
   const staffData =
     data?.getUsers.filter(
-      (user) => user.role !== "Principal de sección" && user.role !== "Integrante BCDB"
+      (user) =>
+        user.role !== "Principal de sección" &&
+        user.role !== "Integrante BCDB" &&
+        user.role !== "Asistente de sección"
     ) || [];
 
   const columns = [
@@ -292,7 +298,7 @@ const Tables = () => {
                       <span className="flex items-center gap-2">
                         <CakeIcon fontSize="medium" />
                         <strong>Fecha nacimiento:</strong>{" "}
-                        {selectedUser.birth ? selectedUser.birth : "N/A"}
+                        {selectedUser.birthday ? selectedUser.birthday : "N/A"}
                       </span>
                       <span className="flex items-center gap-2">
                         <AdminPanelSettingsIcon fontSize="medium" />
