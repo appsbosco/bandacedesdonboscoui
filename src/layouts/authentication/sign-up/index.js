@@ -35,7 +35,7 @@ import InputField from "../components/InputField";
 import MultiStepForm, { FormStep } from "../components/MultiStepForm";
 import SelectField from "../components/SelectField";
 import Header from "components/Header";
-import cover from "../../../assets/images/about.jpg";
+import cover from "../../../assets/images/sign-up.jpg";
 
 const validationSchema = yup.object().shape({
   name: yup.string().required("Campo obligatorio"),
@@ -224,9 +224,8 @@ const SignUp = () => {
                 >
                   <path d="M247.564 18.5807C241.772 13.3568 232.473 12.7526 225.225 11.4427C217.124 9.97395 208.996 8.57031 200.846 7.46093C186.542 5.51302 172.169 4.08854 157.79 3.01562C126.033 0.645827 94.0929 0.0338481 62.3387 2.36979C42.1785 3.85416 22.008 5.90885 2.32917 10.8463C-0.0155171 11.4349 0.207047 14.6719 2.6889 14.7083C22.0261 14.9896 41.3866 12.6406 60.7109 11.8568C79.9471 11.0807 99.2274 10.6719 118.484 10.9557C142.604 11.3125 166.719 12.8333 190.722 15.5156C199.956 16.5469 209.195 17.6016 218.411 18.8255C227.864 20.0807 237.259 22 246.767 20.7422C247.709 20.6198 248.426 19.3568 247.564 18.5807Z" />
                 </svg>
-                <span className="relative">Registro </span>
+                <span className="relative">Registrarse </span>
               </span>
-              en el sistema{" "}
             </h1>
             <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left mb-6">
               Ingrese los datos a continuación para ingresar al sistema.
@@ -294,51 +293,69 @@ const SignUp = () => {
                   <SoftBox component="form" role="form">
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Nombre
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="name" placeholder="Nombre" />{" "}
                     </SoftBox>
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Primer Apellido
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="firstSurName" placeholder="Primer Apellido" />{" "}
                     </SoftBox>
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Segundo Apellido
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="secondSurName" placeholder="Segundo Apellido" />{" "}
                     </SoftBox>
 
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Correo Electrónico
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="email" placeholder="Correo Electrónico" />{" "}
                     </SoftBox>
 
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Contraseña
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField type="password" name="password" placeholder="Contraseña" />{" "}
                     </SoftBox>
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Confirmar Contraseña
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField type="password" name="confirmPassword" placeholder="Contraseña" />{" "}
                     </SoftBox>
@@ -354,9 +371,12 @@ const SignUp = () => {
                   <SoftBox component="form" role="form">
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
-                          ¿Es usted músico de la BCDB?
-                        </SoftTypography>
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
+                          ¿Es usted músico de la BCDB?{" "}
+                        </label>
                       </SoftBox>
                       <SelectField
                         label=""
@@ -371,17 +391,23 @@ const SignUp = () => {
                       <>
                         <SoftBox mb={2}>
                           <SoftBox mb={1} ml={0.5}>
-                            <SoftTypography component="label" variant="caption" fontWeight="bold">
-                              Estado
-                            </SoftTypography>
+                            <label
+                              htmlFor="name"
+                              className="block font-medium leading-6 text-md text-slate-900"
+                            >
+                              Estado{" "}
+                            </label>
                           </SoftBox>
                           <SelectField label="" name="state" options={states} />
                         </SoftBox>
                         <SoftBox mb={2}>
                           <SoftBox mb={1} ml={0.5}>
-                            <SoftTypography component="label" variant="caption" fontWeight="bold">
-                              Instrumento
-                            </SoftTypography>
+                            <label
+                              htmlFor="name"
+                              className="block font-medium leading-6 text-md text-slate-900"
+                            >
+                              Instrumento{" "}
+                            </label>
                           </SoftBox>
                           <SelectField label="" name="instrument" options={instrument} />
                         </SoftBox>
@@ -389,26 +415,35 @@ const SignUp = () => {
                     )}
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
-                          Rol
-                        </SoftTypography>
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
+                          Rol{" "}
+                        </label>
                       </SoftBox>
                       <SelectField label="" name="role" options={roles} />
                     </SoftBox>
 
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Número de celular
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="phone" placeholder="Número de celular" />{" "}
                     </SoftBox>
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Fecha de nacimiento
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField type="date" name="birthday" placeholder="Fecha de nacimiento" />{" "}
                     </SoftBox>
@@ -429,17 +464,23 @@ const SignUp = () => {
                         </SoftTypography>
                       </SoftBox>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Carnet Institucional
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <InputField name="carnet" placeholder="Carnet" />{" "}
                     </SoftBox>
                     <SoftBox mb={2}>
                       <SoftBox mb={1} ml={0.5}>
-                        <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
                           Año lectivo
-                        </SoftTypography>
+                        </label>
                       </SoftBox>
                       <SelectField label="" name="grade" options={grades} />
                     </SoftBox>

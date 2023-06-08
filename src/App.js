@@ -24,6 +24,7 @@ import Sidenav from "examples/Sidenav";
 import Configurator from "examples/Configurator";
 import { useSoftUIController } from "context";
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
+import Landing from "layouts/landing/Landing";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -156,17 +157,12 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Routes>
-        <Route path="/" element={<Navigate to="/home" />} />
-        {renderedRoutes.map((route) => route)}
-        <Route path="/authentication/sign-up" component={SignUp} />
-        <Route path="/authentication/sign-in" component={SignIn} />
-      </Routes>
+
       {layout === "dashboard" &&
         pathname !== "/" &&
         pathname !== "/authentication/sign-in" &&
         pathname !== "/authentication/sign-up" &&
-        pathname !== "/home" &&
+        pathname !== "/" &&
         pathname !== "/nosotros" &&
         pathname !== "/contacto" && (
           <>
@@ -182,6 +178,12 @@ export default function App() {
             {configsButton}
           </>
         )}
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        {renderedRoutes.map((route) => route)}
+        <Route path="/authentication/sign-up" component={SignUp} />
+        <Route path="/authentication/sign-in" component={SignIn} />
+      </Routes>
     </ThemeProvider>
   );
 }

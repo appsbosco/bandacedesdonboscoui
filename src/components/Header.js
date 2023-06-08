@@ -16,7 +16,7 @@ const Header = () => {
         <nav className="relative z-50 flex items-center justify-between w-full">
           {/* Logo */}
           <div className="flex items-center shrink-0">
-            <a href="/home" aria-label="Home" className="flex items-center flex-shrink-0">
+            <a href="/" aria-label="Home" className="flex items-center flex-shrink-0">
               <img src={logo} alt="" className="w-auto h-16 sm:h-16 md:h-20 lg:h-24 xl:h-28" />
             </a>
           </div>
@@ -24,7 +24,7 @@ const Header = () => {
           {/* Desktop navigation links */}
           <div className="items-center hidden md:flex md:space-x-6 lg:space-x-8">
             <a
-              href="/home"
+              href="/"
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               Home
@@ -125,7 +125,7 @@ const Header = () => {
                   {/* Mobile menu links */}
                   <div className="flex flex-col space-y-4">
                     <a
-                      href="/home"
+                      href="/"
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Home

@@ -92,16 +92,6 @@ export const attendanceRoutes = [
 const routes = [
   {
     type: "collapse",
-    name: "Home",
-    key: "home",
-    route: "/home",
-    icon: "",
-    component: <Landing />,
-    noCollapse: true,
-    href: null,
-  },
-  {
-    type: "collapse",
     name: "Nosotros",
     key: "nosotros",
     route: "/nosotros",
