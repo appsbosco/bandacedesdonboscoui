@@ -43,7 +43,7 @@ const MultiStepForm = ({ children, initialValues, onSubmit }) => {
         validationSchema={step.props.validationSchema}
       >
         {(formik) => (
-          <Form>
+          <Form style={{ width: "100%" }}>
             {step}
 
             <SoftBox mt={4} mb={1}>
@@ -53,7 +53,6 @@ const MultiStepForm = ({ children, initialValues, onSubmit }) => {
                     onClick={() => back(formik.values)}
                     variant="gradient"
                     sx={{
-                      backgroundImage: "linear-gradient(to left, #293964, #4573DB)",
                       width: "50%",
                       color: "#ffffff",
                       marginRight: "1rem",
@@ -63,6 +62,11 @@ const MultiStepForm = ({ children, initialValues, onSubmit }) => {
                         color: "white",
                       },
                     }}
+                    className="inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none bg-slate-900 text-white hover:bg-sky-800 w-full text-base sm:text-lg"
+                    style={{
+                      backgroundColor: "white",
+                      color: "rgb(15 23 42 / var(--tw-bg-opacity))",
+                    }}
                   >
                     Atrás
                   </Button>
@@ -71,15 +75,10 @@ const MultiStepForm = ({ children, initialValues, onSubmit }) => {
                   type="submit"
                   variant="gradient"
                   disabled={formik.isSubmitting}
-                  sx={{
-                    backgroundImage: "linear-gradient(to left, #293964, #4573DB)",
-                    width: "50%",
-                    marginLeft: "auto",
-                    color: "#ffffff",
-                    "&:hover": {
-                      bgcolor: "primary.dark",
-                      color: "white",
-                    },
+                  className="inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none bg-slate-900 text-white hover:bg-sky-800 w-full text-base sm:text-lg"
+                  style={{
+                    backgroundColor: "rgb(15 23 42 / var(--tw-bg-opacity))",
+                    color: "white",
                   }}
                 >
                   {isLastStep ? "Enviar" : "Siguiente"}

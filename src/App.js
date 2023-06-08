@@ -1,36 +1,14 @@
-App.js;
 import { useEffect, useMemo, useState } from "react";
-
-// react-router components
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-
-// @mui material components
 import CssBaseline from "@mui/material/CssBaseline";
 import Icon from "@mui/material/Icon";
 import { ThemeProvider } from "@mui/material/styles";
-
-// BCDB React components
-import SoftBox from "components/SoftBox";
-
-// BCDB React examples
-import Configurator from "examples/Configurator";
-import Sidenav from "examples/Sidenav";
-
-// BCDB React themes
-import theme from "assets/theme";
-import themeRTL from "assets/theme/theme-rtl";
-
-// RTL plugins
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import rtlPlugin from "stylis-plugin-rtl";
-
-// BCDB React routes
-// BCDB React contexts
-import { setMiniSidenav, setOpenConfigurator, useSoftUIController } from "context";
-
-// Images
-import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
+import SoftBox from "components/SoftBox";
+import theme from "assets/theme";
+import themeRTL from "assets/theme/theme-rtl";
 import routes, {
   protectedRoutes,
   attendanceRoutes,
@@ -42,6 +20,10 @@ import routes, {
 import { gql, useQuery } from "@apollo/client";
 import SignUp from "layouts/authentication/sign-up";
 import SignIn from "layouts/authentication/sign-in";
+import Sidenav from "examples/Sidenav";
+import Configurator from "examples/Configurator";
+import { useSoftUIController } from "context";
+import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -61,6 +43,7 @@ const GET_USERS_BY_ID = gql`
     }
   }
 `;
+
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
   const { miniSidenav, direction, layout, openConfigurator, sidenavColor } = controller;
@@ -68,10 +51,6 @@ export default function App() {
   const [rtlCache, setRtlCache] = useState(null);
   const { pathname } = useLocation();
 
-  // Accessing the routes array
-  // const routes = MyComponent();
-
-  // Cache for the rtl
   useMemo(() => {
     const cacheRtl = createCache({
       key: "rtl",
@@ -81,7 +60,6 @@ export default function App() {
     setRtlCache(cacheRtl);
   }, []);
 
-  // Open sidenav when mouse enter on mini sidenav
   const handleOnMouseEnter = () => {
     if (miniSidenav && !onMouseEnter) {
       setMiniSidenav(dispatch, false);
@@ -89,7 +67,6 @@ export default function App() {
     }
   };
 
-  // Close sidenav when mouse leave mini sidenav
   const handleOnMouseLeave = () => {
     if (onMouseEnter) {
       setMiniSidenav(dispatch, true);
@@ -97,15 +74,12 @@ export default function App() {
     }
   };
 
-  // Change the openConfigurator state
   const handleConfiguratorOpen = () => setOpenConfigurator(dispatch, !openConfigurator);
 
-  // Setting the dir attribute for the body element
   useEffect(() => {
     document.body.setAttribute("dir", direction);
   }, [direction]);
 
-  // Setting page scroll to 0 when changing the route
   useEffect(() => {
     document.documentElement.scrollTop = 0;
     document.scrollingElement.scrollTop = 0;
@@ -126,12 +100,10 @@ export default function App() {
 
   const { data: userData, loading, error } = useQuery(GET_USERS_BY_ID);
 
-  // Handle loading state
-  if (loading) return <div></div>; // Replace with your loading component
-  if (error) return <div>Error: {error.message}</div>; // Replace with your error handling component
+  if (loading) return <div></div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   const userRole = userData?.getUser?.role;
-  // Now, userRole is guaranteed to be defined before rendering any routes.
   let renderedRoutes = null;
 
   if (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") {
@@ -177,7 +149,6 @@ export default function App() {
       ? staffRoutes
       : membersRoutes;
 
-  // Filter out "sign-in" and "sign-up" routes
   const filteredNavRoutes = navRoutes.filter((route) => {
     return route.route !== "/authentication/sign-in" && route.route !== "/authentication/sign-up";
   });
@@ -185,26 +156,32 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {layout === "dashboard" && (
-        <>
-          <Sidenav
-            color={sidenavColor}
-            brand={brand}
-            brandName="BCDB"
-            routes={filteredNavRoutes}
-            onMouseEnter={handleOnMouseEnter}
-            onMouseLeave={handleOnMouseLeave}
-          />
-          <Configurator />
-          {configsButton}
-        </>
-      )}
       <Routes>
-        <Route path="/" element={<Navigate to="/landing/build/index.html" />} />
+        <Route path="/" element={<Navigate to="/home" />} />
         {renderedRoutes.map((route) => route)}
         <Route path="/authentication/sign-up" component={SignUp} />
         <Route path="/authentication/sign-in" component={SignIn} />
       </Routes>
+      {layout === "dashboard" &&
+        pathname !== "/" &&
+        pathname !== "/authentication/sign-in" &&
+        pathname !== "/authentication/sign-up" &&
+        pathname !== "/home" &&
+        pathname !== "/nosotros" &&
+        pathname !== "/contacto" && (
+          <>
+            <Sidenav
+              color={sidenavColor}
+              brand={brand}
+              brandName="BCDB"
+              routes={filteredNavRoutes}
+              onMouseEnter={handleOnMouseEnter}
+              onMouseLeave={handleOnMouseLeave}
+            />
+            <Configurator />
+            {configsButton}
+          </>
+        )}
     </ThemeProvider>
   );
 }

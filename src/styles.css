@@ -1,0 +1,11 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Add your custom CSS styles here */
+/* For example: */
+.font-display {
+  font-family: "Open Sans", sans-serif;
+}
+
+/* ... */

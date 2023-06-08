@@ -19,6 +19,9 @@ import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt
 import Document from "examples/Icons/Document";
 import SpaceShip from "examples/Icons/SpaceShip";
 import Inventory from "layouts/inventory";
+import Landing from "layouts/landing/Landing";
+import About from "components/About";
+import Contact from "components/Contact";
 
 export const protectedRoutes = [
   {
@@ -87,6 +90,37 @@ export const attendanceRoutes = [
 ];
 
 const routes = [
+  {
+    type: "collapse",
+    name: "Home",
+    key: "home",
+    route: "/home",
+    icon: "",
+    component: <Landing />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Nosotros",
+    key: "nosotros",
+    route: "/nosotros",
+    icon: "",
+    component: <About />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Contacto",
+    key: "Contacto",
+    route: "/contacto",
+    icon: "",
+    component: <Contact />,
+    noCollapse: true,
+    href: null,
+  },
+
   {
     type: "collapse",
     name: "Dashboard",
