@@ -40,7 +40,6 @@ import breakpoints from "assets/theme/base/breakpoints";
 
 // Images
 import { gql, useQuery } from "@apollo/client";
-import avatar from "assets/images/avatar.png";
 import curved0 from "assets/images/curved-images/curved0.jpg";
 
 const GET_USERS_BY_ID = gql`
@@ -58,6 +57,7 @@ const GET_USERS_BY_ID = gql`
       phone
       role
       instrument
+      avatar
     }
   }
 `;
@@ -82,12 +82,7 @@ const Header = () => {
     }
   }, [loading, refetch]);
 
-  const {
-    name,
-    firstSurName,
-
-    instrument,
-  } = data?.getUser || {};
+  const { name, firstSurName, avatar, instrument } = data?.getUser || {};
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.

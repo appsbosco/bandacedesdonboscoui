@@ -61,6 +61,12 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{modalTitle}</DialogTitle>
       <DialogContent>
+        <a
+          href="#0"
+          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
+        >
+          Información personal:
+        </a>
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Identificación
@@ -100,6 +106,58 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
           onChange={(e) => setAddress(e.target.value)}
           fullWidth
         />
+
+        <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
+
+        <a
+          href="#0"
+          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
+        >
+          Condiciones médicas:
+        </a>
+
+        <SoftBox mb={1} ml={0.5}>
+          <SoftTypography component="label" variant="caption" fontWeight="bold">
+            Enfermedades
+          </SoftTypography>
+        </SoftBox>
+        <TextField
+          name="illness"
+          value={illness}
+          onChange={(e) => setIllness(e.target.value)}
+          fullWidth
+        />
+        <SoftBox mb={1} ml={0.5}>
+          <SoftTypography component="label" variant="caption" fontWeight="bold">
+            Medicamentos que debe tomar
+          </SoftTypography>
+        </SoftBox>
+        <TextField
+          name="medicine"
+          value={medicine}
+          onChange={(e) => setMedicine(e.target.value)}
+          fullWidth
+        />
+        <SoftBox mb={1} ml={0.5}>
+          <SoftTypography component="label" variant="caption" fontWeight="bold">
+            Medicamentos que debe tomar en giras de la BCDB
+          </SoftTypography>
+        </SoftBox>
+        <TextField
+          name="medicineOnTour"
+          value={medicineOnTour}
+          onChange={(e) => setMedicineOnTour(e.target.value)}
+          fullWidth
+        />
+
+        <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
+
+        <a
+          href="#0"
+          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
+        >
+          Información encargado:
+        </a>
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Nombre del encargado
@@ -153,39 +211,6 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
           name="familyMemberOccupation"
           value={familyMemberOccupation}
           onChange={(e) => setFamilyMemberOccupation(e.target.value)}
-          fullWidth
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Enfermedades
-          </SoftTypography>
-        </SoftBox>
-        <TextField
-          name="illness"
-          value={illness}
-          onChange={(e) => setIllness(e.target.value)}
-          fullWidth
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Medicamentos que debe tomar
-          </SoftTypography>
-        </SoftBox>
-        <TextField
-          name="medicine"
-          value={medicine}
-          onChange={(e) => setMedicine(e.target.value)}
-          fullWidth
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Medicamentos que debe tomar en giras de la BCDB
-          </SoftTypography>
-        </SoftBox>
-        <TextField
-          name="medicineOnTour"
-          value={medicineOnTour}
-          onChange={(e) => setMedicineOnTour(e.target.value)}
           fullWidth
         />
 
