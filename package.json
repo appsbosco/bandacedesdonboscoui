@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.7.14",
+    "@cloudinary/react": "^1.11.2",
     "@emotion/cache": "11.9.3",
     "@emotion/react": "11.9.3",
     "@emotion/styled": "11.9.3",
@@ -28,6 +29,7 @@
     "apollo-link-context": "^1.0.20",
     "chart.js": "3.4.1",
     "chroma-js": "2.4.2",
+    "cloudinary": "^1.37.1",
     "crypto-browserify": "^3.12.0",
     "file-saver": "^2.0.5",
     "formik": "^2.2.9",

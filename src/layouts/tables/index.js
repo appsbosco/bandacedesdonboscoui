@@ -42,6 +42,7 @@ const GET_USERS = gql`
       grade
       phone
       role
+      avatar
       instrument
     }
   }
@@ -248,6 +249,25 @@ const Tables = () => {
                     >
                       Miembro de la banda:
                     </a>
+
+                    {!selectedUser.avatar || selectedUser.avatar === "" ? (
+                      <div className=""></div>
+                    ) : (
+                      <div className="w-full px-2 pt-2">
+                        <a
+                          href=""
+                          className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+                        >
+                          <img
+                            src={selectedUser.avatar}
+                            alt=""
+                            className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+                        </a>
+                      </div>
+                    )}
+
                     <h1 className="mt-6 text-4xl font-semibold leading-tight text-center font-display text-slate-900 sm:text-5xl sm:leading-tight">
                       {selectedUser.name +
                         " " +

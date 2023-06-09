@@ -41,6 +41,8 @@ import breakpoints from "assets/theme/base/breakpoints";
 // Images
 import { gql, useQuery } from "@apollo/client";
 import curved0 from "assets/images/curved-images/curved0.jpg";
+import ProfileImageUploader from "../ProfilePicture/ProfileImageUploader";
+import { Avatar } from "@mui/material";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -67,6 +69,7 @@ const Header = () => {
   const [tabValue, setTabValue] = useState(0);
 
   const { data, loading, error, refetch } = useQuery(GET_USERS_BY_ID);
+  console.log(data);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +86,7 @@ const Header = () => {
   }, [loading, refetch]);
 
   const { name, firstSurName, avatar, instrument } = data?.getUser || {};
+  console.log(data?.getUser);
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -140,7 +144,16 @@ const Header = () => {
       >
         <Grid container spacing={3} alignItems="center">
           <Grid item>
-            <SoftAvatar src={avatar} alt="Profile-image" variant="rounded" size="xl" shadow="sm" />
+            {!avatar || avatar === "" ? (
+              <ProfileImageUploader />
+            ) : (
+              <img
+                className="w-20 h-20 rounded"
+                style={{ objectFit: "cover", objectPosition: "center" }}
+                src={avatar}
+                alt="Avatar"
+              />
+            )}
           </Grid>
           <Grid item>
             <SoftBox height="100%" mt={0.5} lineHeight={1}>
