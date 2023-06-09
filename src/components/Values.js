@@ -171,7 +171,7 @@ const Values = () => {
 
                   <div className="flex flex-col gap-1">
                     <dt className="text-sm font-semibold leading-6 text-sky-50">
-                      Años de experiencia
+                      Años de historia
                     </dt>
                     <dd className="order-first text-3xl font-extrabold text-white sm:text-4xl">
                       58

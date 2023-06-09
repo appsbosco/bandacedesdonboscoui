@@ -97,7 +97,7 @@ function Configurator() {
         <SoftBox>
           <SoftTypography variant="h5">Configuración</SoftTypography>
           <SoftTypography variant="body2" color="text">
-            Perzonalice la interfaz de usuario
+            Personalice la interfaz de usuario
           </SoftTypography>
         </SoftBox>
 
