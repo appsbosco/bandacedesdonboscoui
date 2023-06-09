@@ -6,10 +6,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   TextField,
 } from "@mui/material";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
+import Input from "components/Input";
+import Select from "components/Select";
 
 const InventoryModal = ({ open, onClose, onSubmit, initialValues, title: modalTitle }) => {
   const [brand, setBrand] = useState(initialValues ? initialValues.brand : "");
@@ -32,6 +35,15 @@ const InventoryModal = ({ open, onClose, onSubmit, initialValues, title: modalTi
     });
   };
 
+  const handleConditionChange = (e) => {
+    setCondition(e.target.value);
+  };
+
+  const conditions = [
+    { value: "Propio", label: "Propio" },
+    { value: "Institucional", label: "Institucional" },
+  ];
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{modalTitle}</DialogTitle>
@@ -41,84 +53,104 @@ const InventoryModal = ({ open, onClose, onSubmit, initialValues, title: modalTi
             Marca
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="brand"
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="model"
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Modelo
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="model"
           value={model}
           onChange={(e) => setModel(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="model"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Número de placa
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="numberId"
           value={numberId}
           onChange={(e) => setNumberId(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="serie"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Serie
           </SoftTypography>
         </SoftBox>
-        <TextField
-          name="serie"
+
+        <Input
           value={serie}
           onChange={(e) => setSerie(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="serie"
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Condición
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Select
+          id="condition"
           name="condition"
           value={condition}
-          onChange={(e) => setCondition(e.target.value)}
-          label=""
-          fullWidth
+          onChange={handleConditionChange}
+          options={conditions}
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Mantenimientos
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="mainteinance"
           value={mainteinance}
           onChange={(e) => setMainteinance(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="mainteinance"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Detalles
           </SoftTypography>
         </SoftBox>
-        <TextField
+        <Input
           name="details"
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           label=""
           fullWidth
+          type="text"
+          id="details"
         />
       </DialogContent>
       <DialogActions>

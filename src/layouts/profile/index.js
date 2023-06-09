@@ -492,6 +492,32 @@ const Overview = () => {
                             {address}
                           </SoftTypography>
                         </SoftBox>
+
+                        <SoftBox display="flex" py={1} pr={2}>
+                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
+                            Enfermedades:
+                          </SoftTypography>
+                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                            {formattedIllness}
+                          </SoftTypography>
+                        </SoftBox>
+                        <SoftBox display="flex" py={1} pr={2}>
+                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
+                            Medicamentos:
+                          </SoftTypography>
+                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                            {formattedMedicine}
+                          </SoftTypography>
+                        </SoftBox>
+                        <SoftBox display="flex" py={1} pr={2}>
+                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
+                            Medicamentos en giras de la banda:
+                          </SoftTypography>
+                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                            {formattedMedicineOnTour}
+                          </SoftTypography>
+                        </SoftBox>
+
                         <SoftBox display="flex" py={1} pr={2}>
                           <SoftTypography variant="h6" fontWeight="bold" textTransform="">
                             Nombre del encargado:
@@ -532,30 +558,7 @@ const Overview = () => {
                             {familyMemberOccupation}
                           </SoftTypography>
                         </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Enfermedades:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedIllness}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Medicamentos:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedMedicine}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Medicamentos en giras de la banda:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedMedicineOnTour}
-                          </SoftTypography>
-                        </SoftBox>
+
                         <Button
                           variant="contained"
                           color="info"
@@ -724,7 +727,8 @@ const Overview = () => {
                     >
                       {userRole === "Asistente de sección" ||
                       userRole === "Principal de sección" ||
-                      userRole === "Integrante BCDB" ? (
+                      userRole === "Integrante BCDB" ||
+                      userRole === "Admin" ? (
                         <>
                           <Button
                             variant="contained"

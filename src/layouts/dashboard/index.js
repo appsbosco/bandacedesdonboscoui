@@ -35,6 +35,8 @@ import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/about.jpg";
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
+import Input from "components/Input";
+import TextArea from "components/TextArea";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -510,7 +512,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Título del evento</label>
           </div>
-          <TextField
+          <Input
             autoFocus
             margin="dense"
             label=""
@@ -525,7 +527,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Lugar del evento</label>
           </div>
-          <TextField
+          <Input
             margin="dense"
             label=""
             type="text"
@@ -539,7 +541,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Fecha del evento</label>
           </div>
-          <TextField
+          <Input
             margin="dense"
             label=""
             type="date"
@@ -553,7 +555,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Hora del evento</label>
           </div>
-          <TextField
+          <Input
             margin="dense"
             label=""
             type="time"
@@ -567,7 +569,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Hora salida de CEDES</label>
           </div>
-          <TextField
+          <Input
             margin="dense"
             label=""
             type="time"
@@ -581,7 +583,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Hora aproximada de llegada a CEDES</label>
           </div>
-          <TextField
+          <Input
             margin="dense"
             label=""
             type="time"
@@ -595,7 +597,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
           <div style={{ marginBottom: "0.5rem" }}>
             <label style={{ fontWeight: "bold" }}>Descripción del evento</label>
           </div>
-          <TextField
+          <TextArea
             margin="dense"
             label=""
             type="text"

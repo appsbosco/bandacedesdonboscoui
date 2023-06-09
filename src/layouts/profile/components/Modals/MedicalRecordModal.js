@@ -10,6 +10,9 @@ import {
 import PropTypes from "prop-types";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
+import Input from "components/Input";
+import Select from "components/Select";
+import TextArea from "components/TextArea";
 
 // MedicalRecordForm component
 const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: modalTitle }) => {
@@ -57,6 +60,41 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
     });
   };
 
+  const bloodTypes = [
+    { value: "A+", label: "A+" },
+    { value: "A-", label: "A-" },
+    { value: "B+", label: "B+" },
+    { value: "B-", label: "B-" },
+    { value: "AB+", label: "AB+" },
+    { value: "AB-", label: "AB-" },
+    { value: "O+", label: "O+" },
+    { value: "O-", label: "O-" },
+  ];
+
+  const sexTypes = [
+    { value: "Masculino", label: "Masculino" },
+    { value: "Femenino", label: "Femenino" },
+  ];
+
+  const relationshipTypes = [
+    { value: "Padre", label: "Padre" },
+    { value: "Madre", label: "Madre" },
+    { value: "Hijo/Hija", label: "Hijo/Hija" },
+    { value: "Hermano/Hermana", label: "Hermano/Hermana" },
+    { value: "Abuelo/Abuela", label: "Abuelo/Abuela" },
+    { value: "Nieto/Nieta", label: "Nieto/Nieta" },
+    { value: "Bisabuelo/Bisabuela", label: "Bisabuelo/Bisabuela" },
+    { value: "Tío/Tía", label: "Tío/Tía" },
+    { value: "Sobrino/Sobrina", label: "Sobrino/Sobrina" },
+    { value: "Primo/Prima", label: "Primo/Prima" },
+    { value: "Esposo/Esposa", label: "Esposo/Esposa" },
+    { value: "Cuñado/Cuñada", label: "Cuñado/Cuñada" },
+    { value: "Suegro/Suegra", label: "Suegro/Suegra" },
+    { value: "Yerno/Nuera", label: "Yerno/Nuera" },
+    { value: "Hermanastro/Hermanastra", label: "Hermanastro/Hermanastra" },
+    { value: "Padrino/Madrina", label: "Padrino/Madrina" },
+  ];
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{modalTitle}</DialogTitle>
@@ -72,39 +110,57 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
             Identificación
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="identification"
           value={identification}
           onChange={(e) => setIdentification(e.target.value)}
           fullWidth
+          type="text"
+          id="identification"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Sexo
           </SoftTypography>
         </SoftBox>
-        <TextField name="sex" value={sex} onChange={(e) => setSex(e.target.value)} fullWidth />
+
+        <Select
+          id="sex"
+          name="sex"
+          value={sex}
+          onChange={(e) => setSex(e.target.value)}
+          options={sexTypes}
+          fullWidth
+        />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Tipo de sangre
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Select
+          id="bloodType"
           name="bloodType"
           value={bloodType}
           onChange={(e) => setBloodType(e.target.value)}
-          fullWidth
+          options={bloodTypes}
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Dirección
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <TextArea
           name="address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           fullWidth
+          rows="5"
+          placeholder=""
         />
 
         <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
@@ -121,35 +177,42 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
             Enfermedades
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="illness"
           value={illness}
           onChange={(e) => setIllness(e.target.value)}
           fullWidth
+          type="text"
+          id="illness"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Medicamentos que debe tomar
           </SoftTypography>
         </SoftBox>
-        <TextField
-          name="medicine"
+
+        <Input
           value={medicine}
           onChange={(e) => setMedicine(e.target.value)}
           fullWidth
+          type="text"
+          id="medicine"
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Medicamentos que debe tomar en giras de la BCDB
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="medicineOnTour"
           value={medicineOnTour}
           onChange={(e) => setMedicineOnTour(e.target.value)}
           fullWidth
+          type="text"
+          id="medicineOnTour"
         />
-
         <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
 
         <a
@@ -163,55 +226,72 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
             Nombre del encargado
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="familyMemberName"
           value={familyMemberName}
           onChange={(e) => setFamilyMemberName(e.target.value)}
           fullWidth
+          type="text"
+          id="familyMemberName"
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Número del encargado
+            Número de contacto del encargado
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="familyMemberNumber"
           value={familyMemberNumber}
           onChange={(e) => setFamilyMemberNumber(e.target.value)}
           fullWidth
+          type="text"
+          id="familyMemberNumber"
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Cédula del encargado
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="familyMemberNumberId"
           value={familyMemberNumberId}
           onChange={(e) => setFamilyMemberNumberId(e.target.value)}
           fullWidth
+          type="text"
+          id="familyMemberNumberId"
         />
+
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Parentesco del encargado
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Select
           name="familyMemberRelationship"
           value={familyMemberRelationship}
           onChange={(e) => setFamilyMemberRelationship(e.target.value)}
           fullWidth
+          options={relationshipTypes}
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
             Ocupación del encargado
           </SoftTypography>
         </SoftBox>
-        <TextField
+
+        <Input
           name="familyMemberOccupation"
           value={familyMemberOccupation}
           onChange={(e) => setFamilyMemberOccupation(e.target.value)}
           fullWidth
+          type="text"
+          id="familyMemberOccupation"
         />
 
         <DialogActions>

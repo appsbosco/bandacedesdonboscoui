@@ -1,34 +1,37 @@
-import TextField from "@mui/material/TextField";
-import { useField } from "formik";
+import React from "react";
 import PropTypes from "prop-types";
+import { useField } from "formik";
 
-const InputField = ({ value, type, label, ...props }) => {
+const InputField = ({ type, label, ...props }) => {
   const [field, meta] = useField(props);
 
   return (
-    <TextField
-      fullWidth
-      label={label}
-      type={type}
-      value={value}
-      {...field}
-      {...props}
-      error={meta.touched && Boolean(meta.error)}
-      helperText={meta.touched && meta.error}
-      sx={{
-        "& .MuiInputBase-root": {
-          fontSize: "1.5rem", // Adjust the font size as desired
-          padding: "1px", // Adjust the padding as desired
-        },
-      }}
-    />
+    <>
+      <input
+        {...field}
+        {...props}
+        type={type}
+        id={props.id}
+        className={`border ${
+          meta.touched && meta.error ? "border-red-500" : "border-gray-300"
+        } text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+        style={{
+          border: "1px solid #e2e8f0",
+          borderRadius: "0.375rem",
+          width: "100%",
+          height: "calc(2.25rem + 2px)",
+          color: "#000",
+        }}
+      />
+      {meta.touched && meta.error && <div className="text-red-500 text-xs mt-1">{meta.error}</div>}
+    </>
   );
 };
 
 InputField.propTypes = {
   label: PropTypes.string,
   type: PropTypes.string,
-  value: PropTypes.string,
+  id: PropTypes.string,
 };
 
 export default InputField;

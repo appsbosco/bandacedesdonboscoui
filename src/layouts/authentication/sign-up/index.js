@@ -380,11 +380,12 @@ const SignUp = () => {
                         </label>
                       </SoftBox>
                       <SelectField
-                        label=""
+                        label="Seleccione una opción"
                         name="answer"
                         options={options}
                         value={userAnswer}
                         onChange={handleUserAnswerChange}
+                        style={{ width: "100%" }} // Apply inline style to set width to 100%
                       />
                     </SoftBox>
 
@@ -399,7 +400,7 @@ const SignUp = () => {
                               Estado{" "}
                             </label>
                           </SoftBox>
-                          <SelectField label="" name="state" options={states} />
+                          <SelectField label="Seleccione su estado" name="state" options={states} />
                         </SoftBox>
                         <SoftBox mb={2}>
                           <SoftBox mb={1} ml={0.5}>
@@ -410,7 +411,11 @@ const SignUp = () => {
                               Instrumento{" "}
                             </label>
                           </SoftBox>
-                          <SelectField label="" name="instrument" options={instrument} />
+                          <SelectField
+                            label="Seleccione un instrumento"
+                            name="instrument"
+                            options={instrument}
+                          />
                         </SoftBox>
                       </>
                     )}
@@ -423,7 +428,7 @@ const SignUp = () => {
                           Rol{" "}
                         </label>
                       </SoftBox>
-                      <SelectField label="" name="role" options={roles} />
+                      <SelectField label="Seleccione su rol" name="role" options={roles} />
                     </SoftBox>
 
                     <SoftBox mb={2}>
@@ -483,7 +488,11 @@ const SignUp = () => {
                           Año lectivo
                         </label>
                       </SoftBox>
-                      <SelectField label="" name="grade" options={grades} />
+                      <SelectField
+                        label="Seleccione su año académico"
+                        name="grade"
+                        options={grades}
+                      />
                     </SoftBox>
                   </SoftBox>
                 </FormStep>

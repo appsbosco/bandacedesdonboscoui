@@ -15,6 +15,8 @@ import { useEffect, useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./style.css";
+import Input from "components/Input";
+import TextArea from "components/TextArea";
 
 // GraphQL queries and mutations
 const GET_EVENTS = gql`
@@ -260,7 +262,7 @@ const EventsCalendar = () => {
           <DialogTitle>{selectedEvent ? "Editar evento" : "Añadir evento"}</DialogTitle>
           <DialogContent>
             <form onSubmit={handleFormSubmit}>
-              <TextField
+              <Input
                 autoFocus
                 margin="dense"
                 name="title"
@@ -271,7 +273,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <Input
                 margin="dense"
                 name="place"
                 label="Place"
@@ -281,7 +283,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <Input
                 margin="dense"
                 name="date"
                 label="Date"
@@ -291,7 +293,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <Input
                 margin="dense"
                 name="time"
                 label="Time"
@@ -301,7 +303,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <Input
                 margin="dense"
                 name="arrival"
                 label="Arrival"
@@ -311,7 +313,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <Input
                 margin="dense"
                 name="departure"
                 label="Departure"
@@ -321,7 +323,7 @@ const EventsCalendar = () => {
                 onChange={handleInputChange}
               />
 
-              <TextField
+              <TextArea
                 margin="dense"
                 name="description"
                 label="Description"
