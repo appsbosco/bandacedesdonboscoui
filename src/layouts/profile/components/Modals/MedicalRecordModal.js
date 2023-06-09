@@ -150,7 +150,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
 
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Dirección
+            Dirección exacta de residencia
           </SoftTypography>
         </SoftBox>
 
@@ -171,6 +171,8 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
         >
           Condiciones médicas:
         </a>
+        <br />
+        <p style={{ fontSize: "0.8rem" }}>Dejar en blanco en caso de no tener</p>
 
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
@@ -219,11 +221,11 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
           href="#0"
           className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
         >
-          Información encargado:
+          Información del encargado o contacto de emergencia
         </a>
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Nombre del encargado
+            Nombre completo
           </SoftTypography>
         </SoftBox>
 
@@ -238,7 +240,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
 
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Número de contacto del encargado
+            Número de contacto
           </SoftTypography>
         </SoftBox>
 
@@ -253,7 +255,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
 
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Cédula del encargado
+            Cédula de identidad
           </SoftTypography>
         </SoftBox>
 
@@ -268,7 +270,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
 
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Parentesco del encargado
+            Parentesco
           </SoftTypography>
         </SoftBox>
 
@@ -281,7 +283,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
         />
         <SoftBox mb={1} ml={0.5}>
           <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Ocupación del encargado
+            Ocupación
           </SoftTypography>
         </SoftBox>
 
