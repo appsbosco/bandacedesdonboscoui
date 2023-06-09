@@ -28,6 +28,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 // Dashboard layout components
 import BuildByDevelopers from "layouts/dashboard/components/BuildByDevelopers";
 import WorkWithTheRockets from "layouts/dashboard/components/WorkWithTheRockets";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 // Data
 import { gql, useMutation, useQuery } from "@apollo/client";
@@ -451,11 +452,17 @@ const Dashboard = () => {
                             </div>
                             <div className="w-full max-w-4xl mx-auto mt-16">
                               <div className="relative block w-full overflow-hidden shadow-lg aspect-w-16 aspect-h-9 rounded-3xl shadow-sky-100/50 md:aspect-w-3 md:aspect-h-2">
-                                <img
+                                <LazyLoadImage
                                   src={cover}
                                   alt=""
-                                  className="object-cover w-full rounded-3xl bg-slate-100"
+                                  effect="opacity"
+                                  style={{
+                                    objectFit: "cover",
+                                    width: "100%",
+                                    height: "100%",
+                                  }}
                                 />
+
                                 <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-slate-900/10"></div>
                               </div>
                             </div>

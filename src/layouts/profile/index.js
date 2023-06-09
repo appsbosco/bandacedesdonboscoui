@@ -722,7 +722,9 @@ const Overview = () => {
                       p={2}
                       height="100%"
                     >
-                      {userRole === "Integrante BCDB" || userRole === "Principal de sección" ? (
+                      {userRole === "Asistente de sección" ||
+                      userRole === "Principal de sección" ||
+                      userRole === "Integrante BCDB" ? (
                         <>
                           <Button
                             variant="contained"

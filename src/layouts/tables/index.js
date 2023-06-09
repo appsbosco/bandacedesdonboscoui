@@ -27,6 +27,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupIcon from "@mui/icons-material/Group";
 import { useMediaQuery } from "react-responsive";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const GET_USERS = gql`
   query getUsers {
@@ -258,11 +259,22 @@ const Tables = () => {
                           href=""
                           className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
                         >
-                          <img
+                          <LazyLoadImage
+                            src={selectedUser.avatar}
+                            alt=""
+                            effect="opacity"
+                            style={{
+                              objectFit: "cover",
+                              width: "100%",
+                              height: "100%",
+                            }}
+                            className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                          />
+                          {/* <img
                             src={selectedUser.avatar}
                             alt=""
                             className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                          />
+                          /> */}
                           <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
                         </a>
                       </div>

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, gql, useQuery } from "@apollo/client";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -20,6 +22,7 @@ const GET_USERS_BY_ID = gql`
     }
   }
 `;
+
 const UPLOAD_PROFILE_PIC = gql`
   mutation UploadProfilePic($id: ID!, $avatar: String!) {
     uploadProfilePic(id: $id, avatar: $avatar) {
@@ -54,13 +57,9 @@ const ProfileImageUploader = () => {
     if (e.target.files[0]) {
       try {
         const imageUrl = await uploadImageToCloudinary(e.target.files[0]);
-
-        console.log("imageUrl", imageUrl);
         const { data } = await uploadProfilePic({
           variables: { id, avatar: imageUrl },
         });
-
-        console.log("UPDATED DATA", data);
 
         const updatedUserAvatar = data.uploadProfilePic.avatar;
         setSelectedImage(updatedUserAvatar);
@@ -71,7 +70,7 @@ const ProfileImageUploader = () => {
   };
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <p></p>;
   }
 
   if (error) {
@@ -88,24 +87,33 @@ const ProfileImageUploader = () => {
         boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px",
       }}
     >
-      <label
-        htmlFor="imageInput"
-        style={{
-          display: "inline-block",
-          width: "2rem",
-          height: "2rem",
-          textAlign: "center",
-          cursor: "pointer",
-        }}
-      >
-        +
-        <input
-          id="imageInput"
-          type="file"
-          style={{ display: "none" }}
-          onChange={handleImageChange}
+      {selectedImage ? (
+        <LazyLoadImage
+          effect="blur"
+          src={selectedImage}
+          alt="Profile Image"
+          className="w-100 h-100"
         />
-      </label>
+      ) : (
+        <label
+          htmlFor="imageInput"
+          style={{
+            display: "inline-block",
+            width: "2rem",
+            height: "2rem",
+            textAlign: "center",
+            cursor: "pointer",
+          }}
+        >
+          +
+          <input
+            id="imageInput"
+            type="file"
+            style={{ display: "none" }}
+            onChange={handleImageChange}
+          />
+        </label>
+      )}
     </div>
   );
 };
