@@ -212,70 +212,88 @@ const Dashboard = () => {
               </SoftBox>
               {/* Other components */}
               <SoftBox p={2} style={{ minWidth: "100%", height: "100%" }}>
-                <Grid
-                  container
-                  spacing={3}
-                  style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", height: "100%" }}
-                >
-                  {eventData &&
-                    eventData.getEvents.map((event) => {
-                      const formattedDate = new Date(event.date).toLocaleDateString("en-GB");
-                      return (
-                        <Grid
-                          item
-                          xs={12}
-                          md={6}
-                          xl={3}
-                          key={event.id}
-                          style={{
-                            minWidth: "350px",
-                            flexShrink: 0,
-                            maxWidth: "100%",
-                            minHeight: "100%",
-                          }}
-                        >
-                          <DefaultProjectCard
+                {eventData.getEvents && eventData.getEvents.length === 0 ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                    }}
+                  >
+                    <p>No tienes eventos próximos</p>
+                  </div>
+                ) : (
+                  <Grid
+                    container
+                    spacing={3}
+                    style={{
+                      display: "flex",
+                      flexWrap: "nowrap",
+                      overflowX: "auto",
+                      height: "100%",
+                    }}
+                  >
+                    {eventData &&
+                      eventData.getEvents.map((event) => {
+                        const formattedDate = new Date(event.date).toLocaleDateString("en-GB");
+                        return (
+                          <Grid
+                            item
+                            xs={12}
+                            md={6}
+                            xl={3}
+                            key={event.id}
                             style={{
-                              minWidth: "100%",
+                              minWidth: "350px",
+                              flexShrink: 0,
                               maxWidth: "100%",
                               minHeight: "100%",
                             }}
-                            image={homeDecor1}
-                            label={`Lugar: ${event.place}`}
-                            title={`${event.title}`}
-                            description={`${event.description}`}
-                            actions={[
-                              {
-                                type: "internal",
-                                route: "",
-                                color: "info",
-                                label: "Ver más",
-                                onClick: () => handleOpenModal("details", event),
-                              },
-                              {
-                                type: "internal",
-                                route: "",
-                                color: "info",
-                                label: "Editar",
-                                onClick: () => handleOpenModal("edit", event),
-                              },
-                              {
-                                type: "internal",
-                                route: "", // Add the route for remove event
-                                color: "error", // Use a suitable color for remove event
-                                label: "Eliminar",
-                                icon: "delete", // Add the icon for remove event (replace with the appropriate icon name if needed)
-                                onClick: () => handleOpenModal("remove", event),
-                              },
-                            ].filter(Boolean)}
-                            handleVerMasClick={() => handleOpenModal("details", event)}
-                            handleEditarClick={() => handleOpenModal("edit", event)}
-                            handleRemoveClick={() => handleOpenModal("remove", event)}
-                          />
-                        </Grid>
-                      );
-                    })}
-                </Grid>
+                          >
+                            <DefaultProjectCard
+                              style={{
+                                minWidth: "100%",
+                                maxWidth: "100%",
+                                minHeight: "100%",
+                              }}
+                              image={homeDecor1}
+                              label={`Lugar: ${event.place}`}
+                              title={`${event.title}`}
+                              description={`${event.description}`}
+                              actions={[
+                                {
+                                  type: "internal",
+                                  route: "",
+                                  color: "info",
+                                  label: "Ver más",
+                                  onClick: () => handleOpenModal("details", event),
+                                },
+                                {
+                                  type: "internal",
+                                  route: "",
+                                  color: "info",
+                                  label: "Editar",
+                                  onClick: () => handleOpenModal("edit", event),
+                                },
+                                {
+                                  type: "internal",
+                                  route: "", // Add the route for remove event
+                                  color: "error", // Use a suitable color for remove event
+                                  label: "Eliminar",
+                                  icon: "delete", // Add the icon for remove event (replace with the appropriate icon name if needed)
+                                  onClick: () => handleOpenModal("remove", event),
+                                },
+                              ].filter(Boolean)}
+                              handleVerMasClick={() => handleOpenModal("details", event)}
+                              handleEditarClick={() => handleOpenModal("edit", event)}
+                              handleRemoveClick={() => handleOpenModal("remove", event)}
+                            />
+                          </Grid>
+                        );
+                      })}
+                  </Grid>
+                )}
               </SoftBox>
               {/* Event Details Modal */}
 
