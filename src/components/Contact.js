@@ -2,6 +2,7 @@ import React from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import contact from "../assets/images/contact.jpg";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Contact = () => {
   return (
@@ -21,7 +22,7 @@ const Contact = () => {
                 </h2>
 
                 <div className="mt-12 aspect-w-3 aspect-h-2 sm:mt-16">
-                  <img
+                  <LazyLoadImage
                     src={contact}
                     alt=""
                     className="object-cover w-full h-full rounded-3xl xl:translate-x-16"

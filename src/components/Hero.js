@@ -3,6 +3,7 @@ import landing from "../assets/images/landing.jpg";
 import pasion from "../assets/images/pasion.png";
 import friends from "../assets/images/friends.png";
 import family from "../assets/images/family.png";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Hero = () => {
   return (
@@ -137,7 +138,7 @@ const Hero = () => {
         {/* Hero graphics */}
         <div className="w-full max-w-lg mx-auto lg:mr-0">
           <div className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50">
-            <img
+            <LazyLoadImage
               className="object-cover object-center w-full h-full rounded-2xl"
               src={landing}
               alt=""
@@ -172,19 +173,19 @@ const Hero = () => {
               <div>
                 {/* Experience with Tech 1 */}
                 <div className="absolute right-12 -top-6 inline-flex h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:-left-28 md:top-14 lg:left-44 lg:-top-6 lg:px-10 2xl:-left-48 2xl:top-14">
-                  <img src={family} alt="" className="w-4 h-auto" />
+                  <LazyLoadImage src={family} alt="" className="w-4 h-auto" />
                   Familia
                 </div>
 
                 {/* Experience with Tech 2 */}
                 <div className="absolute top-full left-12 inline-flex h-12 w-max -translate-y-6 items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-0 md:-translate-x-20 md:-translate-y-24 lg:-left-3 lg:-translate-y-24 lg:px-10 xl:-left-6 xl:-translate-y-32 xl:-translate-x-28">
-                  <img src={friends} alt="" className="w-auto h-6" />
+                  <LazyLoadImage src={friends} alt="" className="w-auto h-6" />
                   Amigos
                 </div>
 
                 {/* Experience with Tech 3 */}
                 <div className="absolute top-[350px] hidden h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-full md:inline-flex md:-translate-x-32 lg:left-48 lg:hidden lg:px-10 2xl:left-full 2xl:inline-flex 2xl:-translate-x-28">
-                  <img src={pasion} alt="" className="h-auto w-7" />
+                  <LazyLoadImage src={pasion} alt="" className="h-auto w-7" />
                   Pasión
                 </div>
               </div>

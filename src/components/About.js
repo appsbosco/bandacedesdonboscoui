@@ -7,13 +7,14 @@ import about from "../assets/images/about-hero-bg.svg";
 import aboutHero from "../assets/images/about.jpg";
 import mision from "../assets/images/mision.jpg";
 import vision from "../assets/images/vision.jpg";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const About = () => {
   return (
     <>
       <Header />
       <section className="relative bg-slate-50/50">
-        <img
+        <LazyLoadImage
           src={about}
           alt=""
           className="absolute inset-0 object-cover object-left w-full h-full lg:w-2/3"
@@ -55,7 +56,7 @@ const About = () => {
         </div>
 
         <div className="bg-picton-blue-25 relative h-96 w-full md:h-[600px] lg:absolute lg:inset-y-0 lg:right-0 lg:h-full lg:w-1/3">
-          <img
+          <LazyLoadImage
             src={aboutHero}
             alt=""
             className="absolute inset-0 object-cover object-top w-full h-full"
@@ -167,7 +168,7 @@ const About = () => {
             <div className="relative w-full max-w-xl pb-24 mx-auto lg:order-1 lg:mx-0 lg:max-w-none">
               <div className="relative w-full max-w-lg mx-auto lg:mr-auto lg:ml-0">
                 <div className="aspect-w-5 aspect-h-7">
-                  <img
+                  <LazyLoadImage
                     src={tour}
                     alt=""
                     className="object-cover object-left w-full h-full rounded-2xl"
@@ -200,7 +201,7 @@ const About = () => {
                   href=""
                   className="relative order-1 block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
                 >
-                  <img
+                  <LazyLoadImage
                     src={mision}
                     alt=""
                     className="object-cover object-top w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
@@ -224,7 +225,7 @@ const About = () => {
                   href=""
                   className="relative order-2 block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
                 >
-                  <img
+                  <LazyLoadImage
                     src={vision}
                     alt=""
                     className="object-cover object-top w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"

@@ -536,10 +536,11 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
             onChange={(e) => setPlace(e.target.value)}
           />
         </div>
-
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Fecha del evento</label>
+            <label style={{ fontWeight: "bold" }}>
+              Fecha del evento <span style={{ color: "red" }}>*</span>
+            </label>
           </div>
           <Input
             margin="dense"
@@ -548,6 +549,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
             fullWidth
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            required
           />
         </div>
 
@@ -615,7 +617,7 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSubmit} color="primary">
+        <Button onClick={handleSubmit} disabled={!date} color="primary">
           Guardar
         </Button>
       </DialogActions>

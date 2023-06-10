@@ -19,6 +19,7 @@ Coded by www.creative-tim.com
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 // BCDB React components
 import SoftBox from "components/SoftBox";
@@ -502,7 +503,7 @@ const SignUp = () => {
 
           <div className="w-full max-w-lg mx-auto lg:mr-0 hidden lg:block">
             <div className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50">
-              <img
+              <LazyLoadImage
                 className="object-cover object-center w-full h-full rounded-2xl"
                 src={cover}
                 alt=""

@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../../styles.css";
 import "../../../main.css";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 // react-router-dom components
 
@@ -265,7 +266,7 @@ const SignIn = () => {
 
           <div className="w-full max-w-lg mx-auto lg:mr-0 hidden lg:block">
             <div className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50">
-              <img
+              <LazyLoadImage
                 className="object-cover object-center w-full h-full rounded-2xl"
                 src={cover}
                 alt=""
