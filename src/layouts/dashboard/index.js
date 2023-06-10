@@ -212,7 +212,7 @@ const Dashboard = () => {
               </SoftBox>
               {/* Other components */}
               <SoftBox p={2} style={{ minWidth: "100%", height: "100%" }}>
-                {eventData.getEvents && eventData.getEvents.length === 0 ? (
+                {eventData?.getEvents && eventData?.getEvents.length === 0 ? (
                   <div
                     style={{
                       display: "flex",
