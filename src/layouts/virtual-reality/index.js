@@ -8,18 +8,6 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 import AttendanceHistoryTable from "./GetAttendances";
 import "./reset.css";
-const GET_USERS = gql`
-  query getUsers {
-    getUsers {
-      id
-      name
-      firstSurName
-      secondSurName
-      instrument
-      role
-    }
-  }
-`;
 
 const Tables = () => {
   return (

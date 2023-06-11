@@ -1,9 +1,8 @@
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
-import PropTypes from "prop-types";
 import { useState } from "react";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Modal, TextField, Typography } from "@mui/material";
+import { Box, IconButton, Modal } from "@mui/material";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Dialog from "@mui/material/Dialog";
@@ -37,79 +36,13 @@ import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
 import Input from "components/Input";
 import TextArea from "components/TextArea";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
-
-const GET_EVENTS = gql`
-  query getEvents {
-    getEvents {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const ADD_EVENT = gql`
-  mutation newEvent($input: EventInput!) {
-    newEvent(input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const UPDATE_EVENT = gql`
-  mutation updateEvent($id: ID!, $input: EventInput!) {
-    updateEvent(id: $id, input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const DELETE_EVENT = gql`
-  mutation deleteEvent($id: ID!) {
-    deleteEvent(id: $id)
-  }
-`;
+import EventFormModal from "components/EventFormModal";
+import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT, SEND_EMAIL } from "graphql/mutations";
+import { GET_USERS_BY_ID, GET_EVENTS, GET_USERS } from "graphql/queries";
 
 const Dashboard = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+  const { data: usersData } = useQuery(GET_USERS);
 
   const userRole = userData?.getUser?.role;
 
@@ -126,6 +59,8 @@ const Dashboard = () => {
   const [deleteEvent] = useMutation(DELETE_EVENT, {
     refetchQueries: [{ query: GET_EVENTS }],
   });
+
+  const [sendEmail] = useMutation(SEND_EMAIL);
 
   const formatTimeTo12Hour = (time) => {
     return moment(time, "HH:mm").format("h:mma");
@@ -153,8 +88,427 @@ const Dashboard = () => {
     setSelectedEvent(null);
   };
 
+  const handleSendEmail = (eventData) => {
+    const formattedTime = new Date(`2000-01-01T${eventData.time}`).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+
+    const dateObj = new Date(eventData.date);
+    const formattedDate = dateObj.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const users = usersData?.getUsers;
+    if (users) {
+      users.forEach((user) => {
+        const { email, name } = user;
+        const emailContent = `
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
+        <html lang="en">
+          <head></head>
+          <div
+            id="__react-email-preview"
+            style="
+              display: none;
+              overflow: hidden;
+              line-height: 1px;
+              opacity: 0;
+              max-height: 0;
+              max-width: 0;
+            "
+          >
+          <p
+          style="
+            font-size: 32px;
+            line-height: 1.3;
+            margin: 16px 0;
+            font-weight: 700;
+            color: #484848;
+          "
+        >
+          ¡Hola, ${name} ! Tienes una nueva presentación con la BCDB.
+        </p>
+            <div>
+               ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
+            </div>
+          </div>
+        
+          <body
+            style="
+              background-color: #ffffff;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
+                Cantarell, 'Helvetica Neue', sans-serif;
+            "
+          >
+            <table
+              style="
+                background-color: #ffffff;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
+                  Cantarell, 'Helvetica Neue', sans-serif;
+              "
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      role="presentation"
+                      cellspacing="0"
+                      cellpadding="0"
+                      border="0"
+                      width="100%"
+                      style="max-width: 37.5em; margin: 0 auto; padding: 20px 0 48px; width: 580px"
+                    >
+                      <tr style="width: 100%">
+                        <td>
+                          <table
+                            align="center"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            width="100%"
+                          >
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <img
+                                    alt="BCDB"
+                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+                                    style="
+                                    display: block;
+                              outline: none;
+                              border: none;
+                              text-decoration: none;
+                              margin: 0;
+                              padding: 0;
+                              max-width: 30%;
+                              height: auto;
+                                    "
+                                  />
+                                  <p
+                                  style="
+                                    font-size: 26px;
+                                    line-height: 1.3;
+                                    margin: 16px 0;
+                                    font-weight: 700;
+                                    color: #484848;
+                                  "
+                                >
+                                  ${eventData.title} 🙌🏻 🎶
+                                </p>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <!-- <table
+                            align="center"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            width="100%"
+                          >
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <img
+                                    alt=""
+                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+                                    
+                                    style="
+                                    display: block;
+                                    outline: none;
+                                    border: none;
+                                    text-decoration: none;
+                                    margin: 0 auto;
+                                    margin-bottom: 16px;
+                                    border-radius: 50%;
+                                    max-width: 100%;
+                                    height: auto;
+                                    "
+                                  />
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table> -->
+                          <table
+                            style="padding-bottom: 20px"
+                            align="center"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            width="100%"
+                          >
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <table
+                                    width="100%"
+                                    align="center"
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                  >
+                                    <tbody style="width: 100%">
+                                      <tr style="width: 100%">
+                                        <p
+                                          style="
+                                            font-size: 32px;
+                                            line-height: 1.3;
+                                            margin: 16px 0;
+                                            font-weight: 700;
+                                            color: #484848;
+                                          "
+                                        >
+                                          ¡Hola, ${name} ! Tienes una nueva presentación con la BCDB.
+                                        </p>
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                            padding: 24px;
+                                            background-color: #f2f3f3;
+                                            border-radius: 4px;
+                                          "
+                                        >
+                                          “Esperamos que este correo le encuentre lleno de entusiasmo y
+                                          listo/a para unirse a una nueva presentación. Nos complace
+                                          anunciarle que se avecina una increíble presentación y queremos
+                                          contar con cada uno de ustedes para hacer de este evento un
+                                          verdadero éxito.”
+                                        </p>
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                          "
+                                        >
+                                          Fecha:  ${formattedDate}
+                                        </p>
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                          "
+                                        >
+                                          Hora: 
+                                          ${formattedTime}
+                                        </p>
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                          "
+                                        >
+                                          Lugar: ${eventData.place}
+                                        </p>
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                            padding-bottom: 16px;
+                                          "
+                                        >
+                                          Descripción del evento:  ${eventData.description}
+                                        </p>
+        
+                                        <p
+                                          style="
+                                            font-size: 18px;
+                                            line-height: 1.4;
+                                            margin: 16px 0;
+                                            color: #484848;
+                                            padding-bottom: 16px;
+                                          "
+                                        >
+                                          ¡Sigamos haciendo música y preparémonos para ofrecer una
+                                          presentación inolvidable! ¡Nos vemos pronto!
+                                        </p>
+        
+                                        <a
+                                          href="https://bandacedesdonbosco.com/"
+                                          target="_blank"
+                                          style="
+                                            background-color: #293964;
+                                            border-radius: 3px;
+                                            color: #fff;
+                                            font-size: 18px;
+                                            text-decoration: none;
+                                            text-align: center;
+                                            display: inline-block;
+                                            width: 100%;
+                                            p-y: 19px;
+                                            line-height: 100%;
+                                            max-width: 100%;
+                                            padding: 19px 0px;
+                                          "
+                                          ><span
+                                            ><!--[if mso
+                                              ]><i
+                                                style="
+                                                  letter-spacing: undefinedpx;
+                                                  mso-font-width: -100%;
+                                                  mso-text-raise: 28.5;
+                                                "
+                                                hidden
+                                                >&nbsp;</i
+                                              ><!
+                                            [endif]--></span
+                                          ><span
+                                            style="
+                                              background-color: #293964;
+                                              border-radius: 3px;
+                                              color: #fff;
+                                              font-size: 18px;
+                                              text-decoration: none;
+                                              text-align: center;
+                                              display: inline-block;
+                                              width: 100%;
+                                              p-y: 19px;
+                                              max-width: 100%;
+                                              line-height: 120%;
+                                              text-transform: none;
+                                              mso-padding-alt: 0px;
+                                              mso-text-raise: 14.25px;
+                                            "
+                                            >Ver más</span
+                                          ><span
+                                            ><!--[if mso
+                                              ]><i
+                                                style="letter-spacing: undefinedpx; mso-font-width: -100%"
+                                                hidden
+                                                >&nbsp;</i
+                                              ><!
+                                            [endif]--></span
+                                          ></a
+                                        >
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <hr
+                            style="
+                              width: 100%;
+                              border: none;
+                              border-top: 1px solid #eaeaea;
+                              border-color: #cccccc;
+                              margin: 20px 0;
+                            "
+                          />
+                          <table
+                            align="center"
+                            border="0"
+                            cellpadding="0"
+                            cellspacing="0"
+                            role="presentation"
+                            width="100%"
+                          >
+                            <tbody>
+                              <tr>
+                                <td>
+                                  <table
+                                    width="100%"
+                                    align="center"
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                  >
+                                    <tbody style="width: 100%">
+                                      <tr style="width: 100%">
+                                        <p
+                                          style="
+                                            font-size: 14px;
+                                            line-height: 24px;
+                                            margin: 16px 0;
+                                            color: #9ca299;
+                                            margin-bottom: 10px;
+                                          "
+                                        >
+                                          Copyright © 2023 Banda CEDES Don Bosco. Todos los derechos
+                                          reservados
+                                        </p>
+                                        <a
+                                          target="_blank"
+                                          style="
+                                            color: #9ca299;
+                                            text-decoration: underline;
+                                            font-size: 14px;
+                                          "
+                                          href="https://bandacedesdonbosco.com/"
+                                        ></a>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </body>
+        </html>
+        
+  `;
+        sendEmail({
+          variables: {
+            input: {
+              to: email,
+              subject: "Tienes una nueva presentación con la BCDB",
+              text: "",
+              html: emailContent,
+            },
+          },
+        })
+          .then(({ data }) => {
+            if (data.sendEmail) {
+              console.log("Email sent successfully");
+            } else {
+              console.log("Failed to send email");
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending email:", error);
+          });
+      });
+    }
+  };
+
   const handleAddEvent = async (eventData) => {
     await addEvent({ variables: { input: eventData } });
+    handleSendEmail(eventData);
     handleCloseModal();
   };
 
@@ -507,169 +861,6 @@ const Dashboard = () => {
       <Footer />
     </DashboardLayout>
   );
-};
-
-const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSubmit }) => {
-  const [title, setTitle] = useState(initialValues ? initialValues.title : "");
-  const [place, setPlace] = useState(initialValues ? initialValues.place : "");
-  const [date, setDate] = useState(initialValues ? initialValues.date : "");
-  const [time, setTime] = useState(initialValues ? initialValues.time : "");
-  const [arrival, setArrival] = useState(initialValues ? initialValues.arrival : "");
-  const [departure, setDeparture] = useState(initialValues ? initialValues.departure : "");
-  const [description, setDescription] = useState(initialValues ? initialValues.description : "");
-
-  const handleSubmit = () => {
-    onSubmit({ title, place, date, time, arrival, departure, description });
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{modalTitle}</DialogTitle>
-      <DialogContent>
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Título del evento</label>
-          </div>
-          <Input
-            autoFocus
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Lugar del evento</label>
-          </div>
-          <Input
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            value={place}
-            onChange={(e) => setPlace(e.target.value)}
-          />
-        </div>
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>
-              Fecha del evento <span style={{ color: "red" }}>*</span>
-            </label>
-          </div>
-          <Input
-            margin="dense"
-            label=""
-            type="date"
-            fullWidth
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora del evento</label>
-          </div>
-          <Input
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora salida de CEDES</label>
-          </div>
-          <Input
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={departure}
-            onChange={(e) => setDeparture(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora aproximada de llegada a CEDES</label>
-          </div>
-          <Input
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={arrival}
-            onChange={(e) => setArrival(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Descripción del evento</label>
-          </div>
-          <TextArea
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            inputProps={{
-              style: {
-                height: "50px",
-                width: "100%",
-              },
-            }}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSubmit} disabled={!date} color="primary">
-          Guardar
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-EventFormModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.string,
-  initialValues: PropTypes.shape({
-    title: PropTypes.string,
-    place: PropTypes.string,
-    date: PropTypes.string,
-    time: PropTypes.string,
-    arrival: PropTypes.string,
-    departure: PropTypes.string,
-    description: PropTypes.string,
-  }),
-  onSubmit: PropTypes.func.isRequired,
-};
-
-EventFormModal.defaultProps = {
-  title: "",
-  initialValues: {
-    title: "",
-    place: "",
-    date: "",
-    time: "",
-    arrival: "",
-    departure: "",
-    description: "",
-  },
 };
 
 export default Dashboard;

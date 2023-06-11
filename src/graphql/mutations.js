@@ -1,9 +1,52 @@
 import { gql } from "@apollo/client";
 
-export const CREATE_EVENT = gql`
-  mutation newEvent($input: EventInput) {
+// Sign Up
+
+export const NEW_ACCOUNT = gql`
+  mutation newUser($input: UserInput) {
+    newUser(input: $input) {
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+      avatar
+    }
+  }
+`;
+
+// Profile Picture
+
+export const UPLOAD_PROFILE_PIC = gql`
+  mutation UploadProfilePic($id: ID!, $avatar: String!) {
+    uploadProfilePic(id: $id, avatar: $avatar) {
+      id
+      avatar
+    }
+  }
+`;
+
+//AUTH
+export const AUTH_USER = gql`
+  mutation authUser($input: AuthInput) {
+    authUser(input: $input) {
+      token
+    }
+  }
+`;
+
+// Events
+export const ADD_EVENT = gql`
+  mutation newEvent($input: EventInput!) {
     newEvent(input: $input) {
       id
+      title
       place
       date
       time
@@ -15,10 +58,16 @@ export const CREATE_EVENT = gql`
 `;
 
 export const UPDATE_EVENT = gql`
-  mutation updateEvent($id: ID!, $input: EventInput) {
+  mutation updateEvent($id: ID!, $input: EventInput!) {
     updateEvent(id: $id, input: $input) {
       id
+      title
       place
+      date
+      time
+      arrival
+      departure
+      description
     }
   }
 `;
@@ -26,5 +75,100 @@ export const UPDATE_EVENT = gql`
 export const DELETE_EVENT = gql`
   mutation deleteEvent($id: ID!) {
     deleteEvent(id: $id)
+  }
+`;
+
+// Email
+export const SEND_EMAIL = gql`
+  mutation SendEmail($input: EmailInput!) {
+    sendEmail(input: $input)
+  }
+`;
+
+// Medical Record
+export const CREATE_MEDICAL_RECORD = gql`
+  mutation CreateMedicalRecord($input: MedicalRecordInput!) {
+    newMedicalRecord(input: $input) {
+      address
+      bloodType
+      familyMemberName
+      familyMemberNumber
+      familyMemberNumberId
+      familyMemberRelationship
+      familyMemberOccupation
+      sex
+      identification
+      illness
+      medicine
+      medicineOnTour
+    }
+  }
+`;
+
+export const UPDATE_MEDICAL_RECORD = gql`
+  mutation UpdateMedicalRecord($id: ID!, $input: MedicalRecordInput!) {
+    updateMedicalRecord(id: $id, input: $input) {
+      id
+      address
+      bloodType
+      familyMemberName
+      familyMemberNumber
+      familyMemberRelationship
+      familyMemberOccupation
+      familyMemberNumberId
+      sex
+      identification
+      illness
+      medicine
+      medicineOnTour
+    }
+  }
+`;
+
+// Inventories
+export const CREATE_INVENTORY = gql`
+  mutation CreateInventory($input: InventoryInput!) {
+    newInventory(input: $input) {
+      condition
+      brand
+      model
+      numberId
+      serie
+      mainteinance
+      details
+    }
+  }
+`;
+
+export const UPDATE_INVENTORY = gql`
+  mutation UpdateInventory($id: ID!, $input: InventoryInput!) {
+    updateInventory(id: $id, input: $input) {
+      brand
+      model
+      numberId
+      serie
+      condition
+      mainteinance
+      details
+    }
+  }
+`;
+
+// Attendance
+export const ADD_ATTENDANCE = gql`
+  mutation ($input: AttendanceInput!) {
+    newAttendance(input: $input) {
+      id
+      user {
+        id
+        name
+        firstSurName
+        secondSurName
+        instrument
+        role
+      }
+      date
+      attended
+    }
   }
 `;

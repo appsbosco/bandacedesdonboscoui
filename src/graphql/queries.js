@@ -1,11 +1,127 @@
 import { gql } from "@apollo/client";
 
+export const GET_USERS_BY_ID = gql`
+  query getUser {
+    getUser {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+      avatar
+    }
+  }
+`;
+
+export const GET_USERS = gql`
+  query getUsers {
+    getUsers {
+      id
+      name
+      firstSurName
+      secondSurName
+      instrument
+      role
+    }
+  }
+`;
+
+// Events
 export const GET_EVENTS = gql`
   query getEvents {
     getEvents {
       id
+      title
       place
+      date
+      time
+      arrival
+      departure
       description
+    }
+  }
+`;
+
+// Inventories
+export const GET_ALL_INVENTORIES = gql`
+  query GetAllInventories {
+    getInventories {
+      id
+      condition
+      brand
+      model
+      numberId
+      serie
+      mainteinance
+      details
+      user {
+        id
+        name
+        firstSurName
+        secondSurName
+        instrument
+      }
+    }
+  }
+`;
+
+export const GET_INVENTORY_BY_USER = gql`
+  query getInventoryByUser {
+    getInventoryByUser {
+      id
+      condition
+      brand
+      model
+      numberId
+      serie
+      mainteinance
+      details
+    }
+  }
+`;
+
+// Medical Records
+export const GET_MEDICAL_RECORD_BY_USER = gql`
+  query getMedicalRecordByUser {
+    getMedicalRecordByUser {
+      id
+      identification
+      sex
+      bloodType
+      address
+      familyMemberName
+      familyMemberNumber
+      familyMemberNumberId
+      familyMemberRelationship
+      familyMemberOccupation
+      illness
+      medicine
+      medicineOnTour
+    }
+  }
+`;
+
+// Attendance
+
+export const GET_ALL_ATTENDANCE = gql`
+  query GetAllAttendance {
+    getAllAttendance {
+      attended
+      date
+      id
+      user {
+        name
+        firstSurName
+        secondSurName
+        instrument
+      }
     }
   }
 `;

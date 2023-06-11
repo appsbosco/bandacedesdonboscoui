@@ -1,24 +1,9 @@
 import { gql, useQuery } from "@apollo/client";
 import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
+import { GET_ALL_ATTENDANCE } from "graphql/queries";
 import PropTypes from "prop-types";
 import { v4 as uuidv4 } from "uuid";
-
-const GET_ALL_ATTENDANCE = gql`
-  query GetAllAttendance {
-    getAllAttendance {
-      attended
-      date
-      id
-      user {
-        name
-        firstSurName
-        secondSurName
-        instrument
-      }
-    }
-  }
-`;
 
 const formatDateString = (dateString) => {
   const date = new Date(parseInt(dateString));
@@ -53,7 +38,19 @@ const AttendanceHistoryTable = () => {
     notifyOnNetworkStatusChange: true,
   });
 
-  if (loading) return <p>Cargando...</p>;
+  if (loading)
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+        }}
+      >
+        <p>Cargando</p>
+      </div>
+    );
   if (error) return <p>Error :(</p>;
 
   const rows = data.getAllAttendance

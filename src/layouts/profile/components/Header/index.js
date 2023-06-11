@@ -43,33 +43,13 @@ import { gql, useQuery } from "@apollo/client";
 import curved0 from "assets/images/curved-images/curved0.jpg";
 import ProfileImageUploader from "../ProfilePicture/ProfileImageUploader";
 import { Avatar } from "@mui/material";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-      avatar
-    }
-  }
-`;
+import { GET_USERS_BY_ID } from "graphql/queries";
 
 const Header = () => {
   const [tabsOrientation, setTabsOrientation] = useState("horizontal");
   const [tabValue, setTabValue] = useState(0);
 
   const { data, loading, error, refetch } = useQuery(GET_USERS_BY_ID);
-  console.log(data);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,7 +66,6 @@ const Header = () => {
   }, [loading, refetch]);
 
   const { name, firstSurName, avatar, instrument } = data?.getUser || {};
-  console.log(data?.getUser);
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.

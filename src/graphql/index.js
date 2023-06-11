@@ -17,58 +17,8 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./style.css";
 import Input from "components/Input";
 import TextArea from "components/TextArea";
-
-// GraphQL queries and mutations
-const GET_EVENTS = gql`
-  query GetEvents {
-    getEvents {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const ADD_EVENT = gql`
-  mutation AddEvent($input: EventInput!) {
-    newEvent(input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const UPDATE_EVENT = gql`
-  mutation UpdateEvent($id: ID!, $input: EventInput!) {
-    updateEvent(id: $id, input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const DELETE_EVENT = gql`
-  mutation DeleteEvent($id: ID!) {
-    deleteEvent(id: $id)
-  }
-`;
+import { GET_EVENTS } from "./queries";
+import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "./mutations";
 
 const EventsCalendar = () => {
   const { loading, error, data, refetch } = useQuery(GET_EVENTS);

@@ -2,35 +2,8 @@ import React, { useState } from "react";
 import { useMutation, gql, useQuery } from "@apollo/client";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-      avatar
-    }
-  }
-`;
-
-const UPLOAD_PROFILE_PIC = gql`
-  mutation UploadProfilePic($id: ID!, $avatar: String!) {
-    uploadProfilePic(id: $id, avatar: $avatar) {
-      id
-      avatar
-    }
-  }
-`;
+import { GET_USERS_BY_ID } from "graphql/queries";
+import { UPLOAD_PROFILE_PIC } from "graphql/mutations";
 
 const ProfileImageUploader = () => {
   const [uploadProfilePic] = useMutation(UPLOAD_PROFILE_PIC);

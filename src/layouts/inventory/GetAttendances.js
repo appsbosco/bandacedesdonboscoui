@@ -1,46 +1,28 @@
 import { gql, useQuery } from "@apollo/client";
 import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
+import { GET_ALL_INVENTORIES } from "graphql/queries";
 import PropTypes from "prop-types";
 import { v4 as uuidv4 } from "uuid";
-
-const GET_ALL_INVENTORIES = gql`
-  query GetAllInventories {
-    getInventories {
-      id
-      condition
-      brand
-      model
-      numberId
-      serie
-      mainteinance
-      details
-      user {
-        id
-        name
-        firstSurName
-        secondSurName
-        instrument
-      }
-    }
-  }
-`;
-
-const formatDateString = (dateString) => {
-  const date = new Date(parseInt(dateString));
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-
-  return `${day}/${month}/${year}`;
-};
 
 const InventoryTable = () => {
   const { loading, error, data, refetch } = useQuery(GET_ALL_INVENTORIES, {
     notifyOnNetworkStatusChange: true,
   });
 
-  if (loading) return <p>Cargando...</p>;
+  if (loading)
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+        }}
+      >
+        <p>Cargando</p>
+      </div>
+    );
   if (error) return <p>Error :(</p>;
 
   const inventoryData = data && data.getInventories ? data.getInventories : [];

@@ -7,19 +7,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useEffect } from "react";
 import AttendanceTable from "./AttendanceTable";
-
-const GET_USERS = gql`
-  query getUsers {
-    getUsers {
-      id
-      name
-      firstSurName
-      secondSurName
-      instrument
-      role
-    }
-  }
-`;
+import { GET_USERS } from "graphql/queries";
 
 const Tables = () => {
   const { loading, error, data, refetch } = useQuery(GET_USERS);

@@ -1,14 +1,7 @@
 import PropTypes from "prop-types";
 
 import { useMutation, useQuery } from "@apollo/client";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from "@material-ui/core";
+
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Modal, Typography } from "@mui/material";
 import homeDecor1 from "assets/images/about.jpg";
@@ -23,80 +16,17 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
 import cover from "assets/images/about.jpg";
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
-// GraphQL queries and mutations
-const GET_EVENTS = gql`
-  query GetEvents {
-    getEvents {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const ADD_EVENT = gql`
-  mutation AddEvent($input: EventInput!) {
-    newEvent(input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const UPDATE_EVENT = gql`
-  mutation UpdateEvent($id: ID!, $input: EventInput!) {
-    updateEvent(id: $id, input: $input) {
-      id
-      title
-      place
-      date
-      time
-      arrival
-      departure
-      description
-    }
-  }
-`;
-
-const DELETE_EVENT = gql`
-  mutation DeleteEvent($id: ID!) {
-    deleteEvent(id: $id)
-  }
-`;
+import Input from "components/Input";
+import TextArea from "components/TextArea";
+import EventFormModal from "components/EventFormModal";
+import { GET_USERS_BY_ID, GET_EVENTS } from "graphql/queries";
+import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
 
 const EventsCalendar = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
 
   const userRole = userData?.getUser?.role;
+
   const { loading, error, data, refetch } = useQuery(GET_EVENTS);
   const [modalType, setModalType] = useState(null); // "add", "edit", or "remove"
 
@@ -271,7 +201,7 @@ const EventsCalendar = () => {
       {/* // Edit Event Modal */}
       {modalType === "edit" &&
         selectedEvent &&
-        (userRole === "Admin" || userRole === "Director" || userRole === "Subdirector") && (
+        (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") && (
           <EventFormModal
             open={openModal}
             onClose={handleCloseModal}
@@ -283,7 +213,7 @@ const EventsCalendar = () => {
 
       {/* // Add Event Modal */}
       {modalType === "add" &&
-        (userRole === "Admin" || userRole === "Director" || userRole === "Subdirector") && (
+        (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") && (
           <EventFormModal
             open={openModal}
             onClose={handleCloseModal}
@@ -447,167 +377,6 @@ const EventsCalendar = () => {
       )}
     </div>
   );
-};
-
-const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSubmit }) => {
-  const [title, setTitle] = useState(initialValues ? initialValues.title : "");
-  const [place, setPlace] = useState(initialValues ? initialValues.place : "");
-  const [date, setDate] = useState(initialValues ? initialValues.date : "");
-  const [time, setTime] = useState(initialValues ? initialValues.time : "");
-  const [arrival, setArrival] = useState(initialValues ? initialValues.arrival : "");
-  const [departure, setDeparture] = useState(initialValues ? initialValues.departure : "");
-  const [description, setDescription] = useState(initialValues ? initialValues.description : "");
-
-  const handleSubmit = () => {
-    onSubmit({ title, place, date, time, arrival, departure, description });
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{modalTitle}</DialogTitle>
-      <DialogContent>
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Título del evento</label>
-          </div>
-          <TextField
-            autoFocus
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Lugar del evento</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            value={place}
-            onChange={(e) => setPlace(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Fecha del evento</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="date"
-            fullWidth
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora del evento</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={moment(time, "HH:mm").format("h:mma")}
-            onChange={(e) => setTime(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora de salida de CEDES</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={departure}
-            onChange={(e) => setDeparture(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Hora aproximada de llegada a CEDES</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="time"
-            fullWidth
-            value={arrival}
-            onChange={(e) => setArrival(e.target.value)}
-          />
-        </div>
-
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <label style={{ fontWeight: "bold" }}>Descripción del evento</label>
-          </div>
-          <TextField
-            margin="dense"
-            label=""
-            type="text"
-            fullWidth
-            inputProps={{
-              style: {
-                height: "50px",
-                width: "100%",
-              },
-            }}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSubmit} color="primary">
-          Guardar
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-EventFormModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.string,
-  initialValues: PropTypes.shape({
-    title: PropTypes.string,
-    place: PropTypes.string,
-    date: PropTypes.string,
-    time: PropTypes.string,
-    arrival: PropTypes.string,
-    departure: PropTypes.string,
-    description: PropTypes.string,
-  }),
-  onSubmit: PropTypes.func.isRequired,
-};
-
-EventFormModal.defaultProps = {
-  title: "",
-  initialValues: {
-    title: "",
-    place: "",
-    date: "",
-    time: "",
-    arrival: "",
-    departure: "",
-    description: "",
-  },
 };
 
 export default EventsCalendar;

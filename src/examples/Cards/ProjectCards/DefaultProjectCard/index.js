@@ -7,27 +7,9 @@ import SoftAvatar from "components/SoftAvatar";
 import SoftBox from "components/SoftBox";
 import SoftButton from "components/SoftButton";
 import SoftTypography from "components/SoftTypography";
+import { GET_USERS_BY_ID } from "graphql/queries";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
 
 function DefaultProjectCard({
   image,

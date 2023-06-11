@@ -26,25 +26,7 @@ import { useSoftUIController } from "context";
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
 import Landing from "layouts/landing/Landing";
 import { setMiniSidenav, setOpenConfigurator } from "context";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
+import { GET_USERS_BY_ID } from "graphql/queries";
 
 export default function App() {
   const [controller, dispatch] = useSoftUIController();

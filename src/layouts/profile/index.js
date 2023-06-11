@@ -39,127 +39,17 @@ import Tooltip from "@mui/material/Tooltip";
 import MedicalRecordModal from "./components/Modals/MedicalRecordModal";
 import { useState } from "react";
 import InventoryModal from "./components/Modals/InventoryModal";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
-
-const GET_INVENTORY_BY_USER = gql`
-  query getInventoryByUser {
-    getInventoryByUser {
-      id
-      condition
-      brand
-      model
-      numberId
-      serie
-      mainteinance
-      details
-    }
-  }
-`;
-
-const CREATE_MEDICAL_RECORD = gql`
-  mutation CreateMedicalRecord($input: MedicalRecordInput!) {
-    newMedicalRecord(input: $input) {
-      address
-      bloodType
-      familyMemberName
-      familyMemberNumber
-      familyMemberNumberId
-      familyMemberRelationship
-      familyMemberOccupation
-      sex
-      identification
-      illness
-      medicine
-      medicineOnTour
-    }
-  }
-`;
-
-const GET_MEDICAL_RECORD_BY_USER = gql`
-  query getMedicalRecordByUser {
-    getMedicalRecordByUser {
-      id
-      identification
-      sex
-      bloodType
-      address
-      familyMemberName
-      familyMemberNumber
-      familyMemberNumberId
-      familyMemberRelationship
-      familyMemberOccupation
-      illness
-      medicine
-      medicineOnTour
-    }
-  }
-`;
-
-const CREATE_INVENTORY = gql`
-  mutation CreateInventory($input: InventoryInput!) {
-    newInventory(input: $input) {
-      condition
-      brand
-      model
-      numberId
-      serie
-      mainteinance
-      details
-    }
-  }
-`;
-
-const UPDATE_MEDICAL_RECORD = gql`
-  mutation UpdateMedicalRecord($id: ID!, $input: MedicalRecordInput!) {
-    updateMedicalRecord(id: $id, input: $input) {
-      id
-      address
-      bloodType
-      familyMemberName
-      familyMemberNumber
-      familyMemberRelationship
-      familyMemberOccupation
-      familyMemberNumberId
-      sex
-      identification
-      illness
-      medicine
-      medicineOnTour
-    }
-  }
-`;
-
-const UPDATE_INVENTORY = gql`
-  mutation UpdateInventory($id: ID!, $input: InventoryInput!) {
-    updateInventory(id: $id, input: $input) {
-      brand
-      model
-      numberId
-      serie
-      condition
-      mainteinance
-      details
-    }
-  }
-`;
+import {
+  GET_USERS_BY_ID,
+  GET_INVENTORY_BY_USER,
+  GET_MEDICAL_RECORD_BY_USER,
+} from "graphql/queries";
+import {
+  CREATE_MEDICAL_RECORD,
+  UPDATE_MEDICAL_RECORD,
+  CREATE_INVENTORY,
+  UPDATE_INVENTORY,
+} from "graphql/mutations";
 
 const Overview = () => {
   const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);

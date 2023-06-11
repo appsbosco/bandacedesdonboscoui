@@ -39,14 +39,7 @@ import { useContext } from "react";
 import UserContext from "UserContext";
 import Header from "components/Header";
 import cover from "../../../assets/images/about.jpg";
-
-const AUTH_USER = gql`
-  mutation authUser($input: AuthInput) {
-    authUser(input: $input) {
-      token
-    }
-  }
-`;
+import { AUTH_USER } from "graphql/mutations";
 
 const SignIn = () => {
   useEffect(() => {

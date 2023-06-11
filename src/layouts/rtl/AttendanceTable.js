@@ -2,59 +2,13 @@ import { gql, useMutation, useQuery } from "@apollo/client";
 import { Button, MenuItem, Select } from "@mui/material";
 import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
+import { ADD_ATTENDANCE } from "graphql/mutations";
+import { GET_USERS } from "graphql/queries";
+import { GET_USERS_BY_ID } from "graphql/queries";
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
-const GET_USERS = gql`
-  query getUsers {
-    getUsers {
-      id
-      name
-      firstSurName
-      secondSurName
-      instrument
-      role
-    }
-  }
-`;
-
-const ADD_ATTENDANCE = gql`
-  mutation ($input: AttendanceInput!) {
-    newAttendance(input: $input) {
-      id
-      user {
-        id
-        name
-        firstSurName
-        secondSurName
-        instrument
-        role
-      }
-      date
-      attended
-    }
-  }
-`;
 
 const AttendanceTable = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
@@ -116,7 +70,19 @@ const AttendanceTable = () => {
     window.location.href = "/attendance-history"; // Replace 'https://example.com' with the URL of the desired page
   };
 
-  if (loading) return <p>Cargando...</p>;
+  if (loading)
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+        }}
+      >
+        <p>Cargando</p>
+      </div>
+    );
   if (error) return <p>Error: {error.message}</p>;
 
   const columns = [

@@ -1,25 +1,7 @@
 import React, { createContext, useState } from "react";
 import { gql, useQuery } from "@apollo/client";
 import PropTypes from "prop-types";
-
-const GET_USERS_BY_ID = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-    }
-  }
-`;
+import { GET_USERS_BY_ID } from "graphql/queries";
 
 const UserContext = createContext();
 

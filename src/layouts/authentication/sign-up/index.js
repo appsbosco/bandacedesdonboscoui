@@ -25,10 +25,7 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 // Authentication layout components
-import CoverLayout from "layouts/authentication/components/CoverLayout";
 
-// Images
-import curved9 from "assets/images/curved-images/curved-6.jpg";
 import * as yup from "yup";
 
 import { gql, useMutation } from "@apollo/client";
@@ -37,6 +34,7 @@ import MultiStepForm, { FormStep } from "../components/MultiStepForm";
 import SelectField from "../components/SelectField";
 import Header from "components/Header";
 import cover from "../../../assets/images/sign-up.jpg";
+import { NEW_ACCOUNT } from "graphql/mutations";
 
 const validationSchema = yup.object().shape({
   name: yup.string().required("Campo obligatorio"),
@@ -107,27 +105,6 @@ const grades = [
 ];
 
 const options = ["Sí", "No"];
-
-// Create new account mutation
-
-const NEW_ACCOUNT = gql`
-  mutation newUser($input: UserInput) {
-    newUser(input: $input) {
-      name
-      firstSurName
-      secondSurName
-      email
-      birthday
-      carnet
-      state
-      grade
-      phone
-      role
-      instrument
-      avatar
-    }
-  }
-`;
 
 const SignUp = () => {
   // Use navigate to redirect user to sign in page
@@ -272,7 +249,6 @@ const SignUp = () => {
                         },
                       },
                     });
-                    console.log(data);
                     // User registered successfully
                     setMessage(`Se creó correctamente el usuario: ${data.newUser.name}`);
 
