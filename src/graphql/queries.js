@@ -27,8 +27,15 @@ export const GET_USERS = gql`
       name
       firstSurName
       secondSurName
-      instrument
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
       role
+      instrument
+      avatar
     }
   }
 `;
