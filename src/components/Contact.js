@@ -3,8 +3,105 @@ import Header from "./Header";
 import Footer from "./Footer";
 import contact from "../assets/images/contact.jpg";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import { SEND_EMAIL } from "graphql/mutations";
+import { useMutation } from "@apollo/client";
 
 const Contact = () => {
+  const [sendEmail] = useMutation(SEND_EMAIL);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const form = event.target;
+
+    const emailData = {
+      from: form.email.value,
+      to: "banda@cedesdonbosco.ed.cr",
+      subject: "Contacto Banda CEDES Don Bosco",
+      html: `
+
+      <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
+      <html lang="en">
+      
+        <head></head>
+        <div id="__react-email-preview" style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0">Log in with this magic link.<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div>
+        </div>
+      
+        <body style="background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Oxygen-Sans,Ubuntu,Cantarell,&quot;Helvetica Neue&quot;,sans-serif">
+          <table align="center" role="presentation" cellSpacing="0" cellPadding="0" border="0" width="100%" style="max-width:37.5em;margin:0 auto;padding:20px 25px 48px;background-image:url(&quot;/assets/raycast-bg.png&quot;);background-position:bottom;background-repeat:no-repeat, no-repeat">
+            <tr style="width:100%">
+              <td> <img
+              alt="BCDB"
+              src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+              style="
+                display: block;
+                outline: none;
+                border: none;
+                text-decoration: none;
+                margin: 0;
+                padding: 0;
+                max-width: 30%;
+                height: auto;
+              "
+            />
+                <h1 style="font-size:28px;font-weight:bold;margin-top:48px">👉 De: ${form.name.value}</h1>
+                <table style="margin:24px 0" align="center" border="0" cellPadding="0" cellSpacing="0" role="presentation" width="100%">
+                  <tbody>
+                    <tr>
+                      <td>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0"><a target="_blank" style="color:#FF6363;text-decoration:none" href="">Correo: ${form.email.value} </a></p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">Contacto: ${form.phone.value} </p>
+
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">Mensaje: ${form.message.value} </p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p style="font-size:16px;line-height:26px;margin:16px 0">Best,<br />- Banda CEDES Don Bosco</p>
+                <p
+                style="
+                  font-size: 14px;
+                  line-height: 24px;
+                  margin: 16px 0;
+                  color: #9ca299;
+                  margin-bottom: 10px;
+                "
+              >
+                Copyright © 2023 Banda CEDES Don Bosco. Todos los derechos
+                reservados
+              </p>               
+              </td>
+            </tr>
+          </table>
+        </body>
+      
+      </html>
+
+
+        `,
+    };
+
+    sendEmail({
+      variables: {
+        input: {
+          to: "banda@cedesdonbosco.ed.cr",
+          subject: "Nuevo mensaje de contacto",
+          html: emailData,
+        },
+      },
+    })
+      .then(({ data }) => {
+        if (data.sendEmail.success) {
+          console.log("Email sent successfully");
+        } else {
+          console.log("Failed to send email");
+        }
+      })
+      .catch((error) => {
+        console.error("Error sending email:", error);
+      });
+  };
+
   return (
     <>
       <Header />
@@ -132,7 +229,7 @@ const Contact = () => {
                   Complete nuestro formulario a continuación para comenzar
                 </h3>
 
-                <form action="#" method="POST" className="mt-10">
+                <form action="#" method="POST" onSubmit={handleSubmit} className="mt-10">
                   <div className="space-y-7">
                     <div>
                       <label
@@ -161,8 +258,8 @@ const Contact = () => {
                       </label>
                       <div className="mt-2">
                         <input
-                          id="email"
                           name="email"
+                          id="email"
                           type="email"
                           autoComplete="email"
                           placeholder="ejemplo@email.com"

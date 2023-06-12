@@ -38,14 +38,14 @@ const About = () => {
               </span>
               de la Banda CEDES Don Bosco
             </h1>
-            <p className="mt-8 text-lg leading-8 text-slate-700">
+            <p className="mt-8 text-lg leading-8 text-slate-700 text-justify">
               La Banda de CEDES Don Bosco (BCDB) está conformada por alumnos y exalumnos de CEDES
               Don Bosco con una edad promedio de 8 años a 24 años, específicamente de la Escuela San
               Juan Bosco, del Colegio Técnico Profesional Don Bosco y del Centro de Formación
               Profesional. La Banda fue creada desde los inicios del Colegio Técnico Don Bosco en
               San José en el año 1965, antiguamente ubicado en barrio Don Bosco.
             </p>
-            <p className="mt-6 text-lg leading-8 text-slate-700">
+            <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
               La BCDB ha participado en diferentes festivales tanto a nivel nacional como
               internacional en países como, El Salvador, Panamá y Estados Unidos. A nivel nacional
               ha participado en 16 ediciones del Festival de la Luz de la Municipalidad de San José
@@ -144,7 +144,7 @@ const About = () => {
                   </span>
                 </h2>
 
-                <p className="mt-6 text-lg leading-8 text-slate-700 ">
+                <p className="mt-6 text-lg leading-8 text-slate-700 text-justify ">
                   Por su gran profesionalismo la banda ha sido parte de eventos de gran relevancia
                   en el país como la Inauguración del Estadio Nacional, Inauguración de los Juegos
                   Centroamericanos y del Caribe, Inauguración del Campeonato Centroamericano y del
@@ -153,7 +153,7 @@ const About = () => {
                   Arias, Mega Banda MEP del Festival Estudiantil de la Artes (FEA).
                 </p>
 
-                <p className="mt-6 text-lg leading-8 text-slate-700">
+                <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
                   La Banda de CEDES Don Bosco se caracteriza por su versatilidad tanto en
                   repertorios como en su formato para las distintas presentaciones, actualmente se
                   puede presentar bajo el formato de Banda de Concierto, Banda de Marcha y Big Band.
@@ -188,7 +188,7 @@ const About = () => {
                 Misión y visión
               </h2>
 
-              <p className="text-lg text-slate-700 lg:ml-auto lg:max-w-lg">
+              <p className="text-lg text-slate-700 lg:ml-auto lg:max-w-lg text-justify">
                 El propósito principal es impartir conocimientos musicales mediante la práctica de
                 un instrumento, con el fin de brindar un servicio alegre al Señor, siguiendo los
                 principios educativos de San Juan Bosco.

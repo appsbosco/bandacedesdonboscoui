@@ -6,7 +6,7 @@ import HouseIcon from "@mui/icons-material/House";
 
 const Values = () => {
   return (
-    <section className="relative pt-20 pb-40 overflow-hidden bg-gradient-to-b from-slate-50 via-slate-50 to-white sm:pt-24 lg:pt-32 lg:pb-64">
+    <section className="relative pt-20 pb-40 overflow-hidden bg-gradient-to-b from-slate-50 via-slate-50 to-white sm:pt-24 lg:pt-32 lg:pb-64 text-justify">
       {/* Container */}
       <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
         {/* Section header */}

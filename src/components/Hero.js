@@ -76,7 +76,7 @@ const Hero = () => {
             </span>
             a la página oficial de la Banda CEDES Don Bosco
           </h1>
-          <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left">
+          <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left text-justify">
             Aquí podrán conocer de la música y el talento de nuestra reconocida banda. Conformada
             por músicos apasionados y comprometidos, nuestra banda destaca por su excelencia y
             energía en el escenario. ¡Gracias por visitarnos!

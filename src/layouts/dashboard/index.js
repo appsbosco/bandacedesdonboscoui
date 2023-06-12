@@ -37,11 +37,38 @@ import moment from "moment";
 import Input from "components/Input";
 import TextArea from "components/TextArea";
 import EventFormModal from "components/EventFormModal";
-import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT, SEND_EMAIL } from "graphql/mutations";
-import { GET_USERS_BY_ID, GET_EVENTS, GET_USERS } from "graphql/queries";
+import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
+import { GET_EVENTS, GET_USERS } from "graphql/queries";
+
+const GET_USERS_BY_ID = gql`
+  query getUser {
+    getUser {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+      avatar
+    }
+  }
+`;
+
+const SEND_EMAIL = gql`
+  mutation SendEmail($input: EmailInput!) {
+    sendEmail(input: $input)
+  }
+`;
 
 const Dashboard = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+
   const { data: usersData } = useQuery(GET_USERS);
 
   const userRole = userData?.getUser?.role;
@@ -485,7 +512,7 @@ const Dashboard = () => {
         sendEmail({
           variables: {
             input: {
-              to: email,
+              to: "chinchillajosue50@gmail.com",
               subject: "Tienes una nueva presentación con la BCDB",
               text: "",
               html: emailContent,
