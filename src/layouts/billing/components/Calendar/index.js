@@ -4,8 +4,7 @@ import { useMutation, useQuery } from "@apollo/client";
 
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Modal, Typography } from "@mui/material";
-import homeDecor1 from "assets/images/about.jpg";
-import gql from "graphql-tag";
+
 import moment from "moment";
 import "moment/locale/es";
 import { useEffect, useState } from "react";
@@ -16,8 +15,7 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
 import cover from "assets/images/about.jpg";
-import Input from "components/Input";
-import TextArea from "components/TextArea";
+
 import EventFormModal from "components/EventFormModal";
 import { GET_USERS_BY_ID, GET_EVENTS } from "graphql/queries";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
@@ -102,13 +100,11 @@ const EventsCalendar = () => {
 
   const CustomToolbar = (toolbar) => {
     const goToBack = () => {
-      toolbar.date.setMonth(toolbar.date.getMonth() - 1);
-      toolbar.onNavigate("prev");
+      toolbar.onNavigate("PREV");
     };
 
     const goToNext = () => {
-      toolbar.date.setMonth(toolbar.date.getMonth() + 1);
-      toolbar.onNavigate("next");
+      toolbar.onNavigate("NEXT");
     };
 
     const dateFormat = "MMMM yyyy";
@@ -120,12 +116,12 @@ const EventsCalendar = () => {
           <button type="button" onClick={toolbar.onView.bind(null, "month")}>
             Mes
           </button>
-          <button type="button" onClick={toolbar.onView.bind(null, "week")}>
+          {/* <button type="button" onClick={toolbar.onView.bind(null, "week")}>
             Semana
           </button>
           <button type="button" onClick={toolbar.onView.bind(null, "day")}>
             Día
-          </button>
+          </button> */}
         </span>
         <span className="rbc-toolbar-label">{currentDate}</span>
         <span className="rbc-btn-group">
