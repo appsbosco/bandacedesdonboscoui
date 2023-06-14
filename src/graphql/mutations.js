@@ -21,6 +21,13 @@ export const NEW_ACCOUNT = gql`
   }
 `;
 
+// Users
+export const DELETE_USER = gql`
+  mutation DeleteUser($deleteUserId: ID!) {
+    deleteUser(id: $deleteUserId)
+  }
+`;
+
 // Profile Picture
 
 export const UPLOAD_PROFILE_PIC = gql`
@@ -125,6 +132,11 @@ export const UPDATE_MEDICAL_RECORD = gql`
   }
 `;
 
+export const DELETE_MEDICAL_RECORD = gql`
+  mutation DeleteMedicalRecord($deleteMedicalRecordId: ID!) {
+    deleteMedicalRecord(id: $deleteMedicalRecordId)
+  }
+`;
 // Inventories
 export const CREATE_INVENTORY = gql`
   mutation CreateInventory($input: InventoryInput!) {
@@ -169,6 +181,68 @@ export const ADD_ATTENDANCE = gql`
       }
       date
       attended
+    }
+  }
+`;
+
+// Payments
+
+// Mutation: Create Payment Event
+export const CREATE_PAYMENT_EVENT = gql`
+  mutation CreatePaymentEvent($input: PaymentEventInput!) {
+    createPaymentEvent(input: $input) {
+      _id
+      name
+      date
+      description
+    }
+  }
+`;
+
+// Mutation: Create Payment
+export const CREATE_PAYMENT = gql`
+  mutation CreatePayment($input: PaymentInput!) {
+    createPayment(input: $input) {
+      _id
+      user {
+        name
+        firstSurName
+      }
+      paymentEvent {
+        _id
+        name
+      }
+      amount
+      date
+    }
+  }
+`;
+
+// Mutation: Update Payment
+export const UPDATE_PAYMENT = gql`
+  mutation UpdatePayment($paymentId: ID!, $input: PaymentInput!) {
+    updatePayment(paymentId: $paymentId, input: $input) {
+      _id
+      amount
+      date
+      paymentEvent {
+        name
+        description
+      }
+      user {
+        name
+      }
+    }
+  }
+`;
+
+export const DELETE_PAYMENT = gql`
+  mutation DeletePayment($paymentId: ID!) {
+    deletePayment(paymentId: $paymentId) {
+      _id
+      paymentEvent {
+        _id
+      }
     }
   }
 `;

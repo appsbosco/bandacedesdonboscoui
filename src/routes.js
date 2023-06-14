@@ -19,10 +19,10 @@ import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt
 import Document from "examples/Icons/Document";
 import SpaceShip from "examples/Icons/SpaceShip";
 import Inventory from "layouts/inventory";
-import Landing from "layouts/landing/Landing";
 import About from "components/About";
 import Contact from "components/Contact";
-
+import PaymentComponent from "layouts/Payments/Payments";
+import PaidIcon from "@mui/icons-material/Paid";
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -41,6 +41,16 @@ export const protectedRoutes = [
     route: "/inventory",
     icon: <InventoryIcon size="12px" />,
     component: <Inventory />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Pagos",
+    key: "payments",
+    route: "/payments",
+    icon: <PaidIcon size="12px" />,
+    component: <PaymentComponent />,
     noCollapse: true,
     href: null,
   },
@@ -197,6 +207,16 @@ export const adminRoutes = [
   },
   {
     type: "collapse",
+    name: "Pagos",
+    key: "payments",
+    route: "/payments",
+    icon: <PaidIcon size="12px" />,
+    component: <PaymentComponent />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
     name: "Tomar Asistencia",
     key: "attendance",
     route: "/attendance",
@@ -276,6 +296,16 @@ export const staffRoutes = [
     route: "/members",
     icon: <PeopleAltIcon size="12px" />,
     component: <Tables />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Pagos",
+    key: "payments",
+    route: "/payments",
+    icon: <PaidIcon size="12px" />,
+    component: <PaymentComponent />,
     noCollapse: true,
     href: null,
   },

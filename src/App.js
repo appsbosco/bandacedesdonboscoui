@@ -115,6 +115,9 @@ export default function App() {
   } else if (userRole === "Principal de sección" || userRole === "Asistente de sección") {
     const attendanceRoutesFiltered = [...routes, ...attendanceRoutes];
     renderedRoutes = getRoutes(attendanceRoutesFiltered);
+  } else if (userRole === "Staff") {
+    const staffRoutesFiltered = [...routes, ...staffRoutes];
+    renderedRoutes = getRoutes(staffRoutesFiltered);
   } else {
     renderedRoutes = getRoutes(routes);
   }

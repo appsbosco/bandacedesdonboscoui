@@ -132,3 +132,38 @@ export const GET_ALL_ATTENDANCE = gql`
     }
   }
 `;
+
+// Payments
+
+// Query: Get Payment Events
+export const GET_PAYMENT_EVENTS = gql`
+  query GetPaymentEvents {
+    getPaymentEvents {
+      date
+      description
+      name
+      _id
+    }
+  }
+`;
+
+// Query: Get Payments By Event
+export const GET_PAYMENTS_BY_EVENT = gql`
+  query GetPaymentsByEvent($paymentEvent: ID!) {
+    getPaymentsByEvent(paymentEvent: $paymentEvent) {
+      _id
+      amount
+      date
+      paymentEvent {
+        name
+        description
+        date
+      }
+      user {
+        name
+        firstSurName
+        secondSurName
+      }
+    }
+  }
+`;

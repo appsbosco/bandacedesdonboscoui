@@ -18,11 +18,12 @@ const Select = ({ id, name, value, onChange, options }) => {
       }}
     >
       <option value="">Seleccione una opción</option>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
+      {options &&
+        options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
     </select>
   );
 };
@@ -37,7 +38,7 @@ Select.propTypes = {
       value: PropTypes.string,
       label: PropTypes.string,
     })
-  ).isRequired,
+  ),
 };
 
 export default Select;

@@ -1,4 +1,4 @@
-import { gql, useQuery } from "@apollo/client";
+import { gql, useQuery, useMutation } from "@apollo/client";
 import Card from "@mui/material/Card";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
@@ -8,7 +8,17 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import TableWithFilteringSorting from "examples/Tables/Table/Table";
 import { useEffect, useState } from "react";
 import "./reset.css";
-import { Box, IconButton, Modal, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Modal,
+  Typography,
+} from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import BadgeIcon from "@mui/icons-material/Badge";
@@ -28,6 +38,8 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupIcon from "@mui/icons-material/Group";
 import { useMediaQuery } from "react-responsive";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import { GET_USERS_BY_ID } from "graphql/queries";
+import { DELETE_USER, DELETE_MEDICAL_RECORD } from "graphql/mutations";
 
 const GET_USERS = gql`
   query getUsers {
@@ -71,15 +83,24 @@ const GET_MEDICAL_RECORD_BY_USER = gql`
 `;
 
 const Tables = () => {
+  const { data: userData } = useQuery(GET_USERS_BY_ID);
+  const [deleteUser] = useMutation(DELETE_USER);
+  const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD);
+
   const { loading, error, data, refetch } = useQuery(GET_USERS);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const [userMedicalRecord, setUserMedicalRecord] = useState(null);
 
   const [openModal, setOpenModal] = useState(true);
+
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
   const handleCloseModal = () => {
     setOpenModal(false);
   };
+
+  const userRole = userData?.getUser.role;
 
   const isMobile = useMediaQuery({ maxWidth: 640 }); // Adjust the max width as per your requirements
 
@@ -156,6 +177,29 @@ const Tables = () => {
   if (error) {
     // Handle error state
   }
+  const handleConfirmDelete = () => {
+    deleteUser({ variables: { deleteUserId: selectedUser?.id } })
+      .then(() => {
+        if (userMedicalRecord?.id) {
+          return deleteMedicalRecord({
+            variables: { deleteMedicalRecordId: userMedicalRecord.id },
+          });
+        }
+      })
+      .then(() => {
+        refetch();
+        setSelectedUser(null);
+        setOpenModal(false);
+      });
+  };
+
+  const handleDeleteUser = (id) => {
+    setShowConfirmation(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirmation(false);
+  };
 
   return (
     <DashboardLayout>
@@ -236,9 +280,35 @@ const Tables = () => {
               },
             }}
           >
-            <IconButton onClick={handleCloseModal}>
-              <CloseIcon />
-            </IconButton>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <IconButton onClick={handleCloseModal}>
+                <CloseIcon />
+              </IconButton>
+              {userRole === "Admin" || userRole === "Director" ? (
+                <Button
+                  type="submit"
+                  style={{ color: "red" }}
+                  onClick={() => handleDeleteUser(selectedUser?.id)}
+                >
+                  Eliminar usuario
+                </Button>
+              ) : null}
+            </div>
+
+            <Dialog open={showConfirmation} onClose={handleCancelDelete}>
+              <DialogTitle>Confirmar eliminación</DialogTitle>
+              <DialogContent>
+                <p>¿Está seguro de que desea eliminar al usuario?</p>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCancelDelete} color="primary">
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmDelete} color="primary">
+                  Eliminar
+                </Button>
+              </DialogActions>
+            </Dialog>
             <main>
               <article>
                 <header className="relative py-16 bg-white sm:pt-24 lg:pt-28">
