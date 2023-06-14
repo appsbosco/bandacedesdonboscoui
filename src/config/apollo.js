@@ -3,7 +3,7 @@ import { setContext } from "@apollo/client/link/context";
 
 // Create an HTTP link
 const httpLink = createHttpLink({
-  uri: "http://localhost:4000/",
+  uri: "https://dry-sands-56701.herokuapp.com/",
 });
 
 // Create an auth link to include authorization headers
