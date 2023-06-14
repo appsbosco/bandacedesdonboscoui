@@ -512,7 +512,7 @@ const Dashboard = () => {
         sendEmail({
           variables: {
             input: {
-              to: email,
+              to: "chinchillajosue50@gmail.com",
               subject: "Tienes una nueva presentación con la BCDB",
               text: "",
               html: emailContent,
