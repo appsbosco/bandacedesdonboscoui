@@ -21,6 +21,26 @@ export const NEW_ACCOUNT = gql`
   }
 `;
 
+export const UPDATE_USER = gql`
+  mutation UpdateUser($updateUserId: ID!, $input: UserInput) {
+    updateUser(id: $updateUserId, input: $input) {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+      avatar
+    }
+  }
+`;
+
 // Users
 export const DELETE_USER = gql`
   mutation DeleteUser($deleteUserId: ID!) {

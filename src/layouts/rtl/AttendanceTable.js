@@ -125,8 +125,9 @@ const AttendanceTable = () => {
       <TableWithFilteringSorting data={rows} columns={columns} />
 
       <Button
-        style={{ margin: "2%", color: "white" }}
+        style={{ margin: "2%" }}
         variant="contained"
+        color="info"
         onClick={handleSaveAttendance}
       >
         Guardar asistencia

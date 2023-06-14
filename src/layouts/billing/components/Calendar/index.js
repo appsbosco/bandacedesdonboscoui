@@ -80,7 +80,15 @@ const EventsCalendar = () => {
     handleCloseModal();
   };
 
-  if (loading) return "Cargando...";
+  if (loading) {
+    return (
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}
+      >
+        <p>Cargando...</p>
+      </div>
+    );
+  }
   if (error) return `Error! ${error.message}`;
 
   const eventStyleGetter = (event, start, end, isSelected) => {

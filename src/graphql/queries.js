@@ -163,6 +163,8 @@ export const GET_PAYMENTS_BY_EVENT = gql`
         name
         firstSurName
         secondSurName
+        instrument
+        role
       }
     }
   }

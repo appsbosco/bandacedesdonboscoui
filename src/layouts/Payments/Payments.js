@@ -156,11 +156,18 @@ const PaymentComponent = () => {
   };
 
   if (paymentEventsLoading || paymentsLoading || usersLoading) {
-    return <p>Loading...</p>;
+    return (
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}
+      >
+        <p>Cargando...</p>
+      </div>
+    );
   }
 
   const paymentEvents = paymentEventsData?.getPaymentEvents || [];
   const payments = paymentsData?.getPaymentsByEvent || [];
+
   const formattedPayments = payments.map((payment) => {
     const user = payment.user;
     const formattedDate = moment(payment.date).format("DD/MM/YYYY");
@@ -169,7 +176,8 @@ const PaymentComponent = () => {
       ...payment,
       id: payment._id,
       userName: user?.name + " " + user?.firstSurName + " " + user?.secondSurName || "",
-      amount: "₡" + " " + payment.amount,
+      instrument: user?.instrument ? user?.instrument : user?.role || "",
+      amount: payment.amount,
       date: formattedDate,
     };
   });
@@ -182,12 +190,19 @@ const PaymentComponent = () => {
       minWidth: 150,
     },
     {
+      field: "instrument",
+      headerName: "Instrumento",
+      flex: 1,
+      minWidth: 100,
+    },
+    {
       field: "amount",
       headerName: "Monto",
       type: "number",
       flex: 1,
       minWidth: 100,
     },
+
     {
       field: "date",
       headerName: "Fecha",
@@ -370,7 +385,7 @@ const PaymentComponent = () => {
                   p={3}
                 >
                   <SoftTypography variant="h6" fontWeight="medium">
-                    Seleccione el monto
+                    Ingrese el monto
                   </SoftTypography>
 
                   <Input

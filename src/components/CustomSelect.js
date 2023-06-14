@@ -19,7 +19,7 @@ function CustomSelect({ labelId, value, onChange, options }) {
       boxShadow: "none",
     }),
     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-    input: (base) => ({ ...base, borderWidth: 0 }),
+    input: (base) => ({ ...base, borderColor: "#000", borderWidth: 0 }),
     placeholder: (base) => ({ ...base, fontSize: "0.8em" }),
     menu: (base) => ({ ...base, border: "none" }),
   };
