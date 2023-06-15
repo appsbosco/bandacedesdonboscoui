@@ -3,12 +3,10 @@ import { setContext } from "@apollo/client/link/context";
 
 // Create an HTTP link
 const httpLink = createHttpLink({
-  uri: "https://dry-sands-56701.herokuapp.com/",
+  uri: "https://bcdb.vercel.app/api/graphql",
 });
 
-// Create an auth link to include authorization headers
 const authLink = setContext((_, { headers }) => {
-  // Add any authorization logic here, e.g., token retrieval from local storage
   const token = localStorage.getItem("token");
   return {
     headers: {
@@ -20,9 +18,9 @@ const authLink = setContext((_, { headers }) => {
 
 // Create ApolloClient instance
 const client = new ApolloClient({
-  link: authLink.concat(httpLink), // Use the auth link with the HTTP link
+  link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
-  connectToDevTools: true, // Enable Apollo DevTools for debugging
+  connectToDevTools: true,
 });
 
 export default client;

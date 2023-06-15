@@ -84,7 +84,7 @@ const Contact = () => {
     sendEmail({
       variables: {
         input: {
-          to: "banda@cedesdonbosco.ed.cr",
+          to: "chinchillajosue50@gmail.com",
           subject: "Nuevo mensaje de contacto",
           html: emailData,
         },

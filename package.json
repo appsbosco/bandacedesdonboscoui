@@ -2,7 +2,7 @@
   "name": "BCDB-APP",
   "version": "4.0.0",
   "author": "Jossué Chinchilla Salazar",
-  "license": "",
+  "license": "ISC",
   "description": "Aplicación oficial de la Banda CEDES Don Bosco",
   "repository": {},
   "engines": {
