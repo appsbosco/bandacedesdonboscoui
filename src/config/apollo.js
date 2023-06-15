@@ -3,7 +3,7 @@ import { setContext } from "@apollo/client/link/context";
 
 // Create an HTTP link
 const httpLink = createHttpLink({
-  uri: "https://bcdb.vercel.app/api/graphql",
+  uri: "https://bcdb-josuechinchillas.vercel.app/api/graphql",
 });
 
 const authLink = setContext((_, { headers }) => {
