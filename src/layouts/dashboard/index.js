@@ -34,8 +34,7 @@ import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/about.jpg";
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
-import Input from "components/Input";
-import TextArea from "components/TextArea";
+
 import EventFormModal from "components/EventFormModal";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
 import { GET_EVENTS, GET_USERS } from "graphql/queries";
@@ -512,7 +511,7 @@ const Dashboard = () => {
         sendEmail({
           variables: {
             input: {
-              to: "chinchillajosue50@gmail.com",
+              to: email,
               subject: "Tienes una nueva presentación con la BCDB",
               text: "",
               html: emailContent,
