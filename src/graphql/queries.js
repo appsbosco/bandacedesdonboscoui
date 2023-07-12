@@ -153,6 +153,7 @@ export const GET_PAYMENTS_BY_EVENT = gql`
     getPaymentsByEvent(paymentEvent: $paymentEvent) {
       _id
       amount
+      description
       date
       paymentEvent {
         name

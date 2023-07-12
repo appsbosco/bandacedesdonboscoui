@@ -35,6 +35,8 @@ const PaymentComponent = () => {
   const [eventDate, setEventDate] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedUser, setSelectedUser] = useState("");
+  const [description, setDescription] = useState("");
+
   const [paymentAmount, setPaymentAmount] = useState("");
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -138,13 +140,14 @@ const PaymentComponent = () => {
         input: {
           user: selectedUser,
           paymentEvent: selectedEvent?._id,
+          description: description,
           amount: parseFloat(paymentAmount),
           date: new Date().toISOString(),
         },
       },
     }).then(async (response) => {
       const createdPayment = response.data.createPayment;
-
+      console.log(createdPayment);
       if (createdPayment) {
         setSelectedEvent(createdPayment.paymentEvent);
 
@@ -177,6 +180,7 @@ const PaymentComponent = () => {
       id: payment._id,
       userName: user?.name + " " + user?.firstSurName + " " + user?.secondSurName || "",
       instrument: user?.instrument ? user?.instrument : user?.role || "",
+      description: payment.description,
       amount: payment.amount,
       date: formattedDate,
     };
@@ -191,7 +195,14 @@ const PaymentComponent = () => {
     },
     {
       field: "instrument",
-      headerName: "Instrumento",
+      headerName: "Sección",
+      flex: 1,
+      minWidth: 100,
+    },
+    {
+      field: "description",
+      headerName: "Descripción",
+
       flex: 1,
       minWidth: 100,
     },
@@ -354,6 +365,7 @@ const PaymentComponent = () => {
                   />
                 </SoftBox>
               </Grid>
+
               <Grid item xs={12} sm={6} md={4}>
                 <SoftBox
                   borderRadius="lg"
@@ -394,6 +406,28 @@ const PaymentComponent = () => {
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
                     required
+                  />
+                </SoftBox>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <SoftBox
+                  borderRadius="lg"
+                  display="flex-col"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  p={3}
+                >
+                  <SoftTypography variant="h6" fontWeight="medium">
+                    Descripción
+                  </SoftTypography>
+                  <Input
+                    autoFocus
+                    margin="dense"
+                    label=""
+                    type="text"
+                    fullWidth
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                   />
                 </SoftBox>
               </Grid>

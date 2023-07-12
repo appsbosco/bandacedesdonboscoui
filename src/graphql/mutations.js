@@ -232,6 +232,7 @@ export const CREATE_PAYMENT = gql`
         _id
         name
       }
+      description
       amount
       date
     }
@@ -244,6 +245,7 @@ export const UPDATE_PAYMENT = gql`
     updatePayment(paymentId: $paymentId, input: $input) {
       _id
       amount
+      description
       date
       paymentEvent {
         name

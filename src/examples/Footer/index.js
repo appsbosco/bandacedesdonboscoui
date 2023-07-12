@@ -94,8 +94,8 @@ Footer.defaultProps = {
   company: { href: "/", name: "Josué Chinchilla" },
   links: [
     { href: "/", name: "Home" },
-    { href: "/presentation", name: "Acerca de nosotros" },
-    // { href: "/blog", name: "Blog" },
+    { href: "/nosotros", name: "Acerca de nosotros" },
+    { href: "/contacto", name: "Contáctanos" },
     // { href: "/license", name: "License" },
   ],
 };
