@@ -100,6 +100,17 @@ const Tables = () => {
     setOpenModal(false);
   };
 
+  const handleStateChange = (id, newState) => {
+    const updatedData = data.getUsers.map((user) => {
+      if (user.id === id) {
+        return { ...user, state: newState };
+      }
+      return user;
+    });
+
+    setData({ ...data, getUsers: updatedData });
+  };
+
   const userRole = userData?.getUser.role;
 
   const isMobile = useMediaQuery({ maxWidth: 640 }); // Adjust the max width as per your requirements
@@ -156,6 +167,7 @@ const Tables = () => {
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
     { field: "instrument", headerName: "Instrumento", width: 150 },
     { field: "role", headerName: "Rol", width: 200 },
+    { field: "status", headerName: "Estado", width: 120 },
   ];
 
   const staffColumns = [
@@ -225,6 +237,8 @@ const Tables = () => {
                 data={musiciansData || []}
                 columns={columns}
                 onRowClick={handleRowClick}
+                userRole={userRole}
+                onStateChange={handleStateChange}
               />
             </SoftBox>
           </Card>

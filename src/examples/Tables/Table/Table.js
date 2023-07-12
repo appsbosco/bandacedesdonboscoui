@@ -2,12 +2,32 @@ import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
 import PropTypes from "prop-types";
 
-const TableWithFilteringSorting = ({ data, columns, onRowClick }) => {
+const TableWithFilteringSorting = ({ data, columns, onRowClick, userRole, onStateChange }) => {
   const renderHeader = (params) => {
     return <div style={{ paddingLeft: "20px", fontWeight: "500" }}>{params.colDef.headerName}</div>;
   };
 
+  const renderStateCell = (params) => {
+    const { id, value } = params;
+    const handleChange = (event) => {
+      onStateChange(id, event.target.value);
+    };
+
+    return (
+      // <select value={value} onChange={handleChange}>
+      <p>Activo</p>
+      //   <option value="inactive">Inactivo</option>
+      // </select>
+    );
+  };
+
   const updatedColumns = columns.map((column, index) => {
+    if (column.field === "status") {
+      return {
+        ...column,
+        renderCell: renderStateCell,
+      };
+    }
     if (index === 0) {
       return {
         ...column,
@@ -18,6 +38,7 @@ const TableWithFilteringSorting = ({ data, columns, onRowClick }) => {
     }
     return column;
   });
+
   return (
     <Box sx={{ height: 400, width: 1 }}>
       <DataGrid
@@ -49,6 +70,8 @@ TableWithFilteringSorting.propTypes = {
   data: PropTypes.array.isRequired,
   columns: PropTypes.array.isRequired,
   onRowClick: PropTypes.func.isRequired,
+  userRole: PropTypes.string.isRequired,
+  onStateChange: PropTypes.func.isRequired,
 };
 
 export default TableWithFilteringSorting;
