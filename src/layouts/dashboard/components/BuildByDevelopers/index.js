@@ -57,7 +57,7 @@ function BuildByDevelopers() {
                 </SoftTypography>
               </SoftBox>
               <SoftTypography variant="h5" fontWeight="bold" gutterBottom>
-                Bienvenida
+                ¡Te damos la bienvenida!
               </SoftTypography>
               <SoftBox mb={6}>
                 <SoftTypography variant="body2" color="text">
