@@ -27,6 +27,8 @@ import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
 import Landing from "layouts/landing/Landing";
 import { setMiniSidenav, setOpenConfigurator } from "context";
 import { GET_USERS_BY_ID } from "graphql/queries";
+import ArticlePage from "layouts/blog/ArticlePage";
+import BlogListing from "layouts/blog/BlogListing";
 
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
@@ -169,7 +171,9 @@ export default function App() {
         pathname !== "/authentication/sign-up" &&
         pathname !== "/" &&
         pathname !== "/nosotros" &&
-        pathname !== "/contacto" && (
+        pathname !== "/contacto" &&
+        pathname !== "/blog" &&
+        !pathname.startsWith("/article/") && (
           <>
             <Sidenav
               color={sidenavColor}
@@ -186,6 +190,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         {renderedRoutes.map((route) => route)}
+        <Route path="/blog" element={<BlogListing />} />
+        <Route path="/article/:id" element={<ArticlePage />} />
         <Route path="/authentication/sign-up" component={SignUp} />
         <Route path="/authentication/sign-in" component={SignIn} />
       </Routes>

@@ -24,7 +24,7 @@ const Blog = () => {
             </svg>
             <span className="relative text-sky-700">Presentaciones </span>
           </span>
-          de nuestra banda
+          recientes de nuestra banda
         </h2>
 
         {/* Articles list */}

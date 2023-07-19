@@ -157,10 +157,13 @@ const About = () => {
                   La Banda de CEDES Don Bosco se caracteriza por su versatilidad tanto en
                   repertorios como en su formato para las distintas presentaciones, actualmente se
                   puede presentar bajo el formato de Banda de Concierto, Banda de Marcha y Big Band.
-                  La BCDB está conformada por: 4 Glockenspiel y 2 Xilófonos, 6 Snare Drum, 5 Tonal
-                  Bass Drum, 3 Tenor Tenors, 4 Platillos, 14 Color Guard, 115 Instrumentistas de
-                  Viento Madera-Metal, un director, un asistente y una comisión de 10 padres de
-                  familia. Total BCDB: 165 personas.
+                  Nuestra banda está conformada por: 110 Instrumentistas de viento, 10 integrantes
+                  de mallets, 19 integrantes de drumline, 23 Color Guard, 22 integrantes de danza,
+                  un director, y un staff de 15 padres de familia.
+                </p>
+
+                <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
+                  Total BCDB: 200 integrantes.
                 </p>
               </div>
             </div>
