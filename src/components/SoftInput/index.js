@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -24,7 +24,7 @@ import SoftInputWithIconRoot from "components/SoftInput/SoftInputWithIconRoot";
 import SoftInputIconBoxRoot from "components/SoftInput/SoftInputIconBoxRoot";
 import SoftInputIconRoot from "components/SoftInput/SoftInputIconRoot";
 
-// BCDB React contexts
+// Banda CEDES Don Bosco contexts
 import { useSoftUIController } from "context";
 
 const SoftInput = forwardRef(({ size, icon, error, success, disabled, ...rest }, ref) => {

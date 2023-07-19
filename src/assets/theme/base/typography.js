@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -14,15 +14,15 @@ Coded by Josué Chinchilla
 */
 
 /**
- * The base typography styles for the BCDB React.
+ * The base typography styles for the Banda CEDES Don Bosco.
  * You can add new typography style using this file.
- * You can customized the typography styles for the entire BCDB React using thie file.
+ * You can customized the typography styles for the entire Banda CEDES Don Bosco using thie file.
  */
 
-// BCDB React Base Styles
+// Banda CEDES Don Bosco Base Styles
 import colors from "assets/theme/base/colors";
 
-// BCDB React Helper Functions
+// Banda CEDES Don Bosco Helper Functions
 import pxToRem from "assets/theme/functions/pxToRem";
 
 const { dark } = colors;

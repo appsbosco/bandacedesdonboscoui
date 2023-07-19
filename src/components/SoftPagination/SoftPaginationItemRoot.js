@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -16,7 +16,7 @@ Coded by Josué Chinchilla
 // @mui material components
 import { styled } from "@mui/material/styles";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftButton from "components/SoftButton";
 
 export default styled(SoftButton)(({ theme, ownerState }) => {

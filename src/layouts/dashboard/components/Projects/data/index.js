@@ -1,7 +1,7 @@
 // @mui material components
 import Tooltip from "@mui/material/Tooltip";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 import SoftAvatar from "components/SoftAvatar";

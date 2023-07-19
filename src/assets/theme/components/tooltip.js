@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -16,12 +16,12 @@ Coded by Josué Chinchilla
 // @mui material components
 import Fade from "@mui/material/Fade";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 import typography from "assets/theme/base/typography";
 import borders from "assets/theme/base/borders";
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import pxToRem from "assets/theme/functions/pxToRem";
 
 const { black, light } = colors;

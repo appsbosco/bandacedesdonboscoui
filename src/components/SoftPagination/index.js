@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -18,7 +18,7 @@ import { forwardRef, createContext, useContext, useMemo } from "react";
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 
 // Custom styles for SoftPagination

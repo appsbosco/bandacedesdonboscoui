@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -25,16 +25,16 @@ import PropTypes from "prop-types";
 import Container from "@mui/material/Container";
 import Icon from "@mui/material/Icon";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 import SoftButton from "components/SoftButton";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import DefaultNavbarLink from "examples/Navbars/DefaultNavbar/DefaultNavbarLink";
 import DefaultNavbarMobile from "examples/Navbars/DefaultNavbar/DefaultNavbarMobile";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import breakpoints from "assets/theme/base/breakpoints";
 
 function DefaultNavbar({ transparent, light, action }) {

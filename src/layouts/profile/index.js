@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -19,11 +19,11 @@ import Grid from "@mui/material/Grid";
 
 // @mui icons
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 
@@ -192,7 +192,14 @@ const Overview = () => {
   values.forEach((item) => {});
 
   // Handle loading state
-  if (userLoading || medicalRecordLoading) return <p>Cargando...</p>;
+  if (userLoading || medicalRecordLoading)
+    return (
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}
+      >
+        <p>Cargando...</p>
+      </div>
+    );
 
   // Handle error state
   // if (userError || medicalRecordError) return <p>Error!</p>;

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -21,19 +21,19 @@ import { useLocation } from "react-router-dom";
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Sidenav from "examples/Sidenav";
 
-// BCDB React context
+// Banda CEDES Don Bosco context
 import { setLayout, setMiniSidenav, setTransparentSidenav, useSoftUIController } from "context";
 
-// BCDB React routes
+// Banda CEDES Don Bosco routes
 import routes from "routes";
 
 // Custom styles for the BaseLayout

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -29,7 +29,7 @@ const SoftUI = createContext(null);
 // Setting custom name for the context which is visible on react dev tools
 SoftUI.displayName = "SoftUIContext";
 
-// BCDB React reducer
+// Banda CEDES Don Bosco reducer
 function reducer(state, action) {
   switch (action.type) {
     case "MINI_SIDENAV": {
@@ -62,7 +62,7 @@ function reducer(state, action) {
   }
 }
 
-// BCDB React context provider
+// Banda CEDES Don Bosco context provider
 function SoftUIControllerProvider({ children }) {
   const initialState = {
     miniSidenav: false,
@@ -82,7 +82,7 @@ function SoftUIControllerProvider({ children }) {
   return <SoftUI.Provider value={value}>{children}</SoftUI.Provider>;
 }
 
-// BCDB React custom hook for using context
+// Banda CEDES Don Bosco custom hook for using context
 function useSoftUIController() {
   const context = useContext(SoftUI);
 

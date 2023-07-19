@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -27,12 +27,12 @@ import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
 import TableRow from "@mui/material/TableRow";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftAvatar from "components/SoftAvatar";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import borders from "assets/theme/base/borders";
 import colors from "assets/theme/base/colors";
 import typography from "assets/theme/base/typography";

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -13,12 +13,12 @@ Coded by Josué Chinchilla
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 import borders from "assets/theme/base/borders";
 import boxShadows from "assets/theme/base/boxShadows";
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import rgba from "assets/theme/functions/rgba";
 import pxToRem from "assets/theme/functions/pxToRem";
 import linearGradient from "assets/theme/functions/linearGradient";
@@ -45,11 +45,11 @@ const switchButton = {
     switchBase: {
       padding: 0,
       top: "0%",
-     // transform: `translate(${pxToRem(2)}, -50%)`,
+      // transform: `translate(${pxToRem(2)}, -50%)`,
       transition: `transform 250ms ease-in-out`,
 
       "&.Mui-checked": {
-       transform: `translate(${pxToRem(22)}, -50%)`,
+        transform: `translate(${pxToRem(22)}, -50%)`,
 
         "& + .MuiSwitch-track": {
           backgroundColor: `${rgba(gradients.dark.state, 0.95)} !important`,

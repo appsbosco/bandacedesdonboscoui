@@ -1,4 +1,4 @@
-// BCDB React layouts
+// Banda CEDES Don Bosco layouts
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
 import Billing from "layouts/billing";
@@ -8,7 +8,7 @@ import RTL from "layouts/rtl";
 import Tables from "layouts/tables";
 import VirtualReality from "layouts/virtual-reality";
 
-// BCDB React icons
+// Banda CEDES Don Bosco icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EventIcon from "@mui/icons-material/Event";
 import FactCheckIcon from "@mui/icons-material/FactCheck";

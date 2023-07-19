@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -28,11 +28,11 @@ import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import Toolbar from "@mui/material/Toolbar";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import Breadcrumbs from "examples/Breadcrumbs";
 import NotificationItem from "examples/Items/NotificationItem";
 
@@ -45,7 +45,7 @@ import {
   navbarRow,
 } from "examples/Navbars/DashboardNavbar/styles";
 
-// BCDB React context
+// Banda CEDES Don Bosco context
 import {
   setMiniSidenav,
   setOpenConfigurator,

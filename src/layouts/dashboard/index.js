@@ -13,16 +13,16 @@ import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import Tooltip from "@mui/material/Tooltip";
 import cover from "assets/images/about.jpg";
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 
 // Dashboard layout components
 import BuildByDevelopers from "layouts/dashboard/components/BuildByDevelopers";

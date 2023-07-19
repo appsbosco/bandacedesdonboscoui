@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -25,7 +25,7 @@ import Switch from "@mui/material/Switch";
 // @mui icons
 import FacebookIcon from "@mui/icons-material/Facebook";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftButton from "components/SoftButton";
 import SoftTypography from "components/SoftTypography";
@@ -33,7 +33,7 @@ import SoftTypography from "components/SoftTypography";
 // Custom styles for the Configurator
 import ConfiguratorRoot from "examples/Configurator/ConfiguratorRoot";
 
-// BCDB React context
+// Banda CEDES Don Bosco context
 import { Instagram } from "@material-ui/icons";
 import {
   setFixedNavbar,
@@ -202,7 +202,7 @@ function Configurator() {
           <SoftBox mb={2}>
             <SoftButton
               component={Link}
-              href=""
+              href="https://wa.me/50660491166"
               target="_blank"
               rel="noreferrer"
               color="dark"
@@ -214,7 +214,7 @@ function Configurator() {
           </SoftBox>
           <SoftButton
             component={Link}
-            href=""
+            href="/nosotros"
             target="_blank"
             rel="noreferrer"
             color="dark"

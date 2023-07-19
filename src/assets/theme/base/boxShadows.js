@@ -1,7 +1,7 @@
-// BCDB React Base Styles
+// Banda CEDES Don Bosco Base Styles
 import colors from "assets/theme/base/colors";
 
-// BCDB React Helper Functions
+// Banda CEDES Don Bosco Helper Functions
 import boxShadow from "assets/theme/functions/boxShadow";
 
 const { black, white, info, inputColors, tabs } = colors;

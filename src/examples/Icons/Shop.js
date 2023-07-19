@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -16,7 +16,7 @@ Coded by Josué Chinchilla
 // prop-types is a library for typechecking of props
 import PropTypes from "prop-types";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 
 function Shop({ color, size }) {

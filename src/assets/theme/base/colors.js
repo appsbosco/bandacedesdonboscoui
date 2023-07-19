@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -14,9 +14,9 @@ Coded by Josué Chinchilla
 */
 
 /**
- * The base colors for the BCDB React.
+ * The base colors for the Banda CEDES Don Bosco.
  * You can add new color using this file.
- * You can customized the colors for the entire BCDB React using thie file.
+ * You can customized the colors for the entire Banda CEDES Don Bosco using thie file.
  */
 
 const colors = {

@@ -1,7 +1,7 @@
-// BCDB React Base Styles
+// Banda CEDES Don Bosco Base Styles
 import colors from "assets/theme/base/colors";
 
-// BCDB React Helper Functions
+// Banda CEDES Don Bosco Helper Functions
 import pxToRem from "assets/theme/functions/pxToRem";
 
 const { grey } = colors;

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -13,12 +13,12 @@ Coded by Josué Chinchilla
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 import borders from "assets/theme/base/borders";
 import boxShadows from "assets/theme/base/boxShadows";
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import linearGradient from "assets/theme/functions/linearGradient";
 import pxToRem from "assets/theme/functions/pxToRem";
 

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v3.1.0
+* Banda CEDES Don Bosco - v3.1.0
 =========================================================
 
 * Product Page: 
@@ -13,7 +13,7 @@ Coded by Josué Chinchilla
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-// BCDB React Button Styles
+// Banda CEDES Don Bosco Button Styles
 import root from "assets/theme/components/button/root";
 import contained from "assets/theme/components/button/contained";
 import outlined from "assets/theme/components/button/outlined";

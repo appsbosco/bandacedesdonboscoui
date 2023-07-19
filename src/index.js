@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "App";
 import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 
-// BCDB React Context Provider
+// Banda CEDES Don Bosco Context Provider
 import { SoftUIControllerProvider } from "context";
 import client from "config/apollo";
 

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -27,19 +27,19 @@ import Icon from "@mui/material/Icon";
 import Link from "@mui/material/Link";
 import List from "@mui/material/List";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftButton from "components/SoftButton";
 import SoftTypography from "components/SoftTypography";
 
-// BCDB React examples
+// Banda CEDES Don Bosco examples
 import SidenavCard from "examples/Sidenav/SidenavCard";
 import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
 
 // Custom styles for the Sidenav
 import SidenavRoot from "examples/Sidenav/SidenavRoot";
 
-// BCDB React context
+// Banda CEDES Don Bosco context
 import { setMiniSidenav, useSoftUIController } from "context";
 
 function Sidenav({ color, brand, brandName, routes, ...rest }) {

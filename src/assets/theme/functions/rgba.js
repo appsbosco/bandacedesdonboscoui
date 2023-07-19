@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -18,7 +18,7 @@ Coded by Josué Chinchilla
   to convert the hex code into rgb for using it inside the rgba color format.
  */
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import hexToRgb from "assets/theme/functions/hexToRgb";
 
 function rgba(color, opacity) {

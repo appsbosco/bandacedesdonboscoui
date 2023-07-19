@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -14,7 +14,7 @@ Coded by Josué Chinchilla
 */
 
 /* eslint-disable no-dupe-keys */
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 
 const { gradients, dark } = colors;

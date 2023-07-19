@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -17,7 +17,7 @@ Coded by Josué Chinchilla
   The boxShadow() function helps you to create a box shadow for an element
  */
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import rgba from "assets/theme/functions/rgba";
 import pxToRem from "assets/theme/functions/pxToRem";
 

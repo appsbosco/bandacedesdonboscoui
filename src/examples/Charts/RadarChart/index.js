@@ -1,6 +1,6 @@
 /**
 =========================================================
-* BCDB React - v4.0.0
+* Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
 * Product Page: 
@@ -24,17 +24,17 @@ import { Radar } from "react-chartjs-2";
 // @mui material components
 import Card from "@mui/material/Card";
 
-// BCDB React components
+// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
 // RadarChart configurations
 import configs from "examples/Charts/RadarChart/configs";
 
-// BCDB React base styles
+// Banda CEDES Don Bosco base styles
 import colors from "assets/theme/base/colors";
 
-// BCDB React helper functions
+// Banda CEDES Don Bosco helper functions
 import rgba from "assets/theme/functions/rgba";
 
 function RadarChart({ title, description, chart }) {
