@@ -9,7 +9,7 @@ const articles = [
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1689802810/DSC00198-min_eo7s1s.jpg",
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1689802810/DSC00110-min_idpeq5.jpg",
     ],
-    type: "Presentación",
+    type: "Campamento",
     description:
       "Después de días de intenso esfuerzo y sacrificio, hemos alcanzado este emocionante momento. ",
     date: "08 de Julio, 2023",
@@ -48,6 +48,7 @@ const articles = [
         "https://www.facebook.com/100063706836872/posts/pfbid07Y9Vu1cfDnNY3pJgNxUvpLnkrsiHhdbQZFULgNnQrGHwYfAkhhQP8fts6Y9E8CPSl/?mibextid=cr9u03",
       instagram: "https://www.instagram.com/p/CuiXpvoJ9Vx/?igshid=MzRlODBiNWFlZA==",
     },
+    lecture: "2 minutos de lectura",
   },
   {
     id: 2,
@@ -96,6 +97,7 @@ const articles = [
         "https://www.facebook.com/100063706836872/posts/pfbid02iJVYat2Y7pJSmPChS6R2jUW4d8gWA168t8wa6EJoTz4L7YEotX57p6ezRMmhDdBNl/?mibextid=cr9u03",
       instagram: "https://www.instagram.com/p/CsSRMd5t8Ha/?igshid=MzRlODBiNWFlZA==",
     },
+    lecture: "1 minuto de lectura",
   },
   {
     id: 3,
@@ -109,7 +111,7 @@ const articles = [
     ],
     type: "Presentación",
     description:
-      "El pasado domingo 23 de Abril, tuvimos el privilegio de animar el medio tiempo y acompañar con nuestra música a los fanáticos presentes durante el partido entre Saprissa y Herediano. Fue una experiencia llena de energía y emoción.",
+      "El pasado domingo 23 de Abril, tuvimos el privilegio de animar el medio tiempo y acompañar con nuestra música a los fanáticos presentes durante el partido entre Saprissa y Herediano.",
     date: "23 de Abril, 2023",
     content: [
       {
@@ -140,9 +142,11 @@ const articles = [
       },
     ],
     socialLinks: {
-      facebook: "",
-      instagram: "",
+      facebook:
+        "https://www.facebook.com/100063706836872/posts/pfbid036hz19ByiwsRYLWbWtF9oAXVamS4Hde6RPTXjtrE5KChT42565gEZhZwF4zza5cXnl/?mibextid=cr9u03",
+      instagram: "https://www.instagram.com/p/CrbXEXxr_k9/?igshid=MzRlODBiNWFlZA==",
     },
+    lecture: "1 minuto de lectura",
   },
 ];
 

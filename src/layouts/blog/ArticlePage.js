@@ -105,7 +105,7 @@ const ArticlePage = () => {
                     d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                2 minutos de lectura
+                {article.lecture}
               </span>
             </div>
             <div className="w-full max-w-4xl mx-auto mt-16">
