@@ -173,7 +173,7 @@ export default function App() {
         pathname !== "/nosotros" &&
         pathname !== "/contacto" &&
         pathname !== "/blog" &&
-        !pathname.startsWith("/article/") && (
+        !pathname.startsWith("/blog/") && (
           <>
             <Sidenav
               color={sidenavColor}
@@ -191,7 +191,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
-        <Route path="/article/:id" element={<ArticlePage />} />
+        <Route path="/blog/:id" element={<ArticlePage />} />
         <Route path="/authentication/sign-up" component={SignUp} />
         <Route path="/authentication/sign-in" component={SignIn} />
       </Routes>

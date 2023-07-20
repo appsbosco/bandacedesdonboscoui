@@ -136,12 +136,6 @@ const ArticlePage = () => {
             <h2>{article.content[3].title}</h2>
             <p>{article.content[3].text}</p>
             <p>{article.content[3].subtext}</p>
-
-            <h2>{article.content[4].title}</h2>
-
-            <p>{article.content[4].text}</p>
-
-            <p>{article.content[5].text}</p>
           </div>
 
           <section className="py-16 overflow-hidden bg-slate-50 sm:py-24 lg:py-28 xl:py-32">
@@ -179,6 +173,12 @@ const ArticlePage = () => {
             </div>
           </section>
 
+          <div className="max-w-2xl mx-auto prose prose-lg mt-10">
+            <h2>{article.content[4].title}</h2>
+
+            <p>{article.content[4].text}</p>
+            <p>{article.content[5].text}</p>
+          </div>
           <footer className="max-w-2xl mx-auto">
             <hr className="w-full h-px pb-6 mt-14 text-slate-300/75 sm:pb-4" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
