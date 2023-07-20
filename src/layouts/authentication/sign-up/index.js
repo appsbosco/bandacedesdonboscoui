@@ -3,10 +3,10 @@
 * Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/soft-ui-dashboard-react
-* Copyright 2022 Banda CEDES Don Bosco(https://www.creative-tim.com)
+* Product Page: https://Josué Chinchilla Salazar/product/soft-ui-dashboard-react
+* Copyright 2022 Banda CEDES Don Bosco(https://Josué Chinchilla Salazar)
 
-Coded by www.creative-tim.com
+Coded by Josué Chinchilla Salazar
 
  =========================================================
 
@@ -255,7 +255,7 @@ const SignUp = () => {
                     // Redirect to the login page
                     setTimeout(() => {
                       setMessage(null);
-                      navigate("/authentication/sign-in");
+                      navigate("/autenticacion/iniciar-sesion");
                     }, 3000);
                   } catch (error) {
                     setMessage(error.message.replace("GraphQL error: ", ""));

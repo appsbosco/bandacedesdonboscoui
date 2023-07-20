@@ -166,7 +166,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         <SoftBox mb={2}>
           <SoftButton
             component="a"
-            href="/authentication/sign-in"
+            href="/autenticacion/iniciar-sesion"
             target=""
             rel="noreferrer"
             variant="gradient"

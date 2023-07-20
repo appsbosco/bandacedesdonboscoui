@@ -106,7 +106,7 @@ export default function App() {
       pathname.startsWith("/Profile"));
 
   if (shouldRedirectToLogin) {
-    return <Navigate to="/authentication/sign-in" />;
+    return <Navigate to="/autenticacion/iniciar-sesion" />;
   }
 
   let renderedRoutes = null;
@@ -158,7 +158,10 @@ export default function App() {
       : membersRoutes;
 
   const filteredNavRoutes = navRoutes.filter((route) => {
-    return route.route !== "/authentication/sign-in" && route.route !== "/authentication/sign-up";
+    return (
+      route.route !== "/autenticacion/iniciar-sesion" &&
+      route.route !== "/autenticacion/registrarse"
+    );
   });
 
   return (
@@ -167,8 +170,8 @@ export default function App() {
 
       {layout === "dashboard" &&
         pathname !== "/" &&
-        pathname !== "/authentication/sign-in" &&
-        pathname !== "/authentication/sign-up" &&
+        pathname !== "/autenticacion/iniciar-sesion" &&
+        pathname !== "/autenticacion/registrarse" &&
         pathname !== "/" &&
         pathname !== "/nosotros" &&
         pathname !== "/contacto" &&
@@ -192,8 +195,8 @@ export default function App() {
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
-        <Route path="/authentication/sign-up" component={SignUp} />
-        <Route path="/authentication/sign-in" component={SignIn} />
+        <Route path="/autenticacion/registrarse" component={SignUp} />
+        <Route path="/autenticacion/iniciar-sesion" component={SignIn} />
       </Routes>
     </ThemeProvider>
   );
