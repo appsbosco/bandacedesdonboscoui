@@ -17,6 +17,7 @@ export const NEW_ACCOUNT = gql`
       role
       instrument
       avatar
+      bands
     }
   }
 `;

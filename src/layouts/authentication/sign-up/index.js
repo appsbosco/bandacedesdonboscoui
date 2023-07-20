@@ -37,6 +37,7 @@ import cover from "../../../assets/images/sign-up.jpg";
 import { NEW_ACCOUNT } from "graphql/mutations";
 import login from "../../../assets/images/log-in.png";
 import loginerror from "../../../assets/images/loginerror.png";
+import CustomSelect from "components/CheckBoxGroup";
 
 const validationSchema = yup.object().shape({
   name: yup.string().required("Campo obligatorio"),
@@ -109,12 +110,29 @@ const grades = [
 
 const options = ["Sí", "No"];
 
+const bandOptions = [
+  "Banda de marcha",
+  "Banda de concierto elemental",
+  "Banda de concierto inicial",
+  "Banda de concierto intermedia",
+  "Banda de concierto avanzada",
+  "Big Band A",
+  "Big Band B",
+];
+
 const SignUp = () => {
   // Use navigate to redirect user to sign in page
   const navigate = useNavigate();
 
   // State to show error message
   const [message, setMessage] = useState(null);
+
+  //Bands
+  const [selectedBands, setSelectedBands] = useState([]);
+
+  const handleBandSelect = (selectedOptions) => {
+    setSelectedBands(selectedOptions);
+  };
 
   // Create new account mutation
   const [newUser] = useMutation(NEW_ACCOUNT);
@@ -253,10 +271,12 @@ const SignUp = () => {
                   birthday: "",
                   carnet: "",
                   grade: "",
+                  bands: [],
                 }}
                 onSubmit={async (values) => {
                   const {
                     confirmPassword, // Exclude the confirmPassword field
+                    bands,
                     birthday, // Include the birthday field
                     ...inputValues // Spread the rest of the values into a new object
                   } = values;
@@ -272,6 +292,7 @@ const SignUp = () => {
                       variables: {
                         input: {
                           ...inputValues,
+                          bands: bands || [],
                           birthday: formattedBirthday,
                         },
                       },
@@ -420,6 +441,25 @@ const SignUp = () => {
                             name="instrument"
                             options={instrument}
                           />
+                        </SoftBox>
+                        <SoftBox component="form" role="form">
+                          <SoftBox mb={2}>
+                            <SoftBox mb={1} ml={0.5}>
+                              <label
+                                htmlFor="name"
+                                className="block font-medium leading-6 text-md text-slate-900"
+                              >
+                                Bandas a las que pertenece
+                              </label>
+                            </SoftBox>
+                            <CustomSelect
+                              label="Seleccione las bandas a las que pertenece"
+                              name="bands"
+                              options={bandOptions}
+                              selectedOptions={selectedBands}
+                              onOptionSelect={handleBandSelect}
+                            />
+                          </SoftBox>
                         </SoftBox>
                       </>
                     )}
