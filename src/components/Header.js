@@ -28,7 +28,7 @@ const Header = () => {
               href="/"
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
-              Home
+              Inicio
             </a>
             <a
               href="/nosotros"
@@ -146,7 +146,7 @@ const Header = () => {
                       href="/"
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Home
+                      Inicio
                     </a>
                     <a
                       href="/nosotros"

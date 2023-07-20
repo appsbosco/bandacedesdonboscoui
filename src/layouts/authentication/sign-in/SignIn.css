@@ -56,3 +56,7 @@
     margin-right: 0;
   }
 }
+
+.blur-background {
+  backdrop-filter: blur(8px);
+}

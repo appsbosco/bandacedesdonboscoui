@@ -3,10 +3,10 @@
 * Banda CEDES Don Bosco - v4.0.0
 =========================================================
 
-* Product Page: https://www.creative-tim.com/product/soft-ui-dashboard-react
-* Copyright 2022 Banda CEDES Don Bosco(https://www.creative-tim.com)
+* Product Page: https://bandacedesdonbosco.com
+* Copyright 2022 Banda CEDES Don Bosco(https://www.bandacedesdonbosco.com)
 
-Coded by www.creative-tim.com
+Coded by Josué Chinchilla Salazar
 
  =========================================================
 

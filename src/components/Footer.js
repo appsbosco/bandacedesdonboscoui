@@ -1,5 +1,7 @@
 import React from "react";
 import newsletter from "../assets/images/newsletter-bg.svg";
+import logocedes from "../assets/images/logocedeswhite.png";
+
 const Footer = () => {
   return (
     <>
@@ -198,27 +200,7 @@ const Footer = () => {
             <hr className="w-full h-px mt-12 mb-6 border-slate-600/90 sm:mt-16 sm:mb-10" />
 
             <div className="flex flex-col items-center justify-between md:flex-row">
-              <div className="flex items-center gap-6">
-                <a
-                  href="/"
-                  className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
-                >
-                  Home
-                </a>
-                <a
-                  href="/nosotros"
-                  className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
-                >
-                  Nosotros
-                </a>
-
-                <a
-                  href="/contacto"
-                  className="text-base font-medium duration-200 ease-in-out text-slate-100 hover:text-white"
-                >
-                  Contacto
-                </a>
-              </div>
+              <img src={logocedes} alt="" className="w-auto h-16 sm:h-16 md:h-20 lg:h-24 xl:h-28" />
 
               <p className="mt-8 text-base text-slate-400/90 md:mt-0">
                 Copyright © 2023 Banda CEDES Don Bosco. Todos los derechos reservados{" "}
