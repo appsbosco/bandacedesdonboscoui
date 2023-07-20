@@ -35,6 +35,8 @@ import SelectField from "../components/SelectField";
 import Header from "components/Header";
 import cover from "../../../assets/images/sign-up.jpg";
 import { NEW_ACCOUNT } from "graphql/mutations";
+import login from "../../../assets/images/log-in.png";
+import loginerror from "../../../assets/images/loginerror.png";
 
 const validationSchema = yup.object().shape({
   name: yup.string().required("Campo obligatorio"),
@@ -117,21 +119,45 @@ const SignUp = () => {
   const [newUser] = useMutation(NEW_ACCOUNT);
 
   const showMessage = () => {
+    let imageSource = "";
+
+    if (message && message.toLowerCase().includes("correctamente el usuario")) {
+      imageSource = login;
+    } else {
+      imageSource = loginerror;
+    }
+
     return (
       <div
         style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: "9999",
           backgroundColor: "#ffffff",
-          padding: "10px",
-          margin: "10px auto",
-          maxWidth: "300px",
+          padding: "20px",
           textAlign: "center",
           boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          borderRadius: "8px",
+          maxWidth: "90%",
+          width: "400px",
         }}
       >
-        <p>{message}</p>
+        <div className="container">
+          <div className="content" id="popup">
+            <img
+              src={imageSource}
+              alt="Banda CEDES Don Bosco"
+              style={{ width: "60%", display: "block", margin: "0 auto", marginBottom: "1rem" }}
+            />
+            <p style={{ marginBottom: "1rem" }}>{message}</p>
+          </div>
+        </div>
       </div>
     );
   };
+
   const [userAnswer, setUserAnswer] = useState("");
 
   const handleUserAnswerChange = (event) => {

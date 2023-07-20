@@ -40,6 +40,8 @@ import UserContext from "UserContext";
 import Header from "components/Header";
 import cover from "../../../assets/images/about.jpg";
 import { AUTH_USER } from "graphql/mutations";
+import login from "../../../assets/images/log-in.png";
+import loginerror from "../../../assets/images/loginerror.png";
 
 const SignIn = () => {
   useEffect(() => {
@@ -64,18 +66,35 @@ const SignIn = () => {
   const [authUser] = useMutation(AUTH_USER);
 
   const showMessage = () => {
+    let imageSource = message !== "Autenticado correctamente. ¡Bienvenido!" ? loginerror : login;
+
     return (
       <div
         style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: "9999",
           backgroundColor: "#ffffff",
-          padding: "10px",
-          margin: "10px auto",
-          maxWidth: "300px",
+          padding: "20px",
           textAlign: "center",
           boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          borderRadius: "8px",
+          maxWidth: "90%",
+          width: "400px",
         }}
       >
-        <p>{message}</p>
+        <div className="container">
+          <div className="content" id="popup">
+            <img
+              src={imageSource}
+              alt="Banda CEDES Don Bosco"
+              style={{ width: "60%", display: "block", margin: "0 auto", marginBottom: "1rem" }}
+            />
+            <p style={{ marginBottom: "1rem" }}>{message}</p>
+          </div>
+        </div>
       </div>
     );
   };
@@ -193,7 +212,7 @@ const SignIn = () => {
                     });
 
                     // User registered successfully
-                    setMessage(`Autenticado correctamente. Bienvenido! `);
+                    setMessage(`Autenticado correctamente. ¡Bienvenido!`);
 
                     // Save token in local storage
                     const { token } = data.authUser;
@@ -246,7 +265,7 @@ const SignIn = () => {
 
                       <SoftTypography component="label" variant="caption" fontWeight="bold">
                         ¿No tienes una cuenta?{" "}
-                        <a style={{ color: "#323C63" }} href="/authentication/sign-up">
+                        <a style={{ color: "#323C63" }} href="/autenticacion/registrarse">
                           Regístrate
                         </a>
                       </SoftTypography>
