@@ -48,7 +48,7 @@ const About = () => {
             <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
               La BCDB ha participado en diferentes festivales tanto a nivel nacional como
               internacional en países como, El Salvador, Panamá y Estados Unidos. A nivel nacional
-              ha participado en 16 ediciones del Festival de la Luz de la Municipalidad de San José
+              ha participado en 17 ediciones del Festival de la Luz de la Municipalidad de San José
               desde el año 1998, siendo ganadores de la edición del 2007 en la categoría “Mejor
               Banda Colegial”.
             </p>

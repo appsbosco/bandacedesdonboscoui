@@ -161,6 +161,8 @@ const Tables = () => {
         user.role !== "Asistente de sección"
     ) || [];
 
+  const parentsData = data?.getUsers.filter((user) => user.role === "Padre/Madre de familia") || [];
+
   const columns = [
     { field: "name", headerName: "Nombre", width: 200 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
@@ -175,6 +177,14 @@ const Tables = () => {
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
     { field: "role", headerName: "Rol", width: 200 },
+  ];
+
+  const parentsColumns = [
+    { field: "name", headerName: "Nombre", width: 200 },
+    { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
+    { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
+    { field: "role", headerName: "Rol", width: 200 },
+    { field: "phone", headerName: "Número", width: 200 },
   ];
 
   const handleRowClick = (params) => {
@@ -261,6 +271,30 @@ const Tables = () => {
               <TableWithFilteringSorting
                 data={staffData || []}
                 columns={staffColumns}
+                onRowClick={handleRowClick}
+              />
+            </SoftBox>
+          </Card>
+        </SoftBox>
+
+        <SoftBox mb={3}>
+          <Card>
+            <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
+              <SoftTypography variant="h6">Padres / Madres de familia</SoftTypography>
+            </SoftBox>
+            <SoftBox
+              sx={{
+                "& .MuiTableRow-root:not(:last-child)": {
+                  "& td": {
+                    borderBottom: ({ borders: { borderWidth, borderColor } }) =>
+                      `${borderWidth[1]} solid ${borderColor}`,
+                  },
+                },
+              }}
+            >
+              <TableWithFilteringSorting
+                data={parentsData || []}
+                columns={parentsColumns}
                 onRowClick={handleRowClick}
               />
             </SoftBox>

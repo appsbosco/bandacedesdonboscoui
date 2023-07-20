@@ -484,9 +484,27 @@ const Overview = () => {
                     p={2}
                     height="100%"
                   >
-                    <Button variant="contained" color="info" onClick={() => handleOpenModal("add")}>
-                      Añadir ficha médica
-                    </Button>
+                    {userRole === "Padre/Madre de familia" ? (
+                      <SoftBox
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
+                        p={2}
+                        height="100%"
+                      >
+                        <SoftTypography variant="button" color="text" fontWeight="regular">
+                          No debes de añadir la ficha médica
+                        </SoftTypography>
+                      </SoftBox>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="info"
+                        onClick={() => handleOpenModal("add")}
+                      >
+                        Añadir ficha médica
+                      </Button>
+                    )}
                     {modalType === "add" && (
                       <MedicalRecordModal
                         open={openModal}

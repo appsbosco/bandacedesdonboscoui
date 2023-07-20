@@ -75,6 +75,7 @@ const roles = [
   "Asistente Color Guard",
   "Asistente Danza",
   "Instructor de instrumento",
+  "Padre/Madre de familia",
 ];
 
 const instrument = [
