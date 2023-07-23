@@ -148,7 +148,7 @@ const Hero = () => {
               {/* Floating handwritten text with arrow */}
               <div className="absolute hidden w-max md:top-16 md:left-full md:block lg:-top-8 lg:-left-28 2xl:top-16 2xl:left-full">
                 <span className="inline-block transform font-writing text-2xl tracking-wide text-slate-600 md:rotate-[16deg] lg:translate-x-6 lg:rotate-[-18deg] 2xl:rotate-12">
-                  Más que una banda!
+                  ¡Más que una banda!
                 </span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

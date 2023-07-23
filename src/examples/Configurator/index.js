@@ -227,7 +227,7 @@ function Configurator() {
 
         <SoftBox mt={3} textAlign="center">
           <SoftBox mb={0.5}>
-            <SoftTypography variant="h6">Gracias por apoyarnos!</SoftTypography>
+            <SoftTypography variant="h6">¡Gracias por apoyarnos!</SoftTypography>
           </SoftBox>
 
           <SoftBox display="flex" justifyContent="center">

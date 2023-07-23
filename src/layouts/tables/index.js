@@ -159,7 +159,8 @@ const Tables = () => {
       (user) =>
         user.role !== "Principal de sección" &&
         user.role !== "Integrante BCDB" &&
-        user.role !== "Asistente de sección"
+        user.role !== "Asistente de sección" &&
+        user.role !== "Padre/Madre de familia"
     ) || [];
 
   const parentsData = data?.getUsers.filter((user) => user.role === "Padre/Madre de familia") || [];

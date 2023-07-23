@@ -51,7 +51,7 @@ const Header = () => {
               Contacto
             </a>
 
-            {!(
+            {/* {!(
               pathname === "/autenticacion/registrarse" ||
               pathname === "/autenticacion/iniciar-sesion"
             ) &&
@@ -62,7 +62,7 @@ const Header = () => {
                 >
                   Registrarse
                 </a>
-              )}
+              )} */}
           </div>
 
           <div className="flex items-center">
@@ -75,13 +75,14 @@ const Header = () => {
                 Dashboard
               </a>
             ) : pathname === "/autenticacion/iniciar-sesion" ? (
-              <a
-                className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
-                href="/autenticacion/registrarse"
-              >
-                Registrarse
-              </a>
+              <></>
             ) : (
+              // <a
+              //   className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+              //   href="/autenticacion/registrarse"
+              // >
+              //   Registrarse
+              // </a>
               <a
                 className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
                 href="/autenticacion/iniciar-sesion"
