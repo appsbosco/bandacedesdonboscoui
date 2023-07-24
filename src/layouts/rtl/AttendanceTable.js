@@ -9,6 +9,7 @@ import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { CircularProgress } from "@mui/material";
 
 const AttendanceTable = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
@@ -47,7 +48,11 @@ const AttendanceTable = () => {
 
   const users = data ? data.getUsers : [];
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSaveAttendance = async () => {
+    setIsLoading(true);
+
     const date = new Date().toISOString();
 
     for (let i = 0; i < attendanceData.length; i++) {
@@ -67,7 +72,9 @@ const AttendanceTable = () => {
     }
 
     refetch();
-    window.location.href = "/attendance-history"; // Replace 'https://example.com' with the URL of the desired page
+    window.location.href = "/attendance-history";
+
+    setIsLoading(false);
   };
 
   if (loading)
@@ -122,16 +129,31 @@ const AttendanceTable = () => {
 
   return (
     <div>
-      <TableWithFilteringSorting data={rows} columns={columns} />
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+          }}
+        >
+          <CircularProgress />
+        </div>
+      ) : (
+        <>
+          <TableWithFilteringSorting data={rows} columns={columns} />
 
-      <Button
-        style={{ margin: "2%" }}
-        variant="contained"
-        color="info"
-        onClick={handleSaveAttendance}
-      >
-        Guardar asistencia
-      </Button>
+          <Button
+            style={{ margin: "2%" }}
+            variant="contained"
+            color="info"
+            onClick={handleSaveAttendance}
+          >
+            {isLoading ? "Guardando..." : "Guardar asistencia"}
+          </Button>
+        </>
+      )}
     </div>
   );
 };

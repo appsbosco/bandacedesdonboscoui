@@ -55,16 +55,16 @@ const AttendanceHistoryTable = () => {
 
   const rows = data.getAllAttendance
     .slice()
-    .reverse() // Reverse the order of the array
+    .reverse()
     .map((attendance) => ({
       id: attendance.id || uuidv4(),
       username:
-        attendance.user.name +
+        attendance.user?.name +
         " " +
-        attendance.user.firstSurName +
+        attendance.user?.firstSurName +
         " " +
-        attendance.user.secondSurName,
-      instrument: attendance.user.instrument,
+        attendance.user?.secondSurName,
+      instrument: attendance.user?.instrument,
       date: formatDateString(attendance.date),
       attended: getAttendanceDisplayString(attendance.attended),
     }));
