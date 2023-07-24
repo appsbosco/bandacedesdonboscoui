@@ -160,7 +160,7 @@ export default function App() {
   const filteredNavRoutes = navRoutes.filter((route) => {
     return (
       route.route !== "/autenticacion/iniciar-sesion" &&
-      route.route !== "/autenticacion/registrarse"
+      route.route !== "/autenticacion/registrarse-privado"
     );
   });
 
@@ -171,7 +171,7 @@ export default function App() {
       {layout === "dashboard" &&
         pathname !== "/" &&
         pathname !== "/autenticacion/iniciar-sesion" &&
-        pathname !== "/autenticacion/registrarse" &&
+        pathname !== "/autenticacion/registrarse-privado" &&
         pathname !== "/" &&
         pathname !== "/nosotros" &&
         pathname !== "/contacto" &&
@@ -195,7 +195,7 @@ export default function App() {
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
-        <Route path="/autenticacion/registrarse" component={SignUp} />
+        <Route path="/autenticacion/registrarse-privado" component={SignUp} />
         <Route path="/autenticacion/iniciar-sesion" component={SignIn} />
       </Routes>
     </ThemeProvider>

@@ -51,7 +51,7 @@ function DefaultNavbarMobile({ open, close }) {
         <DefaultNavbarLink
           icon="account_circle"
           name="Registrarse"
-          route="/autenticacion/registrarse"
+          route="/autenticacion/registrarse-privado"
         />
         {/* <DefaultNavbarLink icon="key" name="sign in" route="/autenticacion/iniciar-sesion" /> */}
       </SoftBox>

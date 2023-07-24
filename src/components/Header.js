@@ -52,12 +52,12 @@ const Header = () => {
             </a>
 
             {/* {!(
-              pathname === "/autenticacion/registrarse" ||
+              pathname === "/autenticacion/registrarse-privado" ||
               pathname === "/autenticacion/iniciar-sesion"
             ) &&
               isAuthenticated === null && (
                 <a
-                  href="/autenticacion/registrarse"
+                  href="/autenticacion/registrarse-privado"
                   className="relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[''] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25"
                 >
                   Registrarse
@@ -79,7 +79,7 @@ const Header = () => {
             ) : (
               // <a
               //   className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
-              //   href="/autenticacion/registrarse"
+              //   href="/autenticacion/registrarse-privado"
               // >
               //   Registrarse
               // </a>
@@ -168,10 +168,10 @@ const Header = () => {
                     >
                       Contacto
                     </a>
-                    {/* {pathname !== "/autenticacion/registrarse" &&
+                    {/* {pathname !== "/autenticacion/registrarse-privado" &&
                       pathname !== "/autenticacion/iniciar-sesion" && (
                         <a
-                          href="/autenticacion/registrarse"
+                          href="/autenticacion/registrarse-privado"
                           className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                         >
                           Registrarse

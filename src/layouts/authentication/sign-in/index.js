@@ -265,7 +265,7 @@ const SignIn = () => {
 
                       {/* <SoftTypography component="label" variant="caption" fontWeight="bold">
                         ¿No tienes una cuenta?{" "}
-                        <a style={{ color: "#323C63" }} href="/autenticacion/registrarse">
+                        <a style={{ color: "#323C63" }} href="/autenticacion/registrarse-privado">
                           Regístrate
                         </a>
                       </SoftTypography> */}

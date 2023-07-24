@@ -654,6 +654,21 @@ const Tables = () => {
                                 : "N/A"}
                             </p>
                           </li>
+
+                          <li className="relative ">
+                            <div>
+                              <div className="flex items-center justify-center rounded-lg h-11 w-11 bg-gradient-to-br from-sky-50 via-slate-50 to-sky-50 ring-1 ring-slate-900/5">
+                                <MedicalServicesIcon />
+                              </div>
+
+                              <p className="mt-2 text-lg font-semibold font-display text-slate-900">
+                                Alergias
+                              </p>
+                            </div>
+                            <p className="mt-3 text-base leading-7 text-slate-700">
+                              {userMedicalRecord.allergies ? userMedicalRecord.allergies : "N/A"}
+                            </p>
+                          </li>
                         </ol>
 
                         <ol className="col-span-2 grid grid-cols-1 gap-x-8 gap-y-10 text-base leading-7 text-gray-600 [counter-reset:section] sm:grid-cols-2 lg:gap-y-16 mt-6">
