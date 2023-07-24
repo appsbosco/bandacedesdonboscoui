@@ -168,7 +168,7 @@ const Header = () => {
                     >
                       Contacto
                     </a>
-                    {pathname !== "/autenticacion/registrarse" &&
+                    {/* {pathname !== "/autenticacion/registrarse" &&
                       pathname !== "/autenticacion/iniciar-sesion" && (
                         <a
                           href="/autenticacion/registrarse"
@@ -176,7 +176,7 @@ const Header = () => {
                         >
                           Registrarse
                         </a>
-                      )}
+                      )} */}
                   </div>
                 </div>
               </div>
