@@ -150,6 +150,7 @@ const Overview = () => {
   let illness = [];
   let medicine = [];
   let medicineOnTour = [];
+  let allergies = [];
 
   const medicalRecords = medicalRecordData?.getMedicalRecordByUser || [];
 
@@ -168,6 +169,7 @@ const Overview = () => {
     illness = record.illness || []; // collect all illnesses
     medicine = record.medicine || []; // collect all medicines
     medicineOnTour = record.medicineOnTour || []; // collect all medicines on tour
+    allergies = record.allergies || [];
   }
 
   const inventoryArray = inventoryData?.getInventoryByUser || [];
@@ -348,9 +350,12 @@ const Overview = () => {
                       illness,
                       medicine,
                       medicineOnTour,
+                      allergies,
                     } = medicalRecord;
 
                     const formattedIllness = illness === "No" || !illness ? "N/A" : illness;
+                    const formattedAllergies = allergies === "No" || !allergies ? "N/A" : allergies;
+
                     const formattedMedicine = medicine === "No" || !medicine ? "N/A" : medicine;
                     const formattedMedicineOnTour =
                       medicineOnTour === "No" || !medicineOnTour ? "N/A" : medicineOnTour;
@@ -412,6 +417,15 @@ const Overview = () => {
                           </SoftTypography>
                           <SoftTypography variant="body2" fontWeight="regular" ml={1}>
                             {formattedMedicineOnTour}
+                          </SoftTypography>
+                        </SoftBox>
+
+                        <SoftBox display="flex" py={1} pr={2}>
+                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
+                            Alergias a medicamentos
+                          </SoftTypography>
+                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                            {formattedAllergies}
                           </SoftTypography>
                         </SoftBox>
 

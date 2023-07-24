@@ -129,6 +129,7 @@ export const CREATE_MEDICAL_RECORD = gql`
       illness
       medicine
       medicineOnTour
+      allergies
     }
   }
 `;
@@ -149,6 +150,7 @@ export const UPDATE_MEDICAL_RECORD = gql`
       illness
       medicine
       medicineOnTour
+      allergies
     }
   }
 `;

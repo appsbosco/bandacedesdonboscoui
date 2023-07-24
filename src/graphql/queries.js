@@ -111,6 +111,7 @@ export const GET_MEDICAL_RECORD_BY_USER = gql`
       illness
       medicine
       medicineOnTour
+      allergies
     }
   }
 `;

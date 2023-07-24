@@ -43,6 +43,8 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
     initialValues ? initialValues.medicineOnTour : ""
   );
 
+  const [allergies, setAllergies] = useState(initialValues ? initialValues.allergies : "");
+
   const handleSubmit = () => {
     onSubmit({
       identification,
@@ -57,6 +59,7 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
       illness,
       medicine,
       medicineOnTour,
+      allergies,
     });
   };
 
@@ -215,6 +218,21 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
           type="text"
           id="medicineOnTour"
         />
+        <SoftBox mb={1} ml={0.5}>
+          <SoftTypography component="label" variant="caption" fontWeight="bold">
+            ¿Tiene alergias a algún alimento y/o medicamento?
+          </SoftTypography>
+        </SoftBox>
+
+        <Input
+          name="allergies"
+          value={allergies}
+          onChange={(e) => setAllergies(e.target.value)}
+          fullWidth
+          type="text"
+          id="allergies"
+        />
+
         <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
 
         <a
@@ -325,6 +343,7 @@ MedicalRecordModal.propTypes = {
     illness: PropTypes.string,
     medicine: PropTypes.string,
     medicineOnTour: PropTypes.string,
+    allergies: PropTypes.string,
   }),
   onSubmit: PropTypes.func.isRequired,
 };
@@ -345,6 +364,7 @@ MedicalRecordModal.defaultProps = {
     illness: "",
     medicine: "",
     medicineOnTour: "",
+    allergies: "",
   },
 };
 
