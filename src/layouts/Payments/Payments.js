@@ -147,7 +147,7 @@ const PaymentComponent = () => {
       },
     }).then(async (response) => {
       const createdPayment = response.data.createPayment;
-      console.log(createdPayment);
+
       if (createdPayment) {
         setSelectedEvent(createdPayment.paymentEvent);
 

@@ -22,6 +22,24 @@ export const NEW_ACCOUNT = gql`
   }
 `;
 
+export const NEW_PARENT = gql`
+  mutation NewParent($input: ParentInput) {
+    newParent(input: $input) {
+      avatar
+      children {
+        id
+      }
+      email
+      firstSurName
+      name
+      password
+      phone
+      role
+      secondSurName
+    }
+  }
+`;
+
 export const UPDATE_USER = gql`
   mutation UpdateUser($updateUserId: ID!, $input: UserInput) {
     updateUser(id: $updateUserId, input: $input) {

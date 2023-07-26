@@ -1,6 +1,8 @@
 // Banda CEDES Don Bosco layouts
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
+import ParentsSignUp from "layouts/authentication/sign-up/parents";
+
 import Billing from "layouts/billing";
 import Dashboard from "layouts/dashboard";
 import Profile from "layouts/profile";
@@ -23,6 +25,8 @@ import About from "components/About";
 import Contact from "components/Contact";
 import PaymentComponent from "layouts/Payments/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
+import ParentsProfile from "layouts/parentsProfile";
+
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -169,6 +173,16 @@ const routes = [
     route: "/autenticacion/registrarse-privado",
     icon: <SpaceShip size="12px" />,
     component: <SignUp />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Sign Up",
+    key: "parents-sign-up",
+    route: "/autenticacion/registro-privado",
+    icon: <SpaceShip size="12px" />,
+    component: <ParentsSignUp />,
     noCollapse: true,
     href: null,
   },
@@ -460,4 +474,39 @@ export const membersRoutes = [
     href: null,
   },
 ];
+
+export const parentsRoutes = [
+  {
+    type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    route: "/dashboard",
+    icon: <DashboardIcon size="12px" />,
+    component: <Dashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Cuenta", key: "account-pages" },
+  {
+    type: "collapse",
+    name: "Perfil",
+    key: "parents-profile",
+    route: "/parents-profile",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <ParentsProfile />,
+    noCollapse: true,
+    href: null,
+  },
+];
+
 export default routes;

@@ -44,12 +44,14 @@ import curved0 from "assets/images/curved-images/curved0.jpg";
 import ProfileImageUploader from "../ProfilePicture/ProfileImageUploader";
 import { Avatar } from "@mui/material";
 import { GET_USERS_BY_ID } from "graphql/queries";
+import { GET_PARENTS_BY_ID } from "graphql/queries";
 
 const Header = () => {
   const [tabsOrientation, setTabsOrientation] = useState("horizontal");
   const [tabValue, setTabValue] = useState(0);
 
   const { data, loading, error, refetch } = useQuery(GET_USERS_BY_ID);
+  const { data: parentsData } = useQuery(GET_PARENTS_BY_ID);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +68,27 @@ const Header = () => {
   }, [loading, refetch]);
 
   const { name, firstSurName, avatar, instrument } = data?.getUser || {};
+  const {
+    name: parentName,
+    firstSurName: parenFirstSurName,
+    secondSurName: parenSecondSurName,
+  } = parentsData?.getParent || {};
+
+  const userRole = data?.getUser?.role;
+  const parentRole = parentsData?.getParent?.role;
+
+  // Function to get the display name and role dynamically
+  const getDisplayNameAndRole = () => {
+    if (userRole) {
+      return { displayName: name + " " + firstSurName, role: userRole };
+    } else if (parentRole) {
+      return { displayName: parentName + " " + parenFirstSurName };
+    } else {
+      return { displayName: "", role: "" };
+    }
+  };
+
+  const { displayName, role } = getDisplayNameAndRole();
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -88,6 +111,34 @@ const Header = () => {
   }, [tabsOrientation]);
 
   const handleSetTabValue = (event, newValue) => setTabValue(newValue);
+
+  const renderAvatar = () => {
+    if (parentRole) {
+      return (
+        <SoftAvatar
+          size="large"
+          name={parentName + " " + parenFirstSurName}
+          src={avatar}
+          alt="Avatar"
+        />
+      );
+    } else {
+      return (
+        <>
+          {!avatar || avatar === "" ? (
+            <ProfileImageUploader />
+          ) : (
+            <img
+              className="w-20 h-20 rounded"
+              style={{ objectFit: "cover", objectPosition: "center" }}
+              src={avatar}
+              alt="Avatar"
+            />
+          )}
+        </>
+      );
+    }
+  };
 
   return (
     <SoftBox position="relative">
@@ -122,22 +173,11 @@ const Header = () => {
         }}
       >
         <Grid container spacing={3} alignItems="center">
-          <Grid item>
-            {!avatar || avatar === "" ? (
-              <ProfileImageUploader />
-            ) : (
-              <img
-                className="w-20 h-20 rounded"
-                style={{ objectFit: "cover", objectPosition: "center" }}
-                src={avatar}
-                alt="Avatar"
-              />
-            )}
-          </Grid>
+          <Grid item>{renderAvatar()}</Grid>
           <Grid item>
             <SoftBox height="100%" mt={0.5} lineHeight={1}>
               <SoftTypography variant="h5" fontWeight="medium">
-                {name + " " + firstSurName}
+                {displayName}
               </SoftTypography>
               <SoftTypography variant="button" color="text" fontWeight="medium">
                 {instrument}

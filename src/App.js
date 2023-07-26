@@ -29,6 +29,7 @@ import { setMiniSidenav, setOpenConfigurator } from "context";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import ArticlePage from "layouts/blog/ArticlePage";
 import BlogListing from "layouts/blog/BlogListing";
+import { parentsRoutes } from "routes";
 
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
@@ -120,6 +121,15 @@ export default function App() {
   } else if (userRole === "Staff") {
     const staffRoutesFiltered = [...routes, ...staffRoutes];
     renderedRoutes = getRoutes(staffRoutesFiltered);
+  } else if (
+    userRole !== "Integrante BCDB" &&
+    userRole !== "Asistente Drumline" &&
+    userRole !== "Asistente Color Guard" &&
+    userRole !== "Asistente Danza" &&
+    userRole !== "Instructor de instrumento"
+  ) {
+    const parentsRoutesFiltered = [...routes, ...parentsRoutes];
+    renderedRoutes = getRoutes(parentsRoutesFiltered);
   } else {
     renderedRoutes = getRoutes(routes);
   }
@@ -155,12 +165,19 @@ export default function App() {
       ? principalRoutes
       : userRole === "Staff"
       ? staffRoutes
+      : userRole !== "Integrante BCDB" &&
+        userRole !== "Asistente Drumline" &&
+        userRole !== "Asistente Color Guard" &&
+        userRole !== "Asistente Danza" &&
+        userRole !== "Instructor de instrumento"
+      ? parentsRoutes
       : membersRoutes;
 
   const filteredNavRoutes = navRoutes.filter((route) => {
     return (
       route.route !== "/autenticacion/iniciar-sesion" &&
-      route.route !== "/autenticacion/registrarse-privado"
+      route.route !== "/autenticacion/registrarse-privado" &&
+      route.route !== "  /autenticacion/registro-privado"
     );
   });
 
@@ -172,6 +189,7 @@ export default function App() {
         pathname !== "/" &&
         pathname !== "/autenticacion/iniciar-sesion" &&
         pathname !== "/autenticacion/registrarse-privado" &&
+        pathname !== "/autenticacion/registro-privado" &&
         pathname !== "/" &&
         pathname !== "/nosotros" &&
         pathname !== "/contacto" &&

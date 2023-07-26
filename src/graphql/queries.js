@@ -20,6 +20,29 @@ export const GET_USERS_BY_ID = gql`
   }
 `;
 
+export const GET_PARENTS_BY_ID = gql`
+  query GetParents {
+    getParent {
+      avatar
+      email
+      firstSurName
+      id
+      name
+      password
+      phone
+      role
+      secondSurName
+      children {
+        name
+        firstSurName
+        secondSurName
+        email
+        phone
+      }
+    }
+  }
+`;
+
 export const GET_USERS = gql`
   query getUsers {
     getUsers {
@@ -36,6 +59,35 @@ export const GET_USERS = gql`
       role
       instrument
       avatar
+    }
+  }
+`;
+export const GET_PARENTS = gql`
+  query GetParents {
+    getParents {
+      phone
+      role
+      secondSurName
+      name
+      id
+      firstSurName
+      email
+      children {
+        name
+        firstSurName
+        secondSurName
+        email
+        carnet
+        birthday
+        bands
+        avatar
+        grade
+        id
+        instrument
+        phone
+        role
+        state
+      }
     }
   }
 `;
