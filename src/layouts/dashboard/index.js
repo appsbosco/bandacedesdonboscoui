@@ -114,7 +114,12 @@ const Dashboard = () => {
     setSelectedEvent(null);
   };
 
-  const users = usersData?.getUsers;
+  if (!usersData || !usersData.getUsers) {
+    console.error("usersData or usersData.getUsers is undefined");
+    return;
+  }
+
+  const users = usersData.getUsers;
 
   const bands = [
     "Banda de marcha",
