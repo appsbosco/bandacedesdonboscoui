@@ -114,6 +114,45 @@ const Dashboard = () => {
     setSelectedEvent(null);
   };
 
+  const users = usersData?.getUsers;
+
+  const bands = [
+    "Banda de marcha",
+    "Banda de concierto elemental",
+    "Banda de concierto inicial",
+    "Banda de concierto intermedia",
+    "Banda de concierto avanzada",
+    "Big Band A",
+    "Big Band B",
+  ];
+
+  const integranteBCDB = users?.filter((user) => user.role === "Integrante BCDB");
+  const principalSeccion = users?.filter((user) => user.role === "Principal de sección");
+  const asistenteSeccion = users?.filter((user) => user.role === "Asistente de sección");
+  const director = users?.filter((user) => user.role === "Director");
+  const direccionLogistica = users?.filter((user) => user.role === "Dirección Logística");
+  const staff = users?.filter((user) => user.role === "Staff");
+  const asistenteDrumline = users?.filter((user) => user.role === "Asistente Drumline");
+  const asistenteColorGuard = users?.filter((user) => user.role === "Asistente Color Guard");
+  const asistenteDanza = users?.filter((user) => user.role === "Asistente Danza");
+  const instructorInstrumento = users?.filter((user) => user.role === "Instructor de instrumento");
+  const padreMadreFamilia = users?.filter((user) => user.role === "Padre/Madre de familia");
+
+  // Create an object to store users grouped by band
+  const usersByBand = {};
+
+  // Helper function to filter users by band
+  const filterUsersByBand = (users, band) => users.filter((user) => user.bands.includes(band));
+
+  // Group users by band
+  bands.forEach((band) => {
+    usersByBand[band] = {
+      integranteBCDB: filterUsersByBand(integranteBCDB, band),
+      principalSeccion: filterUsersByBand(principalSeccion, band),
+      asistenteSeccion: filterUsersByBand(asistenteSeccion, band),
+    };
+  });
+
   const handleSendEmail = (eventData) => {
     const formattedTime = new Date(`2000-01-01T${eventData.time}`).toLocaleTimeString([], {
       hour: "numeric",
@@ -129,8 +168,11 @@ const Dashboard = () => {
     });
 
     const users = usersData?.getUsers;
+    const bandToSendEmail = eventData.type;
+
     if (users) {
-      users.forEach((user) => {
+      const usersInBand = users.filter((user) => user.bands.includes(bandToSendEmail));
+      usersInBand.forEach((user) => {
         const { email, name } = user;
         const emailContent = `
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -319,6 +361,16 @@ const Dashboard = () => {
                                           contar con cada uno de ustedes para hacer de este evento un
                                           verdadero éxito.”
                                         </p>
+                                        <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        Formato:  ${eventData.type}
+                                      </p>
                                         <p
                                           style="
                                             font-size: 18px;

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@material-ui/core";
 import Input from "./Input";
 import TextArea from "./TextArea";
+import Select from "./Select";
 
 const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSubmit }) => {
   const [title, setTitle] = useState(initialValues ? initialValues.title : "");
@@ -12,10 +13,21 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
   const [arrival, setArrival] = useState(initialValues ? initialValues.arrival : "");
   const [departure, setDeparture] = useState(initialValues ? initialValues.departure : "");
   const [description, setDescription] = useState(initialValues ? initialValues.description : "");
+  const [type, setType] = useState(initialValues ? initialValues.type : "");
 
   const handleSubmit = () => {
-    onSubmit({ title, place, date, time, arrival, departure, description });
+    onSubmit({ title, place, date, time, arrival, departure, description, type });
   };
+
+  const bandOptions = [
+    { value: "Banda de marcha", label: "Banda de marcha" },
+    { value: "Banda de concierto elemental", label: "Banda de concierto elemental" },
+    { value: "Banda de concierto inicial", label: "Banda de concierto inicial" },
+    { value: "Banda de concierto intermedia", label: "Banda de concierto intermedia" },
+    { value: "Banda de concierto avanzada", label: "Banda de concierto avanzada" },
+    { value: "Big Band A", label: "Big Band A" },
+    { value: "Big Band B", label: "Big Band B" },
+  ];
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -33,6 +45,19 @@ const EventFormModal = ({ open, onClose, title: modalTitle, initialValues, onSub
             fullWidth
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <label style={{ fontWeight: "bold" }}>Formato</label>
+          </div>
+
+          <Select
+            id="type"
+            name="type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            options={bandOptions}
           />
         </div>
 
@@ -150,6 +175,7 @@ EventFormModal.propTypes = {
     arrival: PropTypes.string,
     departure: PropTypes.string,
     description: PropTypes.string,
+    type: PropTypes.string,
   }),
   onSubmit: PropTypes.func.isRequired,
 };
@@ -164,6 +190,7 @@ EventFormModal.defaultProps = {
     arrival: "",
     departure: "",
     description: "",
+    type: "",
   },
 };
 
