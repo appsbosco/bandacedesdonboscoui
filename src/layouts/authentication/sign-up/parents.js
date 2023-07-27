@@ -284,7 +284,7 @@ const ParentSignUp = () => {
                           htmlFor="name"
                           className="block font-medium leading-6 text-md text-slate-900"
                         >
-                          Contraseña
+                          Cree una contraseña
                         </label>
                       </SoftBox>
                       <InputField type="password" name="password" placeholder="Contraseña" />{" "}
@@ -311,6 +311,25 @@ const ParentSignUp = () => {
                 >
                   <SoftBox component="form" role="form">
                     <SoftBox mb={2}>
+                      <SoftBox mb={2}>
+                        <SoftBox mb={1} ml={0.5}>
+                          <label
+                            htmlFor="name"
+                            className="block font-medium leading-6 text-md text-slate-900"
+                          >
+                            Ingrese su número de celular
+                          </label>
+                        </SoftBox>
+                        <InputField name="phone" placeholder="Número de celular" />{" "}
+                      </SoftBox>
+                      <SoftBox mb={1} ml={0.5}>
+                        <label
+                          htmlFor="name"
+                          className="block font-medium leading-6 text-md text-slate-900"
+                        >
+                          Seleccione o digite el nombre de su hijo/a
+                        </label>
+                      </SoftBox>
                       <CustomSelect
                         labelId="user-label"
                         value={selectedUser}
@@ -320,15 +339,6 @@ const ParentSignUp = () => {
                           label: `${user.name} ${user.firstSurName} ${user.secondSurName}`,
                         }))}
                       />
-                      <SoftBox mb={1} ml={0.5}>
-                        <label
-                          htmlFor="name"
-                          className="block font-medium leading-6 text-md text-slate-900"
-                        >
-                          Número de celular
-                        </label>
-                      </SoftBox>
-                      <InputField name="phone" placeholder="Número de celular" />{" "}
                     </SoftBox>
                   </SoftBox>
                 </FormStep>
