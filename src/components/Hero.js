@@ -8,7 +8,6 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 const Hero = () => {
   return (
     <section className="relative py-20 overflow-hidden lg:py-24">
-      {/* Light blue gradient background */}
       <svg
         width="1728"
         height="894"
@@ -61,7 +60,6 @@ const Hero = () => {
         <div className="flex flex-col items-center max-w-2xl mx-auto lg:items-start">
           <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl lg:text-left">
             <span className="relative whitespace-nowrap">
-              {/* Headline underline */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="249"
@@ -91,8 +89,6 @@ const Hero = () => {
 
             {/* Social links */}
             <div className="flex gap-3 sm:gap-4">
-              {/* Link 1*/}
-              {/* Link 2 */}
               <a
                 className="flex items-center justify-center duration-200 border rounded-full h-11 w-11 border-slate-200 hover:bg-slate-50"
                 href="https://www.instagram.com/bandacedesdonbosco"

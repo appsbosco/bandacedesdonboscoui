@@ -1,27 +1,8 @@
-/**
-=========================================================
-* Banda CEDES Don Bosco - v4.0.0
-=========================================================
-
-* Product Page: 
-* Copyright 2023 Banda CEDES Don Bosco()
-
-Coded by Josué Chinchilla
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
-// prop-types is a library for typechecking of props
+import React from "react";
 import PropTypes from "prop-types";
-
-// @mui material components
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
-
-// Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
@@ -29,80 +10,74 @@ function MiniStatisticsCard({ bgColor, title, count, percentage, icon, direction
   return (
     <Card>
       <SoftBox bgColor={bgColor} variant="gradient">
-        <SoftBox p={2}>
-          <Grid container alignItems="center">
-            {direction === "left" ? (
-              <Grid item>
-                <SoftBox
-                  variant="gradient"
-                  bgColor={bgColor === "white" ? icon.color : "white"}
-                  color={bgColor === "white" ? "white" : "dark"}
-                  width="3rem"
-                  height="3rem"
-                  borderRadius="md"
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  shadow="md"
-                >
-                  <Icon fontSize="small" color="inherit">
-                    {icon.component}
-                  </Icon>
-                </SoftBox>
-              </Grid>
-            ) : null}
-            <Grid item xs={8}>
-              <SoftBox ml={direction === "left" ? 2 : 0} lineHeight={1}>
-                <SoftTypography
-                  variant="button"
-                  color={bgColor === "white" ? "text" : "white"}
-                  opacity={bgColor === "white" ? 1 : 0.7}
-                  textTransform="capitalize"
-                  fontWeight={title.fontWeight}
-                >
-                  {title.text}
+        <SoftBox p={2} display="flex" alignItems="center">
+          {direction === "left" && (
+            <SoftBox
+              variant="gradient"
+              bgColor={bgColor === "white" ? icon.color : "white"}
+              color={bgColor === "white" ? "white" : "dark"}
+              width="3rem"
+              height="3rem"
+              borderRadius="md"
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              shadow="md"
+            >
+              <Icon fontSize="small" color="inherit">
+                <div style={{ marginBottom: "10px" }}>{icon.component}</div>
+              </Icon>
+            </SoftBox>
+          )}
+          <Grid item xs={8}>
+            <SoftBox ml={direction === "left" ? 2 : 0} lineHeight={1}>
+              <SoftTypography
+                variant="button"
+                color={bgColor === "white" ? "text" : "white"}
+                opacity={bgColor === "white" ? 1 : 0.7}
+                textTransform="capitalize"
+                fontWeight={title.fontWeight}
+              >
+                {title.text}
+              </SoftTypography>
+              <SoftTypography
+                variant="h5"
+                fontWeight="bold"
+                color={bgColor === "white" ? "dark" : "white"}
+              >
+                {count}{" "}
+                <SoftTypography variant="button" color={percentage.color} fontWeight="bold">
+                  {percentage.text}
                 </SoftTypography>
-                <SoftTypography
-                  variant="h5"
-                  fontWeight="bold"
-                  color={bgColor === "white" ? "dark" : "white"}
-                >
-                  {count}{" "}
-                  <SoftTypography variant="button" color={percentage.color} fontWeight="bold">
-                    {percentage.text}
-                  </SoftTypography>
-                </SoftTypography>
-              </SoftBox>
-            </Grid>
-            {direction === "right" ? (
-              <Grid item xs={4}>
-                <SoftBox
-                  variant="gradient"
-                  bgColor={bgColor === "white" ? icon.color : "white"}
-                  color={bgColor === "white" ? "white" : "dark"}
-                  width="3rem"
-                  height="3rem"
-                  marginLeft="auto"
-                  borderRadius="md"
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  shadow="md"
-                >
-                  <Icon fontSize="small" color="inherit">
-                    {icon.component}
-                  </Icon>
-                </SoftBox>
-              </Grid>
-            ) : null}
+              </SoftTypography>
+            </SoftBox>
           </Grid>
+          {direction === "right" && (
+            <SoftBox
+              variant="gradient"
+              bgColor={bgColor === "white" ? icon.color : "white"}
+              color={bgColor === "white" ? "white" : "dark"}
+              width="3rem"
+              height="3rem"
+              marginLeft="auto"
+              borderRadius="md"
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              shadow="md"
+              style={{ paddingBottom: "10px" }}
+            >
+              <Icon fontSize="small" color="inherit">
+                <div style={{ paddingBottom: "10px" }}>{icon.component}</div>
+              </Icon>
+            </SoftBox>
+          )}
         </SoftBox>
       </SoftBox>
     </Card>
   );
 }
 
-// Setting default values for the props of MiniStatisticsCard
 MiniStatisticsCard.defaultProps = {
   bgColor: "white",
   title: {
@@ -116,7 +91,6 @@ MiniStatisticsCard.defaultProps = {
   direction: "right",
 };
 
-// Typechecking props for the MiniStatisticsCard
 MiniStatisticsCard.propTypes = {
   bgColor: PropTypes.oneOf([
     "white",

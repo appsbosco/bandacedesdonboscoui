@@ -23,21 +23,51 @@ export const GET_USERS_BY_ID = gql`
 export const GET_PARENTS_BY_ID = gql`
   query GetParents {
     getParent {
-      avatar
-      email
-      firstSurName
       id
       name
+      firstSurName
+      secondSurName
+      email
       password
       phone
       role
-      secondSurName
+      avatar
       children {
+        id
         name
         firstSurName
         secondSurName
         email
+        birthday
+        carnet
+        state
+        grade
         phone
+        role
+        instrument
+        avatar
+        bands
+        attendance {
+          id
+          date
+          attended
+        }
+        medicalRecord {
+          id
+          identification
+          sex
+          bloodType
+        }
+        inventory {
+          id
+          brand
+          model
+          numberId
+          serie
+          condition
+          mainteinance
+          details
+        }
       }
     }
   }

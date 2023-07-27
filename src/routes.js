@@ -28,6 +28,7 @@ import PaymentComponent from "layouts/Payments/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
 import ParentsProfile from "layouts/parentsProfile";
 import Email from "layouts/email";
+import Attendance from "layouts/attendance";
 
 export const protectedRoutes = [
   {
@@ -519,6 +520,17 @@ export const parentsRoutes = [
     route: "/events",
     icon: <EventIcon size="12px" />,
     component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Asistencia", key: "account-pages" },
+  {
+    type: "collapse",
+    name: "Asistencia",
+    key: "attendance",
+    route: "/attendance",
+    icon: <DashboardIcon size="12px" />,
+    component: <Attendance />,
     noCollapse: true,
     href: null,
   },

@@ -62,10 +62,27 @@ const Overview = () => {
     secondSurName: childSecondSurName,
     email: childEmail,
     phone: childPhone,
-  } = firstChild;
+    inventory,
+    medicalRecord,
+    attendance,
+  } = firstChild || {};
 
-  // Handle error state
-  // if (userError || medicalRecordError) return <p>Error!</p>;
+  const {
+    id: inventoryId,
+    brand,
+    model,
+    numberId,
+    serie,
+    condition,
+    mainteinance,
+    details,
+  } = inventory[0] || {};
+
+  // Extract medicalRecord fields
+  const { id: medicalRecordId, identification, sex, bloodType } = medicalRecord[0] || {};
+
+  // Extract attendance fields
+  const { id: attendanceId, date, attended } = attendance[0] || {};
 
   return (
     <DashboardLayout>
@@ -177,17 +194,85 @@ const Overview = () => {
 
           <Grid item xs={12} md={6} xl={4}>
             <Card sx={{ height: "100%", minHeight: "400px" }}>
-              <SoftBox display="flex" flexDirection="column" height="100%">
-                <SoftBox
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  pt={2}
-                  px={2}
-                >
-                  <SoftTypography variant="h5" fontWeight="medium" textTransform="">
-                    Instrumento de mi hijo
+              <SoftBox
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                pt={2}
+                px={2}
+              >
+                <SoftTypography variant="h5" fontWeight="medium" textTransform="">
+                  Mi Hijo/a
+                </SoftTypography>
+              </SoftBox>
+              <SoftBox p={2}>
+                <SoftBox mb={2} lineHeight={1}>
+                  <SoftTypography variant="button" color="text" fontWeight="regular">
+                    Instrumento de mi hijo/a.
                   </SoftTypography>
+                </SoftBox>
+                <SoftBox opacity={0.3}>
+                  <Divider />
+                </SoftBox>
+                <SoftBox key={name} maxHeight="100%">
+                  <SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Marca:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {brand ? brand : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Modelo:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {model ? model : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Número de placa:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {numberId ? numberId : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Número de serie:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {serie ? serie : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Condición:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {condition ? condition : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Mantenimiento:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {mainteinance ? mainteinance : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                    <SoftBox display="flex" py={1} pr={2}>
+                      <SoftTypography variant="h6" fontWeight="medium" textTransform="">
+                        Detalles:
+                      </SoftTypography>
+                      <SoftTypography variant="body2" fontWeight="regular" ml={1}>
+                        {details ? details : "N/A"}
+                      </SoftTypography>
+                    </SoftBox>
+                  </SoftBox>
                 </SoftBox>
               </SoftBox>
             </Card>
