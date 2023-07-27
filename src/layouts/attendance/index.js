@@ -121,12 +121,13 @@ function Attendance() {
       : attendancePresentPercentage >= 50
       ? "#EB6031"
       : "error";
+
   const colorAbsent =
-    attendanceAbsentPercentage <= 70
-      ? "success"
-      : attendanceAbsentPercentage <= 50
+    attendanceAbsentPercentage >= 70
+      ? "error"
+      : attendanceAbsentPercentage >= 50
       ? "#EB6031"
-      : "error";
+      : "success";
 
   const moodIconPresent = getMoodIcon(attendancePresentPercentage);
   const moodIconAbsent = getMoodIcon(attendanceAbsentPercentage);
