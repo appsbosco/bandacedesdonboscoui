@@ -19,6 +19,7 @@ import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
 import Document from "examples/Icons/Document";
+import SendIcon from "@mui/icons-material/Send";
 import SpaceShip from "examples/Icons/SpaceShip";
 import Inventory from "layouts/inventory";
 import About from "components/About";
@@ -26,6 +27,7 @@ import Contact from "components/Contact";
 import PaymentComponent from "layouts/Payments/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
 import ParentsProfile from "layouts/parentsProfile";
+import Email from "layouts/email";
 
 export const protectedRoutes = [
   {
@@ -78,6 +80,16 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Correo",
+    key: "email",
+    route: "/email",
+    icon: <SendIcon size="12px" />,
+    component: <Email />,
+    noCollapse: true,
+    href: null,
+  },
 ];
 
 export const attendanceRoutes = [
@@ -114,6 +126,7 @@ const routes = [
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
     name: "Contacto",
@@ -209,6 +222,7 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
     name: "Inventario",
@@ -256,6 +270,17 @@ export const adminRoutes = [
     route: "/events",
     icon: <EventIcon size="12px" />,
     component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Comunicación", key: "comunication" },
+  {
+    type: "collapse",
+    name: "Correo",
+    key: "email",
+    route: "/email",
+    icon: <SendIcon size="12px" />,
+    component: <Email />,
     noCollapse: true,
     href: null,
   },
@@ -452,6 +477,7 @@ export const membersRoutes = [
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
     name: "Calendario",
