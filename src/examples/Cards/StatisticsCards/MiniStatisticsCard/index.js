@@ -5,6 +5,7 @@ import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
+import { Box } from "@mui/material";
 
 function MiniStatisticsCard({ bgColor, title, count, percentage, icon, direction }) {
   return (
@@ -12,22 +13,35 @@ function MiniStatisticsCard({ bgColor, title, count, percentage, icon, direction
       <SoftBox bgColor={bgColor} variant="gradient">
         <SoftBox p={2} display="flex" alignItems="center">
           {direction === "left" && (
-            <SoftBox
-              variant="gradient"
+            <Box
               bgColor={bgColor === "white" ? icon.color : "white"}
               color={bgColor === "white" ? "white" : "dark"}
               width="3rem"
               height="3rem"
+              marginLeft="auto"
               borderRadius="md"
               display="flex"
               justifyContent="center"
               alignItems="center"
               shadow="md"
             >
-              <Icon fontSize="small" color="inherit">
-                <div style={{ marginBottom: "10px" }}>{icon.component}</div>
-              </Icon>
-            </SoftBox>
+              <SoftBox
+                variant="gradient"
+                bgColor={bgColor === "white" ? icon.color : "white"}
+                color={bgColor === "white" ? "white" : "dark"}
+                width="3rem"
+                height="3rem"
+                marginLeft="auto"
+                borderRadius="md"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                shadow="md"
+                icon={icon}
+              >
+                {icon.component}
+              </SoftBox>
+            </Box>
           )}
           <Grid item xs={8}>
             <SoftBox ml={direction === "left" ? 2 : 0} lineHeight={1}>
@@ -53,8 +67,7 @@ function MiniStatisticsCard({ bgColor, title, count, percentage, icon, direction
             </SoftBox>
           </Grid>
           {direction === "right" && (
-            <SoftBox
-              variant="gradient"
+            <Box
               bgColor={bgColor === "white" ? icon.color : "white"}
               color={bgColor === "white" ? "white" : "dark"}
               width="3rem"
@@ -65,12 +78,24 @@ function MiniStatisticsCard({ bgColor, title, count, percentage, icon, direction
               justifyContent="center"
               alignItems="center"
               shadow="md"
-              style={{ paddingBottom: "10px" }}
             >
-              <Icon fontSize="small" color="inherit">
-                <div style={{ paddingBottom: "10px" }}>{icon.component}</div>
-              </Icon>
-            </SoftBox>
+              <SoftBox
+                variant="gradient"
+                bgColor={bgColor === "white" ? icon.color : "white"}
+                color={bgColor === "white" ? "white" : "dark"}
+                width="3rem"
+                height="3rem"
+                marginLeft="auto"
+                borderRadius="md"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                shadow="md"
+                icon={icon}
+              >
+                {icon.component}
+              </SoftBox>
+            </Box>
           )}
         </SoftBox>
       </SoftBox>

@@ -26,7 +26,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import MiniStatisticsCard from "examples/Cards/StatisticsCards/MiniStatisticsCard";
-
+import AnalyticsIcon from "@mui/icons-material/Analytics";
 // Soft UI Dashboard React base styles
 import typography from "assets/theme/base/typography";
 
@@ -36,6 +36,18 @@ import { useQuery } from "@apollo/client";
 import { Card } from "@mui/material";
 import AttendanceHistoryTable from "./GetAttendances";
 import MoodBadIcon from "@mui/icons-material/MoodBad";
+import MoodIcon from "@mui/icons-material/Mood";
+import SentimentNeutralIcon from "@mui/icons-material/SentimentNeutral";
+
+function getMoodIcon(percentage) {
+  if (percentage >= 70) {
+    return <MoodIcon />;
+  } else if (percentage >= 50) {
+    return <SentimentNeutralIcon />;
+  } else {
+    return <MoodBadIcon />;
+  }
+}
 
 function Attendance() {
   const { size } = typography;
@@ -103,8 +115,21 @@ function Attendance() {
   const attendanceAbsentPercentage = (attendanceCounts.absent / totalAttendance) * 100;
 
   // Determinar el color para cada porcentaje de asistencia
-  const colorPresent = attendancePresentPercentage >= 70 ? "success" : "error";
-  const colorAbsent = attendanceAbsentPercentage <= 70 ? "success" : "error";
+  const colorPresent =
+    attendancePresentPercentage >= 70
+      ? "success"
+      : attendancePresentPercentage >= 50
+      ? "#EB6031"
+      : "error";
+  const colorAbsent =
+    attendanceAbsentPercentage <= 70
+      ? "success"
+      : attendanceAbsentPercentage <= 50
+      ? "#EB6031"
+      : "error";
+
+  const moodIconPresent = getMoodIcon(attendancePresentPercentage);
+  const moodIconAbsent = getMoodIcon(attendanceAbsentPercentage);
 
   return (
     <DashboardLayout>
@@ -122,7 +147,7 @@ function Attendance() {
                 }}
                 icon={{
                   color: "info",
-                  component: <MoodBadIcon />,
+                  component: moodIconPresent,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -138,7 +163,7 @@ function Attendance() {
                 }}
                 icon={{
                   color: "info",
-                  component: <MoodBadIcon />,
+                  component: moodIconAbsent,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -150,7 +175,7 @@ function Attendance() {
                 count={attendanceCounts.justifiedAbsence}
                 icon={{
                   color: "info",
-                  component: <MoodBadIcon />,
+                  component: <AnalyticsIcon />,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -162,7 +187,7 @@ function Attendance() {
                 count={attendanceCounts.unjustifiedAbsence}
                 icon={{
                   color: "info",
-                  component: <MoodBadIcon />,
+                  component: <AnalyticsIcon />,
                   justifyContent: "center",
                   alignItems: "center",
                 }}

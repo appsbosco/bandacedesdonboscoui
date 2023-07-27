@@ -202,7 +202,7 @@ const Overview = () => {
                 px={2}
               >
                 <SoftTypography variant="h5" fontWeight="medium" textTransform="">
-                  Mi Hijo/a
+                  Instrumento
                 </SoftTypography>
               </SoftBox>
               <SoftBox p={2}>
