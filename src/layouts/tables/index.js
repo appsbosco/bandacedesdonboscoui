@@ -219,6 +219,7 @@ const Tables = () => {
 
   const handleDeleteUser = (id) => {
     setShowConfirmation(true);
+    setSelectedUser(null);
   };
 
   const handleCancelDelete = () => {

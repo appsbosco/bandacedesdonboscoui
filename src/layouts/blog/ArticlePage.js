@@ -24,9 +24,9 @@ const ArticlePage = () => {
 
     try {
       document.execCommand("copy");
-      alert("Link copied to clipboard!");
+      alert("Se ha copiado el link!");
     } catch (error) {
-      console.error("Failed to copy link:", error);
+      console.error("No se pudo copiar el link:", error);
     } finally {
       document.body.removeChild(textarea);
     }
@@ -178,6 +178,8 @@ const ArticlePage = () => {
 
             <p>{article.content[4].text}</p>
             <p>{article.content[5].text}</p>
+            <p>{article.content[5].subtext}</p>
+            <p>{article.content[5].subtext2}</p>
           </div>
           <footer className="max-w-2xl mx-auto">
             <hr className="w-full h-px pb-6 mt-14 text-slate-300/75 sm:pb-4" />

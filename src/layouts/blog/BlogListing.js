@@ -108,7 +108,7 @@ const BlogListing = () => {
           <div className="grid max-w-lg gap-8 mx-auto mt-14 sm:mt-16 md:mx-0 md:max-w-none md:grid-cols-2 lg:grid-cols-3 lg:gap-y-6 lg:gap-x-5 xl:gap-x-6 xl:gap-y-8">
             {currentArticles.map((article, index) => (
               <div key={article.id}>
-                <Link to={`/blog/${indexOfFirstArticle + index + 1}`}>
+                <Link to={`/blog/${article.id}`}>
                   <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
                     <div className="w-full px-4 pt-4">
                       <a

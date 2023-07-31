@@ -1,6 +1,57 @@
 const articles = [
   {
-    id: 1,
+    id: 4,
+    title: "Nuestra participación en la Competencia de Bandas WAMSB",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1690837875/IMG_4789_pbmiqm.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1690842482/IMG_4795_uzmjq7.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1690842488/IMG_4800_fgvpxp.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1690842463/IMG_5170_cvdsne.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1690842382/IMG_4798_qlya5m.jpg",
+    ],
+    type: "Competencia",
+    description:
+      "Nuestra banda tuvo el honor de participar en la competencia de bandas WAMSB en la Fortuna de San Carlos, un evento que reúne a talentosas agrupaciones musicales de diferentes partes del país.",
+    date: "",
+    content: [
+      {
+        title: "",
+        text: "Ha sido un largo camino lleno de ensayos, sacrificio y trabajo en equipo, pero finalmente, el día tan esperado llegó. Nuestra banda tuvo el honor de participar en la competencia de bandas WAMSB en la Fortuna de San Carlos, un evento que reúne a talentosas agrupaciones musicales de diferentes partes del país. Durante este emocionante fin de semana, enfrentamos la competición en tres categorías: el show de campo, el desfile de bandas y drumbattle. A través de este blog, queremos compartirles nuestra experiencia, desde las emociones previas al evento hasta la emoción de haber alcanzado nuestros objetivos y la felicidad que sentimos al ver nuestros esfuerzos recompensados.",
+      },
+      {
+        title: "Preparativos y Desafíos",
+        text: "Desde el primer día, cuando surgió la noticia de nuestra participación en este evento, comenzaron las largas y cansadas jornadas de ensayos. Sábados y domingos se convirtieron en días de muchísimo trabajo, donde cada integrante de la banda, desde nuestros integrantes y el staff de padres, dieron lo mejor de sí para llevar nuestra show a un nivel de excelencia.",
+      },
+      {
+        title: "",
+        text: "Nuestros músicos y artistas, en su mayoría jóvenes de edades cortas que oscilan entre los 11 y 18 años, han demostrado una madurez y compromiso impresionante, dejando en claro que la edad no es un impedimento para alcanzar la excelencia en la música.",
+        subtext:
+          "El camino hacia el éxito no ha sido fácil. Ha requerido de mucha perseverancia, paciencia y una pasión por la banda. A lo largo de estos meses, hemos enfrentado desafíos que pusieron a prueba nuestra determinación y amor por ésta familia. Sin embargo, cada obstáculo fue superado con determinación y trabajo en equipo.",
+      },
+      {
+        title: "Staff",
+        text: "Es importante destacar el papel fundamental que ha tenido el staff de padres en este proceso. Su apoyo incondicional y su compromiso han sido una pieza clave para mantener el ritmo y el ánimo de la banda en todo momento. Gracias a su dedicación, hemos podido enfocarnos plenamente en la música y en cada detalle escénico.",
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "Nuestro desempeño en la competencia WAMSB es el fruto del esfuerzo colectivo de cada miembro de la banda. Cada músico y artista, sin importar su instrumento, ha sido una pieza fundamental en la creación de nuestra música. La armonía y el cariño entre todos han sido esenciales para alcanzar el nivel de excelencia que nos caracteriza.",
+      },
+      {
+        title: "",
+        text: "A pesar de de todo, siempre nos hemos esforzado por demostrar que la calidad musical no conoce límites de nada. Hemos enfrentado competiciones donde hemos compartido escenario con bandas más experimentadas, y eso solo nos ha impulsado a dar lo mejor de nosotros y demostrar que estamos a la altura de cualquier desafío. La competencia de bandas WAMSB en la Fortuna de San Carlos ha sido un evento que nos ha llenado de orgullo y satisfacción. Cada aplauso y reconocimiento ha sido el reflejo del trabajo incansable que hemos invertido en nuestra música.        ",
+        subtext:
+          "Detrás del éxito de nuestra banda hay mucho más que música, hay pasión, dedicación y una familia unida que ha hecho posible alcanzar nuestras metas. Este logro es solo el inicio de un camino que continuaremos recorriendo con la misma energía y compromiso. Agradecemos a todos aquellos que han sido parte de nuestro camino, que han apoyado y creído en nosotros.",
+        subtext2: "¡Estamos emocionados por todo lo que vendrá!",
+      },
+    ],
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+    },
+  },
+  {
+    id: 3,
     title: "Campamento Universidad de Oklahoma - Banda CEDES Don Bosco",
     images: [
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1689801639/DSC00414-min_q8ttxs.jpg",
@@ -100,7 +151,7 @@ const articles = [
     lecture: "1 minuto de lectura",
   },
   {
-    id: 3,
+    id: 1,
     title: "Deportivo Saprissa vs Club Sport Herediano",
     images: [
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1689814482/_SH_0063-min_fdwf3g.jpg",
@@ -149,6 +200,8 @@ const articles = [
     lecture: "1 minuto de lectura",
   },
 ];
+
+articles.sort((a, b) => b.id - a.id);
 
 export default articles;
 
