@@ -39,15 +39,16 @@ const articles = [
       },
       {
         title: "",
-        text: "A pesar de de todo, siempre nos hemos esforzado por demostrar que la calidad musical no conoce límites de nada. Hemos enfrentado competiciones donde hemos compartido escenario con bandas más experimentadas, y eso solo nos ha impulsado a dar lo mejor de nosotros y demostrar que estamos a la altura de cualquier desafío. La competencia de bandas WAMSB en la Fortuna de San Carlos ha sido un evento que nos ha llenado de orgullo y satisfacción. Cada aplauso y reconocimiento ha sido el reflejo del trabajo incansable que hemos invertido en nuestra música.        ",
+        text: "A pesar de todo, siempre nos hemos esforzado por demostrar que la calidad musical no conoce límites de nada. Hemos enfrentado competiciones donde hemos compartido escenario con bandas más experimentadas, y eso solo nos ha impulsado a dar lo mejor de nosotros y demostrar que estamos a la altura de cualquier desafío. La competencia de bandas WAMSB en la Fortuna de San Carlos ha sido un evento que nos ha llenado de orgullo y satisfacción. Cada aplauso y reconocimiento ha sido el reflejo del trabajo incansable que hemos invertido en nuestra música.        ",
         subtext:
           "Detrás del éxito de nuestra banda hay mucho más que música, hay pasión, dedicación y una familia unida que ha hecho posible alcanzar nuestras metas. Este logro es solo el inicio de un camino que continuaremos recorriendo con la misma energía y compromiso. Agradecemos a todos aquellos que han sido parte de nuestro camino, que han apoyado y creído en nosotros.",
         subtext2: "¡Estamos emocionados por todo lo que vendrá!",
       },
     ],
     socialLinks: {
-      facebook: "",
-      instagram: "",
+      facebook:
+        "https://www.facebook.com/100063706836872/posts/pfbid021EdK9DrRyE89HzpZKLYxiasEQrTA5L9cuFPVSU5ynaG3YeTFcZGoaA3Sn9qp5WdJl/?mibextid=cr9u03",
+      instagram: "https://www.instagram.com/p/CvYTCwWpfY3/?igshid=MzRlODBiNWFlZA==",
     },
   },
   {
