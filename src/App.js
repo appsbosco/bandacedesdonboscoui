@@ -30,6 +30,16 @@ import { GET_USERS_BY_ID } from "graphql/queries";
 import ArticlePage from "layouts/blog/ArticlePage";
 import BlogListing from "layouts/blog/BlogListing";
 import { parentsRoutes } from "routes";
+import jwtDecode from "jwt-decode";
+
+function isTokenExpired(token) {
+  try {
+    const decodedToken = jwtDecode(token);
+    return decodedToken.exp < Date.now() / 1000;
+  } catch (err) {
+    return true;
+  }
+}
 
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
@@ -93,7 +103,8 @@ export default function App() {
   const userRole = userData?.getUser?.role;
 
   // Check if user is authenticated
-  const isAuthenticated = localStorage.getItem("token"); // Modify this based on your token storage mechanism
+  const token = localStorage.getItem("token");
+  const isAuthenticated = token && !isTokenExpired(token);
 
   // Redirect to login if not authenticated and trying to access /dashboard
   const shouldRedirectToLogin =
