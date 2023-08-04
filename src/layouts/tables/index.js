@@ -94,6 +94,10 @@ const Tables = () => {
   const [userMedicalRecord, setUserMedicalRecord] = useState(null);
 
   const [openModal, setOpenModal] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -377,7 +381,8 @@ const Tables = () => {
                     ) : (
                       <div className="w-full px-2 pt-2">
                         <a
-                          href=""
+                          href="#"
+                          onClick={handleOpen}
                           className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
                         >
                           <LazyLoadImage
@@ -391,13 +396,36 @@ const Tables = () => {
                             }}
                             className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
                           />
-                          {/* <img
-                            src={selectedUser.avatar}
-                            alt=""
-                            className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                          /> */}
+
                           <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
                         </a>
+
+                        <Modal
+                          open={open}
+                          onClose={handleClose}
+                          aria-labelledby="modal-modal-title"
+                          aria-describedby="modal-modal-description"
+                        >
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              width: { xs: "90%", sm: "70%", md: "50%", lg: "40%", xl: "30%" },
+                              bgcolor: "background.paper",
+                              boxShadow: 24,
+                              p: 4,
+                              overflow: "auto",
+                            }}
+                          >
+                            <img
+                              src={selectedUser.avatar}
+                              alt="User avatar"
+                              style={{ maxWidth: "100%", height: "auto" }}
+                            />
+                          </Box>
+                        </Modal>
                       </div>
                     )}
 
