@@ -40,6 +40,7 @@ import { useMediaQuery } from "react-responsive";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { DELETE_USER, DELETE_MEDICAL_RECORD } from "graphql/mutations";
+import { GET_PARENTS } from "graphql/queries";
 
 const GET_USERS = gql`
   query getUsers {
@@ -85,6 +86,9 @@ const GET_MEDICAL_RECORD_BY_USER = gql`
 
 const Tables = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+  const { data: parentData } = useQuery(GET_PARENTS);
+  console.log(parentData);
+
   const [deleteUser] = useMutation(DELETE_USER);
   const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD);
 
@@ -167,7 +171,7 @@ const Tables = () => {
         user.role !== "Padre/Madre de familia"
     ) || [];
 
-  const parentsData = data?.getUsers.filter((user) => user.role === "Padre/Madre de familia") || [];
+  const parentsData = parentData?.getParents;
 
   const columns = [
     { field: "name", headerName: "Nombre", width: 200 },
@@ -191,6 +195,18 @@ const Tables = () => {
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
     { field: "role", headerName: "Rol", width: 200 },
     { field: "phone", headerName: "Número", width: 200 },
+    {
+      field: "childrenNames",
+      headerName: "Hijo/a",
+      width: 300,
+      valueGetter: (params) => {
+        const children = params.row.children || [];
+        const childNames = children
+          .map((child) => `${child.name} ${child.firstSurName} ${child.secondSurName}`)
+          .join(", ");
+        return childNames;
+      },
+    },
   ];
 
   const handleRowClick = (params) => {
