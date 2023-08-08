@@ -165,12 +165,9 @@ const Dashboard = () => {
       hour12: true,
     });
 
-    const dateObj = new Date(eventData.date);
-    const formattedDate = dateObj.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    const date = moment.utc(eventData.date);
+
+    const formattedDate = date.format("D [de] MMMM [del] YYYY");
 
     const users = usersData?.getUsers;
     const bandToSendEmail = eventData.type;
