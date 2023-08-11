@@ -547,4 +547,38 @@ export const parentsRoutes = [
   },
 ];
 
+export const cedesRoutes = [
+  {
+    type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    route: "/dashboard",
+    icon: <DashboardIcon size="12px" />,
+    component: <Dashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Miembros", key: "account-pages" },
+  {
+    type: "collapse",
+    name: "Miembros",
+    key: "members",
+    route: "/members",
+    icon: <PeopleAltIcon size="12px" />,
+    component: <Tables />,
+    noCollapse: true,
+    href: null,
+  },
+];
+
 export default routes;

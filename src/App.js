@@ -31,6 +31,7 @@ import ArticlePage from "layouts/blog/ArticlePage";
 import BlogListing from "layouts/blog/BlogListing";
 import { parentsRoutes } from "routes";
 import jwtDecode from "jwt-decode";
+import { cedesRoutes } from "routes";
 
 function isTokenExpired(token) {
   try {
@@ -132,6 +133,9 @@ export default function App() {
   } else if (userRole === "Staff") {
     const staffRoutesFiltered = [...routes, ...staffRoutes];
     renderedRoutes = getRoutes(staffRoutesFiltered);
+  } else if (userRole === "CEDES") {
+    const cedesRoutesFiltered = [...routes, ...cedesRoutes];
+    renderedRoutes = getRoutes(cedesRoutesFiltered);
   } else if (
     userRole !== "Integrante BCDB" &&
     userRole !== "Asistente Drumline" &&
@@ -176,6 +180,8 @@ export default function App() {
       ? principalRoutes
       : userRole === "Staff"
       ? staffRoutes
+      : userRole === "CEDES"
+      ? cedesRoutes
       : userRole !== "Integrante BCDB" &&
         userRole !== "Asistente Drumline" &&
         userRole !== "Asistente Color Guard" &&
@@ -188,7 +194,7 @@ export default function App() {
     return (
       route.route !== "/autenticacion/iniciar-sesion" &&
       route.route !== "/autenticacion/registrarse-privado" &&
-      route.route !== "  /autenticacion/registro-privado"
+      route.route !== "/autenticacion/registro-privado"
     );
   });
 
