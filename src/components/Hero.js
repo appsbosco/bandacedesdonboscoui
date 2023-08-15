@@ -1,8 +1,8 @@
 import React from "react";
-import landing from "../assets/images/landing.jpg";
-import pasion from "../assets/images/pasion.png";
-import friends from "../assets/images/friends.png";
-import family from "../assets/images/family.png";
+import landing from "../assets/images/landing.webp";
+import pasion from "../assets/images/pasion.webp";
+import friends from "../assets/images/friends.webp";
+import family from "../assets/images/family.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Hero = () => {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import logo from "../assets/images/Logo-Banda-Cedes-Don-Bosco.png";
+import logo from "../assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 import { useLocation } from "react-router-dom";
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
