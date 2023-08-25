@@ -137,9 +137,9 @@ const Dashboard = () => {
   const director = users?.filter((user) => user.role === "Director");
   const direccionLogistica = users?.filter((user) => user.role === "Dirección Logística");
   const staff = users?.filter((user) => user.role === "Staff");
-  const asistenteDrumline = users?.filter((user) => user.role === "Asistente Drumline");
-  const asistenteColorGuard = users?.filter((user) => user.role === "Asistente Color Guard");
-  const asistenteDanza = users?.filter((user) => user.role === "Asistente Danza");
+  const asistenteDrumline = users?.filter((user) => user.role === "Instructor Drumline");
+  const asistenteColorGuard = users?.filter((user) => user.role === "Instructura Color Guard");
+  const asistenteDanza = users?.filter((user) => user.role === "Instructora Danza");
   const instructorInstrumento = users?.filter((user) => user.role === "Instructor de instrumento");
   const padreMadreFamilia = users?.filter((user) => user.role === "Padre/Madre de familia");
 

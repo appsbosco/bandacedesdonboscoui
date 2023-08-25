@@ -147,9 +147,9 @@ const Email = () => {
     "Director",
     "Dirección Logística",
     "Staff",
-    "Asistente Drumline",
-    "Asistente Color Guard",
-    "Asistente Danza",
+    "Instructor Drumline",
+    "Instructura Color Guard",
+    "Instructora Danza",
     "Instructor de instrumento",
     "Padre/Madre de familia",
   ];

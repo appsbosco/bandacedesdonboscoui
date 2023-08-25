@@ -138,9 +138,9 @@ export default function App() {
     renderedRoutes = getRoutes(cedesRoutesFiltered);
   } else if (
     userRole !== "Integrante BCDB" &&
-    userRole !== "Asistente Drumline" &&
-    userRole !== "Asistente Color Guard" &&
-    userRole !== "Asistente Danza" &&
+    userRole !== "Instructor Drumline" &&
+    userRole !== "Instructura Color Guard" &&
+    userRole !== "Instructora Danza" &&
     userRole !== "Instructor de instrumento"
   ) {
     const parentsRoutesFiltered = [...routes, ...parentsRoutes];
@@ -183,9 +183,9 @@ export default function App() {
       : userRole === "CEDES"
       ? cedesRoutes
       : userRole !== "Integrante BCDB" &&
-        userRole !== "Asistente Drumline" &&
-        userRole !== "Asistente Color Guard" &&
-        userRole !== "Asistente Danza" &&
+        userRole !== "Instructor Drumline" &&
+        userRole !== "Instructura Color Guard" &&
+        userRole !== "Instructora Danza" &&
         userRole !== "Instructor de instrumento"
       ? parentsRoutes
       : membersRoutes;
