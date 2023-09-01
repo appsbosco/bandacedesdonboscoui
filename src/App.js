@@ -194,7 +194,8 @@ export default function App() {
     return (
       route.route !== "/autenticacion/iniciar-sesion" &&
       route.route !== "/autenticacion/registrarse-privado" &&
-      route.route !== "/autenticacion/registro-privado"
+      route.route !== "/autenticacion/registro-privado" &&
+      route.route !== "/autenticacion/recuperar/:token"
     );
   });
 
@@ -202,29 +203,34 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
-      {layout === "dashboard" &&
-        pathname !== "/" &&
-        pathname !== "/autenticacion/iniciar-sesion" &&
-        pathname !== "/autenticacion/registrarse-privado" &&
-        pathname !== "/autenticacion/registro-privado" &&
-        pathname !== "/" &&
-        pathname !== "/nosotros" &&
-        pathname !== "/contacto" &&
-        pathname !== "/blog" &&
-        !pathname.startsWith("/blog/") && (
-          <>
-            <Sidenav
-              color={sidenavColor}
-              brand={brand}
-              brandName="BCDB"
-              routes={filteredNavRoutes}
-              onMouseEnter={handleOnMouseEnter}
-              onMouseLeave={handleOnMouseLeave}
-            />
-            <Configurator />
-            {configsButton}
-          </>
-        )}
+      {layout === "dashboard" && (
+        <>
+          {pathname !== "/" &&
+            pathname !== "/autenticacion/iniciar-sesion" &&
+            pathname !== "/autenticacion/registrarse-privado" &&
+            pathname !== "/autenticacion/registro-privado" &&
+            !pathname.startsWith("/autenticacion/recuperar/") &&
+            pathname !== "/" &&
+            pathname !== "/nosotros" &&
+            pathname !== "/contacto" &&
+            pathname !== "/blog" &&
+            !pathname.startsWith("/blog/") && (
+              <>
+                <Sidenav
+                  color={sidenavColor}
+                  brand={brand}
+                  brandName="BCDB"
+                  routes={filteredNavRoutes}
+                  onMouseEnter={handleOnMouseEnter}
+                  onMouseLeave={handleOnMouseLeave}
+                />
+                <Configurator />
+                {configsButton}
+              </>
+            )}
+        </>
+      )}
+
       <Routes>
         <Route path="/" element={<Landing />} />
         {renderedRoutes.map((route) => route)}

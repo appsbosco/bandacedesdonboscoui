@@ -29,6 +29,7 @@ import PaidIcon from "@mui/icons-material/Paid";
 import ParentsProfile from "layouts/parentsProfile";
 import Email from "layouts/email";
 import Attendance from "layouts/attendance";
+import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
 
 export const protectedRoutes = [
   {
@@ -197,6 +198,16 @@ const routes = [
     route: "/autenticacion/registro-privado",
     icon: <SpaceShip size="12px" />,
     component: <ParentsSignUp />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Password Reset",
+    key: "password-reset",
+    route: "/autenticacion/recuperar/:token",
+    icon: <SpaceShip size="12px" />,
+    component: <PasswordReset />,
     noCollapse: true,
     href: null,
   },

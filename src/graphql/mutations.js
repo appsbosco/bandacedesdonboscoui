@@ -67,6 +67,18 @@ export const DELETE_USER = gql`
   }
 `;
 
+export const REQUEST_RESET_MUTATION = gql`
+  mutation RequestReset($email: String!) {
+    requestReset(email: $email)
+  }
+`;
+
+export const RESET_PASSWORD_MUTATION = gql`
+  mutation ResetPassword($token: String!, $newPassword: String!) {
+    resetPassword(token: $token, newPassword: $newPassword)
+  }
+`;
+
 // Profile Picture
 
 export const UPLOAD_PROFILE_PIC = gql`

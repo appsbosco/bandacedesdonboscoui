@@ -42,6 +42,8 @@ import cover from "../../../assets/images/about.jpg";
 import { AUTH_USER } from "graphql/mutations";
 import login from "../../../assets/images/log-in.png";
 import loginerror from "../../../assets/images/loginerror.png";
+import { REQUEST_RESET_MUTATION } from "graphql/mutations";
+import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
 
 const SignIn = () => {
   useEffect(() => {
@@ -54,6 +56,21 @@ const SignIn = () => {
       document.head.removeChild(meta);
     };
   }, []);
+
+  const [email, setEmail] = useState("");
+  const [requestReset] = useMutation(REQUEST_RESET_MUTATION);
+
+  const [showModal, setShowModal] = useState(false);
+
+  const handleForgotPassword = async () => {
+    try {
+      await requestReset({ variables: { email } });
+      alert("If that email exists, a password reset link has been sent.");
+    } catch (error) {
+      alert("Error sending reset link. Try again.");
+    }
+  };
+
   const { refreshUserData } = useContext(UserContext);
 
   // Use navigate to redirect user to sign in page
@@ -263,12 +280,25 @@ const SignIn = () => {
                         />{" "}
                       </SoftBox>
 
-                      {/* <SoftTypography component="label" variant="caption" fontWeight="bold">
-                        ¿No tienes una cuenta?{" "}
-                        <a style={{ color: "#323C63" }} href="/autenticacion/registrarse-privado">
-                          Regístrate
-                        </a>
-                      </SoftTypography> */}
+                      <SoftTypography component="label" variant="caption" fontWeight="bold">
+                        ¿Olvidaste tu contraseña?{" "}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowModal(true);
+                          }}
+                        >
+                          Click aquí para recuperar
+                        </button>
+                      </SoftTypography>
+
+                      {showModal && (
+                        <ForgotPasswordModal
+                          open={showModal}
+                          onClose={() => setShowModal(false)}
+                          onSubmit={handleForgotPassword}
+                        />
+                      )}
                     </SoftBox>
                   </div>
                 </FormStep>
