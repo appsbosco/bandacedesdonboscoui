@@ -62,12 +62,16 @@ const SignIn = () => {
 
   const [showModal, setShowModal] = useState(false);
 
+  const closeModal = () => {
+    setShowModal(false);
+  };
+
   const handleForgotPassword = async () => {
     try {
       await requestReset({ variables: { email } });
       alert("If that email exists, a password reset link has been sent.");
     } catch (error) {
-      alert("Error sending reset link. Try again.");
+      // alert("Error sending reset link. Try again.");
     }
   };
 
@@ -295,7 +299,7 @@ const SignIn = () => {
                       {showModal && (
                         <ForgotPasswordModal
                           open={showModal}
-                          onClose={() => setShowModal(false)}
+                          onClose={closeModal}
                           onSubmit={handleForgotPassword}
                         />
                       )}
