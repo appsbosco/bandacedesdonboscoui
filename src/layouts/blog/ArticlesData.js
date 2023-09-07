@@ -49,6 +49,7 @@ const articles = [
       facebook: "",
       instagram: "",
     },
+    lecture: "3 minutos de lectura",
   },
   {
     id: 4,
@@ -101,6 +102,7 @@ const articles = [
         "https://www.facebook.com/100063706836872/posts/pfbid021EdK9DrRyE89HzpZKLYxiasEQrTA5L9cuFPVSU5ynaG3YeTFcZGoaA3Sn9qp5WdJl/?mibextid=cr9u03",
       instagram: "https://www.instagram.com/p/CvYTCwWpfY3/?igshid=MzRlODBiNWFlZA==",
     },
+    lecture: "2 minutos de lectura",
   },
   {
     id: 3,
