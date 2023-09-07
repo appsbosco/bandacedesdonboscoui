@@ -1,6 +1,57 @@
 const articles = [
   {
     id: 4,
+    title: "Gabriel Hernández: Superando Obstáculos.",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694117930/DSC04555_u250zo.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694117924/DSC04560_sqaemc.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694117933/DSC04362_sfyoi6.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694118661/1692192868006_nezrak.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694117930/DSC04555_u250zo.jpg",
+    ],
+    type: "Inspiración",
+    description:
+      "La música tiene el poder de unir corazones, pero la historia de Gabriel Hernández Álvarez en la Banda CEDES Don Bosco va más allá: es un himno a la resiliencia, la esperanza y la inquebrantable voluntad de seguir adelante. Aunque enfrentó adversidades inimaginables desde su nacimiento, Gabriel ha demostrado que la verdadera esencia de la música no radica solo en las notas, sino en la pasión con la que se tocan. Su viaje, marcado por desafíos, pero también por una determinación férrea, sirve de inspiración para todos aquellos que buscan encontrar su camino a pesar de los obstáculos que enfrentan. Descubre cómo, a través de la música y la firme convicción de seguir sus sueños, Gabriel se ha convertido en un verdadero emblema de superación y amor por nuestra banda y el arte en Costa Rica.",
+    date: "07 de Setiembre, 2023",
+    content: [
+      {
+        title: "",
+        text: "Hay historias que, por su genuina inspiración, se destacan entre las demás. Una de esas es la de Gabriel Hernández Álvarez, miembro dedicado de la Banda CEDES Don Bosco. Recientemente, Repretel nos presentó su vida no solo como músico, sino también como un joven lleno de valentía y esperanza.",
+      },
+      {
+        title: "",
+        text: 'Desde pequeño, Gabriel tuvo que superar grandes desafíos. Una complicación al nacer en su pie derecho lo llevó a una amputación a los 11 meses. Sin embargo, esta situación no lo frenó, sino que lo impulsó a esforzarse aún más. El director de la banda, Luis Fernando Solano, nos comparte: "Para Gabriel, lo que podría haber sido un obstáculo es en realidad una fuente de motivación. Desde el inicio mostró un deseo profundo de formar parte de la banda. Y a pesar de su prótesis, marcha con la misma determinación que cualquier otro integrante".',
+      },
+      {
+        title: "",
+        text: 'El deseo de Gabriel de unirse a la Banda CEDES Don Bosco nació en 2022, inspirado en gran medida por su hermano. "Ver a mi hermano tocar, sentir esa emoción, me hizo querer ser parte de ese mundo", comenta Gabriel con una sonrisa sincera.',
+        subtext: "",
+      },
+      {
+        title: "",
+        text: 'A pesar de los retos diarios, como marchar bajo el sol y enfrentar la lluvia, Gabriel nunca se da por vencido. Cada día requiere de un esfuerzo adicional: asegurarse de que su prótesis esté en buen estado. Aún con esto, su mentalidad es positiva: "Mi objetivo es siempre dar lo mejor", dice con convicción.        ',
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "",
+      },
+      {
+        title: "",
+        text: "Ahora, este joven músico tiene la mirada puesta en horizontes más amplios. Fue seleccionado para participar en la próxima gira a Minnesota con la Banda de Concierto de CEDES Don Bosco, mostrando una vez más su dedicación y talento.",
+        subtext:
+          "La historia de Gabriel nos enseña que con pasión, determinación y un espíritu positivo, podemos superar cualquier reto. ",
+        subtext2:
+          " Es un testimonio vivo de que, más allá de los desafíos, con esfuerzo y amor por lo que hacemos, los sueños se pueden alcanzar.",
+      },
+    ],
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+    },
+  },
+  {
+    id: 4,
     title: "Nuestra participación en la Competencia de Bandas WAMSB",
     images: [
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1690837875/IMG_4789_pbmiqm.jpg",
