@@ -42,8 +42,9 @@ const articles = [
       },
     ],
     socialLinks: {
-      facebook: "",
-      instagram: "",
+      facebook:
+        "https://www.facebook.com/100063706836872/posts/pfbid02bYtrsLgfv1cZ884pubyhePJGa1LyRKXKFWFK2rkwkiumNw2muYUnJzS3i3UAimtWl/?mibextid=cr9u03",
+      instagram: "https://www.instagram.com/p/CxCGlzWNIq3/?igshid=MzRlODBiNWFlZA==",
     },
   },
   {
