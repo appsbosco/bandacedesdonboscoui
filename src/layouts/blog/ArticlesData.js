@@ -11,7 +11,7 @@ const articles = [
     ],
     type: "Presentación",
     description:
-      "Un viaje visual a través de nuestra audición para el Festival de La Luz 2023. Un reconocimiento a todos quienes nos apoyaron en esta presentación.",
+      "Un viaje visual a través de nuestra audición para el Festival de La Luz 2023. Un agradecimiento enorme a quienes nos apoyaron en esta presentación.",
     date: "10 de Setiembre, 2023",
     content: [
       {
@@ -20,7 +20,7 @@ const articles = [
       },
       {
         title: "",
-        text: "El apoyo de todos ustedes en en Tarrazú fue esencial, y también agradecemos a aquellos que, a distancia, manifestaron su confianza y respaldo. La solidaridad y el interés mostrado por la nuestra familia BCDB, tanto local como a distancia, fueron determinantes para nuestro desempeño y nos ofrecieron una base firme sobre la cual actuar.",
+        text: "El apoyo de todos ustedes en Tarrazú fue esencial, y también agradecemos a aquellos que, a distancia, manifestaron su confianza y respaldo. La solidaridad y el interés mostrado por nuestra familia BCDB, tanto local como a distancia, fueron determinantes para nuestro desempeño y nos ofrecieron una base firme sobre la cual actuar.",
       },
       {
         title: "",
@@ -38,7 +38,7 @@ const articles = [
       },
       {
         title: "",
-        text: "Con la mirada puesta en futuras oportunidades, la Banda CEDES Don Bosco desea expresar su agradecimiento profundo a todos los que nos respaldaron en este esfuerzo. Su apoyo fortalece nuestro compromiso y nos inspira a seguir adelante con determinación y profesionalismo. Agradecemos su confianza y esperamos continuar representando a nuestra comunidad con la misma excelencia.",
+        text: "Con la mirada puesta en futuras oportunidades, la Banda CEDES Don Bosco desea expresar un agradecimiento profundo a todos los que nos respaldaron en este esfuerzo. Su apoyo fortalece nuestro compromiso y nos inspira a seguir adelante con determinación y profesionalismo. Agradecemos su confianza y esperamos continuar representando a nuestra comunidad con la misma excelencia.",
       },
     ],
     socialLinks: {
