@@ -221,6 +221,7 @@ const Tables = () => {
   if (error) {
     // Handle error state
   }
+
   const handleConfirmDelete = () => {
     deleteUser({ variables: { deleteUserId: selectedUser?.id } })
       .then(() => {
@@ -232,14 +233,16 @@ const Tables = () => {
       })
       .then(() => {
         refetch();
-        setSelectedUser(null);
+        setSelectedUser(null); // Reset the selected user here
         setOpenModal(false);
+        setShowConfirmation(false); // Close the confirmation as well
       });
   };
 
-  const handleDeleteUser = (id) => {
+  const handleDeleteUser = (id, event) => {
+    event.stopPropagation(); // Prevents the event from triggering the modal's onClose
     setShowConfirmation(true);
-    setSelectedUser(null);
+    // setSelectedUser(null);
   };
 
   const handleCancelDelete = () => {
@@ -359,7 +362,7 @@ const Tables = () => {
                 <Button
                   type="submit"
                   style={{ color: "red" }}
-                  onClick={() => handleDeleteUser(selectedUser?.id)}
+                  onClick={(e) => handleDeleteUser(selectedUser?.id, e)}
                 >
                   Eliminar usuario
                 </Button>

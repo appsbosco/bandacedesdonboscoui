@@ -49,8 +49,8 @@ const TableWithFilteringSorting = ({ data, columns, onRowClick, userRole, onStat
         }}
         rows={data}
         columns={updatedColumns}
-        components={{
-          Toolbar: GridToolbar,
+        slots={{
+          toolbar: GridToolbar,
         }}
         slotProps={{
           toolbar: {
@@ -61,6 +61,7 @@ const TableWithFilteringSorting = ({ data, columns, onRowClick, userRole, onStat
         }}
         localeText={esES.components.MuiDataGrid.defaultProps.localeText}
         onRowClick={onRowClick}
+        pageSizeOptions={[10, 25, 50]}
       />
     </Box>
   );
