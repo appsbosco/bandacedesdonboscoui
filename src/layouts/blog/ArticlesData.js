@@ -1,6 +1,53 @@
 const articles = [
   {
-    id: 4,
+    id: 6,
+    title: "Audición Festival de la Luz 2023",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694393564/DSC03770-min_mfuohi.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694393564/DSC03815-min_ulicp9.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694393564/DSC03820-min_ua2eui.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694393564/DSC03721-min_lzq3bi.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1694393563/DSC03782-min_h7ilqp.jpg",
+    ],
+    type: "Presentación",
+    description:
+      "Un viaje visual a través de nuestra audición para el Festival de La Luz 2023. Un reconocimiento a todos quienes nos apoyaron en esta presentación.",
+    date: "10 de Setiembre, 2023",
+    content: [
+      {
+        title: "",
+        text: "La Banda CEDES Don Bosco tuvo el honor de participar en la audición para el Festival de La Luz 2023.",
+      },
+      {
+        title: "",
+        text: "El apoyo de todos ustedes en en Tarrazú fue esencial, y también agradecemos a aquellos que, a distancia, manifestaron su confianza y respaldo. La solidaridad y el interés mostrado por la nuestra familia BCDB, tanto local como a distancia, fueron determinantes para nuestro desempeño y nos ofrecieron una base firme sobre la cual actuar.",
+      },
+      {
+        title: "",
+        text: "",
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "",
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "",
+      },
+      {
+        title: "",
+        text: "Con la mirada puesta en futuras oportunidades, la Banda CEDES Don Bosco desea expresar su agradecimiento profundo a todos los que nos respaldaron en este esfuerzo. Su apoyo fortalece nuestro compromiso y nos inspira a seguir adelante con determinación y profesionalismo. Agradecemos su confianza y esperamos continuar representando a nuestra comunidad con la misma excelencia.",
+      },
+    ],
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+    },
+  },
+  {
+    id: 5,
     title: "Gabriel Hernández: Superando Obstáculos.",
     images: [
       "https://res.cloudinary.com/dnv9akklf/image/upload/v1694117930/DSC04555_u250zo.jpg",

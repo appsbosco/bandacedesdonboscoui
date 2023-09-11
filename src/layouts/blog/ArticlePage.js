@@ -34,6 +34,15 @@ const ArticlePage = () => {
   return (
     <>
       <Header />
+      <head>
+        <title>Blog Banda CEDES Don Bosco</title>
+        {/* Etiquetas Open Graph para Facebook y otros servicios que las soporten */}
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={article.description} />
+        <meta property="og:image" content={article.images[0]} />
+        <meta property="og:url" content={window.location.href} />
+      </head>
+
       <article>
         {/* Article Header */}
         <header className="relative py-16 bg-slate-50 sm:pt-24 lg:pt-28">
