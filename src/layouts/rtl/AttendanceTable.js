@@ -64,7 +64,7 @@ const AttendanceTable = () => {
           await addAttendance({
             variables: { input: { user: userId, date, attended } },
           });
-          toast.success("Guardado correctamente");
+          // toast.success("Guardado correctamente");
         } catch (error) {
           console.error(error);
         }
