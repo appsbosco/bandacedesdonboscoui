@@ -1,5 +1,54 @@
 const articles = [
   {
+    id: 7,
+    title: "Independencia de Costa Rica en Parque Diversiones Costa Rica",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1695062273/DSC04973_1_rnqlxx.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1695062274/DSC04931_1_n88uop.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1695061971/IMG_4080_t9ykjn.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1695062273/DSC04984_1_bwxf2x.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1695062407/DSC04960_1_vvduqk.jpg",
+    ],
+    type: "Presentación",
+    description:
+      "El día de ayer, celebramos la Independencia de Costa Rica en Parque Diversiones Costa Rica.",
+    date: "19 de Setiembre, 2023",
+    content: [
+      {
+        title: "",
+        text: "El pasado fin de semana, del 15 de setiembre, es un día que nos llena a todos los costarricenses. Una fecha que no sólo marca la independencia de nuestro querido país, sino que también celebra nuestra identidad, cultura y tradiciones. Es un día para recordar, para compartir y, sobre todo, para celebrar.",
+      },
+      {
+        title: "",
+        text: "Y como cada año, nos fuimos a celebrarlo en Parque Diversiones Costa Rica. Ayer, en un ambiente lleno de alegría, música, colores y, por supuesto, el entusiasmo de todos los presentes. Fue un momento donde se podía sentir el orgullo tico.",
+      },
+      {
+        title: "",
+        text: "",
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "",
+        subtext: "",
+      },
+      {
+        title: "",
+        text: "Nada de esto hubiera sido posible sin el apoyo incondicional de nuestra comunidad. A cada persona que se tomó el tiempo de acompañarnos, de aplaudir, y estar con nosotros, ¡gracias! Gracias por ser parte de nuestra familia y por apoyarnos siempre. Continuaremos trabajando y presentándonos con el mismo entusiasmo y amor que nos caracteriza.",
+      },
+      {
+        title: "",
+        text: "¡Hasta la próxima celebración! ¡Pura vida! 🇨🇷🙌🏻",
+      },
+    ],
+    socialLinks: {
+      facebook:
+        "https://www.facebook.com/100063706836872/posts/pfbid02BhPPxwDEa6gE7d9Gu9Prc99syw3LEizxBFYocTuRDAAJXtMZqDz8Crc4CmuXFM7l/?mibextid=cr9u03",
+      instagram: "https://www.instagram.com/p/CxV_iW_LJZw/?igshid=MzRlODBiNWFlZA==",
+    },
+    lecture: "1 minuto de lectura",
+  },
+  {
     id: 6,
     title: "Audición Festival de la Luz 2023",
     images: [

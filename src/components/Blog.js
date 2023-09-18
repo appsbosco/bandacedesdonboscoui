@@ -55,6 +55,66 @@ const Blog = () => {
             {/* Image */}
             <div className="w-full px-4 pt-4">
               <a
+                href="https://bandacedesdonbosco.com/blog/7"
+                className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
+              >
+                <img
+                  src="https://res.cloudinary.com/dnv9akklf/image/upload/v1695062273/DSC04973_1_rnqlxx.jpg"
+                  alt=""
+                  className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
+              </a>
+            </div>
+
+            {/* Content */}
+            <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+              <a
+                href="https://bandacedesdonbosco.com/blog/6"
+                className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+              >
+                <LibraryMusicIcon />
+                Banda de marcha
+              </a>
+              <div className="flex-1">
+                <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
+                  <a href="">
+                    <span className="absolute inset-0"></span>
+                    Independencia de Costa Rica en Parque Diversiones Costa Rica
+                  </a>
+                </h3>
+                <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                  El día de ayer, celebramos la Independencia de Costa Rica en Parque Diversiones
+                  Costa Rica.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.75"
+                    stroke="currentColor"
+                    className="w-5 h-5 text-slate-400"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    />
+                  </svg>
+                  <time dateTime="2023-03-24">Setiembre 19, 2023</time>
+                </span>
+              </div>
+            </div>
+          </article>
+
+          {/* 1rst Article */}
+          <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
+            {/* Image */}
+            <div className="w-full px-4 pt-4">
+              <a
                 href="https://bandacedesdonbosco.com/blog/6"
                 className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
               >
@@ -166,65 +226,6 @@ const Blog = () => {
                     />
                   </svg>
                   <time dateTime="2023-03-24">Julio 31, 2023</time>
-                </span>
-              </div>
-            </div>
-          </article>
-
-          <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
-            {/* Image */}
-            <div className="w-full px-4 pt-4">
-              <a
-                href=""
-                className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
-              >
-                <img
-                  src={bicentenario}
-                  alt=""
-                  className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
-              </a>
-            </div>
-
-            {/* Content */}
-            <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
-              <a
-                href="#"
-                className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
-              >
-                <LibraryMusicIcon />
-                Banda de marcha
-              </a>
-              <div className="flex-1">
-                <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
-                  <a href="">
-                    <span className="absolute inset-0"></span>
-                    Bicentenario de la capitalidad de San José
-                  </a>
-                </h3>
-                <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
-                  Hoy celebramos el bicentenario de los 200 años de la capitalidad de San José. 🙌🏻
-                  ¡Les compartimos parte de nuestra participación!
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.75"
-                    stroke="currentColor"
-                    className="w-5 h-5 text-slate-400"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
-                    />
-                  </svg>
-                  <time dateTime="2023-03-24">Mayo 14, 2023</time>
                 </span>
               </div>
             </div>
