@@ -287,6 +287,7 @@ const SignIn = () => {
                       <SoftTypography component="label" variant="caption" fontWeight="bold">
                         ¿Olvidaste tu contraseña?{" "}
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             setShowModal(true);
