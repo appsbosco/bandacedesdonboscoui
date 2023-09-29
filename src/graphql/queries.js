@@ -135,6 +135,7 @@ export const GET_EVENTS = gql`
       arrival
       departure
       description
+      type
     }
   }
 `;

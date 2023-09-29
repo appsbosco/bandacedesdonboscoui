@@ -32,6 +32,12 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 // Data
 import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/about.jpg";
+import bigBandB from "assets/images/BigBandB.JPG";
+import bigBandA from "assets/images/BigBandA.jpg";
+import bandaIntermedia from "assets/images/BandaIntermedia.JPG";
+import bandaInicial from "assets/images/Banda Inicial.JPG";
+import bandaAvanzada from "assets/images/Banda Avanzada.JPG";
+
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
 
@@ -604,6 +610,22 @@ const Dashboard = () => {
     handleCloseModal();
   };
 
+  const getEventImage = (eventType) => {
+    if (eventType.includes("Big Band B")) {
+      return bigBandB;
+    } else if (eventType.includes("Big Band A")) {
+      return bigBandA;
+    } else if (eventType.includes("Banda de concierto intermedia")) {
+      return bandaInicial;
+    } else if (eventType.includes("Banda de concierto inicial")) {
+      return bandaInicial;
+    } else if (eventType.includes("Banda de concierto avanzada")) {
+      return bandaAvanzada;
+    }
+
+    return homeDecor1; // default image
+  };
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -671,6 +693,8 @@ const Dashboard = () => {
                     {eventData &&
                       eventData.getEvents.map((event) => {
                         const formattedDate = new Date(event.date).toLocaleDateString("en-GB");
+                        const eventImage = getEventImage(event.type);
+
                         return (
                           <Grid
                             item
@@ -691,7 +715,7 @@ const Dashboard = () => {
                                 maxWidth: "100%",
                                 minHeight: "100%",
                               }}
-                              image={homeDecor1}
+                              image={eventImage}
                               label={`Lugar: ${event.place}`}
                               title={`${event.title}`}
                               description={`${event.description}`}
@@ -806,7 +830,7 @@ const Dashboard = () => {
                               className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
                             >
                               <LibraryMusicIcon />
-                              Banda de marcha
+                              {selectedEvent.type}
                             </a>
                             <h1 className="mt-6 text-4xl font-semibold leading-tight text-center font-display text-slate-900 sm:text-5xl sm:leading-tight">
                               {selectedEvent.title}
