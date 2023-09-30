@@ -140,14 +140,14 @@ const Dashboard = () => {
   const integranteBCDB = users?.filter((user) => user.role === "Integrante BCDB");
   const principalSeccion = users?.filter((user) => user.role === "Principal de sección");
   const asistenteSeccion = users?.filter((user) => user.role === "Asistente de sección");
-  const director = users?.filter((user) => user.role === "Director");
-  const direccionLogistica = users?.filter((user) => user.role === "Dirección Logística");
-  const staff = users?.filter((user) => user.role === "Staff");
-  const asistenteDrumline = users?.filter((user) => user.role === "Instructor Drumline");
-  const asistenteColorGuard = users?.filter((user) => user.role === "Instructura Color Guard");
-  const asistenteDanza = users?.filter((user) => user.role === "Instructora Danza");
-  const instructorInstrumento = users?.filter((user) => user.role === "Instructor de instrumento");
-  const padreMadreFamilia = users?.filter((user) => user.role === "Padre/Madre de familia");
+  // const director = users?.filter((user) => user.role === "Director");
+  // const direccionLogistica = users?.filter((user) => user.role === "Dirección Logística");
+  // const staff = users?.filter((user) => user.role === "Staff");
+  // const asistenteDrumline = users?.filter((user) => user.role === "Instructor Drumline");
+  // const asistenteColorGuard = users?.filter((user) => user.role === "Instructura Color Guard");
+  // const asistenteDanza = users?.filter((user) => user.role === "Instructora Danza");
+  // const instructorInstrumento = users?.filter((user) => user.role === "Instructor de instrumento");
+  // const padreMadreFamilia = users?.filter((user) => user.role === "Padre/Madre de familia");
 
   // Create an object to store users grouped by band
   const usersByBand = {};
