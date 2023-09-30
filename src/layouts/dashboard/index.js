@@ -36,14 +36,15 @@ import homeDecor1 from "assets/images/about.jpg";
 import bandaIntermedia from "assets/images/BandaIntermedia.JPG";
 import bandaInicial from "assets/images/Banda Inicial.JPG";
 import bandaAvanzada from "assets/images/Banda Avanzada.JPG";
-import bigBandB from "assets/images/BigBandB.jpg";
-import bigBandA from "assets/images/BigBandA.jpg";
+
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
 
 import EventFormModal from "components/EventFormModal";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
 import { GET_EVENTS, GET_USERS } from "graphql/queries";
+import bigBandB from "assets/images/BigBandB.jpg";
+import bigBandA from "assets/images/BigBandA.jpg";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -609,8 +610,6 @@ const Dashboard = () => {
     await deleteEvent({ variables: { id: selectedEvent.id } });
     handleCloseModal();
   };
-
-  console.log(bigBandA);
 
   const getEventImage = (eventType) => {
     if (eventType.includes("Big Band B")) {
