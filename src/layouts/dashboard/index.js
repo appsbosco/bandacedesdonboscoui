@@ -32,7 +32,7 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 // Data
 import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/about.jpg";
-import bigBandB from "assets/images/BigBandB.JPG";
+import bigBandB from "assets/images/BigBandB.jpg";
 import bigBandA from "assets/images/BigBandA.jpg";
 import bandaIntermedia from "assets/images/BandaIntermedia.JPG";
 import bandaInicial from "assets/images/Banda Inicial.JPG";
@@ -616,7 +616,7 @@ const Dashboard = () => {
     } else if (eventType.includes("Big Band A")) {
       return bigBandA;
     } else if (eventType.includes("Banda de concierto intermedia")) {
-      return bandaInicial;
+      return bandaIntermedia;
     } else if (eventType.includes("Banda de concierto inicial")) {
       return bandaInicial;
     } else if (eventType.includes("Banda de concierto avanzada")) {
