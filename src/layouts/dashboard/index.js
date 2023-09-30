@@ -610,6 +610,8 @@ const Dashboard = () => {
     handleCloseModal();
   };
 
+  console.log(bigBandA);
+
   const getEventImage = (eventType) => {
     if (eventType.includes("Big Band B")) {
       return bigBandB;
