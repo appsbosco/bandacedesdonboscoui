@@ -32,12 +32,12 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 // Data
 import { gql, useMutation, useQuery } from "@apollo/client";
 import homeDecor1 from "assets/images/about.jpg";
-import bigBandB from "assets/images/BigBandB.jpg";
-import bigBandA from "assets/images/BigBandA.jpg";
+
 import bandaIntermedia from "assets/images/BandaIntermedia.JPG";
 import bandaInicial from "assets/images/Banda Inicial.JPG";
 import bandaAvanzada from "assets/images/Banda Avanzada.JPG";
-
+import bigBandB from "assets/images/BigBandB.jpg";
+import bigBandA from "assets/images/BigBandA.jpg";
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
 
