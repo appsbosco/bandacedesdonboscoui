@@ -692,7 +692,6 @@ const Dashboard = () => {
                   >
                     {eventData &&
                       eventData.getEvents.map((event) => {
-                        const formattedDate = new Date(event.date).toLocaleDateString("en-GB");
                         const eventImage = getEventImage(event.type);
 
                         return (
