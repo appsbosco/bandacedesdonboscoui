@@ -33,10 +33,10 @@ import InputField from "../components/InputField";
 import MultiStepForm, { FormStep } from "../components/MultiStepForm";
 import SelectField from "../components/SelectField";
 import Header from "components/Header";
-import cover from "../../../assets/images/sign-up.jpg";
+import cover from "../../../assets/images/sign-up.webp";
 import { NEW_PARENT } from "graphql/mutations";
-import login from "../../../assets/images/log-in.png";
-import loginerror from "../../../assets/images/loginerror.png";
+import login from "../../../assets/images/log-in.webp";
+import loginerror from "../../../assets/images/loginerror.webp";
 import { GET_USERS } from "graphql/queries";
 import CustomSelect from "components/CustomSelect";
 

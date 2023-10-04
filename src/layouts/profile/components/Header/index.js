@@ -40,7 +40,7 @@ import breakpoints from "assets/theme/base/breakpoints";
 
 // Images
 import { gql, useQuery } from "@apollo/client";
-import curved0 from "assets/images/curved-images/curved0.jpg";
+import curved0 from "assets/images/curved-images/curved0.webp";
 import ProfileImageUploader from "../ProfilePicture/ProfileImageUploader";
 import { Avatar } from "@mui/material";
 import { GET_USERS_BY_ID } from "graphql/queries";

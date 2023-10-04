@@ -12,7 +12,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import Tooltip from "@mui/material/Tooltip";
-import cover from "assets/images/about.jpg";
+import cover from "assets/images/about.webp";
 // Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
@@ -31,11 +31,11 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 
 // Data
 import { gql, useMutation, useQuery } from "@apollo/client";
-import homeDecor1 from "assets/images/about.jpg";
+import homeDecor1 from "assets/images/about.webp";
 
-import bandaIntermedia from "assets/images/BandaIntermedia.JPG";
-import bandaInicial from "assets/images/Banda Inicial.JPG";
-import bandaAvanzada from "assets/images/Banda Avanzada.JPG";
+import bandaIntermedia from "assets/images/Banda Avanzada.webp";
+import bandaInicial from "assets/images/Banda Inicial.webp";
+import bandaAvanzada from "assets/images/BandaIntermedia.webp";
 
 import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 import moment from "moment";
@@ -43,8 +43,8 @@ import moment from "moment";
 import EventFormModal from "components/EventFormModal";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
 import { GET_EVENTS, GET_USERS } from "graphql/queries";
-import bigBandB from "assets/images/BigBandB.jpg";
-import bigBandA from "assets/images/BigBandA.jpg";
+import bigBandB from "assets/images/BigBandB.webp";
+import bigBandA from "assets/images/BigBandA.webp";
 
 const GET_USERS_BY_ID = gql`
   query getUser {
@@ -80,8 +80,9 @@ const Dashboard = () => {
   const userRole = userData?.getUser?.role;
 
   const { data: eventData, loading: eventLoading, error: eventError } = useQuery(GET_EVENTS);
+
   const [openModal, setOpenModal] = useState(false);
-  const [modalType, setModalType] = useState(null); // "add", "edit", or "remove"
+  const [modalType, setModalType] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [addEvent] = useMutation(ADD_EVENT, {
     refetchQueries: [{ query: GET_EVENTS }],
@@ -262,7 +263,7 @@ const Dashboard = () => {
                                 <td>
                                   <img
                                     alt="BCDB"
-                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
                                     style="
                                     display: block;
                               outline: none;
@@ -302,7 +303,7 @@ const Dashboard = () => {
                                 <td>
                                   <img
                                     alt=""
-                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+                                    src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
                                     
                                     style="
                                     display: block;
@@ -623,8 +624,7 @@ const Dashboard = () => {
     } else if (eventType.includes("Banda de concierto avanzada")) {
       return bandaAvanzada;
     }
-
-    return homeDecor1; // default image
+    return homeDecor1;
   };
 
   return (

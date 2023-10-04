@@ -23,7 +23,7 @@ import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
 // Images
-import rocketWhite from "assets/images/illustrations/rocket-white.png";
+import rocketWhite from "assets/images/illustrations/rocket-white.webp";
 import wavesWhite from "assets/images/shapes/waves-white.svg";
 
 const cardData = [

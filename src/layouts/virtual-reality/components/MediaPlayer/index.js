@@ -24,7 +24,7 @@ import SoftTypography from "components/SoftTypography";
 import SoftButton from "components/SoftButton";
 
 // Images
-import curved1 from "assets/images/curved-images/curved1.jpg";
+import curved1 from "assets/images/curved-images/curved1.webp";
 
 function MediaPlayer() {
   const mediaPlayerButtonStyles = ({ functions: { pxToRem } }) => ({

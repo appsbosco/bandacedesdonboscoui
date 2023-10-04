@@ -3,8 +3,8 @@ import { RESET_PASSWORD_MUTATION } from "graphql/mutations";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import logo from "../../../assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
-import login from "../../../assets/images/log-in.png";
-import loginerror from "../../../assets/images/loginerror.png";
+import login from "../../../assets/images/log-in.webp";
+import loginerror from "../../../assets/images/loginerror.webp";
 
 const PasswordReset = () => {
   const { token } = useParams();

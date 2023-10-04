@@ -31,17 +31,17 @@ import CoverLayout from "layouts/authentication/components/CoverLayout";
 
 // Images
 import { gql, useMutation } from "@apollo/client";
-import curved9 from "assets/images/curved-images/curved-6.jpg";
+import curved9 from "assets/images/curved-images/curved-6.webp";
 import * as yup from "yup";
 import InputField from "../components/InputField";
 import MultiStepForm, { FormStep } from "../components/MultiStepForm";
 import { useContext } from "react";
 import UserContext from "UserContext";
 import Header from "components/Header";
-import cover from "../../../assets/images/about.jpg";
+import cover from "../../../assets/images/about.webp";
 import { AUTH_USER } from "graphql/mutations";
-import login from "../../../assets/images/log-in.png";
-import loginerror from "../../../assets/images/loginerror.png";
+import login from "../../../assets/images/log-in.webp";
+import loginerror from "../../../assets/images/loginerror.webp";
 import { REQUEST_RESET_MUTATION } from "graphql/mutations";
 import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
 

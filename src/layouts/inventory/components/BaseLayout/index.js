@@ -44,7 +44,7 @@ import {
 } from "layouts/virtual-reality/components/BaseLayout/styles";
 
 // Images
-import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
+import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 
 function BaseLayout({ children }) {
   const [controller, dispatch] = useSoftUIController();

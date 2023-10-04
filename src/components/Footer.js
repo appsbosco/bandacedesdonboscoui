@@ -1,6 +1,6 @@
 import React from "react";
 import newsletter from "../assets/images/newsletter-bg.svg";
-import logocedes from "../assets/images/logocedeswhite.png";
+import logocedes from "../assets/images/logocedeswhite.webp";
 
 const Footer = () => {
   return (

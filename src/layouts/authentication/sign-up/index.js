@@ -33,10 +33,10 @@ import InputField from "../components/InputField";
 import MultiStepForm, { FormStep } from "../components/MultiStepForm";
 import SelectField from "../components/SelectField";
 import Header from "components/Header";
-import cover from "../../../assets/images/sign-up.jpg";
+import cover from "../../../assets/images/sign-up.webp";
 import { NEW_ACCOUNT } from "graphql/mutations";
-import login from "../../../assets/images/log-in.png";
-import loginerror from "../../../assets/images/loginerror.png";
+import login from "../../../assets/images/log-in.webp";
+import loginerror from "../../../assets/images/loginerror.webp";
 import CustomSelect from "components/CheckBoxGroup";
 
 const validationSchema = yup.object().shape({

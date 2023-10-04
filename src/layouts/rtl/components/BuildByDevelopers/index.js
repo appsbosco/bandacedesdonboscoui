@@ -24,7 +24,7 @@ import SoftTypography from "components/SoftTypography";
 
 // Images
 import wavesWhite from "assets/images/shapes/waves-white.svg";
-import rocketWhite from "assets/images/illustrations/rocket-white.png";
+import rocketWhite from "assets/images/illustrations/rocket-white.webp";
 
 function BuildByDevelopers() {
   return (

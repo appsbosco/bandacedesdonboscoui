@@ -1,16 +1,16 @@
 import React from "react";
-import clarinet from "../assets/images/clarinet.png";
-import sax from "../assets/images/sax.png";
-import trumpet from "../assets/images/trumpet.png";
-import gong from "../assets/images/gong.png";
-import guitar from "../assets/images/guitar.png";
+import clarinet from "../assets/images/clarinet.webp";
+import sax from "../assets/images/sax.webp";
+import trumpet from "../assets/images/trumpet.webp";
+import gong from "../assets/images/gong.webp";
+import guitar from "../assets/images/guitar.webp";
 
-import arpa from "../assets/images/arpa.png";
-import piano from "../assets/images/piano.png";
-import marimba from "../assets/images/marimba.png";
-import acordeon from "../assets/images/acordeon.png";
-import flute from "../assets/images/flute.png";
-import pandereta from "../assets/images/pandereta.png";
+import arpa from "../assets/images/arpa.webp";
+import piano from "../assets/images/piano.webp";
+import marimba from "../assets/images/marimba.webp";
+import acordeon from "../assets/images/acordeon.webp";
+import flute from "../assets/images/flute.webp";
+import pandereta from "../assets/images/pandereta.webp";
 
 const Decor = () => {
   return (

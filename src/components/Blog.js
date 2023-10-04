@@ -1,8 +1,9 @@
 import React from "react";
-import bicentenario from "../assets/images/bicentenario.jpeg";
-import saprissa from "../assets/images/ricardosaprissa.jpeg";
-import liga from "../assets/images/morerasoto.jpeg";
+import bicentenario from "../assets/images/bicentenario.webp";
+import saprissa from "../assets/images/ricardosaprissa.webp";
+import liga from "../assets/images/morerasoto.webp";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Blog = () => {
   return (
@@ -58,11 +59,12 @@ const Blog = () => {
                 href="https://bandacedesdonbosco.com/blog/7"
                 className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
               >
-                <img
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/v1695062273/DSC04973_1_rnqlxx.jpg"
+                <LazyLoadImage
+                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/q_auto,f_auto/v1696387427/DSC04973_1_rnqlxx_gnzeny.webp"
                   alt=""
                   className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
                 />
+
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
               </a>
             </div>
@@ -110,7 +112,7 @@ const Blog = () => {
             </div>
           </article>
 
-          {/* 1rst Article */}
+          {/* 2nd Article */}
           <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
             {/* Image */}
             <div className="w-full px-4 pt-4">
@@ -118,11 +120,12 @@ const Blog = () => {
                 href="https://bandacedesdonbosco.com/blog/6"
                 className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
               >
-                <img
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/v1694393564/DSC03770-min_mfuohi.jpg"
+                <LazyLoadImage
+                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1696387529/DSC03770-min_mfuohi_pdkjek.webp"
                   alt=""
                   className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
                 />
+
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
               </a>
             </div>
@@ -170,7 +173,7 @@ const Blog = () => {
             </div>
           </article>
 
-          {/* 1rst Article */}
+          {/* 3rd Article */}
           <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
             {/* Image */}
             <div className="w-full px-4 pt-4">
@@ -178,11 +181,12 @@ const Blog = () => {
                 href="https://bandacedesdonbosco.com/blog/4"
                 className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
               >
-                <img
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/v1690837875/IMG_4789_pbmiqm.jpg"
+                <LazyLoadImage
+                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1696387640/IMG_4789_pbmiqm_nbwroi.webp"
                   alt=""
                   className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
                 />
+
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
               </a>
             </div>

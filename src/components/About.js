@@ -1,12 +1,12 @@
 import React from "react";
 
-import tour from "../assets/images/tour.JPG";
+import tour from "../assets/images/tour.webp";
 import Header from "./Header";
 import Footer from "components/Footer";
 import about from "../assets/images/about-hero-bg.svg";
-import aboutHero from "../assets/images/about.jpg";
-import mision from "../assets/images/mision.jpg";
-import vision from "../assets/images/vision.jpg";
+import aboutHero from "../assets/images/about.webp";
+import mision from "../assets/images/mision.webp";
+import vision from "../assets/images/vision.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const About = () => {

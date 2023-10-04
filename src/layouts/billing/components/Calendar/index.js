@@ -14,7 +14,7 @@ import "./style.css";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
-import cover from "assets/images/about.jpg";
+import cover from "assets/images/about.webp";
 
 import EventFormModal from "components/EventFormModal";
 import { GET_USERS_BY_ID, GET_EVENTS } from "graphql/queries";

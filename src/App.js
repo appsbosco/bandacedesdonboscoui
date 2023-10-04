@@ -23,7 +23,7 @@ import SignIn from "layouts/authentication/sign-in";
 import Sidenav from "examples/Sidenav";
 import Configurator from "examples/Configurator";
 import { useSoftUIController } from "context";
-import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.png";
+import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 import Landing from "layouts/landing/Landing";
 import { setMiniSidenav, setOpenConfigurator } from "context";
 import { GET_USERS_BY_ID } from "graphql/queries";

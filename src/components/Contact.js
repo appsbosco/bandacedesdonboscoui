@@ -1,7 +1,7 @@
 import React from "react";
 import Header from "./Header";
 import Footer from "./Footer";
-import contact from "../assets/images/contact.jpg";
+import contact from "../assets/images/contact.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { SEND_EMAIL } from "graphql/mutations";
 import { useMutation } from "@apollo/client";
@@ -32,7 +32,7 @@ const Contact = () => {
             <tr style="width:100%">
               <td> <img
               alt="BCDB"
-              src="https://res.cloudinary.com/dnv9akklf/image/upload/v1686511395/LOGO_BCDB_qvjabt.png"
+              src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
               style="
                 display: block;
                 outline: none;
