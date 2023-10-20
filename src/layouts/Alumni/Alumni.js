@@ -21,7 +21,7 @@ const Alumni = () => {
       {isModalOpen && <Modal onClose={handleCloseModal} />}
       <section
         className={`pt-16 overflow-hidden bg-white sm:pt-20 lg:pt-28 ${
-          isModalOpen ? "bg-black opacity-30" : ""
+          isModalOpen ? "bg-black opacity-10" : ""
         } `}
       >
         {/* <!-- Container --> */}
