@@ -90,27 +90,29 @@ const Alumni = () => {
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Próximo Evento</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Concierto de Navidad de la banda de exalumnos
+                  Concierto de cierre de la primera temporada del proyecto de exalumnos.
                 </dd>
               </div>
 
               {/* <!-- 2nd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Fecha</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">1 de diciembre, 2023</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">1 de diciembre, 2023.</dd>
               </div>
 
               {/* <!-- 3rd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Lugar:</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">SUM de CEDES Don Bosco</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
+                  SUM de CEDES Don Bosco.
+                </dd>
               </div>
 
               {/* <!-- 4th detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Participantes</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Exalumnos activos y no activos de la Banda CEDES Don Bosco
+                  Exalumnos graduados de CEDES Don Bosco.
                 </dd>
               </div>
 
@@ -184,7 +186,7 @@ const Alumni = () => {
 
               <p>
                 En resumen, el proyecto de exalumnos no solo busca mantener viva la llama de la
-                tradición y el carisma salesiano, sino también fortalecer y expandir la Banda CEDES
+                tradición y el carisma salesiano, sino también fortalecer y apoyar la Banda CEDES
                 Don Bosco, aportando la experiencia, talento y pasión de aquellos que, en algún
                 momento de sus vidas, fueron parte de esta gran familia. Es una invitación a todos
                 los exintegrantes a reencontrarse con sus raíces, a contribuir al crecimiento de la
