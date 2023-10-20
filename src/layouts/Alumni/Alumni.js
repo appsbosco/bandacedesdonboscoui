@@ -28,7 +28,7 @@ const Alumni = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-lg mx-auto sm:max-w-3xl lg:mx-0 lg:max-w-none">
             <h1 className="text-4xl font-semibold leading-tight font-display text-slate-900 sm:text-5xl sm:leading-tight lg:text-6xl lg:leading-tight">
-              Proyecto de Exalumnos Banda CEDES Don Bosco - Antiguo Técnico Don Bosco y CEDES Don
+              Proyecto de exalumnos Banda CEDES Don Bosco - Antiguo Técnico Don Bosco y CEDES Don
               Bosco
             </h1>
 
@@ -102,7 +102,7 @@ const Alumni = () => {
 
               {/* <!-- 3rd detail --> */}
               <div>
-                <dt className="text-lg font-medium font-display text-slate-900">Lugar:</dt>
+                <dt className="text-lg font-medium font-display text-slate-900">Lugar</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
                   SUM de CEDES Don Bosco.
                 </dd>
@@ -112,14 +112,14 @@ const Alumni = () => {
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Participantes</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Exalumnos graduados de CEDES Don Bosco.
+                  Exalumnos graduados de CEDES Don Bosco y antiguo Técnico Don Bosco.
                 </dd>
               </div>
 
               {/* <!-- 5th detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">
-                  Incripciones abiertas
+                  Inscripciones abiertas
                 </dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
                   ¡ Ya puedes inscribirte para ser parte del concierto !
@@ -134,7 +134,7 @@ const Alumni = () => {
               className="bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
               onClick={handleOpenModal}
             >
-              Incribirme
+              Inscribirme
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
