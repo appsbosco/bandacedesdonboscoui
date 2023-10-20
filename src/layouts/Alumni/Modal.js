@@ -20,7 +20,7 @@ const Modal = ({ onClose }) => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [identification, setIdentification] = useState("");
-  const [yearGraduated, setYearGraduated] = useState(0);
+  const [yearGraduated, setYearGraduated] = useState(2023);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [instrument, setInstrument] = useState("");
   const [address, setAddress] = useState("");
@@ -466,7 +466,7 @@ const Modal = ({ onClose }) => {
       className="fixed shadow top-0 left-0 right-0 z-50  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
     >
       {message && showMessage()}
-      <div className="relative w-full max-w-md max-h-full">
+      <div className="relative w-full max-w-2xl max-h-full">
         {/* <!-- Modal content --> */}
         <div className="relative bg-white rounded-lg shadow ">
           <div className="flex justify-end">
@@ -496,6 +496,22 @@ const Modal = ({ onClose }) => {
 
               <div>
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                  Número de cédula
+                </label>
+                <input
+                  type="text"
+                  name="identification"
+                  id="identification"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                  placeholder="1-1111-1111"
+                  required
+                  value={identification}
+                  onChange={(e) => setIdentification(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
                   Correo electrónico
                 </label>
                 <input
@@ -510,21 +526,6 @@ const Modal = ({ onClose }) => {
                 />
               </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Número de cédula
-                </label>
-                <input
-                  type="text"
-                  name="identification"
-                  id="identification"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="1-1111-1111"
-                  required
-                  value={identification}
-                  onChange={(e) => setIdentification(e.target.value)}
-                />
-              </div>
               <div>
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
                   Año graduación
@@ -593,6 +594,10 @@ const Modal = ({ onClose }) => {
                   <option value="Sí">Sí</option>
                   <option value="No">No</option>
                 </select>
+                <p className="block my-2 text-xs ">
+                  De ser la respuesta `No`, se intentará conseguir el préstamo de un instrumento,
+                  más no se garantiza el 100%.
+                </p>
               </div>
               <div>
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">

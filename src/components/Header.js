@@ -201,7 +201,7 @@ const Header = ({ openModal }) => {
 };
 
 Header.propTypes = {
-  openModal: PropTypes.func.isRequired,
+  openModal: PropTypes.func,
 };
 
 export default Header;

@@ -18,10 +18,11 @@ const Alumni = () => {
     <div>
       <Header openModal={handleOpenModal} />
 
-      {isModalOpen && <Modal onClose={handleCloseModal} />}
+      <div className=" w-screen">{isModalOpen && <Modal onClose={handleCloseModal} />}</div>
+
       <section
         className={`pt-16 overflow-hidden bg-white sm:pt-20 lg:pt-28 ${
-          isModalOpen ? "bg-black opacity-10" : ""
+          isModalOpen ? "bg-black opacity-5" : ""
         } `}
       >
         {/* <!-- Container --> */}
