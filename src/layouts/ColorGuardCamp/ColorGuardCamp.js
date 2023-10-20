@@ -46,47 +46,32 @@ const ModalInfo = ({ onClose }) => {
             <p className="text-base leading-relaxed text-gray-500">
               Leer la información detenidamente antes de proceder con la inscripción al campamento
             </p>
-            <h3 className="text-lg font-medium leading-8 font-display text-slate-900 sm:text-xl sm:leading-10">
+            <h3 className="text-md font-medium leading-8 font-display text-slate-900 sm:text-xl sm:leading-10">
               Notas Importantes:
             </h3>
-            <ul className="list-disc px-10">
-              <li>
+            <ul className="list-disc px-10 text-sm text-justify">
+              <li className="mb-1">
                 {" "}
-                Para garantizar una entrada sin inconvenientes al campus de CEDES Don Bosco, les
-                solicitamos proporcionar el número de placa del vehículo con el que ingresarán, a
-                más tardar el miércoles 15 de noviembre. Por favor, envíen esta información al
-                siguiente correo electrónico: banda@cedesdonbosco.ed.cr, para proceder con el
-                registro correspondiente del vehículo en nuestro sistema.
+                Enviar el número de placa del vehículo a banda@cedesdonbosco.ed.cr antes del 15 de
+                noviembre para ingresar al campus de CEDES Don Bosco.
               </li>
-              <li>
-                {" "}
-                Los participantes deben adherirse a las normas de comportamiento y presentación
-                personal de CEDES Don Bosco.{" "}
+              <li className="mb-1">
+                Seguir las normas de comportamiento y presentación personal del lugar
               </li>
-              <li>
-                {" "}
-                Está prohibido el uso y consumo de bebidas alcohólicas, cigarrillos u otras drogas
-                en las instalaciones.{" "}
+              <li className="mb-1">
+                Prohibido el consumo de alcohol, drogas y tabaco en las instalaciones.
               </li>
-              <li>
-                {" "}
-                Se recomienda asistir con ropa deportiva decorosa y, si es posible, con una camiseta
-                de la banda o equipo que representan.
+              <li className="mb-1">
+                Vestir ropa deportiva decorosa, preferiblemente de su equipo.
               </li>
-              <li>
-                {" "}
-                Mantengamos el orden, la limpieza de las instalaciones y los servicios sanitarios.
+              <li className="mb-1">
+                Mantener limpio el lugar y usar los servicios sanitarios adecuadamente.
               </li>
-              <li>
-                {" "}
-                Se solicita permanecer en el gimnasio durante la actividad; para el almuerzo, pueden
-                hacer uso de las canchas y áreas aledañas.
+              <li className="mb-1">
+                Permanecer en el gimnasio durante el evento y usar áreas designadas para el
+                almuerzo.
               </li>
-              <li>
-                {" "}
-                Evitemos el uso de vocabulario vulgar y soez. Sigamos las indicaciones de las
-                personas a cargo de la actividad.
-              </li>
+              <li>Evitar lenguaje vulgar y seguir las indicaciones de los organizadores.</li>
             </ul>
           </div>
           <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b ">
