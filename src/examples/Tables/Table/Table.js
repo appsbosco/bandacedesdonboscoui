@@ -2,7 +2,14 @@ import Box from "@mui/material/Box";
 import { DataGrid, GridToolbar, esES } from "@mui/x-data-grid";
 import PropTypes from "prop-types";
 
-const TableWithFilteringSorting = ({ data, columns, onRowClick, userRole, onStateChange }) => {
+const TableWithFilteringSorting = ({
+  data,
+  columns,
+  onRowClick,
+  userRole,
+  onStateChange,
+  height = 400,
+}) => {
   const renderHeader = (params) => {
     return <div style={{ paddingLeft: "20px", fontWeight: "500" }}>{params.colDef.headerName}</div>;
   };
@@ -40,7 +47,7 @@ const TableWithFilteringSorting = ({ data, columns, onRowClick, userRole, onStat
   });
 
   return (
-    <Box sx={{ height: 400, width: 1 }}>
+    <Box sx={{ height: height, width: 1 }}>
       <DataGrid
         initialState={{
           pagination: {
@@ -73,6 +80,7 @@ TableWithFilteringSorting.propTypes = {
   onRowClick: PropTypes.func.isRequired,
   userRole: PropTypes.string.isRequired,
   onStateChange: PropTypes.func.isRequired,
+  height: PropTypes.number,
 };
 
 export default TableWithFilteringSorting;

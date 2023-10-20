@@ -255,3 +255,20 @@ export const GET_PAYMENTS_BY_EVENT = gql`
     }
   }
 `;
+
+// Query: Get Exalumnos
+export const GET_EXALUMNOS = gql`
+  query GetExAlumnos {
+    getExAlumnos {
+      id
+      fullName
+      phoneNumber
+      identification
+      instrument
+      yearGraduated
+      email
+      address
+      instrumentCondition
+    }
+  }
+`;

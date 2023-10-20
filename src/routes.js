@@ -31,7 +31,8 @@ import Email from "layouts/email";
 import Attendance from "layouts/attendance";
 import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
 import Alumni from "layouts/Alumni/Alumni";
-
+import SchoolIcon from "@mui/icons-material/School";
+import AlumniDashboard from "layouts/Alumni/AlumniDashboard";
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -50,6 +51,16 @@ export const protectedRoutes = [
     route: "/inventory",
     icon: <InventoryIcon size="12px" />,
     component: <Inventory />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Exalumnos",
+    key: "exalumnos",
+    route: "/exalumnos",
+    icon: <SchoolIcon size="12px" />,
+    component: <AlumniDashboard />,
     noCollapse: true,
     href: null,
   },
@@ -292,6 +303,16 @@ export const adminRoutes = [
     route: "/events",
     icon: <EventIcon size="12px" />,
     component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Exalumnos",
+    key: "exalumnos",
+    route: "/exalumnos",
+    icon: <SchoolIcon size="12px" />,
+    component: <AlumniDashboard />,
     noCollapse: true,
     href: null,
   },
