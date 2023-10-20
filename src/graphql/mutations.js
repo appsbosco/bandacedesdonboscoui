@@ -318,3 +318,16 @@ export const ADD_EXALUMNO = gql`
     }
   }
 `;
+
+export const ADD_COLOR_GUARD_CAMP_REGISTRATION = gql`
+  mutation Mutation($input: ColorGuardCampRegistrationInput!) {
+    createColorGuardCampRegistration(input: $input) {
+      id
+      teamName
+      instructorName
+      phoneNumber
+      email
+      participantQuantity
+    }
+  }
+`;

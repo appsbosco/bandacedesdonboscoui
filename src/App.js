@@ -33,6 +33,8 @@ import { parentsRoutes } from "routes";
 import jwtDecode from "jwt-decode";
 import { cedesRoutes } from "routes";
 import Alumni from "layouts/Alumni/Alumni";
+import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
+import { colorGuardCampRoutes } from "routes";
 
 function isTokenExpired(token) {
   try {
@@ -131,6 +133,9 @@ export default function App() {
   } else if (userRole === "Principal de sección" || userRole === "Asistente de sección") {
     const attendanceRoutesFiltered = [...routes, ...attendanceRoutes];
     renderedRoutes = getRoutes(attendanceRoutesFiltered);
+  } else if (userRole === "Instructura Color Guard") {
+    const colorGuardRoutes = [...routes, ...colorGuardCampRoutes];
+    renderedRoutes = getRoutes(colorGuardRoutes);
   } else if (userRole === "Staff") {
     const staffRoutesFiltered = [...routes, ...staffRoutes];
     renderedRoutes = getRoutes(staffRoutesFiltered);
@@ -181,6 +186,8 @@ export default function App() {
       ? principalRoutes
       : userRole === "Staff"
       ? staffRoutes
+      : userRole === "Instructura Color Guard"
+      ? colorGuardCampRoutes
       : userRole === "CEDES"
       ? cedesRoutes
       : userRole !== "Integrante BCDB" &&
@@ -214,6 +221,7 @@ export default function App() {
             pathname !== "/" &&
             pathname !== "/nosotros" &&
             pathname !== "/proyecto-exalumnos" &&
+            pathname !== "/color-guard-camp" &&
             pathname !== "/contacto" &&
             pathname !== "/blog" &&
             !pathname.startsWith("/blog/") && (
@@ -238,6 +246,7 @@ export default function App() {
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
+        <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
         <Route path="/autenticacion/registrarse-privado" component={SignUp} />
         <Route path="/autenticacion/iniciar-sesion" component={SignIn} />

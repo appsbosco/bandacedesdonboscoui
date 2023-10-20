@@ -18,6 +18,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
+import FlagIcon from "@mui/icons-material/Flag";
 import Document from "examples/Icons/Document";
 import SendIcon from "@mui/icons-material/Send";
 import SpaceShip from "examples/Icons/SpaceShip";
@@ -33,6 +34,9 @@ import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
 import Alumni from "layouts/Alumni/Alumni";
 import SchoolIcon from "@mui/icons-material/School";
 import AlumniDashboard from "layouts/Alumni/AlumniDashboard";
+import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
+import ColorGuardCampDashboard from "layouts/ColorGuardCamp/ColorGuardCampDashboard";
+
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -61,6 +65,16 @@ export const protectedRoutes = [
     route: "/exalumnos",
     icon: <SchoolIcon size="12px" />,
     component: <AlumniDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Color Guard Camp",
+    key: "color-guard-camp-dashboard",
+    route: "/color-guard-camp-dashboard",
+    icon: <SchoolIcon size="12px" />,
+    component: <ColorGuardCampDashboard />,
     noCollapse: true,
     href: null,
   },
@@ -147,6 +161,16 @@ const routes = [
     route: "/proyecto-exalumnos",
     icon: "",
     component: <Alumni />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Color Guard Camp",
+    key: "color-guard-camp",
+    route: "/color-guard-camp",
+    icon: "",
+    component: <ColorGuardCamp />,
     noCollapse: true,
     href: null,
   },
@@ -303,6 +327,16 @@ export const adminRoutes = [
     route: "/events",
     icon: <EventIcon size="12px" />,
     component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Color Guard Camp",
+    key: "color-guard-camp-dashboard",
+    route: "/color-guard-camp-dashboard",
+    icon: <FlagIcon size="12px" />,
+    component: <ColorGuardCampDashboard />,
     noCollapse: true,
     href: null,
   },
@@ -618,6 +652,50 @@ export const cedesRoutes = [
     route: "/members",
     icon: <PeopleAltIcon size="12px" />,
     component: <Tables />,
+    noCollapse: true,
+    href: null,
+  },
+];
+
+export const colorGuardCampRoutes = [
+  {
+    type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    route: "/dashboard",
+    icon: <DashboardIcon size="12px" />,
+    component: <Dashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Color Guard Camp",
+    key: "color-guard-camp-dashboard",
+    route: "/color-guard-camp-dashboard",
+    icon: <FlagIcon size="12px" />,
+    component: <ColorGuardCampDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Cuenta", key: "account-pages" },
+  {
+    type: "collapse",
+    name: "Perfil",
+    key: "Profile",
+    route: "/Profile",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <Profile />,
     noCollapse: true,
     href: null,
   },

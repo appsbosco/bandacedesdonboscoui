@@ -272,3 +272,16 @@ export const GET_EXALUMNOS = gql`
     }
   }
 `;
+
+export const GET_COLOR_GUARD_CAMP_REGISTRATION = gql`
+  query Query {
+    getColorGuardCampRegistrations {
+      id
+      teamName
+      instructorName
+      phoneNumber
+      email
+      participantQuantity
+    }
+  }
+`;
