@@ -24,6 +24,7 @@ const Modal = ({ onClose }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [instrument, setInstrument] = useState("");
   const [address, setAddress] = useState("");
+  const [instrumentCondition, setInstrumentCondition] = useState("");
 
   const [isRegistrationSuccessful, setIsRegistrationSuccessful] = useState(false);
   const navigate = useNavigate();
@@ -65,6 +66,7 @@ const Modal = ({ onClose }) => {
       phoneNumber,
       instrument,
       address,
+      instrumentCondition,
     };
 
     try {
@@ -569,7 +571,29 @@ const Modal = ({ onClose }) => {
                   onChange={(e) => setInstrument(e.target.value)}
                 />
               </div>
-
+              <div>
+                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                  ¿Cuenta con instrumento propio?
+                </label>
+                <select
+                  id="instrumentCondition"
+                  name="instrumentCondition"
+                  value={instrumentCondition}
+                  onChange={(e) => setInstrumentCondition(e.target.value)}
+                  className="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "0.375rem",
+                    width: "100%",
+                    height: "calc(2.25rem + 2px)",
+                    color: "#000",
+                  }}
+                >
+                  <option value="">Seleccione una opción</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
               <div>
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
                   Dirección de residencia

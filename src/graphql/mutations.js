@@ -314,6 +314,7 @@ export const ADD_EXALUMNO = gql`
       yearGraduated
       email
       address
+      instrumentCondition
     }
   }
 `;
