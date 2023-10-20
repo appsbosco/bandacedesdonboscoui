@@ -32,6 +32,7 @@ import BlogListing from "layouts/blog/BlogListing";
 import { parentsRoutes } from "routes";
 import jwtDecode from "jwt-decode";
 import { cedesRoutes } from "routes";
+import Alumni from "layouts/Alumni/Alumni";
 
 function isTokenExpired(token) {
   try {
@@ -212,6 +213,7 @@ export default function App() {
             !pathname.startsWith("/autenticacion/recuperar/") &&
             pathname !== "/" &&
             pathname !== "/nosotros" &&
+            pathname !== "/proyecto-exalumnos" &&
             pathname !== "/contacto" &&
             pathname !== "/blog" &&
             !pathname.startsWith("/blog/") && (
@@ -235,6 +237,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
+        <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
         <Route path="/autenticacion/registrarse-privado" component={SignUp} />
         <Route path="/autenticacion/iniciar-sesion" component={SignIn} />

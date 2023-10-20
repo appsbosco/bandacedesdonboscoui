@@ -1,6 +1,5 @@
 import React from "react";
-import landingDesktop from "../assets/images/landing.webp";
-import landingMobile from "../assets/images/landingmobile.png";
+import landing from "../assets/images/landing.png";
 import pasion from "../assets/images/pasion.webp";
 import friends from "../assets/images/friends.webp";
 import family from "../assets/images/family.webp";
@@ -135,19 +134,11 @@ const Hero = () => {
         {/* Hero graphics */}
         <div className="w-full max-w-lg mx-auto lg:mr-0">
           <div className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50">
-            {/* <LazyLoadImage
-              className="object-cover object-center w-full h-full rounded-2xl"
-              src={landingDesktop}
-              alt=""
-              sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
-            /> */}
-
             <LazyLoadImage
               className="object-cover object-center w-full h-full rounded-2xl"
+              src={landing}
               alt=""
-              src={landingDesktop}
-              srcSet={`${landingMobile} 480w, ${landingDesktop} 800w`}
-              sizes="(max-width: 551px) 480px, 800px"
+              sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
             />
 
             <div>

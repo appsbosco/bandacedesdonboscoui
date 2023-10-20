@@ -23,6 +23,7 @@ function DefaultProjectCard({
   handleRemoveClick,
 }) {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+
   const userRole = userData?.getUser?.role;
 
   const renderAuthors = authors.map(({ image: media, name }) => (

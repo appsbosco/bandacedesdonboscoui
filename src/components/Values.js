@@ -1,8 +1,10 @@
 import React from "react";
 import cover from "../assets/images/cover-landing.webp";
+import coverMobile from "../assets/images/cover-landing-mobile.png";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import HouseIcon from "@mui/icons-material/House";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 const Values = () => {
   return (
@@ -153,11 +155,19 @@ const Values = () => {
           {/* Graphics */}
           <div className="lg:col-span-8 lg:pl-8 xl:pl-24">
             <div className="relative w-full aspect-w-3 aspect-h-2">
-              <img
+              {/* <img
                 className="object-cover object-center w-full h-full rounded-3xl"
                 src={cover}
                 alt=""
                 sizes="(min-width: 1280px) 705.34px, (min-width: 1024px) calc((100vw - 64px) * 0.6667 - 32px), (min-width: 616px) 36rem, calc(100vw - 40px)"
+              /> */}
+
+              <LazyLoadImage
+                className="object-cover object-center w-full h-full rounded-3xl"
+                alt=""
+                src={cover}
+                srcSet={`${coverMobile} 480w, ${cover} 800w`}
+                sizes="(max-width: 551px) 480px, 800px"
               />
               <div>
                 {/* Stats */}

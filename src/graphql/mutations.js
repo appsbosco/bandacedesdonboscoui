@@ -302,3 +302,18 @@ export const DELETE_PAYMENT = gql`
     }
   }
 `;
+
+export const ADD_EXALUMNO = gql`
+  mutation AddExAlumno($input: ExalumnoInput!) {
+    addExAlumno(input: $input) {
+      id
+      fullName
+      phoneNumber
+      identification
+      instrument
+      yearGraduated
+      email
+      address
+    }
+  }
+`;

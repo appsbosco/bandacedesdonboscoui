@@ -30,6 +30,7 @@ import ParentsProfile from "layouts/parentsProfile";
 import Email from "layouts/email";
 import Attendance from "layouts/attendance";
 import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
+import Alumni from "layouts/Alumni/Alumni";
 
 export const protectedRoutes = [
   {
@@ -128,7 +129,16 @@ const routes = [
     noCollapse: true,
     href: null,
   },
-
+  {
+    type: "collapse",
+    name: "Alumni",
+    key: "alumni",
+    route: "/proyecto-exalumnos",
+    icon: "",
+    component: <Alumni />,
+    noCollapse: true,
+    href: null,
+  },
   {
     type: "collapse",
     name: "Contacto",

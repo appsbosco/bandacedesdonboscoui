@@ -180,6 +180,7 @@ const Tables = () => {
     { field: "instrument", headerName: "Instrumento", width: 150 },
     { field: "role", headerName: "Rol", width: 200 },
     { field: "status", headerName: "Estado", width: 120 },
+    { field: "grade", headerName: "Año", width: 120 },
   ];
 
   const staffColumns = [
