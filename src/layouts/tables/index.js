@@ -63,23 +63,27 @@ const GET_USERS = gql`
   }
 `;
 
-const GET_MEDICAL_RECORD_BY_USER = gql`
-  query getMedicalRecordByUser {
+const GET_MEDICAL_RECORDS = gql`
+  query GetMedicalRecords {
     getMedicalRecords {
-      identification
       id
-      familyMemberRelationship
-      familyMemberOccupation
-      familyMemberNumberId
-      familyMemberNumber
-      familyMemberName
+      identification
+      sex
       bloodType
       address
+      familyMemberName
+      familyMemberNumber
+      familyMemberNumberId
+      familyMemberRelationship
+      familyMemberOccupation
       illness
       medicine
       medicineOnTour
-      sex
-      user
+      allergies
+      user {
+        name
+        id
+      }
     }
   }
 `;
@@ -87,7 +91,6 @@ const GET_MEDICAL_RECORD_BY_USER = gql`
 const Tables = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const { data: parentData } = useQuery(GET_PARENTS);
-  console.log(parentData);
 
   const [deleteUser] = useMutation(DELETE_USER);
   const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD);
@@ -142,12 +145,16 @@ const Tables = () => {
     data: medicalRecordData,
     loading: medicalRecordLoading,
     error: medicalRecordError,
-  } = useQuery(GET_MEDICAL_RECORD_BY_USER);
+  } = useQuery(GET_MEDICAL_RECORDS);
+
+  console.log("Medical records", medicalRecordData?.getMedicalRecords);
+
+  console.log("Selected User", selectedUser);
 
   useEffect(() => {
     if (selectedUser && medicalRecordData) {
-      const userRecord = medicalRecordData.getMedicalRecords.find(
-        (record) => record.user === selectedUser.id
+      const userRecord = medicalRecordData?.getMedicalRecords.find(
+        (record) => record?.user?.id === selectedUser.id
       );
       setUserMedicalRecord(userRecord);
     }
