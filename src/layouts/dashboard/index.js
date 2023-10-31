@@ -627,6 +627,16 @@ const Dashboard = () => {
     return homeDecor1;
   };
 
+  const events = [...eventData?.getEvents];
+
+  const sortedEvents = [...events].sort((a, b) => {
+    const dateTimeA = new Date(parseInt(a.date) + new Date("1970-01-01T" + a.time + "Z").getTime());
+    const dateTimeB = new Date(parseInt(b.date) + new Date("1970-01-01T" + b.time + "Z").getTime());
+
+    return dateTimeA - dateTimeB;
+  });
+  console.log(sortedEvents);
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -691,65 +701,64 @@ const Dashboard = () => {
                       height: "100%",
                     }}
                   >
-                    {eventData &&
-                      eventData.getEvents.map((event) => {
-                        const eventImage = getEventImage(event.type);
+                    {sortedEvents.map((event) => {
+                      const eventImage = getEventImage(event.type);
 
-                        return (
-                          <Grid
-                            item
-                            xs={12}
-                            md={6}
-                            xl={3}
-                            key={event.id}
+                      return (
+                        <Grid
+                          item
+                          xs={12}
+                          md={6}
+                          xl={3}
+                          key={event.id}
+                          style={{
+                            minWidth: "350px",
+                            flexShrink: 0,
+                            maxWidth: "100%",
+                            minHeight: "100%",
+                          }}
+                        >
+                          <DefaultProjectCard
                             style={{
-                              minWidth: "350px",
-                              flexShrink: 0,
+                              minWidth: "100%",
                               maxWidth: "100%",
                               minHeight: "100%",
                             }}
-                          >
-                            <DefaultProjectCard
-                              style={{
-                                minWidth: "100%",
-                                maxWidth: "100%",
-                                minHeight: "100%",
-                              }}
-                              image={eventImage}
-                              label={`Lugar: ${event.place}`}
-                              title={`${event.title}`}
-                              description={`${event.description}`}
-                              actions={[
-                                {
-                                  type: "internal",
-                                  route: "",
-                                  color: "info",
-                                  label: "Ver más",
-                                  onClick: () => handleOpenModal("details", event),
-                                },
-                                {
-                                  type: "internal",
-                                  route: "",
-                                  color: "info",
-                                  label: "Editar",
-                                  onClick: () => handleOpenModal("edit", event),
-                                },
-                                {
-                                  type: "internal",
-                                  route: "", // Add the route for remove event
-                                  color: "error", // Use a suitable color for remove event
-                                  label: "Eliminar",
-                                  icon: "delete", // Add the icon for remove event (replace with the appropriate icon name if needed)
-                                  onClick: () => handleOpenModal("remove", event),
-                                },
-                              ].filter(Boolean)}
-                              handleVerMasClick={() => handleOpenModal("details", event)}
-                              handleEditarClick={() => handleOpenModal("edit", event)}
-                              handleRemoveClick={() => handleOpenModal("remove", event)}
-                            />
-                          </Grid>
-                        );
-                      })}
+                            image={eventImage}
+                            label={`Lugar: ${event.place}`}
+                            title={`${event.title}`}
+                            description={`${event.description}`}
+                            actions={[
+                              {
+                                type: "internal",
+                                route: "",
+                                color: "info",
+                                label: "Ver más",
+                                onClick: () => handleOpenModal("details", event),
+                              },
+                              {
+                                type: "internal",
+                                route: "",
+                                color: "info",
+                                label: "Editar",
+                                onClick: () => handleOpenModal("edit", event),
+                              },
+                              {
+                                type: "internal",
+                                route: "", // Add the route for remove event
+                                color: "error", // Use a suitable color for remove event
+                                label: "Eliminar",
+                                icon: "delete", // Add the icon for remove event (replace with the appropriate icon name if needed)
+                                onClick: () => handleOpenModal("remove", event),
+                              },
+                            ].filter(Boolean)}
+                            handleVerMasClick={() => handleOpenModal("details", event)}
+                            handleEditarClick={() => handleOpenModal("edit", event)}
+                            handleRemoveClick={() => handleOpenModal("remove", event)}
+                          />
+                        </Grid>
+                      );
+                    })}
                   </Grid>
                 )}
               </SoftBox>
