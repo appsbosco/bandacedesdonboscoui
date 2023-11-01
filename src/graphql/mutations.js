@@ -331,3 +331,41 @@ export const ADD_COLOR_GUARD_CAMP_REGISTRATION = gql`
     }
   }
 `;
+
+export const NEW_PERFORMANCE_ATTENDANCE = gql`
+  mutation NewPerformanceAttendance($input: PerformanceAttendanceInput) {
+    newPerformanceAttendance(input: $input) {
+      id
+      user {
+        name
+      }
+      event {
+        title
+      }
+      attended
+      busNumber
+      hotel {
+        name
+      }
+    }
+  }
+`;
+
+export const UPDATE_PERFORMANCE_ATTENDANCE = gql`
+  mutation Mutation($updatePerformanceAttendanceId: ID!, $input: PerformanceAttendanceInput) {
+    updatePerformanceAttendance(id: $updatePerformanceAttendanceId, input: $input) {
+      user {
+        name
+      }
+      event {
+        title
+      }
+      busNumber
+      attended
+      hotel {
+        name
+      }
+      id
+    }
+  }
+`;

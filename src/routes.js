@@ -36,6 +36,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import AlumniDashboard from "layouts/Alumni/AlumniDashboard";
 import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import ColorGuardCampDashboard from "layouts/ColorGuardCamp/ColorGuardCampDashboard";
+import PerformanceAttendance from "layouts/PerformanceAttendance/PerformanceAttendance";
 
 export const protectedRoutes = [
   {
@@ -108,6 +109,17 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  {
+    type: "collapse",
+    name: "Asist. a presentaciones",
+    key: "performance-attendance",
+    route: "/performance-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <PerformanceAttendance />,
+    noCollapse: true,
+    href: null,
+  },
   {
     type: "collapse",
     name: "Correo",
@@ -138,6 +150,16 @@ export const attendanceRoutes = [
     route: "/attendance-history",
     icon: <ReceiptLongIcon size="12px" />,
     component: <VirtualReality />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asist. a presentaciones",
+    key: "performance-attendance",
+    route: "/performance-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <PerformanceAttendance />,
     noCollapse: true,
     href: null,
   },
@@ -307,6 +329,16 @@ export const adminRoutes = [
     route: "/attendance",
     icon: <FactCheckIcon size="12px" />,
     component: <RTL />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asist. a presentaciones",
+    key: "performance-attendance",
+    route: "/performance-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <PerformanceAttendance />,
     noCollapse: true,
     href: null,
   },
@@ -499,6 +531,16 @@ export const principalRoutes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Asist. a presentaciones",
+    key: "performance-attendance",
+    route: "/performance-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <PerformanceAttendance />,
+    noCollapse: true,
+    href: null,
+  },
 
   {
     type: "collapse",
@@ -610,6 +652,7 @@ export const parentsRoutes = [
     noCollapse: true,
     href: null,
   },
+
   { type: "title", title: "Cuenta", key: "account-pages" },
   {
     type: "collapse",

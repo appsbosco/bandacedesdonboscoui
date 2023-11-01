@@ -285,3 +285,34 @@ export const GET_COLOR_GUARD_CAMP_REGISTRATION = gql`
     }
   }
 `;
+
+export const GET_PERFORMANCE_ATTENDANCE = gql`
+  query GetPerformanceAttendanceByEvent($event: ID!) {
+    getPerformanceAttendanceByEvent(event: $event) {
+      id
+      user {
+        name
+        firstSurName
+        secondSurName
+        instrument
+      }
+      event {
+        title
+      }
+      attended
+      busNumber
+      hotel {
+        name
+      }
+    }
+  }
+`;
+
+export const GET_HOTELS = gql`
+  query GetHotels {
+    getHotels {
+      id
+      name
+    }
+  }
+`;

@@ -116,6 +116,7 @@ export default function App() {
     (pathname.startsWith("/dashboard") ||
       pathname.startsWith("/members") ||
       pathname.startsWith("/inventory") ||
+      pathname.startsWith("/performance-attendance") ||
       pathname.startsWith("/attendance") ||
       pathname.startsWith("/attendance-history") ||
       pathname.startsWith("/events") ||
