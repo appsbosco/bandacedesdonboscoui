@@ -147,14 +147,14 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
     {
       field: "name",
       headerName: "Nombre",
-      flex: 1,
+      width: 300,
       editable: true,
     },
-    { field: "event", headerName: "Evento", flex: 1 },
+
     {
       field: "attended",
       headerName: "Asistencia",
-      flex: 1,
+      width: 150,
       renderCell: (params) => {
         const isInEditMode = rowModesModel[params.id]?.mode === GridRowModes.Edit;
 
@@ -172,7 +172,7 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
     {
       field: "busNumber",
       headerName: "Número de Bus",
-      flex: 1,
+      width: 200,
       renderCell: (params) => {
         const isInEditMode = rowModesModel[params.id]?.mode === GridRowModes.Edit;
 
@@ -197,7 +197,7 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
     {
       field: "hotel",
       headerName: "Hotel",
-      flex: 1,
+      width: 200,
       renderCell: (params) => {
         const isInEditMode =
           rowModesModel[params.id]?.mode === GridRowModes.Edit &&

@@ -172,13 +172,13 @@ const PerformanceAttendance = () => {
     {
       field: "name",
       headerName: "Integrante",
-      flex: 1,
+      width: 300,
       renderCell: (params) => <div style={{ paddingLeft: "20px" }}>{params.value}</div>,
     },
     {
       field: "attendance",
       headerName: "Asistencia",
-      flex: 1,
+      width: 150,
       renderCell: (params) => {
         const user = params.row;
         return (
@@ -196,7 +196,7 @@ const PerformanceAttendance = () => {
     {
       field: "bus",
       headerName: "Bus",
-      flex: 1,
+      width: 200,
       renderCell: (params) => {
         const user = params.row;
         const isAbsent = attendanceStatus[user.id] === "Ausente";
@@ -220,7 +220,7 @@ const PerformanceAttendance = () => {
     {
       field: "hotel",
       headerName: "Hotel",
-      flex: 1,
+      width: 200,
       renderCell: (params) => {
         const user = params.row;
         const isAbsent = attendanceStatus[user.id] === "Ausente";
