@@ -239,6 +239,18 @@ export const ADD_ATTENDANCE = gql`
   }
 `;
 
+export const UPDATE_ATTENDANCE = gql`
+  mutation UpdateAttendance($updateAttendanceId: ID!, $input: AttendanceInput) {
+    updateAttendance(id: $updateAttendanceId, input: $input) {
+      user {
+        name
+      }
+      id
+      date
+      attended
+    }
+  }
+`;
 // Payments
 
 // Mutation: Create Payment Event

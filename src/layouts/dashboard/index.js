@@ -123,7 +123,6 @@ const Dashboard = () => {
   };
 
   if (!usersData || !usersData.getUsers) {
-    console.error("usersData or usersData.getUsers is undefined");
     return;
   }
 

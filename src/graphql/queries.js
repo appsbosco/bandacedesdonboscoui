@@ -209,6 +209,7 @@ export const GET_ALL_ATTENDANCE = gql`
       date
       id
       user {
+        id
         name
         firstSurName
         secondSurName
