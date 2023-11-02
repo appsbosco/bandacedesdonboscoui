@@ -58,10 +58,15 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
   );
 
   React.useEffect(() => {
-    const filteredRows =
-      data?.getPerformanceAttendanceByEvent.filter(
-        (item) => item.user.instrument === userInstrument
-      ) || [];
+    let filteredRows = [];
+    if (userRole === "Admin" || userRole === "Director") {
+      filteredRows = data?.getPerformanceAttendanceByEvent || [];
+    } else {
+      filteredRows =
+        data?.getPerformanceAttendanceByEvent.filter(
+          (item) => item.user.instrument === userInstrument
+        ) || [];
+    }
 
     setRows(
       filteredRows.map((item) => ({
@@ -73,7 +78,7 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
         hotel: { id: item?.hotel?.id, name: item?.hotel?.name },
       }))
     );
-  }, [data, userInstrument]);
+  }, [data, userInstrument, userRole]);
 
   const initialRows =
     data?.getPerformanceAttendanceByEvent.map((item) => ({
