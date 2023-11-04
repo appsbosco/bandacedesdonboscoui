@@ -16,6 +16,7 @@ import {
   GridToolbarContainer,
   GridActionsCellItem,
   GridRowEditStopReasons,
+  GridToolbar,
 } from "@mui/x-data-grid";
 import PropTypes from "prop-types";
 import { GET_HOTELS } from "graphql/queries";
@@ -59,7 +60,12 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
 
   React.useEffect(() => {
     let filteredRows = [];
-    if (userRole === "Admin" || userRole === "Director") {
+    if (
+      userRole === "Admin" ||
+      userRole === "Director" ||
+      userRole === "Staff" ||
+      userRole === "Dirección Logística"
+    ) {
       filteredRows = data?.getPerformanceAttendanceByEvent || [];
     } else {
       filteredRows =
@@ -304,6 +310,7 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
         rows={rows}
         columns={columns}
         editMode="row"
+        components={{ Toolbar: GridToolbar }}
         rowModesModel={rowModesModel}
         onRowModesModelChange={setRowModesModel}
         onRowEditStop={handleRowEditStop}

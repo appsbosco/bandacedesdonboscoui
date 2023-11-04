@@ -459,6 +459,16 @@ export const staffRoutes = [
   },
   {
     type: "collapse",
+    name: "Asist. a presentaciones",
+    key: "performance-attendance",
+    route: "/performance-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <PerformanceAttendance />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
     name: "Calendario",
     key: "events",
     route: "/events",

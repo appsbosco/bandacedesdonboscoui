@@ -131,7 +131,11 @@ export default function App() {
   if (userRole === "Admin" || userRole === "Director" || userRole === "Dirección Logística") {
     const adminRoutes = [...routes, ...protectedRoutes];
     renderedRoutes = getRoutes(adminRoutes);
-  } else if (userRole === "Principal de sección" || userRole === "Asistente de sección") {
+  } else if (
+    userRole === "Principal de sección" ||
+    userRole === "Asistente de sección" ||
+    userRole === "Líder de sección"
+  ) {
     const attendanceRoutesFiltered = [...routes, ...attendanceRoutes];
     renderedRoutes = getRoutes(attendanceRoutesFiltered);
   } else if (userRole === "Instructura Color Guard") {

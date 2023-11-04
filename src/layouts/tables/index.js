@@ -125,7 +125,7 @@ const Tables = () => {
 
   const userRole = userData?.getUser.role;
 
-  const isMobile = useMediaQuery({ maxWidth: 640 }); // Adjust the max width as per your requirements
+  const isMobile = useMediaQuery({ maxWidth: 640 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,10 +146,6 @@ const Tables = () => {
     loading: medicalRecordLoading,
     error: medicalRecordError,
   } = useQuery(GET_MEDICAL_RECORDS);
-
-  console.log("Medical records", medicalRecordData?.getMedicalRecords);
-
-  console.log("Selected User", selectedUser);
 
   useEffect(() => {
     if (selectedUser && medicalRecordData) {
@@ -185,15 +181,18 @@ const Tables = () => {
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
     { field: "instrument", headerName: "Instrumento", width: 150 },
-    { field: "role", headerName: "Rol", width: 200 },
+    { field: "email", headerName: "Correo", width: 120 },
+    // { field: "role", headerName: "Rol", width: 200 },
     { field: "status", headerName: "Estado", width: 120 },
     { field: "grade", headerName: "Año", width: 120 },
+    { field: "bands", headerName: "Bandas", width: 120 },
   ];
 
   const staffColumns = [
     { field: "name", headerName: "Nombre", width: 200 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
+    { field: "email", headerName: "Correo", width: 120 },
     { field: "role", headerName: "Rol", width: 200 },
   ];
 
@@ -201,6 +200,7 @@ const Tables = () => {
     { field: "name", headerName: "Nombre", width: 200 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
+    { field: "email", headerName: "Correo", width: 120 },
     { field: "role", headerName: "Rol", width: 200 },
     { field: "phone", headerName: "Número", width: 200 },
     {
@@ -241,16 +241,15 @@ const Tables = () => {
       })
       .then(() => {
         refetch();
-        setSelectedUser(null); // Reset the selected user here
+        setSelectedUser(null);
         setOpenModal(false);
-        setShowConfirmation(false); // Close the confirmation as well
+        setShowConfirmation(false);
       });
   };
 
   const handleDeleteUser = (id, event) => {
-    event.stopPropagation(); // Prevents the event from triggering the modal's onClose
+    event.stopPropagation();
     setShowConfirmation(true);
-    // setSelectedUser(null);
   };
 
   const handleCancelDelete = () => {

@@ -117,7 +117,10 @@ const PerformanceAttendance = () => {
         "Principal de sección",
         "Líder de sección",
         "Asistente de sección",
+        "Staff",
+        "Dirección Logística",
         "Admin",
+        "Director",
       ];
       if (allowedRoles.includes(userData?.getUser.role)) {
         const filtered = usersData?.getUsers.filter((user) => user.instrument === userInstrument);
@@ -229,7 +232,7 @@ const PerformanceAttendance = () => {
           <Select
             value={hotelAssignments[user.id] || "Seleccione un hotel"}
             onChange={(event) => handleHotelAssignment(user.id, event.target.value)}
-            disabled={isAbsent}
+            disabled={isAbsent || userData?.getUser?.role !== "Admin"}
           >
             <MenuItem value="Seleccione un hotel">Seleccione un hotel</MenuItem>
             {hotelsData?.getHotels.map((hotel) => (
