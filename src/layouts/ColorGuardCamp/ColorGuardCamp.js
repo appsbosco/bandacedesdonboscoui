@@ -215,6 +215,7 @@ const ColorGuardCamp = () => {
               target="_blank"
               className="bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
               onClick={handleOpenModal}
+              disabled
             >
               Inscribirme
               <svg
