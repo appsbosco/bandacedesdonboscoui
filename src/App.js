@@ -35,6 +35,7 @@ import { cedesRoutes } from "routes";
 import Alumni from "layouts/Alumni/Alumni";
 import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import { colorGuardCampRoutes } from "routes";
+import CalendarListing from "layouts/calendar/CalendarListing";
 
 function isTokenExpired(token) {
   try {
@@ -229,6 +230,7 @@ export default function App() {
             pathname !== "/color-guard-camp" &&
             pathname !== "/contacto" &&
             pathname !== "/blog" &&
+            pathname !== "/calendario" &&
             !pathname.startsWith("/blog/") && (
               <>
                 <Sidenav
@@ -250,6 +252,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         {renderedRoutes.map((route) => route)}
         <Route path="/blog" element={<BlogListing />} />
+        <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
