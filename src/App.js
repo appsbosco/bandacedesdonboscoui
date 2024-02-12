@@ -145,15 +145,14 @@ export default function App() {
   } else if (userRole === "Staff") {
     const staffRoutesFiltered = [...routes, ...staffRoutes];
     renderedRoutes = getRoutes(staffRoutesFiltered);
-  } else if (userRole === "CEDES") {
+  } else if (userRole === "CEDES" || userRole === "Instructor de instrumento") {
     const cedesRoutesFiltered = [...routes, ...cedesRoutes];
     renderedRoutes = getRoutes(cedesRoutesFiltered);
   } else if (
     userRole !== "Integrante BCDB" &&
     userRole !== "Instructor Drumline" &&
     userRole !== "Instructura Color Guard" &&
-    userRole !== "Instructora Danza" &&
-    userRole !== "Instructor de instrumento"
+    userRole !== "Instructora Danza"
   ) {
     const parentsRoutesFiltered = [...routes, ...parentsRoutes];
     renderedRoutes = getRoutes(parentsRoutesFiltered);
@@ -194,7 +193,7 @@ export default function App() {
       ? staffRoutes
       : userRole === "Instructura Color Guard"
       ? colorGuardCampRoutes
-      : userRole === "CEDES"
+      : userRole === "CEDES" || userRole === "Instructor de instrumento"
       ? cedesRoutes
       : userRole !== "Integrante BCDB" &&
         userRole !== "Instructor Drumline" &&
