@@ -348,6 +348,7 @@ export const GET_ORDERS = gql`
           name
           price
         }
+        quantity
       }
       orderDate
     }

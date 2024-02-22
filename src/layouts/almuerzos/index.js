@@ -31,6 +31,8 @@ const Almuerzos = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [cart, setCart] = useState([]);
+  const [selectedQuantities, setSelectedQuantities] = useState({});
+
   const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);
 
   const [createOrder, { data: orderData, loading: orderLoading, error: orderError }] = useMutation(
@@ -53,19 +55,26 @@ const Almuerzos = () => {
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
 
-  const addToCart = (product, quantity) => {
+  const addToCart = (product) => {
+    const quantity = selectedQuantities[product.id] || 1;
     setCart((prevCart) => {
       const isProductInCart = prevCart.find((item) => item.product.id === product.id);
       if (isProductInCart) {
-        // Si el producto ya está en el carrito, actualiza la cantidad
         return prevCart.map((item) =>
           item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       } else {
-        // Si el producto no está en el carrito, lo añade
         return [...prevCart, { product, quantity }];
       }
     });
+  };
+
+  // Función para manejar cambios en la cantidad seleccionada
+  const handleQuantityChange = (productId, quantity) => {
+    setSelectedQuantities((prevQuantities) => ({
+      ...prevQuantities,
+      [productId]: quantity,
+    }));
   };
 
   const removeFromCart = (productId) => {
@@ -274,10 +283,26 @@ const Almuerzos = () => {
                           />
                         </div>
                         <div className=" pt-4 flex justify-between items-center">
-                          <h6 className="text-lg text-default-500">Precio: ₡ {product.price}</h6>
+                          <div>
+                            <h6 className="text-lg text-default-500">Precio: ₡ {product.price}</h6>
+
+                            <div className="flex flex-row ">
+                              <h6 className="text-lg text-default-500 mr-2">Cant: </h6>
+
+                              <input
+                                type="number"
+                                min="1"
+                                value={selectedQuantities[product.id] || 1}
+                                onChange={(e) =>
+                                  handleQuantityChange(product.id, parseInt(e.target.value))
+                                }
+                                className=" w-12 mr-2 border rounded-full  py-1 px-2"
+                              />
+                            </div>
+                          </div>
 
                           <button
-                            onClick={() => addToCart(product, 1)}
+                            onClick={() => addToCart(product)}
                             className="bg-black text-white p-2 text-sm  rounded-2xl"
                           >
                             Añadir
