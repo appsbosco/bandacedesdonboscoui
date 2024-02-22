@@ -311,6 +311,12 @@ const PerformanceAttendanceTable = ({ refetchToggle, selectedEvent }) => {
         columns={columns}
         editMode="row"
         components={{ Toolbar: GridToolbar }}
+        slotProps={{
+          toolbar: {
+            showQuickFilter: true,
+            quickFilterProps: { debounceMs: 500 },
+          },
+        }}
         rowModesModel={rowModesModel}
         onRowModesModelChange={setRowModesModel}
         onRowEditStop={handleRowEditStop}

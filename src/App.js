@@ -121,6 +121,7 @@ export default function App() {
       pathname.startsWith("/attendance") ||
       pathname.startsWith("/attendance-history") ||
       pathname.startsWith("/events") ||
+      pathname.startsWith("/almuer") ||
       pathname.startsWith("/Profile"));
 
   if (shouldRedirectToLogin) {

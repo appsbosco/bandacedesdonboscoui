@@ -317,3 +317,39 @@ export const GET_HOTELS = gql`
     }
   }
 `;
+
+export const GET_PRODUCTS = gql`
+  query Products {
+    products {
+      id
+      name
+      description
+      category
+      price
+      availableForDays
+      closingDate
+      createdAt
+    }
+  }
+`;
+
+export const GET_ORDERS = gql`
+  query Query {
+    orders {
+      id
+      userId {
+        name
+        firstSurName
+        secondSurName
+      }
+      products {
+        productId {
+          id
+          name
+          price
+        }
+      }
+      orderDate
+    }
+  }
+`;

@@ -381,3 +381,48 @@ export const UPDATE_PERFORMANCE_ATTENDANCE = gql`
     }
   }
 `;
+
+//Almuerzos
+export const CREATE_PRODUCT = gql`
+  mutation CreateProduct(
+    $name: String!
+    $description: String!
+    $price: Float!
+    $availableForDays: [String!]!
+    $closingDate: String!
+    $category: String
+  ) {
+    createProduct(
+      name: $name
+      description: $description
+      price: $price
+      availableForDays: $availableForDays
+      closingDate: $closingDate
+      category: $category
+    ) {
+      id
+      name
+      description
+      price
+      availableForDays
+      closingDate
+      createdAt
+      category
+    }
+  }
+`;
+
+export const CREATE_ORDER = gql`
+  mutation CreateOrder($userId: ID!, $products: [InputOrderProduct!]!) {
+    createOrder(userId: $userId, products: $products) {
+      id
+      userId {
+        name
+      }
+      products {
+        quantity
+      }
+      orderDate
+    }
+  }
+`;

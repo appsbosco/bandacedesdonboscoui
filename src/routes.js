@@ -13,6 +13,7 @@ import VirtualReality from "layouts/virtual-reality";
 // Banda CEDES Don Bosco icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EventIcon from "@mui/icons-material/Event";
+import RestaurantIcon from "@mui/icons-material/Restaurant";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -37,7 +38,8 @@ import AlumniDashboard from "layouts/Alumni/AlumniDashboard";
 import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import ColorGuardCampDashboard from "layouts/ColorGuardCamp/ColorGuardCampDashboard";
 import PerformanceAttendance from "layouts/PerformanceAttendance/PerformanceAttendance";
-
+import Almuerzos from "layouts/almuerzos";
+import ListaAlmuerzos from "layouts/almuerzos/lista";
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -86,6 +88,16 @@ export const protectedRoutes = [
     route: "/payments",
     icon: <PaidIcon size="12px" />,
     component: <PaymentComponent />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Lista de almuerzos",
+    key: "lista-almuerzos",
+    route: "/lista-almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <ListaAlmuerzos />,
     noCollapse: true,
     href: null,
   },
@@ -227,6 +239,17 @@ const routes = [
     noCollapse: true,
     href: null,
   },
+
+  {
+    type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
   { type: "title", title: "Cuenta", key: "account-pages" },
   {
     type: "collapse",
@@ -364,6 +387,26 @@ export const adminRoutes = [
   },
   {
     type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Lista de almuerzos",
+    key: "lista-almuerzos",
+    route: "/lista-almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <ListaAlmuerzos />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
     name: "Color Guard Camp",
     key: "color-guard-camp-dashboard",
     route: "/color-guard-camp-dashboard",
@@ -477,6 +520,26 @@ export const staffRoutes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Lista de almuerzos",
+    key: "lista-almuerzos",
+    route: "/lista-almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <ListaAlmuerzos />,
+    noCollapse: true,
+    href: null,
+  },
   { type: "title", title: "Cuenta", key: "account-pages" },
   {
     type: "collapse",
@@ -562,6 +625,17 @@ export const principalRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  {
+    type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
   { type: "title", title: "Cuenta", key: "account-pages" },
   {
     type: "collapse",
@@ -614,6 +688,16 @@ export const membersRoutes = [
     route: "/events",
     icon: <EventIcon size="12px" />,
     component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
     noCollapse: true,
     href: null,
   },

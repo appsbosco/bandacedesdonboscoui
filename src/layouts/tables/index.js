@@ -97,6 +97,7 @@ const Tables = () => {
 
   const { loading, error, data, refetch } = useQuery(GET_USERS);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [updatedMusiciansData, setUpdatedMusiciansData] = useState([]);
 
   const [userMedicalRecord, setUserMedicalRecord] = useState(null);
 
@@ -156,6 +157,98 @@ const Tables = () => {
     }
   }, [selectedUser, medicalRecordData]);
 
+  // Convert birthday into parts
+  const convertDate = (str) => {
+    const months = {
+      enero: "01",
+      febrero: "02",
+      marzo: "03",
+      abril: "04",
+      mayo: "05",
+      junio: "06",
+      julio: "07",
+      agosto: "08",
+      septiembre: "09",
+      octubre: "10",
+      noviembre: "11",
+      diciembre: "12",
+    };
+
+    const parts = str.split(" ");
+    const formattedDate = `${parts[4]}-${months[parts[2]]}-${parts[0].padStart(2, "0")}`;
+
+    return formattedDate;
+  };
+
+  //Get age
+  const calculateAge = (birthdayStr) => {
+    const birthday = new Date(convertDate(birthdayStr));
+    const today = new Date();
+    let age = today.getFullYear() - birthday.getFullYear();
+    const monthDifference = today.getMonth() - birthday.getMonth();
+
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthday.getDate())) {
+      age--;
+    }
+
+    return age;
+  };
+
+  //Get sex from medical record
+  const mapMedicalRecordsToUsers = (users, medicalRecords) => {
+    const medicalRecordsMap = Object.fromEntries(
+      medicalRecords.filter((record) => record.user).map((record) => [record.user.id, record])
+    );
+    return users.map((user) => ({
+      ...user,
+      sex: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].sex : "N/A",
+      identification:
+        user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].identification : "N/A",
+      address: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].address : "N/A",
+      familyMemberName:
+        user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].familyMemberName : "N/A",
+      familyMemberNumberId:
+        user && medicalRecordsMap[user.id]
+          ? medicalRecordsMap[user.id].familyMemberNumberId
+          : "N/A",
+      familyMemberRelationship:
+        user && medicalRecordsMap[user.id]
+          ? medicalRecordsMap[user.id].familyMemberRelationship
+          : "N/A",
+    }));
+  };
+
+  useEffect(() => {
+    if (data && medicalRecordData) {
+      const updatedData = mapMedicalRecordsToUsers(
+        data.getUsers,
+        medicalRecordData.getMedicalRecords
+      );
+
+      console.log("Updated data", updatedData);
+
+      const musiciansData = updatedData.filter(
+        (user) =>
+          user.role === "Principal de sección" ||
+          user.role === "Integrante BCDB" ||
+          user.role === "Asistente de sección"
+      );
+      const updatedMusiciansData = musiciansData.map((user) => ({
+        ...user,
+        age: calculateAge(user.birthday),
+        identification: user.identification,
+        address: user.address,
+        familyMemberName: user.familyMemberName,
+        familyMemberNumberId: user.familyMemberNumberId,
+        familyMemberRelationship: user.familyMemberRelationship,
+      }));
+
+      setUpdatedMusiciansData(updatedMusiciansData);
+
+      console.log("Musicians data", updatedMusiciansData);
+    }
+  }, [data, medicalRecordData]);
+
   // Filter users by role
   const musiciansData =
     data?.getUsers.filter(
@@ -177,15 +270,21 @@ const Tables = () => {
   const parentsData = parentData?.getParents;
 
   const columns = [
+    { field: "identification", headerName: "Cédula", width: 120 },
+    { field: "age", headerName: "Edad", width: 80 },
     { field: "name", headerName: "Nombre", width: 200 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
-    { field: "instrument", headerName: "Instrumento", width: 150 },
+    { field: "instrument", headerName: "Sección", width: 80 },
+
+    { field: "sex", headerName: "Sexo", width: 120 },
+    { field: "birthday", headerName: "Año", width: 120 },
     { field: "email", headerName: "Correo", width: 120 },
-    // { field: "role", headerName: "Rol", width: 200 },
-    { field: "status", headerName: "Estado", width: 120 },
-    { field: "grade", headerName: "Año", width: 120 },
-    { field: "bands", headerName: "Bandas", width: 120 },
+    { field: "address", headerName: "Dirección", width: 80 },
+    { field: "phone", headerName: "Phone", width: 120 },
+    { field: "familyMemberName", headerName: "Beneficiario", width: 150 },
+    { field: "familyMemberNumberId", headerName: "Cédula", width: 150 },
+    { field: "familyMemberRelationship", headerName: "Parentesco", width: 150 },
   ];
 
   const staffColumns = [
@@ -277,7 +376,7 @@ const Tables = () => {
               }}
             >
               <TableWithFilteringSorting
-                data={musiciansData || []}
+                data={updatedMusiciansData || []}
                 columns={columns}
                 onRowClick={handleRowClick}
                 userRole={userRole}

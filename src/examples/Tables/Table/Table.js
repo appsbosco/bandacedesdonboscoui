@@ -78,8 +78,8 @@ TableWithFilteringSorting.propTypes = {
   data: PropTypes.array.isRequired,
   columns: PropTypes.array.isRequired,
   onRowClick: PropTypes.func.isRequired,
-  userRole: PropTypes.string.isRequired,
-  onStateChange: PropTypes.func.isRequired,
+  userRole: PropTypes.string,
+  onStateChange: PropTypes.func,
   height: PropTypes.number,
 };
 
