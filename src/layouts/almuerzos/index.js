@@ -68,6 +68,10 @@ const Almuerzos = () => {
     });
   };
 
+  const removeFromCart = (productId) => {
+    setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId));
+  };
+
   const handleOpen = () => setOpen(!open);
 
   const submitOrder = async (userId) => {
@@ -322,6 +326,13 @@ const Almuerzos = () => {
                             {" "}
                             ₡ {product.price * quantity}
                           </h3>
+
+                          <button
+                            onClick={() => removeFromCart(product.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            x
+                          </button>
                         </div>
                       ))}
                     </div>

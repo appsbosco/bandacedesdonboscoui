@@ -5,6 +5,15 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { GET_ORDERS } from "graphql/queries";
 import { useQuery } from "@apollo/client";
 
+const formatDateString = (dateString) => {
+  const date = new Date(parseInt(dateString));
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
 const ListaAlmuerzos = () => {
   const { loading, error, data } = useQuery(GET_ORDERS);
 
@@ -216,7 +225,7 @@ const ListaAlmuerzos = () => {
                             {data?.orders?.map((order) => (
                               <tr key={order.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                  {order.orderDate}
+                                  {formatDateString(order.orderDate)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
                                   {order.userId.name +
