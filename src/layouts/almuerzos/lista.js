@@ -24,7 +24,10 @@ const ListaAlmuerzos = () => {
 
   // Calcular el monto total de todas las órdenes
   const totalAmount = data.orders.reduce((acc, order) => {
-    const orderTotal = order.products.reduce((acc, product) => acc + product.productId.price, 0);
+    const orderTotal = order.products.reduce(
+      (acc, product) => acc + product.productId.price * product.quantity,
+      0
+    );
     return acc + orderTotal;
   }, 0);
 
@@ -241,7 +244,7 @@ const ListaAlmuerzos = () => {
                                         <div className="flex gap-1.5">
                                           {order.products.map((product, index) => (
                                             <span key={product.productId.id}>
-                                              {product.productId.name}
+                                              {product.productId.name} ({product.quantity})
                                               {index < order.products.length - 1 ? ", " : ""}
                                             </span>
                                           ))}
@@ -253,7 +256,10 @@ const ListaAlmuerzos = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
                                   ₡{" "}
                                   {order.products
-                                    .reduce((acc, curr) => acc + curr.productId.price, 0)
+                                    .reduce(
+                                      (acc, curr) => acc + curr.productId.price * curr.quantity,
+                                      0
+                                    )
                                     .toFixed(2)}
                                 </td>
                                 {/* <td className="px-6 py-4">

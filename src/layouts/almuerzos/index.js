@@ -69,6 +69,27 @@ const Almuerzos = () => {
     });
   };
 
+  const handleIncrement = (productId) => {
+    setSelectedQuantities((prevQuantities) => {
+      const currentQuantity = prevQuantities[productId] || 0;
+      return {
+        ...prevQuantities,
+        [productId]: currentQuantity + 1,
+      };
+    });
+  };
+
+  const handleDecrement = (productId) => {
+    setSelectedQuantities((prevQuantities) => {
+      const currentQuantity = prevQuantities[productId] || 0;
+      const newQuantity = currentQuantity > 1 ? currentQuantity - 1 : 1;
+      return {
+        ...prevQuantities,
+        [productId]: newQuantity,
+      };
+    });
+  };
+
   // Función para manejar cambios en la cantidad seleccionada
   const handleQuantityChange = (productId, quantity) => {
     setSelectedQuantities((prevQuantities) => ({
@@ -282,11 +303,69 @@ const Almuerzos = () => {
                             className="w-full h-full"
                           />
                         </div>
-                        <div className=" pt-4 flex justify-between items-center">
+                        <div className=" pt-4 flex justify-between items-end">
                           <div>
                             <h6 className="text-lg text-default-500">Precio: ₡ {product.price}</h6>
 
-                            <div className="flex flex-row ">
+                            <div className="flex items-center space-x-2 bg-white border rounded-full mt-5">
+                              <div className="relative flex items-center max-w-[8rem]">
+                                <button
+                                  type="button"
+                                  className="bg-white    border  rounded-s-lg p-3 h-9   "
+                                  onClick={() => handleDecrement(product.id)}
+                                >
+                                  <svg
+                                    className="w-2 h-2 text-gray-900 "
+                                    aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 18 2"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M1 1h16"
+                                    />
+                                  </svg>
+                                </button>
+                                <input
+                                  type="text"
+                                  pattern="\d*"
+                                  value={selectedQuantities[product.id] || 1}
+                                  onChange={(e) =>
+                                    handleQuantityChange(product.id, parseInt(e.target.value))
+                                  }
+                                  className="bg-white border-x-0  p-6 h-9  text-center text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block w-full py-2.5 "
+                                  placeholder="999"
+                                  required
+                                />
+                                <button
+                                  type="button"
+                                  className="bg-white   hover:bg-gray-200 border  rounded-e-lg p-3 h-9    "
+                                  onClick={() => handleIncrement(product.id)}
+                                >
+                                  <svg
+                                    className="w-2 h-2 text-gray-900 "
+                                    aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 18 18"
+                                  >
+                                    <path
+                                      stroke="currentColor"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M9 1v16M1 9h16"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* <div className="flex flex-row ">
                               <h6 className="text-lg text-default-500 mr-2">Cant: </h6>
 
                               <input
@@ -299,12 +378,12 @@ const Almuerzos = () => {
                                 }
                                 className=" w-12 mr-2 border rounded-full  py-1 px-2"
                               />
-                            </div>
+                            </div> */}
                           </div>
 
                           <button
                             onClick={() => addToCart(product)}
-                            className="bg-black text-white p-2 text-sm  rounded-2xl"
+                            className="bg-black text-white px-6 py-2 text-sm  rounded-2xl"
                           >
                             Añadir
                           </button>
