@@ -291,8 +291,9 @@ const Almuerzos = () => {
 
                               <input
                                 type="number"
+                                pattern="\d*"
                                 min="1"
-                                value={selectedQuantities[product.id] || 1}
+                                value={selectedQuantities[product.id] || " "}
                                 onChange={(e) =>
                                   handleQuantityChange(product.id, parseInt(e.target.value))
                                 }
