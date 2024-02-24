@@ -384,6 +384,7 @@ const Almuerzos = () => {
                           <button
                             onClick={() => addToCart(product)}
                             className="bg-black text-white px-6 py-2 text-sm  rounded-2xl"
+                            disabled
                           >
                             Añadir
                           </button>
