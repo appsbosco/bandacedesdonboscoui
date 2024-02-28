@@ -3,7 +3,6 @@
 // Banda CEDES Don Bosco examples
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
-import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 // Images
 import Bebida from "../../assets/images/almuerzo/bebidas.webp";
@@ -23,22 +22,27 @@ import { useState } from "react";
 import { CREATE_ORDER } from "graphql/mutations";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { GET_ORDERS } from "graphql/queries";
+import DashboardNavbar from "examples/Navbars/CartsNavBar";
+import { GET_ORDERS_BY_USER } from "graphql/queries";
 
 const Almuerzos = () => {
   const { loading, error, data } = useQuery(GET_PRODUCTS);
   const [open, setOpen] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [alert, setAlert] = useState({ show: false, message: "" });
 
   const [cart, setCart] = useState([]);
   const [selectedQuantities, setSelectedQuantities] = useState({});
 
   const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);
 
+  const userId = userData?.getUser?.id;
+
   const [createOrder, { data: orderData, loading: orderLoading, error: orderError }] = useMutation(
     CREATE_ORDER,
     {
-      refetchQueries: [{ query: GET_ORDERS }],
+      refetchQueries: [{ query: GET_ORDERS }, { query: GET_ORDERS_BY_USER, variables: { userId } }],
     }
   );
 
@@ -50,23 +54,54 @@ const Almuerzos = () => {
   if (userLoading) return <p>Cargando información del usuario...</p>;
   if (userError) return <p>Error al obtener la información del usuario: {userError.message}</p>;
 
-  const userId = userData?.getUser?.id;
-
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error :(</p>;
 
+  // const addToCart = (product) => {
+  //   const quantity = selectedQuantities[product.id] || 1;
+  //   setCart((prevCart) => {
+  //     const isProductInCart = prevCart.find((item) => item.product.id === product.id);
+  //     if (isProductInCart) {
+  //       return prevCart.map((item) =>
+  //         item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+  //       );
+  //     } else {
+  //       return [...prevCart, { product, quantity }];
+  //     }
+  //   });
+  // };
+
   const addToCart = (product) => {
-    const quantity = selectedQuantities[product.id] || 1;
-    setCart((prevCart) => {
-      const isProductInCart = prevCart.find((item) => item.product.id === product.id);
-      if (isProductInCart) {
-        return prevCart.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
-      } else {
-        return [...prevCart, { product, quantity }];
-      }
-    });
+    // Convertir la fecha de cierre a un objeto Date
+    const closingDate = product.closingDate;
+    // Obtener la fecha y hora actuales
+    const now = new Date();
+
+    // Verificar si la fecha y hora de cierre son mayores que la fecha y hora actuales
+    if (closingDate > now) {
+      const quantity = selectedQuantities[product.id] || 1;
+      setCart((prevCart) => {
+        const isProductInCart = prevCart.find((item) => item.product.id === product.id);
+        if (isProductInCart) {
+          return prevCart.map((item) =>
+            item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          );
+        } else {
+          return [...prevCart, { product, quantity }];
+        }
+      });
+    } else {
+      // Mostrar mensaje de error si la fecha y hora de cierre han pasado
+      // alert("Este producto ya no está disponible para ser añadido al carrito.");
+      setAlert({
+        show: true,
+        message: "Este producto ya no está disponible para ser añadido al carrito.",
+      });
+
+      setTimeout(() => {
+        setAlert({ ...alert, show: false });
+      }, 4000);
+    }
   };
 
   const handleIncrement = (productId) => {
@@ -123,7 +158,6 @@ const Almuerzos = () => {
       // Mostrar mensaje de éxito o redirigir al usuario
     } catch (error) {
       console.error("Error al crear la orden:", error);
-      // Manejar el error adecuadamente (mostrar un mensaje al usuario, por ejemplo)
     }
   };
 
@@ -146,6 +180,49 @@ const Almuerzos = () => {
       <DashboardNavbar />
 
       <>
+        {alert.show && (
+          <div
+            id="popup-modal"
+            tabIndex="-1"
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: "9999",
+
+              padding: "20px",
+              textAlign: "center",
+
+              maxWidth: "90%",
+              width: "400px",
+            }}
+          >
+            <div className="relative p-4 w-full max-w-md max-h-full">
+              <div className="relative bg-white rounded-lg shadow ">
+                <div className="p-4 md:p-5 text-center">
+                  <svg
+                    className="mx-auto mb-4 text-red-700 w-12 h-12 "
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                  <h3 className="mb-5 text-lg font-normal text-gray-500 ">{alert.message}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {open && (
           <div
             id="popup-modal"
@@ -290,13 +367,12 @@ const Almuerzos = () => {
                         <div className="pt-2 space-y-2">
                           <h6 className=" text-xs text-default-500">{product.category}</h6>
 
-                          <h4 className="text-default-800 text-2xl font-semibold line-clamp-1 mb-2">
+                          <h4 className="text-default-800 text-2xl font-semibold  mb-2">
                             {product.name}
                           </h4>
                           <h6 className=" text-lg text-default-500">{product.description}</h6>
                         </div>
                         <div className="mt-4 mx-auto">
-                          {/* Asumiendo que tienes una forma de determinar la imagen basada en el producto */}
                           <img
                             src={getImageForCategory(product.category)}
                             alt={product.name}
@@ -364,27 +440,11 @@ const Almuerzos = () => {
                                 </button>
                               </div>
                             </div>
-
-                            {/* <div className="flex flex-row ">
-                              <h6 className="text-lg text-default-500 mr-2">Cant: </h6>
-
-                              <input
-                                type="number"
-                                pattern="\d*"
-                                min="1"
-                                value={selectedQuantities[product.id] || " "}
-                                onChange={(e) =>
-                                  handleQuantityChange(product.id, parseInt(e.target.value))
-                                }
-                                className=" w-12 mr-2 border rounded-full  py-1 px-2"
-                              />
-                            </div> */}
                           </div>
 
                           <button
                             onClick={() => addToCart(product)}
-                            className="bg-black text-white px-6 py-2 text-sm  rounded-2xl"
-                            disabled
+                            className="bg-black text-white px-6 py-2 text-sm  rounded-2xl "
                           >
                             Añadir
                           </button>

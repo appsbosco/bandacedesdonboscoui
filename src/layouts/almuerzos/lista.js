@@ -3,7 +3,8 @@ import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { GET_ORDERS } from "graphql/queries";
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
+import { COMPLETE_ORDER_MUTATION } from "graphql/mutations";
 
 const formatDateString = (dateString) => {
   const date = new Date(parseInt(dateString));
@@ -16,11 +17,28 @@ const formatDateString = (dateString) => {
 
 const ListaAlmuerzos = () => {
   const { loading, error, data } = useQuery(GET_ORDERS);
+  const [completeOrder] = useMutation(COMPLETE_ORDER_MUTATION, {
+    update(cache, { data: { completeOrder } }) {
+      cache.modify({
+        id: cache.identify({
+          __typename: "Order",
+          id: completeOrder.id,
+        }),
+        fields: {
+          isCompleted() {
+            return true;
+          },
+        },
+      });
+    },
+  });
 
   if (loading) return <p>Cargando...</p>;
   if (error) return <p>Error :(</p>;
 
   const totalOrders = data.orders.length;
+  const completedOrders = data.orders.filter((order) => order.isCompleted).length;
+  const completedPercentage = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
 
   // Calcular el monto total de todas las órdenes
   const totalAmount = data.orders.reduce((acc, order) => {
@@ -122,8 +140,10 @@ const ListaAlmuerzos = () => {
                       </svg>
                     </div>
                     <div className="">
-                      <p className="text-base text-default-500 font-medium mb-1">Pagado</p>
-                      <h4 className="text-2xl text-default-950 font-semibold mb-2">98%</h4>
+                      <p className="text-base text-default-500 font-medium mb-1">Completas</p>
+                      <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                        {completedPercentage}%
+                      </h4>
                     </div>
                   </div>
                 </div>
@@ -219,9 +239,9 @@ const ListaAlmuerzos = () => {
                               <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                 Total
                               </th>
-                              {/* <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
-                                Status
-                              </th> */}
+                              <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
+                                Estado
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-default-200">
@@ -262,11 +282,23 @@ const ListaAlmuerzos = () => {
                                     )
                                     .toFixed(2)}
                                 </td>
-                                {/* <td className="px-6 py-4">
-                                  <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-500">
-                                    Refund
-                                  </span>
-                                </td> */}
+
+                                <td className="px-6 py-4">
+                                  {order.isCompleted ? (
+                                    <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-green-500/20 text-green-500">
+                                      Completada
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() =>
+                                        completeOrder({ variables: { orderId: order.id } })
+                                      }
+                                      className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
+                                    >
+                                      Completar
+                                    </button>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>

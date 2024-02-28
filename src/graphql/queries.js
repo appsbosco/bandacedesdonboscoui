@@ -351,6 +351,26 @@ export const GET_ORDERS = gql`
         quantity
       }
       orderDate
+      isCompleted
+    }
+  }
+`;
+
+export const GET_ORDERS_BY_USER = gql`
+  query OrderByUserId($userId: ID) {
+    orderByUserId(userId: $userId) {
+      orderDate
+      userId {
+        name
+        secondSurName
+        firstSurName
+      }
+      products {
+        productId {
+          name
+        }
+        quantity
+      }
     }
   }
 `;

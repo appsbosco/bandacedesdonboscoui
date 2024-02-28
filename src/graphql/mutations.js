@@ -426,3 +426,11 @@ export const CREATE_ORDER = gql`
     }
   }
 `;
+
+export const COMPLETE_ORDER_MUTATION = gql`
+  mutation Mutation($orderId: ID!) {
+    completeOrder(orderId: $orderId) {
+      id
+    }
+  }
+`;
