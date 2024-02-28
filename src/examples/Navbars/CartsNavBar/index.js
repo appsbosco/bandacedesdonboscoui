@@ -160,7 +160,17 @@ function DashboardNavbar({ absolute, light, isMini }) {
           />
         ))
       ) : (
-        <NotificationItem title="No orders found" onClick={handleCloseMenu} />
+        <OrderItem
+          image={
+            <Icon fontSize="small" sx={{ color: ({ palette: { white } }) => white.main }}>
+              shopping_cart
+            </Icon>
+          }
+          title={`No tienes ninguna orden`}
+          // Este es un ejemplo de cómo podrías estructurar el mensaje. Ajusta según lo que quieras mostrar.
+          description={`Aún no has realizado ninguna orden`}
+          onClick={handleCloseMenu}
+        />
       )}
     </Menu>
   );

@@ -23,15 +23,15 @@ const OrderItem = forwardRef(({ color, image, title, description, date, ...rest 
       <SoftTypography variant="button" textTransform="capitalize" fontWeight="regular">
         {title} {/* Modificado para aceptar una cadena en lugar de un arreglo */}
       </SoftTypography>
-      {/* Opcional: Agregar la descripción si está presente */}
       {description && (
         <SoftTypography
           variant="caption"
           color="secondary"
           sx={{
-            display: "flex",
-            alignItems: "center",
+            display: "block",
             mt: 0.5,
+            overflowWrap: "break-word",
+            whiteSpace: "normal",
           }}
         >
           {description}
@@ -46,7 +46,7 @@ const OrderItem = forwardRef(({ color, image, title, description, date, ...rest 
           mt: 0.5,
         }}
       >
-        <Icon sx={{ lineHeight: 1.2, mr: 0.5 }}>watch_later</Icon>
+        {date && <Icon sx={{ lineHeight: 1.2, mr: 0.5 }}>watch_later</Icon>}
         {date}
       </SoftTypography>
     </SoftBox>
