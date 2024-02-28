@@ -522,8 +522,8 @@ const Almuerzos = () => {
                 <div className="flex flex-col gap-4">
                   <button
                     className="flex items-center justify-center gap-2 rounded-full border border-l-purple-950 bg-[#293964] px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-l-purple-950-700 hover:bg-[#293964]-500"
-                    onClick={() => userId && submitOrder(userId)}
-                    disabled={orderLoading || !userId}
+                    onClick={() => userId && cart.length > 0 && submitOrder(userId)}
+                    disabled={cart.length === 0 || orderLoading || !userId}
                   >
                     Confirmar Orden
                   </button>
