@@ -434,3 +434,12 @@ export const COMPLETE_ORDER_MUTATION = gql`
     }
   }
 `;
+
+export const UPDATE_NOTIFICATION_TOKEN = gql`
+  mutation updateNotificationToken($userId: ID!, $token: String!) {
+    updateNotificationToken(userId: $userId, token: $token) {
+      id
+      notificationToken
+    }
+  }
+`;

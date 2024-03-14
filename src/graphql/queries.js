@@ -16,6 +16,7 @@ export const GET_USERS_BY_ID = gql`
       role
       instrument
       avatar
+      notificationToken
     }
   }
 `;

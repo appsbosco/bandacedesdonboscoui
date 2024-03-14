@@ -1,5 +1,5 @@
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined"; // @mui material components
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Modal } from "@mui/material";
@@ -46,6 +46,10 @@ import { GET_EVENTS, GET_USERS } from "graphql/queries";
 import bigBandB from "assets/images/BigBandB.webp";
 import bigBandA from "assets/images/BigBandA.webp";
 
+import { generateToken, messaging } from "config/firebase";
+import { onMessage } from "firebase/messaging";
+import { UPDATE_NOTIFICATION_TOKEN } from "graphql/mutations";
+
 const GET_USERS_BY_ID = gql`
   query getUser {
     getUser {
@@ -74,6 +78,34 @@ const SEND_EMAIL = gql`
 
 const Dashboard = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+
+  const [updateNotificationToken] = useMutation(UPDATE_NOTIFICATION_TOKEN);
+
+  useEffect(() => {
+    const requestTokenAndUpdate = async () => {
+      const token = await generateToken();
+      console.log("Token de notificación:", token);
+      if (token) {
+        try {
+          // Asume que userId está disponible de alguna manera (contexto, estado global, almacenamiento local, etc.)
+          const userId = userData?.getUser?.id;
+          await updateNotificationToken({ variables: { userId, token } });
+          console.log("Token de notificación actualizado correctamente");
+        } catch (error) {
+          console.error("Error al actualizar el token de notificación:", error);
+        }
+      }
+    };
+
+    requestTokenAndUpdate();
+  }, [updateNotificationToken]);
+
+  // useEffect(() => {
+  //   generateToken();
+  //   onMessage(messaging, (payload) => {
+  //     console.log("Message received. ", payload);
+  //   });
+  // }, []);
 
   const { data: usersData } = useQuery(GET_USERS);
 
