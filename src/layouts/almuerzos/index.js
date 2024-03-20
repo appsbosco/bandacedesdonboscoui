@@ -304,15 +304,15 @@ const Almuerzos = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
               <h3 className="text-xl font-semibold text-default-950">Categorías</h3>
             </div>
-            <div className="flex flex-row gap-6 overflow-x-auto lg:grid lg:grid-cols-6  ">
+            <div className="grid lg:grid-cols-6 grid-cols-3 gap-6">
               <div
-                onClick={() => handleCategorySelection("")} // Esto resetea el filtrado
+                onClick={() => handleCategorySelection("")}
                 className="text-center space-y-4 cursor-pointer"
               >
                 <div className="">
                   <img src={Todos} className="mx-auto w-6/12 h-full" />
                 </div>
-                <h5 className="text-lg text-default-600">Todos </h5>
+                <h5 className="text-lg text-default-600">Todos</h5>
               </div>
               <div
                 onClick={() => handleCategorySelection("Almuerzo")}
@@ -349,6 +349,7 @@ const Almuerzos = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
               <h3 className="text-xl font-semibold text-default-950">Productos</h3>
             </div>
+
             <div className="grid lg:grid-cols-4 gap-6">
               {data.products.filter(
                 (product) => selectedCategory === "" || product.category === selectedCategory
@@ -359,98 +360,220 @@ const Almuerzos = () => {
                   )
                   .map((product) => (
                     // Renderización de cada producto
-                    <div
-                      key={product.id}
-                      className="border border-default-200 rounded-lg p-6 overflow-hidden hover:border-purple-950 transition-all duration-300"
-                    >
-                      <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
-                        <div className="pt-2 space-y-2">
-                          <h6 className=" text-xs text-default-500">{product.category}</h6>
+                    <>
+                      {/* <div
+                        key={product.id}
+                        className="border border-default-200 rounded-lg p-6 overflow-hidden hover:border-purple-950 transition-all duration-300"
+                      >
+                        <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
+                          <div className="pt-2 space-y-2">
+                            <h6 className=" text-xs text-default-500">{product.category}</h6>
 
-                          <h4 className="text-default-800 text-2xl font-semibold  mb-2">
-                            {product.name}
-                          </h4>
-                          <h6 className=" text-lg text-default-500">{product.description}</h6>
-                        </div>
-                        <div className="mt-4 mx-auto">
-                          <img
-                            src={getImageForCategory(product.category)}
-                            alt={product.name}
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <div className=" pt-4 flex justify-between items-end">
-                          <div>
-                            <h6 className="text-lg text-default-500">Precio: ₡ {product.price}</h6>
+                            <h4 className="text-default-800 text-2xl font-semibold  mb-2">
+                              {product.name}
+                            </h4>
+                            <h6 className=" text-lg text-default-500">{product.description}</h6>
+                          </div>
+                          <div className="mt-4 mx-auto">
+                            <img
+                              src={getImageForCategory(product.category)}
+                              alt={product.name}
+                              className="w-full h-full"
+                            />
+                          </div>
+                          <div className="">
+                            <div className="flex justify-between items-center ">
+                              <div>
+                                <h4 className="font-semibold text-xl text-default-9000">
+                                  ₡ {product.price}
+                                </h4>
+                              </div>
 
-                            <div className="flex items-center space-x-2 bg-white border rounded-full mt-5">
-                              <div className="relative flex items-center max-w-[8rem]">
-                                <button
-                                  type="button"
-                                  className="bg-white    border  rounded-s-lg p-3 h-9   "
-                                  onClick={() => handleDecrement(product.id)}
-                                >
-                                  <svg
-                                    className="w-2 h-2 text-gray-900 "
-                                    aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 18 2"
+                              <div className="flex items-center space-x-2 bg-white border rounded-full mt-5">
+                                <div className="relative flex items-center max-w-[8rem]">
+                                  <button
+                                    type="button"
+                                    className="bg-white    border  rounded-s-lg p-3 h-9   "
+                                    onClick={() => handleDecrement(product.id)}
                                   >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M1 1h16"
-                                    />
-                                  </svg>
-                                </button>
-                                <input
-                                  type="text"
-                                  pattern="\d*"
-                                  value={selectedQuantities[product.id] || 1}
-                                  onChange={(e) =>
-                                    handleQuantityChange(product.id, parseInt(e.target.value))
-                                  }
-                                  className="bg-white border-x-0  p-6 h-9  text-center text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block w-full py-2.5 "
-                                  placeholder="999"
-                                  required
-                                />
-                                <button
-                                  type="button"
-                                  className="bg-white   hover:bg-gray-200 border  rounded-e-lg p-3 h-9    "
-                                  onClick={() => handleIncrement(product.id)}
-                                >
-                                  <svg
-                                    className="w-2 h-2 text-gray-900 "
-                                    aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 18 18"
+                                    <svg
+                                      className="w-2 h-2 text-gray-900 "
+                                      aria-hidden="true"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 18 2"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M1 1h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    pattern="\d*"
+                                    value={selectedQuantities[product.id] || 1}
+                                    onChange={(e) =>
+                                      handleQuantityChange(product.id, parseInt(e.target.value))
+                                    }
+                                    className="bg-white border-x-0  p-6 h-9  text-center text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block w-full py-2.5 "
+                                    placeholder="999"
+                                    required
+                                  />
+                                  <button
+                                    type="button"
+                                    className="bg-white   hover:bg-gray-200 border  rounded-e-lg p-3 h-9    "
+                                    onClick={() => handleIncrement(product.id)}
                                   >
-                                    <path
-                                      stroke="currentColor"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M9 1v16M1 9h16"
-                                    />
-                                  </svg>
-                                </button>
+                                    <svg
+                                      className="w-2 h-2 text-gray-900 "
+                                      aria-hidden="true"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 18 18"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M9 1v16M1 9h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
                             </div>
+
+                            <button
+                              onClick={() => addToCart(product)}
+                              className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-black px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 "
+                            >
+                              Añadir
+                            </button>
+                          </div>
+                        </div>
+                      </div> */}
+                      <div
+                        key={product.id}
+                        className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300"
+                      >
+                        <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
+                          <div className="mb-4 mx-auto">
+                            <img
+                              className="w-full h-full group-hover:scale-105 transition-all"
+                              src={getImageForCategory(product.category)}
+                            />
                           </div>
 
-                          <button
-                            onClick={() => addToCart(product)}
-                            className="bg-black text-white px-6 py-2 text-sm  rounded-2xl "
-                          >
-                            Añadir
-                          </button>
+                          <div className="pt-2">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4
+                                className="text-default-800 text-xl font-semibold  after:absolute after:inset-0"
+                                href=""
+                              >
+                                {product.name}
+                              </h4>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                data-lucide="heart"
+                                className="lucide lucide-heart h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10"
+                              >
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+                              </svg>
+                            </div>
+                            <span className="inline-flex items-center gap-2 mb-4">
+                              <span className="text-sm text-default-950 from-inherit">
+                                {product.description}
+                              </span>
+                            </span>
+                            <div className="flex items-end justify-between mb-4">
+                              <h4 className="font-semibold text-xl text-default-900">
+                                {" "}
+                                ₡ {product.price}
+                              </h4>
+                              <div className="flex items-center space-x-2 bg-white border rounded-full mt-5">
+                                <div className="relative flex items-center max-w-[8rem]">
+                                  <button
+                                    type="button"
+                                    className="bg-white    border  rounded-s-lg p-3 h-9   "
+                                    onClick={() => handleDecrement(product.id)}
+                                  >
+                                    <svg
+                                      className="w-2 h-2 text-gray-900 "
+                                      aria-hidden="true"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 18 2"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M1 1h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    pattern="\d*"
+                                    value={selectedQuantities[product.id] || 1}
+                                    onChange={(e) =>
+                                      handleQuantityChange(product.id, parseInt(e.target.value))
+                                    }
+                                    className="bg-white border-x-0  p-6 h-9  text-center text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block w-full py-2.5 "
+                                    placeholder="999"
+                                    required
+                                  />
+                                  <button
+                                    type="button"
+                                    className="bg-white   hover:bg-gray-200 border  rounded-e-lg p-3 h-9    "
+                                    onClick={() => handleIncrement(product.id)}
+                                  >
+                                    <svg
+                                      className="w-2 h-2 text-gray-900 "
+                                      aria-hidden="true"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 18 18"
+                                    >
+                                      <path
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M9 1v16M1 9h16"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2  mt-5">
+                              <button
+                                className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-black px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-white hover:text-black"
+                                onClick={() => addToCart(product)}
+                              >
+                                Añadir
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </>
                   ))
               ) : (
                 <div className="col-span-full text-center">
@@ -474,32 +597,52 @@ const Almuerzos = () => {
                   {cart.length > 0 ? (
                     <div className="my-6 border-b border-default-200">
                       {cart.map(({ product, quantity }) => (
-                        <div key={product.id} className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <img
-                              src={getImageForCategory(product.category)}
-                              alt={product.name}
-                              className="h-16 w-16 object-cover rounded-full"
-                            />
-                            <div className="">
-                              <a href="" className="text-base font-medium text-default-800">
-                                {product.name}
-                              </a>
-                              <p className="text-sm font-medium text-default-800">x{quantity}</p>
+                        <>
+                          <div key={product.id} className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={getImageForCategory(product.category)}
+                                alt={product.name}
+                                className="h-16 w-16 object-cover rounded-full "
+                              />
+                              <div className="">
+                                <a
+                                  href=""
+                                  className="text-base font-medium text-default-800 line-clamp-1"
+                                >
+                                  {product.name}
+                                </a>
+                                <p className="text-sm font-medium text-default-800">
+                                  x{quantity} - ₡ {product.price * quantity}
+                                </p>
+                                {/* <h3 className="text-base font-medium text-default-800">
+                                  {" "}
+                                  ₡ {product.price * quantity}
+                                </h3> */}
+                              </div>
                             </div>
-                          </div>
-                          <h3 className="text-base font-medium text-default-800">
-                            {" "}
-                            ₡ {product.price * quantity}
-                          </h3>
 
-                          <button
-                            onClick={() => removeFromCart(product.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            x
-                          </button>
-                        </div>
+                            <button onClick={() => removeFromCart(product.id)}>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                data-lucide="x-circle"
+                                className="lucide lucide-x-circle w-5 h-5 text-default-400"
+                              >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="m15 9-6 6"></path>
+                                <path d="m9 9 6 6"></path>
+                              </svg>
+                            </button>
+                          </div>
+                        </>
                       ))}
                     </div>
                   ) : (
@@ -512,7 +655,7 @@ const Almuerzos = () => {
                   <div className="py-6">
                     <div className="flex items-center justify-between py-3">
                       <h6 className="text-base text-default-800 font-medium">Total :</h6>
-                      <h4 className="text-xl text-primary font-semibold">
+                      <h4 className="text-xl text-primary font-semibold ">
                         ₡ {cart.reduce((acc, curr) => acc + curr.product.price * curr.quantity, 0)}
                       </h4>
                     </div>
@@ -521,7 +664,7 @@ const Almuerzos = () => {
 
                 <div className="flex flex-col gap-4">
                   <button
-                    className="flex items-center justify-center gap-2 rounded-full border border-l-purple-950 bg-[#293964] px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-l-purple-950-700 hover:bg-[#293964]-500"
+                    className="flex items-center justify-center gap-2 rounded-full border border-l-purple-950 bg-[#293964] px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-l-purple-950-700 hover:bg-[#1a2441]"
                     onClick={() => userId && cart.length > 0 && submitOrder(userId)}
                     disabled={cart.length === 0 || orderLoading || !userId}
                   >

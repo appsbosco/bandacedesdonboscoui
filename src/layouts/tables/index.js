@@ -59,6 +59,7 @@ const GET_USERS = gql`
       avatar
       instrument
       bands
+      notificationTokens
     }
   }
 `;
@@ -225,8 +226,6 @@ const Tables = () => {
         medicalRecordData.getMedicalRecords
       );
 
-      console.log("Updated data", updatedData);
-
       const musiciansData = updatedData.filter(
         (user) =>
           user.role === "Principal de sección" ||
@@ -237,6 +236,7 @@ const Tables = () => {
         ...user,
         age: calculateAge(user.birthday),
         identification: user.identification,
+        notificationTokens: user.notificationTokens,
         address: user.address,
         familyMemberName: user.familyMemberName,
         familyMemberNumberId: user.familyMemberNumberId,
@@ -250,13 +250,6 @@ const Tables = () => {
   }, [data, medicalRecordData]);
 
   // Filter users by role
-  const musiciansData =
-    data?.getUsers.filter(
-      (user) =>
-        user.role === "Principal de sección" ||
-        user.role === "Integrante BCDB" ||
-        user.role === "Asistente de sección"
-    ) || [];
 
   const staffData =
     data?.getUsers.filter(
@@ -267,31 +260,30 @@ const Tables = () => {
         user.role !== "Padre/Madre de familia"
     ) || [];
 
+  const instructorsData =
+    data?.getUsers.filter((user) => user.role === "Instructor de instrumento") || [];
+
   const parentsData = parentData?.getParents;
 
   const columns = [
+    { field: "notificationTokens", headerName: "notificationTokens", width: 120 },
     { field: "identification", headerName: "Cédula", width: 120 },
-    { field: "age", headerName: "Edad", width: 80 },
-    { field: "name", headerName: "Nombre", width: 200 },
+    { field: "state", headerName: "Estado", width: 120 },
+    { field: "name", headerName: "Nombre", width: 120 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
-    { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
-    { field: "instrument", headerName: "Sección", width: 80 },
-
-    { field: "sex", headerName: "Sexo", width: 120 },
-    { field: "birthday", headerName: "Año", width: 120 },
-    { field: "email", headerName: "Correo", width: 120 },
-    { field: "address", headerName: "Dirección", width: 80 },
+    { field: "secondSurName", headerName: "Segundo Apellido", width: 200 },
+    { field: "instrument", headerName: "Sección", width: 120 },
+    { field: "age", headerName: "Edad", width: 80 },
+    { field: "birthday", headerName: "Año de nacimiento", width: 200 },
+    { field: "email", headerName: "Correo", width: 220 },
     { field: "phone", headerName: "Phone", width: 120 },
-    { field: "familyMemberName", headerName: "Beneficiario", width: 150 },
-    { field: "familyMemberNumberId", headerName: "Cédula", width: 150 },
-    { field: "familyMemberRelationship", headerName: "Parentesco", width: 150 },
   ];
 
   const staffColumns = [
     { field: "name", headerName: "Nombre", width: 200 },
     { field: "firstSurName", headerName: "Primer Apellido", width: 200 },
     { field: "secondSurName", headerName: "Segundo Apellido", width: 250 },
-    { field: "email", headerName: "Correo", width: 120 },
+    { field: "email", headerName: "Correo", width: 220 },
     { field: "role", headerName: "Rol", width: 200 },
   ];
 
@@ -427,6 +419,30 @@ const Tables = () => {
               <TableWithFilteringSorting
                 data={parentsData || []}
                 columns={parentsColumns}
+                onRowClick={handleRowClick}
+              />
+            </SoftBox>
+          </Card>
+        </SoftBox>
+
+        <SoftBox mb={3}>
+          <Card>
+            <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
+              <SoftTypography variant="h6">Instructores</SoftTypography>
+            </SoftBox>
+            <SoftBox
+              sx={{
+                "& .MuiTableRow-root:not(:last-child)": {
+                  "& td": {
+                    borderBottom: ({ borders: { borderWidth, borderColor } }) =>
+                      `${borderWidth[1]} solid ${borderColor}`,
+                  },
+                },
+              }}
+            >
+              <TableWithFilteringSorting
+                data={instructorsData || []}
+                columns={staffColumns}
                 onRowClick={handleRowClick}
               />
             </SoftBox>

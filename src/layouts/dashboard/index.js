@@ -84,7 +84,6 @@ const Dashboard = () => {
   useEffect(() => {
     const requestTokenAndUpdate = async () => {
       const token = await generateToken();
-      console.log("Token de notificación:", token);
       if (token) {
         try {
           // Asume que userId está disponible de alguna manera (contexto, estado global, almacenamiento local, etc.)
