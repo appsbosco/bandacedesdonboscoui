@@ -59,7 +59,7 @@ const GET_USERS = gql`
       avatar
       instrument
       bands
-      # notificationTokens
+      notificationTokens
     }
   }
 `;
@@ -236,7 +236,7 @@ const Tables = () => {
         ...user,
         age: calculateAge(user.birthday),
         identification: user.identification,
-        // notificationTokens: user.notificationTokens,
+        notificationTokens: user.notificationTokens,
         address: user.address,
         familyMemberName: user.familyMemberName,
         familyMemberNumberId: user.familyMemberNumberId,
@@ -266,7 +266,7 @@ const Tables = () => {
   const parentsData = parentData?.getParents;
 
   const columns = [
-    // { field: "notificationTokens", headerName: "notificationTokens", width: 120 },
+    { field: "notificationTokens", headerName: "notificationTokens", width: 120 },
     { field: "identification", headerName: "Cédula", width: 120 },
     { field: "state", headerName: "Estado", width: 120 },
     { field: "name", headerName: "Nombre", width: 120 },

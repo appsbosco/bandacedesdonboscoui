@@ -84,9 +84,9 @@ const Dashboard = () => {
   useEffect(() => {
     const requestTokenAndUpdate = async () => {
       const token = await generateToken();
+      console.log("Token de notificación:", token);
       if (token) {
         try {
-          // Asume que userId está disponible de alguna manera (contexto, estado global, almacenamiento local, etc.)
           const userId = userData?.getUser?.id;
           await updateNotificationToken({ variables: { userId, token } });
           console.log("Token de notificación actualizado correctamente");
@@ -98,13 +98,6 @@ const Dashboard = () => {
 
     requestTokenAndUpdate();
   }, [updateNotificationToken]);
-
-  // useEffect(() => {
-  //   generateToken();
-  //   onMessage(messaging, (payload) => {
-  //     console.log("Message received. ", payload);
-  //   });
-  // }, []);
 
   const { data: usersData } = useQuery(GET_USERS);
 

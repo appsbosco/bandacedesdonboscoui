@@ -25,12 +25,14 @@ export const messaging = getMessaging(app);
 
 export const generateToken = async () => {
   const permission = await Notification.requestPermission();
+  console.log("Permiso", permission);
 
   if (permission === "granted") {
     const token = await getToken(messaging, {
       vapidKey:
         "BJmb2xP_HgqJHavQ-ur2jLzepOyjt2V8Dubb59y8KMn6OZqEfZs_vclMuLd_8CDVofoCB0-u5jdXHx-VQw57_hA",
     });
+    console.log("Token", token);
 
     return token;
   }
