@@ -11,7 +11,7 @@ import Todos from "../../assets/images/almuerzo/todos.webp";
 import Success from "../../assets/images/almuerzo/success.webp";
 import Bg from "../../assets/images/almuerzo/bg.jpg";
 
-import Almuerzo2 from "../../assets/images/almuerzo/almuerzo.webp";
+import Almuerzo2 from "../../assets/images/almuerzo/almuerzo.jpg";
 import Bebida2 from "../../assets/images/almuerzo/bebida.webp";
 import Postre2 from "../../assets/images/almuerzo/postre.webp";
 

@@ -139,7 +139,7 @@ const AttendanceHistoryTable = () => {
     { field: "attendancePercentage", headerName: "Porcentaje de Asistencia", width: 200 },
     {
       field: "mood",
-      headerName: "Estado de Ánimo",
+      headerName: "Estado",
       width: 150,
       renderCell: (params) => {
         const color = getMoodColor(parseFloat(params.row.attendancePercentage));

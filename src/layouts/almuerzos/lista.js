@@ -227,11 +227,14 @@ const ListaAlmuerzos = () => {
                         <table className="min-w-full divide-y divide-default-200">
                           <thead className="bg-default-100">
                             <tr className="text-start">
-                              <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                Fecha
+                              <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
+                                Estado
                               </th>
                               <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                 Nombre completo
+                              </th>
+                              <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                Fecha
                               </th>
                               <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w">
                                 Pedidos
@@ -239,16 +242,26 @@ const ListaAlmuerzos = () => {
                               <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                 Total
                               </th>
-                              <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
-                                Estado
-                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-default-200">
                             {data?.orders?.map((order) => (
                               <tr key={order.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                  {formatDateString(order.orderDate)}
+                                <td className="px-6 py-4">
+                                  {order.isCompleted ? (
+                                    <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-green-500/20 text-green-500">
+                                      Completada
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() =>
+                                        completeOrder({ variables: { orderId: order.id } })
+                                      }
+                                      className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
+                                    >
+                                      Completar
+                                    </button>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
                                   {order.userId.name +
@@ -257,6 +270,10 @@ const ListaAlmuerzos = () => {
                                     " " +
                                     order.userId.secondSurName}
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                  {formatDateString(order.orderDate)}
+                                </td>
+
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
                                   <div className="flex items-center gap-4">
                                     <div className="grow">
@@ -281,23 +298,6 @@ const ListaAlmuerzos = () => {
                                       0
                                     )
                                     .toFixed(2)}
-                                </td>
-
-                                <td className="px-6 py-4">
-                                  {order.isCompleted ? (
-                                    <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-green-500/20 text-green-500">
-                                      Completada
-                                    </span>
-                                  ) : (
-                                    <button
-                                      onClick={() =>
-                                        completeOrder({ variables: { orderId: order.id } })
-                                      }
-                                      className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
-                                    >
-                                      Completar
-                                    </button>
-                                  )}
                                 </td>
                               </tr>
                             ))}
