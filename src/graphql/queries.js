@@ -328,6 +328,7 @@ export const GET_PRODUCTS = gql`
       category
       price
       availableForDays
+      photo
       closingDate
       createdAt
     }

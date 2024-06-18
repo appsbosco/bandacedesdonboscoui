@@ -213,7 +213,7 @@ const Contact = () => {
                           href="tel:+13234567891"
                           className="inline-block mt-6 duration-200 ease-in-out text-sky-700 hover:text-sky-600"
                         >
-                          +506 6049-1166
+                          +506 8380-7124
                         </a>
                       </p>
                     </div>

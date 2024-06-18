@@ -388,7 +388,8 @@ export const CREATE_PRODUCT = gql`
     $name: String!
     $description: String!
     $price: Float!
-    $availableForDays: [String!]!
+    $availableForDays: String!
+    $photo: String
     $closingDate: String!
     $category: String
   ) {
@@ -397,6 +398,7 @@ export const CREATE_PRODUCT = gql`
       description: $description
       price: $price
       availableForDays: $availableForDays
+      photo: $photo
       closingDate: $closingDate
       category: $category
     ) {
@@ -405,9 +407,18 @@ export const CREATE_PRODUCT = gql`
       description
       price
       availableForDays
+      photo
       closingDate
       createdAt
       category
+    }
+  }
+`;
+
+export const DELETE_PRODUCT = gql`
+  mutation DeleteProduct($deleteProductId: ID!) {
+    deleteProduct(id: $deleteProductId) {
+      id
     }
   }
 `;

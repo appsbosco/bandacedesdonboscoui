@@ -24,20 +24,31 @@ import { GET_USERS_BY_ID } from "graphql/queries";
 import { GET_ORDERS } from "graphql/queries";
 import DashboardNavbar from "examples/Navbars/CartsNavBar";
 import { GET_ORDERS_BY_USER } from "graphql/queries";
+import SoftTypography from "components/SoftTypography";
+import { Icon, Tooltip } from "@mui/material";
+import AddLunchModal from "components/AddLunchModal";
+import { CREATE_PRODUCT } from "graphql/mutations";
+import { DELETE_PRODUCT } from "graphql/mutations";
 
 const Almuerzos = () => {
   const { loading, error, data } = useQuery(GET_PRODUCTS);
+
   const [open, setOpen] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [alert, setAlert] = useState({ show: false, message: "" });
 
+  const [openModal, setOpenModal] = useState(false);
+  const [modalType, setModalType] = useState(null);
   const [cart, setCart] = useState([]);
   const [selectedQuantities, setSelectedQuantities] = useState({});
 
   const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);
 
   const userId = userData?.getUser?.id;
+  const userRole = userData?.getUser?.role;
+
+  console.log("USER DATA", userData);
 
   const [createOrder, { data: orderData, loading: orderLoading, error: orderError }] = useMutation(
     CREATE_ORDER,
@@ -45,6 +56,13 @@ const Almuerzos = () => {
       refetchQueries: [{ query: GET_ORDERS }, { query: GET_ORDERS_BY_USER, variables: { userId } }],
     }
   );
+
+  const [deleteProduct] = useMutation(DELETE_PRODUCT, {
+    refetchQueries: [{ query: GET_PRODUCTS }],
+  });
+  const [addProduct] = useMutation(CREATE_PRODUCT, {
+    refetchQueries: [{ query: GET_PRODUCTS }],
+  });
 
   // Función para actualizar la categoría seleccionada
   const handleCategorySelection = (category) => {
@@ -161,20 +179,81 @@ const Almuerzos = () => {
     }
   };
 
-  const getImageForCategory = (category) => {
-    switch (category) {
-      case "Bebidas":
-        return Bebida2;
-      case "Almuerzo":
-        return Almuerzo2;
-      case "Postres":
-        return Postre2;
+  // const getImageForCategory = (category) => {
+  //   switch (category) {
+  //     case "Bebidas":
+  //       return Bebida2;
+  //     case "Almuerzo":
+  //       return Almuerzo2;
+  //     case "Postres":
+  //       return Postre2;
 
-      default:
-        return Almuerzo2;
+  //     default:
+  //       return Almuerzo2;
+  //   }
+  // };
+
+  const handleOpenModal = (type) => {
+    setModalType(type);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setModalType(null);
+  };
+
+  const handleAddProduct = async (productData) => {
+    try {
+      await addProduct({
+        variables: {
+          name: productData.name,
+          description: productData.description,
+          price: parseFloat(productData.price),
+          availableForDays: productData.availableForDays,
+          photo: productData.photo,
+          closingDate: productData.closingDate,
+          category: productData.category,
+        },
+      });
+      handleCloseModal();
+    } catch (error) {
+      console.error("Error al agregar el producto:", error);
     }
   };
 
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await deleteProduct({
+        variables: {
+          deleteProductId: productId,
+        },
+      });
+      setAlert({
+        show: true,
+        message: "Producto eliminado exitosamente",
+      });
+
+      setTimeout(() => {
+        setAlert({ ...alert, show: false });
+      }, 4000);
+    } catch (error) {
+      console.error("Error al eliminar el producto:", error);
+      setAlert({
+        show: true,
+        message: "Error al eliminar el producto",
+      });
+
+      setTimeout(() => {
+        setAlert({ ...alert, show: false });
+      }, 4000);
+    }
+  };
+
+  if (loading) return <p>Cargando productos...</p>;
+  if (error) return <p>Error al cargar productos, {error} </p>;
+
+  console.log("error", error);
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -348,6 +427,14 @@ const Almuerzos = () => {
           <div className="pb-10">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
               <h3 className="text-xl font-semibold text-default-950">Productos</h3>
+
+              {userRole !== "Admin" && userRole !== "Staff" ? null : (
+                <SoftTypography variant="body2" color="secondary">
+                  <Tooltip placement="top">
+                    <Icon onClick={() => handleOpenModal("add")}>add</Icon>
+                  </Tooltip>
+                </SoftTypography>
+              )}
             </div>
 
             <div className="grid lg:grid-cols-4 gap-6">
@@ -465,7 +552,7 @@ const Almuerzos = () => {
                           <div className="mb-4 mx-auto">
                             <img
                               className="w-full h-full group-hover:scale-105 transition-all"
-                              src={getImageForCategory(product.category)}
+                              src={product.photo}
                             />
                           </div>
 
@@ -475,7 +562,7 @@ const Almuerzos = () => {
                                 className="text-default-800 text-xl font-semibold  after:absolute after:inset-0"
                                 href=""
                               >
-                                {product.name}
+                                {product.name} - {product.availableForDays}
                               </h4>
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -569,6 +656,15 @@ const Almuerzos = () => {
                               >
                                 Añadir
                               </button>
+
+                              {userRole !== "Admin" && userRole !== "Staff" ? null : (
+                                <button
+                                  className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-black px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-white hover:text-black"
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                >
+                                  Eliminar
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -601,7 +697,7 @@ const Almuerzos = () => {
                           <div key={product.id} className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-4">
                               <img
-                                src={getImageForCategory(product.category)}
+                                src={product.photo}
                                 alt={product.name}
                                 className="h-16 w-16 object-cover rounded-full "
                               />
@@ -677,6 +773,15 @@ const Almuerzos = () => {
         </div>
       </div>
 
+      {/* Add Event Modal */}
+      {modalType === "add" && (
+        <AddLunchModal
+          open={openModal}
+          onClose={handleCloseModal}
+          title="Agregar evento"
+          onSubmit={handleAddProduct}
+        />
+      )}
       <Footer />
     </DashboardLayout>
   );
