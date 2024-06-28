@@ -659,7 +659,7 @@ const Almuerzos = () => {
 
                               {userRole !== "Admin" && userRole !== "Staff" ? null : (
                                 <button
-                                  className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-black px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-white hover:text-black"
+                                  className="relative z-10 w-full inline-flex items-center justify-center rounded-full text-center text-sm font-medium text-red-700 bg-transparent"
                                   onClick={() => handleDeleteProduct(product.id)}
                                 >
                                   Eliminar

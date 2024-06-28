@@ -51,7 +51,10 @@ const CalendarListing = () => {
 
           <section className="bg-white  antialiased">
             <div className="max-w-screen-xl px-4 py-8 mx-auto lg:px-6 sm:py-16 lg:py-24">
-              <div className="flow-root max-w-3xl mx-auto mt-8 sm:mt-12 lg:mt-8">
+              <div className=" flex items-center justify-center text-center">
+                <p> No hay presentaciones próximas </p>
+              </div>
+              {/* <div className="flow-root max-w-3xl mx-auto mt-8 sm:mt-12 lg:mt-8">
                 <div className="-my-4 divide-y divide-gray-200 ">
                   <div className="flex flex-col gap-2 py-4 sm:gap-6 sm:flex-row sm:items-center">
                     <p className=" text-lg font-normal text-gray-500 sm:text-right clipRule shrink-0">
@@ -197,7 +200,7 @@ const CalendarListing = () => {
                     </h3>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </section>
         </div>

@@ -1,5 +1,5 @@
 import React from "react";
-import landing from "../assets/images/landing.png";
+import landing from "../assets/images/landing.webp";
 import pasion from "../assets/images/pasion.webp";
 import friends from "../assets/images/friends.webp";
 import family from "../assets/images/family.webp";
@@ -170,19 +170,37 @@ const Hero = () => {
               <div>
                 {/* Experience with Tech 1 */}
                 <div className="absolute right-12 -top-6 inline-flex h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:-left-28 md:top-14 lg:left-44 lg:-top-6 lg:px-10 2xl:-left-48 2xl:top-14">
-                  <LazyLoadImage src={family} alt="" className="w-4 h-auto" />
+                  <LazyLoadImage
+                    width={10}
+                    height={10}
+                    src={family}
+                    alt=""
+                    className="w-4 h-auto"
+                  />
                   Familia
                 </div>
 
                 {/* Experience with Tech 2 */}
                 <div className="absolute top-full left-12 inline-flex h-12 w-max -translate-y-6 items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-0 md:-translate-x-20 md:-translate-y-24 lg:-left-3 lg:-translate-y-24 lg:px-10 xl:-left-6 xl:-translate-y-32 xl:-translate-x-28">
-                  <LazyLoadImage src={friends} alt="" className="w-auto h-6" />
+                  <LazyLoadImage
+                    width={10}
+                    height={10}
+                    src={friends}
+                    alt=""
+                    className="w-auto h-6"
+                  />
                   Amigos
                 </div>
 
                 {/* Experience with Tech 3 */}
                 <div className="absolute top-[350px] hidden h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-full md:inline-flex md:-translate-x-32 lg:left-48 lg:hidden lg:px-10 2xl:left-full 2xl:inline-flex 2xl:-translate-x-28">
-                  <LazyLoadImage src={pasion} alt="" className="h-auto w-7" />
+                  <LazyLoadImage
+                    width={10}
+                    height={10}
+                    src={pasion}
+                    alt=""
+                    className="h-auto w-7"
+                  />
                   Pasión
                 </div>
               </div>

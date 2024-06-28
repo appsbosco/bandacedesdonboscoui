@@ -451,7 +451,7 @@ const Modal = ({ onClose }) => {
                                           margin-bottom: 10px;
                                         "
                                       >
-                                        Copyright © 2023 Banda CEDES Don Bosco. Todos los derechos
+                                        Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos
                                         reservados
                                       </p>
                                       <a

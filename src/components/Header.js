@@ -20,7 +20,13 @@ const Header = ({ openModal }) => {
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <a href="/" aria-label="Home" className="flex items-center flex-shrink-0">
-              <img src={logo} alt="" className="w-auto h-16 sm:h-16 md:h-20 lg:h-24 xl:h-28" />
+              <img
+                src={logo}
+                width={120}
+                height={120}
+                alt=""
+                className="w-auto h-16 sm:h-16 md:h-20 lg:h-24 xl:h-28"
+              />
             </a>
           </div>
 

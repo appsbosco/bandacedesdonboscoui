@@ -257,6 +257,7 @@ const Tables = () => {
         user.role !== "Principal de sección" &&
         user.role !== "Integrante BCDB" &&
         user.role !== "Asistente de sección" &&
+        user.role !== "Instructor de instrumento" &&
         user.role !== "Padre/Madre de familia"
     ) || [];
 
