@@ -137,8 +137,9 @@ const Hero = () => {
             <LazyLoadImage
               className="object-cover object-center w-full h-full rounded-2xl"
               src={landing}
-              alt=""
+              alt="Banda CEDES Don Bosco - Banda de marcha"
               sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
+              srcSet=""
             />
 
             <div>
