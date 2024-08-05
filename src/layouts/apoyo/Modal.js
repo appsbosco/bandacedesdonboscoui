@@ -289,17 +289,6 @@ const Modal = ({ onClose }) => {
                                       </p>
       
                                      
-                                    
-                                      <p
-                                        style="
-                                          font-size: 18px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                        "
-                                      >
-                                      Actividades Principales: Visitas a colegios y universidades salesianas, lugares turísticos, y excursiones culturales y turísticas.
-                                      </p>
                                    
                             
       
