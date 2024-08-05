@@ -275,6 +275,26 @@ export const GET_EXALUMNOS = gql`
   }
 `;
 
+export const GET_GUATEMALA = gql`
+  query GetGuatemala {
+    getGuatemala {
+      id
+      fullName
+      phoneNumber
+      identification
+      instrument
+      email
+      comments
+      children {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+    }
+  }
+`;
+
 export const GET_COLOR_GUARD_CAMP_REGISTRATION = gql`
   query Query {
     getColorGuardCampRegistrations {

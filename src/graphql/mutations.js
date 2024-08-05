@@ -331,6 +331,40 @@ export const ADD_EXALUMNO = gql`
   }
 `;
 
+export const ADD_GUATEMALA = gql`
+  mutation addGuatemala($input: GuatemalaInput!) {
+    addGuatemala(input: $input) {
+      fullName
+      phoneNumber
+      identification
+      instrument
+      email
+      comments
+      children {
+        id
+      }
+      authorized
+    }
+  }
+`;
+
+export const ADD_APOYO = gql`
+  mutation addApoyo($input: ApoyoInput!) {
+    addApoyo(input: $input) {
+      fullName
+      phoneNumber
+      identification
+      instrument
+      email
+      comments
+      children {
+        id
+      }
+      availability
+    }
+  }
+`;
+
 export const ADD_COLOR_GUARD_CAMP_REGISTRATION = gql`
   mutation Mutation($input: ColorGuardCampRegistrationInput!) {
     createColorGuardCampRegistration(input: $input) {

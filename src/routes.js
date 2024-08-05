@@ -40,6 +40,11 @@ import ColorGuardCampDashboard from "layouts/ColorGuardCamp/ColorGuardCampDashbo
 import PerformanceAttendance from "layouts/PerformanceAttendance/PerformanceAttendance";
 import Almuerzos from "layouts/almuerzos";
 import ListaAlmuerzos from "layouts/almuerzos/lista";
+import Guatemala from "layouts/guatemala/Guatemala";
+import GuatemalaDashboard from "layouts/guatemala/GuatemalaDashboard";
+import PublicIcon from "@mui/icons-material/Public";
+import Apoyo from "layouts/apoyo/Apoyo";
+
 export const protectedRoutes = [
   {
     type: "collapse",
@@ -68,6 +73,26 @@ export const protectedRoutes = [
     route: "/exalumnos",
     icon: <SchoolIcon size="12px" />,
     component: <AlumniDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Guatemala",
+    key: "guatemala",
+    route: "/guatemala",
+    icon: <PublicIcon size="12px" />,
+    component: <GuatemalaDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Apoyo",
+    key: "apoyo",
+    route: "/grupo-apoyo-dashboard",
+    icon: <PublicIcon size="12px" />,
+    component: <GuatemalaDashboard />,
     noCollapse: true,
     href: null,
   },
@@ -195,6 +220,26 @@ const routes = [
     route: "/proyecto-exalumnos",
     icon: "",
     component: <Alumni />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Guatemala",
+    key: "guatemala",
+    route: "/gira-guatemala",
+    icon: "",
+    component: <Guatemala />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Apoyo",
+    key: "apoyo",
+    route: "/grupo-apoyo",
+    icon: "",
+    component: <Apoyo />,
     noCollapse: true,
     href: null,
   },
@@ -422,6 +467,16 @@ export const adminRoutes = [
     route: "/exalumnos",
     icon: <SchoolIcon size="12px" />,
     component: <AlumniDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Guatemala",
+    key: "guatemala",
+    route: "/guatemala",
+    icon: <PublicIcon size="12px" />,
+    component: <GuatemalaDashboard />,
     noCollapse: true,
     href: null,
   },

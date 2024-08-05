@@ -36,6 +36,8 @@ import Alumni from "layouts/Alumni/Alumni";
 import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import { colorGuardCampRoutes } from "routes";
 import CalendarListing from "layouts/calendar/CalendarListing";
+import Guatemala from "layouts/guatemala/Guatemala";
+import Apoyo from "layouts/apoyo/Apoyo";
 
 function isTokenExpired(token) {
   try {
@@ -227,6 +229,8 @@ export default function App() {
             pathname !== "/" &&
             pathname !== "/nosotros" &&
             pathname !== "/proyecto-exalumnos" &&
+            pathname !== "/gira-guatemala" &&
+            pathname !== "/grupo-apoyo" &&
             pathname !== "/color-guard-camp" &&
             pathname !== "/contacto" &&
             pathname !== "/blog" &&
@@ -254,6 +258,9 @@ export default function App() {
         <Route path="/blog" element={<BlogListing />} />
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
+        <Route path="/gira-guatemala" element={<Guatemala />} />
+        <Route path="/grupo-apoyo" element={<Apoyo />} />
+
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
         <Route path="/blog/:id" element={<ArticlePage />} />
         <Route path="/autenticacion/registrarse-privado" component={SignUp} />
