@@ -76,7 +76,6 @@ const roles = [
   "Instructora Color Guard",
   "Instructora Danza",
   "Instructor de instrumento",
-  "Padre/Madre de familia",
   "CEDES",
 ];
 

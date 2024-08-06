@@ -44,6 +44,8 @@ import Guatemala from "layouts/guatemala/Guatemala";
 import GuatemalaDashboard from "layouts/guatemala/GuatemalaDashboard";
 import PublicIcon from "@mui/icons-material/Public";
 import Apoyo from "layouts/apoyo/Apoyo";
+import ApoyoDashboard from "layouts/apoyo/ApoyoDashboard";
+import AccessibilityIcon from "@mui/icons-material/Accessibility";
 
 export const protectedRoutes = [
   {
@@ -88,11 +90,11 @@ export const protectedRoutes = [
   },
   {
     type: "collapse",
-    name: "Apoyo",
-    key: "apoyo",
+    name: "Grupo Apoyo",
+    key: "apoyo-dashboard",
     route: "/grupo-apoyo-dashboard",
-    icon: <PublicIcon size="12px" />,
-    component: <GuatemalaDashboard />,
+    icon: <AccessibilityIcon size="12px" />,
+    component: <ApoyoDashboard />,
     noCollapse: true,
     href: null,
   },
@@ -233,9 +235,10 @@ const routes = [
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
-    name: "Apoyo",
+    name: "Grupo Apoyo",
     key: "apoyo",
     route: "/grupo-apoyo",
     icon: "",
@@ -477,6 +480,16 @@ export const adminRoutes = [
     route: "/guatemala",
     icon: <PublicIcon size="12px" />,
     component: <GuatemalaDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Apoyo",
+    key: "grupo-apoyo-dashboard",
+    route: "/grupo-apoyo-dashboard",
+    icon: <AccessibilityIcon size="12px" />,
+    component: <ApoyoDashboard />,
     noCollapse: true,
     href: null,
   },

@@ -6,13 +6,14 @@ import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import TableWithFilteringSorting from "examples/Tables/Table/Table";
+import { GET_APOYO } from "graphql/queries";
 import { GET_GUATEMALA } from "graphql/queries";
 
 const Tables = () => {
-  const { data, loading, error } = useQuery(GET_GUATEMALA);
+  const { data, loading, error } = useQuery(GET_APOYO);
 
   // Filter users by role
-  const guatemalaData = data?.getGuatemala;
+  const apoyoData = data?.getApoyo;
 
   const columns = [
     {
@@ -31,8 +32,9 @@ const Tables = () => {
     { field: "identification", headerName: "Identificación", width: 200 },
     { field: "email", headerName: "Correo electrónico", width: 250 },
     { field: "phoneNumber", headerName: "Número de celular", width: 200 },
-
-    { field: "instrument", headerName: "Instrumento", width: 250 },
+    { field: "instrument", headerName: "Instrumento", width: 200 },
+    { field: "comments", headerName: "Comentarios", width: 700, height: "auto" },
+    { field: "availability", headerName: "Disponibilidad", width: 400 },
   ];
 
   if (loading) {
@@ -50,7 +52,7 @@ const Tables = () => {
         <SoftBox mb={3}>
           <Card>
             <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
-              <SoftTypography variant="h6">Inscripciones Guatemala</SoftTypography>
+              <SoftTypography variant="h6">Inscripciones Grupo Apoyo</SoftTypography>
             </SoftBox>
 
             <SoftBox
@@ -63,11 +65,7 @@ const Tables = () => {
                 },
               }}
             >
-              <TableWithFilteringSorting
-                data={guatemalaData || []}
-                columns={columns}
-                height={700}
-              />
+              <TableWithFilteringSorting data={apoyoData || []} columns={columns} height={700} />
             </SoftBox>
           </Card>
         </SoftBox>

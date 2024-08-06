@@ -295,6 +295,27 @@ export const GET_GUATEMALA = gql`
   }
 `;
 
+export const GET_APOYO = gql`
+  query GetApoyo {
+    getApoyo {
+      id
+      fullName
+      phoneNumber
+      identification
+      instrument
+      email
+      comments
+      availability
+      children {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+    }
+  }
+`;
+
 export const GET_COLOR_GUARD_CAMP_REGISTRATION = gql`
   query Query {
     getColorGuardCampRegistrations {

@@ -20,7 +20,7 @@ const Modal = ({ onClose }) => {
   const [sendEmail] = useMutation(SEND_EMAIL);
   const { loading, data: usersData } = useQuery(GET_USERS);
   const [message, setMessage] = useState(null);
-  const [fullName, setFullName] = useState("");
+  const [fullName, setFullName] = useState(null);
   const [email, setEmail] = useState("");
   const [identification, setIdentification] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
