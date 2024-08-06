@@ -16,6 +16,12 @@ const Tables = () => {
 
   const columns = [
     {
+      field: "authorized",
+      headerName: "¿Asiste?",
+      width: 100,
+      valueGetter: (params) => (params.row.authorized ? "Sí" : "No"),
+    },
+    {
       field: "children",
       headerName: "Integrante",
       width: 300,
@@ -29,9 +35,9 @@ const Tables = () => {
     },
     { field: "fullName", headerName: "Nombre", width: 300 },
     { field: "identification", headerName: "Identificación", width: 200 },
-    { field: "email", headerName: "Correo electrónico", width: 250 },
+    { field: "email", headerName: "Correo electrónico", width: 300 },
     { field: "phoneNumber", headerName: "Número de celular", width: 200 },
-
+    { field: "comments", headerName: "Comentarios", width: 700, height: "auto" },
     { field: "instrument", headerName: "Instrumento", width: 250 },
   ];
 

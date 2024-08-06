@@ -284,6 +284,7 @@ export const GET_GUATEMALA = gql`
       identification
       instrument
       email
+      authorized
       comments
       children {
         id
