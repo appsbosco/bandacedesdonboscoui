@@ -46,6 +46,7 @@ import PublicIcon from "@mui/icons-material/Public";
 import Apoyo from "layouts/apoyo/Apoyo";
 import ApoyoDashboard from "layouts/apoyo/ApoyoDashboard";
 import AccessibilityIcon from "@mui/icons-material/Accessibility";
+import QRScanner from "layouts/tickets/QrScanner";
 
 export const protectedRoutes = [
   {
@@ -95,6 +96,16 @@ export const protectedRoutes = [
     route: "/grupo-apoyo-dashboard",
     icon: <AccessibilityIcon size="12px" />,
     component: <ApoyoDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "QRScanner",
+    key: "qrscanner",
+    route: "/qr-scanner",
+    icon: <PublicIcon size="12px" />,
+    component: <QRScanner />,
     noCollapse: true,
     href: null,
   },
@@ -473,6 +484,7 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
     name: "Guatemala",
@@ -480,6 +492,17 @@ export const adminRoutes = [
     route: "/guatemala",
     icon: <PublicIcon size="12px" />,
     component: <GuatemalaDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+
+  {
+    type: "collapse",
+    name: "QRScanner",
+    key: "qrscanner",
+    route: "/qr-scanner",
+    icon: <PublicIcon size="12px" />,
+    component: <QRScanner />,
     noCollapse: true,
     href: null,
   },
