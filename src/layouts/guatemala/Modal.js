@@ -360,7 +360,7 @@ const Modal = ({ onClose }) => {
                                             mso-padding-alt: 0px;
                                             mso-text-raise: 14.25px;
                                           "
-                                          >Unirse al grupo de WhatsApp</span
+                                          >Nos vemos pronto</span
                                         ><span
                                           ><!--[if mso
                                             ]><i
