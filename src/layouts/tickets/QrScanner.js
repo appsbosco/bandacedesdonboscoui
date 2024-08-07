@@ -1,7 +1,16 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
+import Card from "@mui/material/Card";
+import SoftBox from "components/SoftBox";
+import SoftTypography from "components/SoftTypography";
+import Footer from "examples/Footer";
+import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
+import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import TableWithFilteringSorting from "examples/Tables/Table/Table";
 import { useMutation, gql } from "@apollo/client";
+import login from "../../assets/images/aprobado.webp";
+import loginerror from "../../assets/images/denegado.webp";
 
 const VALIDATE_TICKET = gql`
   mutation ValidateTicket($qrCode: String!) {
@@ -23,6 +32,40 @@ const QRScanner = () => {
   const [message, setMessage] = useState("");
   const [scanning, setScanning] = useState(false);
   const [validateTicket] = useMutation(VALIDATE_TICKET);
+
+  const showMessage = () => {
+    let imageSource = message !== "Entrada paga y válida. Puede ingresar." ? loginerror : login;
+
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: "9999",
+          backgroundColor: "#ffffff",
+          padding: "20px",
+          textAlign: "center",
+          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          borderRadius: "8px",
+          maxWidth: "90%",
+          width: "400px",
+        }}
+      >
+        <div className="container">
+          <div className="content" id="popup">
+            <img
+              src={imageSource}
+              alt="Banda CEDES Don Bosco"
+              style={{ width: "60%", display: "block", margin: "0 auto", marginBottom: "1rem" }}
+            />
+            <p style={{ marginBottom: "1rem" }}>{message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -46,33 +89,35 @@ const QRScanner = () => {
   }, [webcamRef]);
 
   const handleScan = async (data) => {
-    console.log("Scanning", data); // Log the scanning data
+    console.log("Scanning", data);
     if (data && !scanning) {
       setScanning(true);
       try {
         const response = await validateTicket({ variables: { qrCode: data } });
-        console.log("Response", response); // Log the response
+        console.log("Response", response);
 
         const ticket = response.data.validateTicket;
-        console.log("Ticket", ticket); // Log the ticket data
+        console.log("Ticket", ticket);
 
         if (ticket.paid) {
-          setMessage("Ticket is paid and valid. You may enter.");
+          setMessage("Entrada paga y válida. Puede ingresar.");
         } else {
-          setMessage("Ticket is not paid. Please proceed to payment.");
+          setMessage("Ticket no está pagado. Por favor proceda al pago.");
         }
       } catch (error) {
-        console.error("Error validating ticket:", error); // Log the error
+        console.error("Error validating ticket:", error);
         const errorMessage = error.message || "An error occurred. Please try again.";
         if (errorMessage.includes("Ticket not paid")) {
-          setMessage("Ticket is not paid. Please proceed to payment.");
+          setMessage("Ticket no está pagado. Por favor proceda al pago.");
         } else if (errorMessage.includes("Invalid ticket")) {
-          setMessage("Invalid ticket. Please try again or contact support.");
+          setMessage("Ticket inválido. Por favor intente de nuevo o contacte soporte.");
         } else {
           setMessage(errorMessage);
+          setScanning(false);
         }
+      } finally {
+        setScanning(false); // Ensure scanning is set to false after processing
       }
-      setScanning(false);
     }
   };
 
@@ -81,19 +126,42 @@ const QRScanner = () => {
     setMessage("Error scanning QR code.");
   };
 
+  useEffect(() => {
+    let timeoutId = null;
+    if (message) {
+      timeoutId = setTimeout(() => {
+        setMessage(null);
+      }, 2000);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [message]);
+
   return (
-    <div>
-      <h2>QR Scanner</h2>
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        screenshotFormat="image/png"
-        videoConstraints={{ facingMode: "environment" }}
-        style={{ width: "100%" }}
-      />
-      <button onClick={capture}>Scan QR</button>
-      <p>{message}</p>
-    </div>
+    <DashboardLayout>
+      <DashboardNavbar />
+      <SoftBox py={3}>
+        <SoftBox mb={3}>
+          <Card>
+            {message && showMessage()}
+            <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
+              <SoftTypography variant="h6">Checkeo de entradas</SoftTypography>
+            </SoftBox>
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              screenshotFormat="image/png"
+              videoConstraints={{ facingMode: "environment" }}
+              style={{ width: "100%" }}
+            />
+            <button onClick={capture}>Escanear</button>
+          </Card>
+        </SoftBox>
+      </SoftBox>
+      <Footer />
+    </DashboardLayout>
   );
 };
 
