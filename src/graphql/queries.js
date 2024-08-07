@@ -418,3 +418,45 @@ export const GET_ORDERS_BY_USER = gql`
     }
   }
 `;
+
+export const GET_TICKETS = gql`
+  query GetTickets($eventId: ID) {
+    getTickets(eventId: $eventId) {
+      id
+      userId {
+        name
+        firstSurName
+        secondSurName
+        email
+      }
+      eventId
+      type
+      paid
+      amountPaid
+      ticketQuantity
+      qrCode
+      scanned
+      buyerName
+      buyerEmail
+      raffleNumbers
+    }
+  }
+`;
+
+export const ASSIGN_TICKETS = gql`
+  mutation AssignTickets($input: AssignTicketsInput!) {
+    assignTickets(input: $input) {
+      id
+      userId {
+        name
+        firstSurName
+        secondSurName
+        email
+      }
+      eventId
+      type
+      ticketQuantity
+      qrCode
+    }
+  }
+`;

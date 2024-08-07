@@ -11,18 +11,18 @@ import TableWithFilteringSorting from "examples/Tables/Table/Table";
 import { useMutation, gql } from "@apollo/client";
 import login from "../../assets/images/aprobado.webp";
 import loginerror from "../../assets/images/denegado.webp";
+import { GET_TICKETS } from "graphql/queries";
 
 const VALIDATE_TICKET = gql`
   mutation ValidateTicket($qrCode: String!) {
     validateTicket(qrCode: $qrCode) {
-      id
       paid
       scanned
-      userId
+
       eventId
       type
       amountPaid
-      totalAmount
+      ticketQuantity
     }
   }
 `;
@@ -31,7 +31,9 @@ const QRScanner = () => {
   const webcamRef = useRef(null);
   const [message, setMessage] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [validateTicket] = useMutation(VALIDATE_TICKET);
+  const [validateTicket] = useMutation(VALIDATE_TICKET, {
+    refetchQueries: [{ query: GET_TICKETS }],
+  });
 
   const showMessage = () => {
     let imageSource = message !== "Entrada paga y válida. Puede ingresar." ? loginerror : login;
@@ -81,7 +83,6 @@ const QRScanner = () => {
         const imageData = context.getImageData(0, 0, img.width, img.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
         if (code) {
-          console.log("Detected QR code data:", code.data); // Log the detected QR code data
           handleScan(code.data);
         }
       };
@@ -89,7 +90,6 @@ const QRScanner = () => {
   }, [webcamRef]);
 
   const handleScan = async (data) => {
-    console.log("Scanning", data);
     if (data && !scanning) {
       setScanning(true);
       try {
@@ -102,15 +102,15 @@ const QRScanner = () => {
         if (ticket.paid) {
           setMessage("Entrada paga y válida. Puede ingresar.");
         } else {
-          setMessage("Ticket no está pagado. Por favor proceda al pago.");
+          setMessage("Entrada no está pagada. Por favor proceda al pago.");
         }
       } catch (error) {
         console.error("Error validating ticket:", error);
         const errorMessage = error.message || "An error occurred. Please try again.";
         if (errorMessage.includes("Ticket not paid")) {
-          setMessage("Ticket no está pagado. Por favor proceda al pago.");
+          setMessage("La entrada no está pagada. Por favor proceda al pago.");
         } else if (errorMessage.includes("Invalid ticket")) {
-          setMessage("Ticket inválido. Por favor intente de nuevo o contacte soporte.");
+          setMessage("La entrada es inválida. Por favor intente de nuevo o contacte soporte.");
         } else {
           setMessage(errorMessage);
           setScanning(false);

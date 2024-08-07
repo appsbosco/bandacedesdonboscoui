@@ -47,6 +47,10 @@ import Apoyo from "layouts/apoyo/Apoyo";
 import ApoyoDashboard from "layouts/apoyo/ApoyoDashboard";
 import AccessibilityIcon from "@mui/icons-material/Accessibility";
 import QRScanner from "layouts/tickets/QrScanner";
+import QrCodeIcon from "@mui/icons-material/QrCode";
+import TicketList from "layouts/tickets/TicketList";
+import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
+import AssignTickets from "layouts/tickets/TicketAssignation";
 
 export const protectedRoutes = [
   {
@@ -104,8 +108,28 @@ export const protectedRoutes = [
     name: "QRScanner",
     key: "qrscanner",
     route: "/qr-scanner",
-    icon: <PublicIcon size="12px" />,
+    icon: <QrCodeIcon size="12px" />,
     component: <QRScanner />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Entradas",
+    key: "entradas",
+    route: "/lista-entradas",
+    icon: <ConfirmationNumberIcon size="12px" />,
+    component: <TicketList />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asignar entradas",
+    key: "asignar-entradas",
+    route: "/asignar-entradas",
+    icon: <ConfirmationNumberIcon size="12px" />,
+    component: <AssignTickets />,
     noCollapse: true,
     href: null,
   },
@@ -466,6 +490,36 @@ export const adminRoutes = [
   },
   {
     type: "collapse",
+    name: "Lista de entradas",
+    key: "entradas",
+    route: "/lista-entradas",
+    icon: <ConfirmationNumberIcon size="12px" />,
+    component: <TicketList />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asignar entradas",
+    key: "asignar-entradas",
+    route: "/asignar-entradas",
+    icon: <ConfirmationNumberIcon size="12px" />,
+    component: <AssignTickets />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Escaneo de entradas",
+    key: "qrscanner",
+    route: "/qr-scanner",
+    icon: <QrCodeIcon size="12px" />,
+    component: <QRScanner />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
     name: "Color Guard Camp",
     key: "color-guard-camp-dashboard",
     route: "/color-guard-camp-dashboard",
@@ -496,16 +550,6 @@ export const adminRoutes = [
     href: null,
   },
 
-  {
-    type: "collapse",
-    name: "QRScanner",
-    key: "qrscanner",
-    route: "/qr-scanner",
-    icon: <PublicIcon size="12px" />,
-    component: <QRScanner />,
-    noCollapse: true,
-    href: null,
-  },
   {
     type: "collapse",
     name: "Apoyo",
