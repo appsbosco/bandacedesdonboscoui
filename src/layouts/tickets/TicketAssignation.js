@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, gql } from "@apollo/client";
 import PropTypes from "prop-types";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -97,6 +97,7 @@ const AssignTickets = () => {
 
   const [isRegisteredUser, setIsRegisteredUser] = useState(true);
   const [filter, setFilter] = useState({ role: "", instrument: "" });
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   const { loading: usersLoading, error: usersError, data: usersData } = useQuery(GET_USERS);
   const { loading: eventsLoading, error: eventsError, data: eventsData } = useQuery(GET_EVENTS);
@@ -154,6 +155,11 @@ const AssignTickets = () => {
     }
   );
 
+  useEffect(() => {
+    if (usersData) {
+      setFilteredUsers(usersData.getUsers);
+    }
+  }, [usersData]);
   if (usersLoading || eventsLoading) return <p>Cargando...</p>;
   if (usersError || eventsError) return <p>Error al cargar datos :(</p>;
 
@@ -195,6 +201,7 @@ const AssignTickets = () => {
       if (isRegisteredUser) {
         await assignTickets({ variables: { input } });
         alert("Entradas asignadas con éxito!");
+        setFilteredUsers((prevUsers) => prevUsers.filter((user) => user.id !== input.userId));
       } else {
         await purchaseTicket({ variables: purchaseInput });
         alert("Entradas compradas con éxito!");
@@ -205,7 +212,7 @@ const AssignTickets = () => {
     }
   };
 
-  const filteredUsers = usersData.getUsers.filter((user) => {
+  const displayedUsers = filteredUsers.filter((user) => {
     return (
       (!filter.role || user.role === filter.role) &&
       (!filter.instrument || user.instrument === filter.instrument)
@@ -314,7 +321,7 @@ const AssignTickets = () => {
                                 name="userId"
                                 value={input.userId}
                                 onChange={(e) => handleChange("userId", e.target.value)}
-                                options={filteredUsers?.map((user) => ({
+                                options={displayedUsers?.map((user) => ({
                                   value: user.id,
                                   label: `${user.name} ${user.firstSurName} ${user.secondSurName}`,
                                 }))}
