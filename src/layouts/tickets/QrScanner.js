@@ -7,7 +7,6 @@ import SoftTypography from "components/SoftTypography";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import TableWithFilteringSorting from "examples/Tables/Table/Table";
 import { useMutation, gql } from "@apollo/client";
 import login from "../../assets/images/aprobado.webp";
 import loginerror from "../../assets/images/denegado.webp";

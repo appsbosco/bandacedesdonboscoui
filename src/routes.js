@@ -116,7 +116,7 @@ export const protectedRoutes = [
   {
     type: "collapse",
     name: "Entradas",
-    key: "entradas",
+    key: "lista-entradas",
     route: "/lista-entradas",
     icon: <ConfirmationNumberIcon size="12px" />,
     component: <TicketList />,
@@ -491,7 +491,7 @@ export const adminRoutes = [
   {
     type: "collapse",
     name: "Lista de entradas",
-    key: "entradas",
+    key: "lista-entradas",
     route: "/lista-entradas",
     icon: <ConfirmationNumberIcon size="12px" />,
     component: <TicketList />,
@@ -511,13 +511,14 @@ export const adminRoutes = [
   {
     type: "collapse",
     name: "Escaneo de entradas",
-    key: "qrscanner",
+    key: "qr-scanner",
     route: "/qr-scanner",
     icon: <QrCodeIcon size="12px" />,
     component: <QRScanner />,
     noCollapse: true,
     href: null,
   },
+
   {
     type: "collapse",
     name: "Color Guard Camp",

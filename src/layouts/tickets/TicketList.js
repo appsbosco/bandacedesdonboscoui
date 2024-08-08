@@ -85,12 +85,12 @@ const TicketList = () => {
     <DashboardLayout>
       <DashboardNavbar />
       <div className="p-6 page-content">
-        <div className="flex items-center justify-between w-full mb-6">
-          <h4 className="text-xl font-medium">Lista de entradas</h4>
+        <div className="flex flex-col md:flex-row items-center justify-between w-full mb-6">
+          <h4 className="text-xl font-medium w-6/12">Lista de entradas</h4>
           <select
             value={selectedEvent}
             onChange={handleEventChange}
-            className="p-2 border rounded w-[40%]"
+            className="p-2 border my-4 rounded md:w-6/12 w-full"
           >
             <option value="">Seleccione un evento</option>
             {eventsData?.getEventsT?.map((event) => (
@@ -100,6 +100,7 @@ const TicketList = () => {
             ))}
           </select>
         </div>
+
         <div className="grid gap-6">
           <div className="xl:col-span-9">
             <div className="space-y-6">
@@ -198,103 +199,105 @@ const TicketList = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-                    <div className="relative overflow-x-auto">
-                      <div className="min-w-full inline-block align-middle">
-                        <div className="overflow-hidden">
-                          <table className="min-w-full divide-y divide-default-200">
-                            <thead className="bg-default-100">
-                              <tr className="text-start">
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
-                                  Estado
-                                </th>
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Nombre completo
-                                </th>
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Correo
-                                </th>
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Tipo
-                                </th>
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Escaneada
-                                </th>
+                  <div className="grid grid-cols-1">
+                    <div className="border rounded-lg border-default-200">
+                      <div className="relative overflow-x-auto">
+                        <div className="min-w-full inline-block align-middle">
+                          <div className="overflow-hidden">
+                            <table className="min-w-full divide-y divide-default-200">
+                              <thead className="bg-default-100">
+                                <tr className="text-start">
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[10rem]">
+                                    Estado
+                                  </th>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Nombre completo
+                                  </th>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Correo
+                                  </th>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Tipo
+                                  </th>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Escaneada
+                                  </th>
 
-                                {}
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Números
-                                </th>
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Cantidad
-                                </th>
+                                  {}
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Números
+                                  </th>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Cantidad
+                                  </th>
 
-                                <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                  Total a pagar
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-default-200">
-                              {ticketsData?.getTickets?.length === 0 ? (
-                                <tr>
-                                  <td
-                                    colSpan="7"
-                                    className="px-6 py-4 text-center text-lg text-gray-500"
-                                  >
-                                    No hay entradas para este evento.
-                                  </td>
+                                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                                    Total a pagar
+                                  </th>
                                 </tr>
-                              ) : (
-                                ticketsData?.getTickets?.map((ticket) => (
-                                  <tr key={ticket.id}>
-                                    <td className="px-6 py-4">
-                                      {ticket.paid ? (
-                                        <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-green-500/20 text-green-500">
-                                          Pagado
-                                        </span>
-                                      ) : (
-                                        <button
-                                          onClick={() => handleMarkAsPaid(ticket.id)}
-                                          className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
-                                        >
-                                          Completar
-                                        </button>
-                                      )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.userId
-                                        ? `${
-                                            ticket.userId?.name +
-                                            " " +
-                                            ticket.userId?.firstSurName +
-                                            " " +
-                                            ticket.userId?.secondSurName
-                                          }  `
-                                        : ticket.buyerName}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.userId ? ticket.userId?.email : ticket.buyerEmail}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.type === "assigned" ? "Asignada" : "Comprada"}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.scanned === true ? "Sí" : "No"}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.raffleNumbers?.join(", ") || "-"}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      {ticket.ticketQuantity}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                      ₡{(ticket.ticketQuantity * eventPrice).toFixed(2)}
+                              </thead>
+                              <tbody className="divide-y divide-default-200">
+                                {ticketsData?.getTickets?.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan="7"
+                                      className="px-6 py-4 text-center text-lg text-gray-500"
+                                    >
+                                      No hay entradas para este evento.
                                     </td>
                                   </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
+                                ) : (
+                                  ticketsData?.getTickets?.map((ticket) => (
+                                    <tr key={ticket.id}>
+                                      <td className="px-6 py-4">
+                                        {ticket.paid ? (
+                                          <span className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-green-500/20 text-green-500">
+                                            Pagado
+                                          </span>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleMarkAsPaid(ticket.id)}
+                                            className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
+                                          >
+                                            Completar
+                                          </button>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.userId
+                                          ? `${
+                                              ticket.userId?.name +
+                                              " " +
+                                              ticket.userId?.firstSurName +
+                                              " " +
+                                              ticket.userId?.secondSurName
+                                            }  `
+                                          : ticket.buyerName}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.userId ? ticket.userId?.email : ticket.buyerEmail}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.type === "assigned" ? "Asignada" : "Comprada"}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.scanned === true ? "Sí" : "No"}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.raffleNumbers?.join(", ") || "-"}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        {ticket.ticketQuantity}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
+                                        ₡{(ticket.ticketQuantity * eventPrice).toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       </div>
                     </div>
