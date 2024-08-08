@@ -84,6 +84,7 @@ const Header = ({ openModal }) => {
             {/* Call to action */}
             {isAuthenticated != null &&
             pathname !== "/gira-guatemala" &&
+            pathname !== "/velada-de-las-madres" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/color-guard-camp" ? (
               <a
@@ -94,7 +95,18 @@ const Header = ({ openModal }) => {
               </a>
             ) : pathname === "/autenticacion/iniciar-sesion" ? (
               <></>
+            ) : pathname === "/velada-de-las-madres" ? (
+              <>
+                <button
+                  onClick={openModal}
+                  className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+                  // href="/autenticacion/iniciar-sesion"
+                >
+                  Reservar
+                </button>
+              </>
             ) : pathname === "/gira-guatemala" ||
+              pathname === "/velada-de-las-madres" ||
               pathname === "/color-guard-camp" ||
               pathname === "/grupo-apoyo" ? (
               <>

@@ -32,11 +32,13 @@ const UPDATE_PAYMENT_STATUS = gql`
 `;
 
 const TicketList = () => {
-  const [selectedEvent, setSelectedEvent] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventPrice, setEventPrice] = useState(0);
   const [totalPurchased, setTotalPurchased] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [percentagePaid, setPercentagePaid] = useState(0);
+  const [searchText, setSearchText] = useState("");
+  const [filteredTickets, setFilteredTickets] = useState([]);
 
   const { loading: eventsLoading, error: eventsError, data: eventsData } = useQuery(GET_EVENTS);
   const {
@@ -44,7 +46,7 @@ const TicketList = () => {
     error: ticketsError,
     data: ticketsData,
   } = useQuery(GET_TICKETS, {
-    variables: { eventId: selectedEvent },
+    variables: { eventId: selectedEvent?.id },
   });
   const [updatePaymentStatus] = useMutation(UPDATE_PAYMENT_STATUS);
 
@@ -62,24 +64,43 @@ const TicketList = () => {
       setTotalPurchased(purchased);
       setTotalPaid(paid);
       setPercentagePaid(percentage.toFixed(2));
+
+      const filtered = ticketsData.getTickets.filter((ticket) => {
+        const fullName = ticket.userId
+          ? `${ticket.userId.name} ${ticket.userId.firstSurName} ${ticket.userId.secondSurName}`
+          : ticket.buyerName;
+        const email = ticket.userId ? ticket.userId.email : ticket.buyerEmail;
+        const raffleNumbers = ticket.raffleNumbers ? ticket.raffleNumbers.join(", ") : "";
+
+        return (
+          ticket.paid.toString().toLowerCase().includes(searchText.toLowerCase()) ||
+          fullName.toLowerCase().includes(searchText.toLowerCase()) ||
+          email.toLowerCase().includes(searchText.toLowerCase()) ||
+          raffleNumbers.toLowerCase().includes(searchText.toLowerCase())
+        );
+      });
+      setFilteredTickets(filtered);
     }
-  }, [ticketsData]);
+  }, [ticketsData, searchText]);
 
   if (eventsLoading || ticketsLoading) return <p>Cargando...</p>;
   if (eventsError || ticketsError) return <p>Error :(</p>;
 
-  const handleMarkAsPaid = (ticketId) => {
+  const handleMarkAsPaid = (ticketId, ticketQuantity) => {
+    const amountPaid = ticketQuantity * eventPrice;
     updatePaymentStatus({
-      variables: { ticketId, amountPaid: 2 },
+      variables: { ticketId, amountPaid },
     });
   };
 
   const handleEventChange = (e) => {
     const eventId = e.target.value;
     const selectedEvent = eventsData.getEventsT.find((event) => event.id === eventId);
-    setSelectedEvent(eventId);
+    setSelectedEvent(selectedEvent);
     setEventPrice(selectedEvent ? selectedEvent.price : 0);
   };
+
+  const availableTickets = selectedEvent ? selectedEvent.ticketLimit - totalPurchased : 0;
 
   return (
     <DashboardLayout>
@@ -87,8 +108,9 @@ const TicketList = () => {
       <div className="p-6 page-content">
         <div className="flex flex-col md:flex-row items-center justify-between w-full mb-6">
           <h4 className="text-xl font-medium w-6/12">Lista de entradas</h4>
+
           <select
-            value={selectedEvent}
+            value={selectedEvent?.id || ""}
             onChange={handleEventChange}
             className="p-2 border my-4 rounded md:w-6/12 w-full"
           >
@@ -135,6 +157,9 @@ const TicketList = () => {
                           <h4 className="text-2xl text-default-950 font-semibold mb-2">
                             {totalPurchased}
                           </h4>
+                          <p className="text-base text-default-500 font-medium mb-1">
+                            Entradas disponibles: {availableTickets}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -199,6 +224,14 @@ const TicketList = () => {
                       </div>
                     </div>
                   </div>
+
+                  <input
+                    type="text"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Buscar"
+                    className="p-2 border my-4 rounded md:w-6/12 w-full"
+                  />
                   <div className="grid grid-cols-1">
                     <div className="border rounded-lg border-default-200">
                       <div className="relative overflow-x-auto">
@@ -222,32 +255,29 @@ const TicketList = () => {
                                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                     Escaneada
                                   </th>
-
-                                  {}
                                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                     Números
                                   </th>
                                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                     Cantidad
                                   </th>
-
                                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                     Total a pagar
                                   </th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-default-200">
-                                {ticketsData?.getTickets?.length === 0 ? (
+                                {filteredTickets.length === 0 ? (
                                   <tr>
                                     <td
-                                      colSpan="7"
+                                      colSpan="8"
                                       className="px-6 py-4 text-center text-lg text-gray-500"
                                     >
                                       No hay entradas para este evento.
                                     </td>
                                   </tr>
                                 ) : (
-                                  ticketsData?.getTickets?.map((ticket) => (
+                                  filteredTickets.map((ticket) => (
                                     <tr key={ticket.id}>
                                       <td className="px-6 py-4">
                                         {ticket.paid ? (
@@ -256,7 +286,9 @@ const TicketList = () => {
                                           </span>
                                         ) : (
                                           <button
-                                            onClick={() => handleMarkAsPaid(ticket.id)}
+                                            onClick={() =>
+                                              handleMarkAsPaid(ticket.id, ticket.ticketQuantity)
+                                            }
                                             className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
                                           >
                                             Completar
@@ -281,7 +313,9 @@ const TicketList = () => {
                                         {ticket.type === "assigned" ? "Asignada" : "Comprada"}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
-                                        {ticket.scanned === true ? "Sí" : "No"}
+                                        {ticket.scanned === true
+                                          ? `Sí : ${ticket.scans}/${ticket.ticketQuantity}`
+                                          : `No : ${ticket.scans}/${ticket.ticketQuantity}`}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-500">
                                         {ticket.raffleNumbers?.join(", ") || "-"}

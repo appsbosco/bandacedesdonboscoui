@@ -17,11 +17,11 @@ const VALIDATE_TICKET = gql`
     validateTicket(qrCode: $qrCode) {
       paid
       scanned
-
       eventId
       type
       amountPaid
       ticketQuantity
+      scans
     }
   }
 `;
@@ -30,6 +30,7 @@ const QRScanner = () => {
   const webcamRef = useRef(null);
   const [message, setMessage] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [scanInfo, setScanInfo] = useState(null);
   const [validateTicket] = useMutation(VALIDATE_TICKET, {
     refetchQueries: [{ query: GET_TICKETS }],
   });
@@ -62,6 +63,7 @@ const QRScanner = () => {
               style={{ width: "60%", display: "block", margin: "0 auto", marginBottom: "1rem" }}
             />
             <p style={{ marginBottom: "1rem" }}>{message}</p>
+            {scanInfo && <p>{scanInfo}</p>}
           </div>
         </div>
       </div>
@@ -100,6 +102,7 @@ const QRScanner = () => {
 
         if (ticket.paid) {
           setMessage("Entrada paga y válida. Puede ingresar.");
+          setScanInfo(`Escaneos: ${ticket.scans}/${ticket.ticketQuantity}`);
         } else {
           setMessage("Entrada no está pagada. Por favor proceda al pago.");
         }
@@ -130,6 +133,7 @@ const QRScanner = () => {
     if (message) {
       timeoutId = setTimeout(() => {
         setMessage(null);
+        setScanInfo(null); // Clear scan info when message is cleared
       }, 2000);
     }
 

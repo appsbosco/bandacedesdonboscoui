@@ -38,6 +38,7 @@ import { colorGuardCampRoutes } from "routes";
 import CalendarListing from "layouts/calendar/CalendarListing";
 import Guatemala from "layouts/guatemala/Guatemala";
 import Apoyo from "layouts/apoyo/Apoyo";
+import VeladaTickets from "layouts/tickets/BuyTickets";
 
 function isTokenExpired(token) {
   try {
@@ -229,6 +230,7 @@ export default function App() {
             pathname !== "/" &&
             pathname !== "/nosotros" &&
             pathname !== "/proyecto-exalumnos" &&
+            pathname !== "/velada-de-las-madres" &&
             pathname !== "/gira-guatemala" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/color-guard-camp" &&
@@ -259,6 +261,7 @@ export default function App() {
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-guatemala" element={<Guatemala />} />
+        <Route path="/velada-de-las-madres" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />

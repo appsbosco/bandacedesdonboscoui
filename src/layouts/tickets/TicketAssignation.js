@@ -5,6 +5,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import CustomSelect from "components/CustomSelect";
+import { GET_TICKETS } from "graphql/queries";
 
 const GET_USERS = gql`
   query GetUsers {
@@ -99,19 +100,74 @@ const AssignTickets = () => {
 
   const { loading: usersLoading, error: usersError, data: usersData } = useQuery(GET_USERS);
   const { loading: eventsLoading, error: eventsError, data: eventsData } = useQuery(GET_EVENTS);
-  const [assignTickets, { loading: assignLoading, error: assignError }] =
-    useMutation(ASSIGN_TICKETS);
-  const [purchaseTicket, { loading: purchaseLoading, error: purchaseError }] =
-    useMutation(PURCHASE_TICKET);
+  const [assignTickets, { loading: assignLoading, error: assignError }] = useMutation(
+    ASSIGN_TICKETS,
+    {
+      update: (cache, { data: { assignTickets } }) => {
+        const data = cache.readQuery({
+          query: GET_TICKETS,
+          variables: { eventId: input.eventId },
+        });
+
+        if (data) {
+          const { getTickets } = data;
+          cache.writeQuery({
+            query: GET_TICKETS,
+            variables: { eventId: input.eventId },
+            data: { getTickets: getTickets.concat([assignTickets]) },
+          });
+        } else {
+          cache.writeQuery({
+            query: GET_TICKETS,
+            variables: { eventId: input.eventId },
+            data: { getTickets: [assignTickets] },
+          });
+        }
+      },
+    }
+  );
+
+  const [purchaseTicket, { loading: purchaseLoading, error: purchaseError }] = useMutation(
+    PURCHASE_TICKET,
+    {
+      update: (cache, { data: { purchaseTicket } }) => {
+        const data = cache.readQuery({
+          query: GET_TICKETS,
+          variables: { eventId: purchaseInput.eventId },
+        });
+
+        if (data) {
+          const { getTickets } = data;
+          cache.writeQuery({
+            query: GET_TICKETS,
+            variables: { eventId: purchaseInput.eventId },
+            data: { getTickets: getTickets.concat([purchaseTicket]) },
+          });
+        } else {
+          cache.writeQuery({
+            query: GET_TICKETS,
+            variables: { eventId: purchaseInput.eventId },
+            data: { getTickets: [purchaseTicket] },
+          });
+        }
+      },
+    }
+  );
 
   if (usersLoading || eventsLoading) return <p>Cargando...</p>;
   if (usersError || eventsError) return <p>Error al cargar datos :(</p>;
 
   const handleChange = (name, value) => {
+    if (name === "ticketQuantity") {
+      value = parseInt(value, 10);
+    }
     setInput({ ...input, [name]: value });
   };
 
   const handlePurchaseChange = (name, value) => {
+    if (name === "ticketQuantity") {
+      value = parseInt(value, 10);
+    }
     setPurchaseInput({ ...purchaseInput, [name]: value });
   };
 
@@ -121,6 +177,20 @@ const AssignTickets = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isRegisteredUser && (!input.eventId || !input.userId)) {
+      alert("Por favor selecciona un evento y un usuario.");
+      return;
+    }
+
+    if (
+      !isRegisteredUser &&
+      (!purchaseInput.eventId || !purchaseInput.buyerName || !purchaseInput.buyerEmail)
+    ) {
+      alert("Por favor completa todos los campos para el comprador no registrado.");
+      return;
+    }
+
     try {
       if (isRegisteredUser) {
         await assignTickets({ variables: { input } });
@@ -174,6 +244,7 @@ const AssignTickets = () => {
                               value: event.id,
                               label: event.name,
                             }))}
+                            required
                           />
                         </div>
                         <div className="mb-4">

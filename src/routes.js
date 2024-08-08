@@ -51,6 +51,7 @@ import QrCodeIcon from "@mui/icons-material/QrCode";
 import TicketList from "layouts/tickets/TicketList";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import AssignTickets from "layouts/tickets/TicketAssignation";
+import VeladaTickets from "layouts/tickets/BuyTickets";
 
 export const protectedRoutes = [
   {
@@ -267,6 +268,16 @@ const routes = [
     route: "/gira-guatemala",
     icon: "",
     component: <Guatemala />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Velada",
+    key: "velada-de-las-madres",
+    route: "/velada-de-las-madres",
+    icon: "",
+    component: <VeladaTickets />,
     noCollapse: true,
     href: null,
   },

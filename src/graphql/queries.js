@@ -436,6 +436,7 @@ export const GET_TICKETS = gql`
       ticketQuantity
       qrCode
       scanned
+      scans
       buyerName
       buyerEmail
       raffleNumbers
