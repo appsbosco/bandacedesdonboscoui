@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import PropTypes from "prop-types";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { useMutation, useQuery, gql } from "@apollo/client";
+import { useLazyQuery, useQuery, useMutation, gql } from "@apollo/client";
 import { GET_TICKETS } from "graphql/queries";
 
 const GET_EVENTS = gql`
@@ -31,40 +31,51 @@ const UPDATE_PAYMENT_STATUS = gql`
   }
 `;
 
+const EventSelector = React.memo(({ eventsData, handleEventChange, selectedEvent }) => (
+  <select
+    value={selectedEvent?.id || ""}
+    onChange={handleEventChange}
+    className="p-2 border my-4 rounded md:w-6/12 w-full"
+  >
+    <option value="">Seleccione un evento</option>
+    {eventsData?.getEventsT?.map((event) => (
+      <option key={event.id} value={event.id}>
+        {event.name}
+      </option>
+    ))}
+  </select>
+));
+
 const TicketList = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventPrice, setEventPrice] = useState(0);
-  const [totalPurchased, setTotalPurchased] = useState(0);
-  const [totalPaid, setTotalPaid] = useState(0);
-  const [percentagePaid, setPercentagePaid] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [filteredTickets, setFilteredTickets] = useState([]);
 
   const { loading: eventsLoading, error: eventsError, data: eventsData } = useQuery(GET_EVENTS);
-  const {
-    loading: ticketsLoading,
-    error: ticketsError,
-    data: ticketsData,
-  } = useQuery(GET_TICKETS, {
-    variables: { eventId: selectedEvent?.id },
-  });
+  const [loadTickets, { loading: ticketsLoading, error: ticketsError, data: ticketsData }] =
+    useLazyQuery(GET_TICKETS);
   const [updatePaymentStatus] = useMutation(UPDATE_PAYMENT_STATUS);
+
+  const totalPurchased = useMemo(() => {
+    if (!ticketsData) return 0;
+    return ticketsData.getTickets.reduce((acc, ticket) => acc + ticket.ticketQuantity, 0);
+  }, [ticketsData]);
+
+  const totalPaid = useMemo(() => {
+    if (!ticketsData) return 0;
+    return ticketsData.getTickets.reduce(
+      (acc, ticket) => (ticket.paid ? acc + ticket.ticketQuantity : acc),
+      0
+    );
+  }, [ticketsData]);
+
+  const percentagePaid = useMemo(() => {
+    return totalPurchased > 0 ? (totalPaid / totalPurchased) * 100 : 0;
+  }, [totalPurchased, totalPaid]);
 
   useEffect(() => {
     if (ticketsData && ticketsData.getTickets) {
-      const purchased = ticketsData.getTickets.reduce(
-        (acc, ticket) => acc + ticket.ticketQuantity,
-        0
-      );
-      const paid = ticketsData.getTickets.reduce(
-        (acc, ticket) => (ticket.paid ? acc + ticket.ticketQuantity : acc),
-        0
-      );
-      const percentage = purchased > 0 ? (paid / purchased) * 100 : 0;
-      setTotalPurchased(purchased);
-      setTotalPaid(paid);
-      setPercentagePaid(percentage.toFixed(2));
-
       const filtered = ticketsData.getTickets.filter((ticket) => {
         const fullName = ticket.userId
           ? `${ticket.userId.name} ${ticket.userId.firstSurName} ${ticket.userId.secondSurName}`
@@ -83,7 +94,72 @@ const TicketList = () => {
     }
   }, [ticketsData, searchText]);
 
-  if (eventsLoading || ticketsLoading) return <p>Cargando...</p>;
+  if (eventsLoading) {
+    return (
+      <div className="loading-placeholder">
+        <div className="grid min-h-[140px] w-full place-items-center overflow-x-scroll rounded-lg p-6 lg:overflow-visible">
+          <svg
+            className="w-16 h-16 animate-spin text-gray-900/50"
+            viewBox="0 0 64 64"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+          >
+            <path
+              d="M32 3C35.8083 3 39.5794 3.75011 43.0978 5.20749C46.6163 6.66488 49.8132 8.80101 52.5061 11.4939C55.199 14.1868 57.3351 17.3837 58.7925 20.9022C60.2499 24.4206 61 28.1917 61 32C61 35.8083 60.2499 39.5794 58.7925 43.0978C57.3351 46.6163 55.199 49.8132 52.5061 52.5061C49.8132 55.199 46.6163 57.3351 43.0978 58.7925C39.5794 60.2499 35.8083 61 32 61C28.1917 61 24.4206 60.2499 20.9022 58.7925C17.3837 57.3351 14.1868 55.199 11.4939 52.5061C8.801 49.8132 6.66487 46.6163 5.20749 43.0978C3.7501 39.5794 3 35.8083 3 32C3 28.1917 3.75011 24.4206 5.2075 20.9022C6.66489 17.3837 8.80101 14.1868 11.4939 11.4939C14.1868 8.80099 17.3838 6.66487 20.9022 5.20749C24.4206 3.7501 28.1917 3 32 3L32 3Z"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            ></path>
+            <path
+              d="M32 3C36.5778 3 41.0906 4.08374 45.1692 6.16256C49.2477 8.24138 52.7762 11.2562 55.466 14.9605C58.1558 18.6647 59.9304 22.9531 60.6448 27.4748C61.3591 31.9965 60.9928 36.6232 59.5759 40.9762"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-900"
+            ></path>
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  if (ticketsLoading) {
+    return (
+      <div className="loading-placeholder">
+        <div className="grid min-h-[140px] w-full place-items-center overflow-x-scroll rounded-lg p-6 lg:overflow-visible">
+          <svg
+            className="w-16 h-16 animate-spin text-gray-900/50"
+            viewBox="0 0 64 64"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+          >
+            <path
+              d="M32 3C35.8083 3 39.5794 3.75011 43.0978 5.20749C46.6163 6.66488 49.8132 8.80101 52.5061 11.4939C55.199 14.1868 57.3351 17.3837 58.7925 20.9022C60.2499 24.4206 61 28.1917 61 32C61 35.8083 60.2499 39.5794 58.7925 43.0978C57.3351 46.6163 55.199 49.8132 52.5061 52.5061C49.8132 55.199 46.6163 57.3351 43.0978 58.7925C39.5794 60.2499 35.8083 61 32 61C28.1917 61 24.4206 60.2499 20.9022 58.7925C17.3837 57.3351 14.1868 55.199 11.4939 52.5061C8.801 49.8132 6.66487 46.6163 5.20749 43.0978C3.7501 39.5794 3 35.8083 3 32C3 28.1917 3.75011 24.4206 5.2075 20.9022C6.66489 17.3837 8.80101 14.1868 11.4939 11.4939C14.1868 8.80099 17.3838 6.66487 20.9022 5.20749C24.4206 3.7501 28.1917 3 32 3L32 3Z"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            ></path>
+            <path
+              d="M32 3C36.5778 3 41.0906 4.08374 45.1692 6.16256C49.2477 8.24138 52.7762 11.2562 55.466 14.9605C58.1558 18.6647 59.9304 22.9531 60.6448 27.4748C61.3591 31.9965 60.9928 36.6232 59.5759 40.9762"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-900"
+            ></path>
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
   if (eventsError || ticketsError) return <p>Error :(</p>;
 
   const handleMarkAsPaid = (ticketId, ticketQuantity) => {
@@ -98,6 +174,7 @@ const TicketList = () => {
     const selectedEvent = eventsData.getEventsT.find((event) => event.id === eventId);
     setSelectedEvent(selectedEvent);
     setEventPrice(selectedEvent ? selectedEvent.price : 0);
+    loadTickets({ variables: { eventId } });
   };
 
   const availableTickets = selectedEvent ? selectedEvent.ticketLimit - totalPurchased : 0;
@@ -108,19 +185,11 @@ const TicketList = () => {
       <div className="p-6 page-content">
         <div className="flex flex-col md:flex-row items-center justify-between w-full mb-6">
           <h4 className="text-xl font-medium w-6/12">Lista de entradas</h4>
-
-          <select
-            value={selectedEvent?.id || ""}
-            onChange={handleEventChange}
-            className="p-2 border my-4 rounded md:w-6/12 w-full"
-          >
-            <option value="">Seleccione un evento</option>
-            {eventsData?.getEventsT?.map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.name}
-              </option>
-            ))}
-          </select>
+          <EventSelector
+            eventsData={eventsData}
+            handleEventChange={handleEventChange}
+            selectedEvent={selectedEvent}
+          />
         </div>
 
         <div className="grid gap-6">
@@ -353,6 +422,27 @@ const TicketList = () => {
 
 TicketList.propTypes = {
   eventId: PropTypes.string,
+};
+
+EventSelector.propTypes = {
+  eventsData: PropTypes.shape({
+    getEventsT: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        date: PropTypes.string.isRequired,
+        description: PropTypes.string,
+        ticketLimit: PropTypes.number.isRequired,
+        totalTickets: PropTypes.number,
+        raffleEnabled: PropTypes.bool,
+        price: PropTypes.number.isRequired,
+      })
+    ).isRequired,
+  }).isRequired,
+  handleEventChange: PropTypes.func.isRequired,
+  selectedEvent: PropTypes.shape({
+    id: PropTypes.string,
+  }),
 };
 
 export default TicketList;
