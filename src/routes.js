@@ -104,16 +104,7 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
-  {
-    type: "collapse",
-    name: "QRScanner",
-    key: "qrscanner",
-    route: "/qr-scanner",
-    icon: <QrCodeIcon size="12px" />,
-    component: <QRScanner />,
-    noCollapse: true,
-    href: null,
-  },
+  { type: "title", title: "Entradas", key: "entradas-eventos" },
   {
     type: "collapse",
     name: "Entradas",
@@ -124,6 +115,17 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "QRScanner",
+    key: "qrscanner",
+    route: "/qr-scanner",
+    icon: <QrCodeIcon size="12px" />,
+    component: <QRScanner />,
+    noCollapse: true,
+    href: null,
+  },
+
   {
     type: "collapse",
     name: "Asignar entradas",
@@ -144,6 +146,8 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Pagos", key: "pagos" },
+
   {
     type: "collapse",
     name: "Pagos",
@@ -164,6 +168,8 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Asistencia", key: "attendance" },
+
   {
     type: "collapse",
     name: "Tomar Asistencia",
@@ -418,7 +424,16 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
-
+  {
+    type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
   {
     type: "collapse",
     name: "Inventario",
@@ -429,6 +444,8 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Pagos", key: "pagos" },
+
   {
     type: "collapse",
     name: "Pagos",
@@ -439,6 +456,8 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Asistencia", key: "attendance" },
+
   {
     type: "collapse",
     name: "Tomar Asistencia",
@@ -469,16 +488,8 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
-  {
-    type: "collapse",
-    name: "Calendario",
-    key: "events",
-    route: "/events",
-    icon: <EventIcon size="12px" />,
-    component: <Billing />,
-    noCollapse: true,
-    href: null,
-  },
+  { type: "title", title: "Almuerzos", key: "almuerzos" },
+
   {
     type: "collapse",
     name: "Almuerzos",
@@ -499,6 +510,9 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  { type: "title", title: "Entradas", key: "entradas-eventos" },
+
   {
     type: "collapse",
     name: "Lista de entradas",
@@ -529,6 +543,8 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  { type: "title", title: "Otros", key: "otros" },
 
   {
     type: "collapse",
@@ -639,6 +655,18 @@ export const staffRoutes = [
   },
   {
     type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Pagos", key: "pagos" },
+
+  {
+    type: "collapse",
     name: "Pagos",
     key: "payments",
     route: "/payments",
@@ -657,16 +685,31 @@ export const staffRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  { type: "title", title: "Entradas", key: "entradas-eventos" },
+
   {
     type: "collapse",
-    name: "Calendario",
-    key: "events",
-    route: "/events",
-    icon: <EventIcon size="12px" />,
-    component: <Billing />,
+    name: "Lista de entradas",
+    key: "lista-entradas",
+    route: "/lista-entradas",
+    icon: <ConfirmationNumberIcon size="12px" />,
+    component: <TicketList />,
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Escaneo de entradas",
+    key: "qr-scanner",
+    route: "/qr-scanner",
+    icon: <QrCodeIcon size="12px" />,
+    component: <QRScanner />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Almuerzos", key: "almuerzos" },
+
   {
     type: "collapse",
     name: "Almuerzos",
@@ -733,6 +776,16 @@ export const principalRoutes = [
   },
   {
     type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
     name: "Tomar Asistencia",
     key: "attendance",
     route: "/attendance",
@@ -758,17 +811,6 @@ export const principalRoutes = [
     route: "/performance-attendance",
     icon: <FactCheckIcon size="12px" />,
     component: <PerformanceAttendance />,
-    noCollapse: true,
-    href: null,
-  },
-
-  {
-    type: "collapse",
-    name: "Calendario",
-    key: "events",
-    route: "/events",
-    icon: <EventIcon size="12px" />,
-    component: <Billing />,
     noCollapse: true,
     href: null,
   },
