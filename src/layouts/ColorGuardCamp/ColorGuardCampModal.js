@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { ADD_EXALUMNO } from "graphql/mutations";
 import { gql, useMutation } from "@apollo/client";
 import { ADD_COLOR_GUARD_CAMP_REGISTRATION } from "graphql/mutations";
 

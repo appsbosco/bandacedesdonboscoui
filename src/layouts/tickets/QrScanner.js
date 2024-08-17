@@ -134,7 +134,7 @@ const QRScanner = () => {
       timeoutId = setTimeout(() => {
         setMessage(null);
         setScanInfo(null); // Clear scan info when message is cleared
-      }, 2000);
+      }, 3000);
     }
 
     return () => {

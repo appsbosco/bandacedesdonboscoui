@@ -231,6 +231,7 @@ export default function App() {
             pathname !== "/nosotros" &&
             pathname !== "/proyecto-exalumnos" &&
             pathname !== "/velada-de-las-madres" &&
+            pathname !== "/raffle" &&
             pathname !== "/gira-guatemala" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/color-guard-camp" &&

@@ -52,6 +52,7 @@ import TicketList from "layouts/tickets/TicketList";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
+import Raffle from "layouts/tickets/Raffle";
 
 export const protectedRoutes = [
   {
@@ -288,6 +289,16 @@ const routes = [
     href: null,
   },
 
+  {
+    type: "collapse",
+    name: "Raffle",
+    key: "Raffle",
+    route: "/raffle",
+    icon: "",
+    component: <Raffle eventId="66b45c2f9834903c1becfecf" />,
+    noCollapse: true,
+    href: null,
+  },
   {
     type: "collapse",
     name: "Grupo Apoyo",

@@ -6102,3 +6102,13 @@ select {
     padding-right: 0px;
   }
 }
+
+.raffles {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: url("./layouts//tickets/foNDO.svg") no-repeat center center;
+}
