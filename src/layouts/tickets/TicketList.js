@@ -53,8 +53,10 @@ const TicketList = () => {
   const [filteredTickets, setFilteredTickets] = useState([]);
 
   const { loading: eventsLoading, error: eventsError, data: eventsData } = useQuery(GET_EVENTS);
-  const [loadTickets, { loading: ticketsLoading, error: ticketsError, data: ticketsData }] =
-    useLazyQuery(GET_TICKETS);
+  const [
+    loadTickets,
+    { loading: ticketsLoading, error: ticketsError, data: ticketsData, refetch },
+  ] = useLazyQuery(GET_TICKETS);
   const [updatePaymentStatus] = useMutation(UPDATE_PAYMENT_STATUS);
 
   const totalPurchased = useMemo(() => {
@@ -175,6 +177,12 @@ const TicketList = () => {
     setSelectedEvent(selectedEvent);
     setEventPrice(selectedEvent ? selectedEvent.price : 0);
     loadTickets({ variables: { eventId } });
+  };
+
+  const handleRefreshTickets = () => {
+    if (selectedEvent) {
+      refetch({ eventId: selectedEvent.id });
+    }
   };
 
   const availableTickets = selectedEvent ? selectedEvent.ticketLimit - totalPurchased : 0;
@@ -301,6 +309,14 @@ const TicketList = () => {
                     placeholder="Buscar"
                     className="p-2 border my-4 rounded md:w-6/12 w-full"
                   />
+
+                  <button
+                    onClick={handleRefreshTickets}
+                    className="bg-blue-500 text-white py-2 px-4 rounded mb-4"
+                  >
+                    Actualizar lista de tiquetes
+                  </button>
+
                   <div className="grid grid-cols-1">
                     <div className="border rounded-lg border-default-200">
                       <div className="relative overflow-x-auto">
@@ -360,7 +376,7 @@ const TicketList = () => {
                                             }
                                             className="inline-flex items-center gap-1 py-1 px-4 rounded-full text-sm font-medium bg-red-700 text-white"
                                           >
-                                            Completar
+                                            Completar{" "}
                                           </button>
                                         )}
                                       </td>
