@@ -105,37 +105,7 @@ export default function App() {
 
   const { data: userData, loading, error } = useQuery(GET_USERS_BY_ID);
 
-  // Mantener un estado de "loading" hasta que los datos estén listos y no haya errores
-  if (loading || !userData) {
-    return <div>Loading...</div>; // Mostrar un indicador de carga hasta que los datos estén listos
-  }
-
-  // Manejo del error de manera más controlada, sin renderizar hasta que todo esté cargado correctamente
-  if (error || !userData.getUser) {
-    return <div>Error: Unable to load user data. Please try again later.</div>; // Mostrar un mensaje de error específico
-  }
-
-  // Solo proceder si userData y getUser están definidos
-  if (!userData || !userData.getUser) {
-    return (
-      <div>
-        {/* Aquí puedes manejar la situación donde los datos del usuario no estén disponibles */}
-        Error: User data is not available.
-      </div>
-    );
-  }
-
-  const userRole = userData.getUser.role;
-
-  // Proceder con la lógica solo cuando userRole está disponible
-  if (!userRole) {
-    return (
-      <div>
-        {/* Puedes manejar este error de forma específica */}
-        Error: User role is undefined.
-      </div>
-    );
-  }
+  const userRole = userData?.getUser?.role;
 
   // Check if user is authenticated
   const token = localStorage.getItem("token");
