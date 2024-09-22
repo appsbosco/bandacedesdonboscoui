@@ -92,7 +92,7 @@ const AttendanceTable = ({ students }) => {
   if (error) return <p>Error al cargar la asistencia: {error.message}</p>;
 
   return (
-    <div>
+    <div className="p-6 page-content">
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700">Seleccionar Fecha</label>
         <DatePicker
@@ -102,84 +102,119 @@ const AttendanceTable = ({ students }) => {
           className="mt-1 block w-full border border-gray-300 rounded-md p-2"
         />
       </div>
+      <div className="grid  gap-6">
+        <div className="xl:col-span-9">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1">
+              <div className="border rounded-lg border-default-200">
+                <div className="relative overflow-x-auto">
+                  <div className="min-w-full inline-block align-middle">
+                    <div className="overflow-hidden">
+                      <table className="min-w-full divide-y divide-default-200">
+                        <thead className="bg-default-100">
+                          <tr className="text-start">
+                            <th className="border border-gray-300 p-2">Estudiante</th>
+                            <th className="border border-gray-300 p-2">Asistencia</th>
+                            <th className="border border-gray-300 p-2">Justificación</th>
+                            <th className="border border-gray-300 p-2">Estado del Pago</th>
+                            <th className="border border-gray-300 p-2">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((student) => {
+                            const studentData = attendanceData[student.id] || {};
+                            const isSaved = studentData.isSaved;
 
-      <table className="w-full border-collapse border border-gray-300">
-        <thead>
-          <tr>
-            <th className="border border-gray-300 p-2">Estudiante</th>
-            <th className="border border-gray-300 p-2">Asistencia</th>
-            <th className="border border-gray-300 p-2">Justificación</th>
-            <th className="border border-gray-300 p-2">Estado del Pago</th>
-            <th className="border border-gray-300 p-2">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((student) => {
-            const studentData = attendanceData[student.id] || {};
-            const isSaved = studentData.isSaved;
-
-            return (
-              <tr key={student.id}>
-                <td className="border border-gray-300 p-2">
-                  {student.name} {student.firstSurName} {student.secondSurName}
-                </td>
-                <td className="border border-gray-300 p-2">
-                  <select
-                    value={studentData.attendanceStatus || "Presente"}
-                    onChange={(e) =>
-                      handleAttendanceChange(student.id, "attendanceStatus", e.target.value)
-                    }
-                  >
-                    <option value="Presente">Presente</option>
-                    <option value="Ausencia Justificada">Ausencia Justificada</option>
-                    <option value="Ausencia No Justificada">Ausencia No Justificada</option>
-                  </select>
-                </td>
-                <td className="border border-gray-300 p-2">
-                  <input
-                    type="text"
-                    value={studentData.justification || ""}
-                    onChange={(e) =>
-                      handleAttendanceChange(student.id, "justification", e.target.value)
-                    }
-                    disabled={studentData.attendanceStatus !== "Ausencia Justificada"}
-                    placeholder="Justificación"
-                    className={`border ${
-                      studentData.attendanceStatus === "Ausencia Justificada" &&
-                      !studentData.justification
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    } p-2 rounded-md`}
-                  />
-                </td>
-                <td className="border border-gray-300 p-2">
-                  <select
-                    value={studentData.paymentStatus || "Pendiente"}
-                    onChange={(e) =>
-                      handleAttendanceChange(student.id, "paymentStatus", e.target.value)
-                    }
-                  >
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Pagado">Pagado</option>
-                    <option value="Becado">Becado</option>
-                  </select>
-                </td>
-                <td className="border border-gray-300 p-2">
-                  <button
-                    onClick={() => handleSave(student.id)}
-                    className={`bg-blue-500 text-white px-3 py-1 rounded ${
-                      isSaved ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    disabled={isSaved || mutationLoading}
-                  >
-                    {isSaved ? "Guardado" : "Guardar"}
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                            return (
+                              <tr key={student.id}>
+                                <td className="border border-gray-300 p-2 ">
+                                  <div className="w-[30rem]">
+                                    {student.name} {student.firstSurName} {student.secondSurName}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <select
+                                    value={studentData.attendanceStatus || "Presente"}
+                                    onChange={(e) =>
+                                      handleAttendanceChange(
+                                        student.id,
+                                        "attendanceStatus",
+                                        e.target.value
+                                      )
+                                    }
+                                  >
+                                    <option value="Presente">Presente</option>
+                                    <option value="Ausencia Justificada">
+                                      Ausencia Justificada
+                                    </option>
+                                    <option value="Ausencia No Justificada">
+                                      Ausencia No Justificada
+                                    </option>
+                                  </select>
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <input
+                                    type="text"
+                                    value={studentData.justification || ""}
+                                    onChange={(e) =>
+                                      handleAttendanceChange(
+                                        student.id,
+                                        "justification",
+                                        e.target.value
+                                      )
+                                    }
+                                    disabled={
+                                      studentData.attendanceStatus !== "Ausencia Justificada"
+                                    }
+                                    placeholder="Justificación"
+                                    className={`border ${
+                                      studentData.attendanceStatus === "Ausencia Justificada" &&
+                                      !studentData.justification
+                                        ? "border-red-500"
+                                        : "border-gray-300"
+                                    } p-2 rounded-md`}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <select
+                                    value={studentData.paymentStatus || "Pendiente"}
+                                    onChange={(e) =>
+                                      handleAttendanceChange(
+                                        student.id,
+                                        "paymentStatus",
+                                        e.target.value
+                                      )
+                                    }
+                                  >
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="Pagado">Pagado</option>
+                                    <option value="Becado">Becado</option>
+                                  </select>
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <button
+                                    onClick={() => handleSave(student.id)}
+                                    className={`bg-blue-500 text-white px-3 py-1 rounded ${
+                                      isSaved ? "opacity-50 cursor-not-allowed" : ""
+                                    }`}
+                                    disabled={isSaved || mutationLoading}
+                                  >
+                                    {isSaved ? "Guardado" : "Guardar"}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
