@@ -17,6 +17,12 @@ export const GET_USERS_BY_ID = gql`
       instrument
       avatar
       notificationTokens
+      students {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
     }
   }
 `;
@@ -458,6 +464,85 @@ export const ASSIGN_TICKETS = gql`
       type
       ticketQuantity
       qrCode
+    }
+  }
+`;
+
+export const GET_STUDENTS_BY_INSTRUCTOR = gql`
+  query GetStudentsByInstructor($instrument: String!) {
+    getStudentsByInstructor(instrument: $instrument) {
+      id
+      name
+    }
+  }
+`;
+
+export const GET_ATTENDANCE_BY_STUDENT = gql`
+  query GetAttendanceByStudent($studentId: ID!) {
+    getAttendanceByStudent(studentId: $studentId) {
+      id
+      date
+      attended
+      paymentStatus
+    }
+  }
+`;
+
+export const GET_STUDENTS_BY_INSTRUMENT = gql`
+  query Query {
+    getUsers {
+      id
+      name
+      instrument
+      firstSurName
+      secondSurName
+    }
+  }
+`;
+
+export const GET_ATTENDANCE_FOR_TODAY = gql`
+  query GetAttendanceForToday {
+    getAttendanceForToday {
+      id
+      student {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+      attended
+      paymentStatus
+    }
+  }
+`;
+
+export const GET_USERS_BY_INSTRUMENT = gql`
+  query getUsersByInstrument {
+    getUsersByInstrument {
+      id
+      name
+      firstSurName
+      secondSurName
+      instrument
+      role
+    }
+  }
+`;
+
+export const GET_INSTRUCTOR_STUDENTS_ATTENDANCE = gql`
+  query getInstructorStudentsAttendance($date: String!) {
+    getInstructorStudentsAttendance(date: $date) {
+      id
+      student {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+      date
+      attendanceStatus
+      justification
+      paymentStatus
     }
   }
 `;

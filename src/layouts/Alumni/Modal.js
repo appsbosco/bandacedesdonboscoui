@@ -12,6 +12,24 @@ const SEND_EMAIL = gql`
   }
 `;
 
+const instrumentos = [
+  "Flauta",
+  "Piccolo",
+  "Oboe",
+  "Clarinete",
+  "Clarinete bajo",
+  "Saxofón alto",
+  "Saxofón tenor",
+  "Saxofón barítono",
+  "Trompeta",
+  "Trombón",
+  "Eufonio",
+  "Tuba",
+  "Percusión",
+  "Mallets",
+  "Bajo eléctrico",
+];
+
 const Modal = ({ onClose }) => {
   const [addExAlumno] = useMutation(ADD_EXALUMNO);
   const [sendEmail] = useMutation(SEND_EMAIL);
@@ -175,7 +193,7 @@ const Modal = ({ onClose }) => {
                                     color: #484848;
                                   "
                                 >
-                                  Concierto de navidad 1 de Diciembre, 2023 🙌🏻 🎶
+                                  Concierto "Una Noche de Películas", 2024 🙌🏻 🎶
                                 </p>
                               </td>
                             </tr>
@@ -259,7 +277,7 @@ const Modal = ({ onClose }) => {
                                         "Esperamos que este correo le encuentre lleno/a de entusiasmo y
                                         listo/a para unirse a una nuevo concierto. Nos complace anunciarle
                                         que se ha inscrito exitosamente al próximo concierto con la banda
-                                        de exalumnos. Se avecina una increíble presentación y queremos
+                                        de exalumnos. Va a ser una increíble presentación y queremos
                                         contar con cada uno de ustedes para hacer de este evento un
                                         verdadero éxito."
                                       </p>
@@ -307,7 +325,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        Fecha: 01 de Diciembre, 2023.
+                                        Fecha: 23 de Noviembre, 2024.
                                       </p>
                                       <p
                                         style="
@@ -491,165 +509,175 @@ const Modal = ({ onClose }) => {
   }, [isRegistrationSuccessful, email, sendEmail]);
 
   return (
-    <div
-      id="authentication-modal"
-      tabIndex="-1"
-      aria-hidden="true"
-      className="fixed shadow top-0 left-0 right-0 z-50  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
-    >
+    <div id="authentication-modal" tabIndex="-1" aria-hidden="true" className="modal-backdrop">
       {message && showMessage()}
-      <div className="relative w-full max-w-2xl max-h-full">
+      <div className="modal-backdrop">
         {/* <!-- Modal content --> */}
-        <div className="relative bg-white rounded-lg shadow ">
+        <div className="modal-content">
           <div className="flex justify-end">
             <IconButton onClick={onClose}>
               <CloseIcon />
             </IconButton>
           </div>
 
-          <div className="px-6 py-6 lg:px-8">
+          <div className="">
             <h3 className=" mb-8 text-2xl font-medium text-gray-900 ">Inscribirme al concierto</h3>
             <form className="space-y-6" action="#" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Nombre completo
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  id="fullName"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="Carlos Pereira"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    id="fullName"
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="Digite su nombre completo"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Número de cédula
-                </label>
-                <input
-                  type="text"
-                  name="identification"
-                  id="identification"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="1-1111-1111"
-                  required
-                  value={identification}
-                  onChange={(e) => setIdentification(e.target.value)}
-                />
-              </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Número de cédula
+                  </label>
+                  <input
+                    type="text"
+                    name="identification"
+                    id="identification"
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="Digite su número de cédula"
+                    required
+                    value={identification}
+                    onChange={(e) => setIdentification(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Correo electrónico
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  id="email"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="hola@hola.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Correo electrónico
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    className="bg-gray-50 border-2 border-slate-100	 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="Digite su correo electrónico"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Año graduación
-                </label>
-                <input
-                  type="number"
-                  name="yearGraduated"
-                  id="yearGraduated"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="2023"
-                  required
-                  value={yearGraduated}
-                  onChange={(e) => setYearGraduated(e.target.value)}
-                />
-              </div>
+                <div className="col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Año graduación
+                  </label>
+                  <input
+                    type="number"
+                    name="yearGraduated"
+                    id="yearGraduated"
+                    className="bg-gray-50 border border-slate-100	 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="Digite el año de graduación"
+                    required
+                    value={yearGraduated}
+                    onChange={(e) => setYearGraduated(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Número telefónico
-                </label>
-                <input
-                  type="text"
-                  name="phoneNumber"
-                  id="phoneNumber"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="+506 8888-8888"
-                  required
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Instrumento
-                </label>
-                <input
-                  type="text"
-                  name="instrument"
-                  id="instrument"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="Fagot"
-                  required
-                  value={instrument}
-                  onChange={(e) => setInstrument(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  ¿Cuenta con instrumento propio?
-                </label>
-                <select
-                  id="instrumentCondition"
-                  name="instrumentCondition"
-                  value={instrumentCondition}
-                  onChange={(e) => setInstrumentCondition(e.target.value)}
-                  className="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "0.375rem",
-                    width: "100%",
-                    height: "calc(2.25rem + 2px)",
-                    color: "#000",
-                  }}
-                >
-                  <option value="">Seleccione una opción</option>
-                  <option value="Sí">Sí</option>
-                  <option value="No">No</option>
-                </select>
-                <p className="block my-2 text-xs ">
-                  De ser la respuesta `No`, se intentará conseguir el préstamo de un instrumento,
-                  más no se garantiza el 100%.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Dirección de residencia
-                </label>
-                <textarea
-                  className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                  id="address"
-                  name="address"
-                  rows="5"
-                  cols="33"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
+                <div className="col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Número telefónico
+                  </label>
+                  <input
+                    type="text"
+                    name="phoneNumber"
+                    id="phoneNumber"
+                    className="bg-gray-50 border-2 border-black text-sm rounded-lg  block w-full p-2.5 "
+                    placeholder="Digite su número telefónico"
+                    required
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Instrumento
+                  </label>
+                  <select
+                    type="text"
+                    name="instrument"
+                    id="instrument"
+                    placeholder="Seleccione el instrumento que toca"
+                    value={instrument}
+                    onChange={(e) => setInstrument(e.target.value)}
+                    className="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.375rem",
+                      width: "100%",
+                      height: "calc(2.25rem + 2px)",
+                      color: "#000",
+                    }}
+                  >
+                    <option value="">Seleccione una opción</option>
+
+                    {instrumentos.map((instrumento) => (
+                      <option key={instrumento} value={instrumento}>
+                        {instrumento}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    ¿Cuenta con instrumento propio?
+                  </label>
+                  <select
+                    id="instrumentCondition"
+                    name="instrumentCondition"
+                    value={instrumentCondition}
+                    onChange={(e) => setInstrumentCondition(e.target.value)}
+                    className="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.375rem",
+                      width: "100%",
+                      height: "calc(2.25rem + 2px)",
+                      color: "#000",
+                    }}
+                  >
+                    <option value="">Seleccione una opción</option>
+                    <option value="Sí">Sí</option>
+                    <option value="No">No</option>
+                  </select>
+                  <p className="block my-2 text-xs ">
+                    De ser la respuesta `No`, se intentará conseguir el préstamo de un instrumento,
+                    más no se garantiza el 100%.
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Dirección de residencia
+                  </label>
+                  <textarea
+                    className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    id="address"
+                    name="address"
+                    rows="5"
+                    cols="33"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
               </div>
 
               <button
                 type="submit"
                 className="inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none bg-slate-900 text-white hover:bg-sky-800 w-full text-base sm:text-lg"
-                disabled
               >
                 Inscribirme
               </button>

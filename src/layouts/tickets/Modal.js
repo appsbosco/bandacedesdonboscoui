@@ -59,7 +59,7 @@ const Modal = ({ onClose }) => {
   const [message, setMessage] = useState("");
 
   const [purchaseInput, setPurchaseInput] = useState({
-    eventId: "66b45c2f9834903c1becfecf",
+    eventId: "66eb482d2f79ce5e83950239",
     buyerName: "",
     buyerEmail: "",
     ticketQuantity: 2,
@@ -104,6 +104,7 @@ const Modal = ({ onClose }) => {
 
     try {
       await purchaseTicket({ variables: purchaseInput });
+
       setMessage(`Entradas asignadas con éxito. Revisa tu correo electrónico!`);
 
       setTimeout(() => {
@@ -124,96 +125,98 @@ const Modal = ({ onClose }) => {
       className="fixed shadow top-0 left-0 right-0 z-50  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
     >
       {message && showMessage()}
-      <div className="relative w-full max-w-2xl max-h-full">
+      <div className="modal-backdrop">
         {/* <!-- Modal content --> */}
-        <div className="relative bg-white rounded-lg shadow ">
+        <div className="modal-content override">
           <div className="flex justify-end">
             <IconButton onClick={onClose}>
               <CloseIcon />
             </IconButton>
           </div>
 
-          <div className="px-6 py-6 lg:px-8">
+          <div className="">
             <h3 className=" mb-8 text-3xl font-medium text-gray-900 ">Comprar entradas</h3>
             <form className="space-y-6" action="#" onSubmit={handleSubmit}>
               <h3 className=" mb-8 text-xl font-medium text-gray-900 ">
                 Información del comprador
               </h3>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Nombre completo
-                </label>
-                <input
-                  type="text"
-                  name="buyerName"
-                  id="buyerName"
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "0.375rem",
-                    width: "100%",
-                    height: "calc(2.25rem + 2px)",
-                    color: "#000",
-                    boxShadow: "none",
-                  }}
-                  className="bg-gray-50 border border-gray-900 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="Carlos Pereira"
-                  required
-                  value={purchaseInput.buyerName}
-                  onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    name="buyerName"
+                    id="buyerName"
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.375rem",
+                      width: "100%",
+                      height: "calc(2.25rem + 2px)",
+                      color: "#000",
+                      boxShadow: "none",
+                    }}
+                    className="bg-gray-50 border border-gray-900 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="Digite su nombre completo"
+                    required
+                    value={purchaseInput.buyerName}
+                    onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Correo electrónico
-                </label>
-                <input
-                  type="email"
-                  name="buyerEmail"
-                  id="buyerEmail"
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "0.375rem",
-                    width: "100%",
-                    height: "calc(2.25rem + 2px)",
-                    color: "#000",
-                    boxShadow: "none",
-                  }}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  placeholder="hola@ejemplo.com"
-                  required
-                  value={purchaseInput.buyerEmail}
-                  onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
-                />
-              </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Correo electrónico
+                  </label>
+                  <input
+                    type="email"
+                    name="buyerEmail"
+                    id="buyerEmail"
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.375rem",
+                      width: "100%",
+                      height: "calc(2.25rem + 2px)",
+                      color: "#000",
+                      boxShadow: "none",
+                    }}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    placeholder="hola@ejemplo.com"
+                    required
+                    value={purchaseInput.buyerEmail}
+                    onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
+                  />
+                </div>
 
-              <hr />
-              <div>
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
-                  Cantidad de entradas
-                </label>
-                <input
-                  type="number"
-                  name="ticketQuantity"
-                  id="ticketQuantity"
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "0.375rem",
-                    width: "100%",
-                    height: "calc(2.25rem + 2px)",
-                    color: "#000",
-                    boxShadow: "none",
-                  }}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
-                  required
-                  value={purchaseInput.ticketQuantity}
-                  onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
-                />
+                <hr />
+                <div className="col-span-2 md:col-span-1">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 ">
+                    Cantidad de entradas
+                  </label>
+                  <input
+                    type="number"
+                    name="ticketQuantity"
+                    id="ticketQuantity"
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "0.375rem",
+                      width: "100%",
+                      height: "calc(2.25rem + 2px)",
+                      color: "#000",
+                      boxShadow: "none",
+                    }}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
+                    required
+                    value={purchaseInput.ticketQuantity}
+                    onChange={(e) => handlePurchaseChange(e.target.name, e.target.value)}
+                  />
+                </div>
               </div>
               <button
                 type="submit"
-                className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-white px-6 py-3 text-center text-sm font-medium text-black shadow-sm transition-all duration-500 hover:bg-black hover:text-white"
+                className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-[#293964] px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-black hover:text-white"
                 disabled={purchaseLoading}
               >
                 {purchaseLoading ? "Procesando..." : "Reservar entradas"}

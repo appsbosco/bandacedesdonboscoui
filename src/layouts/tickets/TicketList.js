@@ -61,12 +61,12 @@ const TicketList = () => {
 
   const totalPurchased = useMemo(() => {
     if (!ticketsData) return 0;
-    return ticketsData.getTickets.reduce((acc, ticket) => acc + ticket.ticketQuantity, 0);
+    return ticketsData?.getTickets?.reduce((acc, ticket) => acc + ticket.ticketQuantity, 0);
   }, [ticketsData]);
 
   const totalPaid = useMemo(() => {
     if (!ticketsData) return 0;
-    return ticketsData.getTickets.reduce(
+    return ticketsData?.getTickets?.reduce(
       (acc, ticket) => (ticket.paid ? acc + ticket.ticketQuantity : acc),
       0
     );
@@ -77,8 +77,8 @@ const TicketList = () => {
   }, [totalPurchased, totalPaid]);
 
   useEffect(() => {
-    if (ticketsData && ticketsData.getTickets) {
-      const filtered = ticketsData.getTickets.filter((ticket) => {
+    if (ticketsData && ticketsData?.getTickets) {
+      const filtered = ticketsData?.getTickets.filter((ticket) => {
         const fullName = ticket.userId
           ? `${ticket.userId.name} ${ticket.userId.firstSurName} ${ticket.userId.secondSurName}`
           : ticket.buyerName;

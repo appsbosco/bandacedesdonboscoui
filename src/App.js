@@ -39,6 +39,7 @@ import CalendarListing from "layouts/calendar/CalendarListing";
 import Guatemala from "layouts/guatemala/Guatemala";
 import Apoyo from "layouts/apoyo/Apoyo";
 import VeladaTickets from "layouts/tickets/BuyTickets";
+import { instructorsRoutes } from "routes";
 
 function isTokenExpired(token) {
   try {
@@ -194,8 +195,10 @@ export default function App() {
       ? staffRoutes
       : userRole === "Instructura Color Guard"
       ? colorGuardCampRoutes
-      : userRole === "CEDES" || userRole === "Instructor de instrumento"
+      : userRole === "CEDES"
       ? cedesRoutes
+      : userRole === "Instructor de instrumento"
+      ? instructorsRoutes
       : userRole !== "Integrante BCDB" &&
         userRole !== "Instructor Drumline" &&
         userRole !== "Instructura Color Guard" &&
@@ -227,7 +230,7 @@ export default function App() {
             pathname !== "/" &&
             pathname !== "/nosotros" &&
             pathname !== "/proyecto-exalumnos" &&
-            pathname !== "/velada-de-las-madres" &&
+            pathname !== "/concierto-noche-de-peliculas" &&
             pathname !== "/raffle" &&
             pathname !== "/gira-guatemala" &&
             pathname !== "/grupo-apoyo" &&
@@ -259,7 +262,7 @@ export default function App() {
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-guatemala" element={<Guatemala />} />
-        <Route path="/velada-de-las-madres" element={<VeladaTickets />} />
+        <Route path="/concierto-noche-de-peliculas" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />

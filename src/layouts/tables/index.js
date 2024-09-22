@@ -306,6 +306,16 @@ const Tables = () => {
         return childNames;
       },
     },
+    {
+      field: "childrenInstuemtn",
+      headerName: "Sección",
+      width: 300,
+      valueGetter: (params) => {
+        const children = params.row.children || [];
+        const childNames = children.map((child) => `${child.instrument}`).join(", ");
+        return childNames;
+      },
+    },
   ];
 
   const handleRowClick = (params) => {

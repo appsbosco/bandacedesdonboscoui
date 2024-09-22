@@ -488,3 +488,41 @@ export const UPDATE_NOTIFICATION_TOKEN = gql`
     }
   }
 `;
+
+export const MARK_ATTENDANCE = gql`
+  mutation MarkAttendance($studentId: ID!, $attended: Boolean!, $paymentStatus: String!) {
+    markAttendance(studentId: $studentId, attended: $attended, paymentStatus: $paymentStatus) {
+      id
+      student {
+        id
+        name
+      }
+      attended
+      paymentStatus
+    }
+  }
+`;
+
+export const ASSIGN_STUDENT_TO_INSTRUCTOR = gql`
+  mutation assignStudentToInstructor($studentId: ID!) {
+    assignStudentToInstructor(studentId: $studentId)
+  }
+`;
+
+export const MARK_ATTENDANCE_AND_PAYMENT = gql`
+  mutation markAttendanceAndPayment($input: AttendanceClassInput!) {
+    markAttendanceAndPayment(input: $input) {
+      id
+      student {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+      date
+      attendanceStatus
+      justification
+      paymentStatus
+    }
+  }
+`;

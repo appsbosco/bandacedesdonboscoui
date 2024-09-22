@@ -53,6 +53,7 @@ import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import Raffle from "layouts/tickets/Raffle";
+import ClassAttendance from "layouts/classAttendance/lista";
 
 export const protectedRoutes = [
   {
@@ -281,8 +282,8 @@ const routes = [
   {
     type: "collapse",
     name: "Velada",
-    key: "velada-de-las-madres",
-    route: "/velada-de-las-madres",
+    key: "concierto-noche-de-peliculas",
+    route: "/concierto-noche-de-peliculas",
     icon: "",
     component: <VeladaTickets />,
     noCollapse: true,
@@ -319,6 +320,17 @@ const routes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Asistencia",
+    key: "class-attendance",
+    route: "/class-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <ClassAttendance />,
+    noCollapse: true,
+    href: null,
+  },
+
   {
     type: "collapse",
     name: "Contacto",
@@ -989,6 +1001,50 @@ export const cedesRoutes = [
     route: "/members",
     icon: <PeopleAltIcon size="12px" />,
     component: <Tables />,
+    noCollapse: true,
+    href: null,
+  },
+];
+
+export const instructorsRoutes = [
+  {
+    type: "collapse",
+    name: "Dashboard",
+    key: "dashboard",
+    route: "/dashboard",
+    icon: <DashboardIcon size="12px" />,
+    component: <Dashboard />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Calendario",
+    key: "events",
+    route: "/events",
+    icon: <EventIcon size="12px" />,
+    component: <Billing />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "title", title: "Miembros", key: "account-pages" },
+  {
+    type: "collapse",
+    name: "Miembros",
+    key: "members",
+    route: "/members",
+    icon: <PeopleAltIcon size="12px" />,
+    component: <Tables />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asistencia",
+    key: "class-attendance",
+    route: "/class-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <ClassAttendance />,
     noCollapse: true,
     href: null,
   },

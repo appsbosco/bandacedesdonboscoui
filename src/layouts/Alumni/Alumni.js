@@ -91,14 +91,14 @@ const Alumni = () => {
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Próximo Evento</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Concierto de cierre de la primera temporada del proyecto de exalumnos.
+                  Concierto Noche de películas
                 </dd>
               </div>
 
               {/* <!-- 2nd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Fecha</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">1 de diciembre, 2023.</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">23 de noviembre, 2024.</dd>
               </div>
 
               {/* <!-- 3rd detail --> */}
@@ -134,7 +134,6 @@ const Alumni = () => {
               target="_blank"
               className="bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
               onClick={handleOpenModal}
-              disabled
             >
               Inscribirme
               <svg

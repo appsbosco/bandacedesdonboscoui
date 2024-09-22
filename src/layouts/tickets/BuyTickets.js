@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
 import Footer from "components/Footer";
-import velada from "../../assets/images/velada.avif";
+import velada from "../../assets/images/nochepeliculas.jpg";
 import Header from "components/Header";
 
 const VeladaTickets = () => {
@@ -30,7 +30,7 @@ const VeladaTickets = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-lg mx-auto sm:max-w-3xl lg:mx-0 lg:max-w-none">
             <h1 className="text-4xl font-semibold leading-tight font-display text-slate-900 sm:text-5xl sm:leading-tight lg:text-6xl lg:leading-tight">
-              Velada del día de las Madres con la Banda CEDES Don Bosco
+              Noche de películas - Ensamble de exalumnos
             </h1>
 
             {/* <!-- Tags list --> */}
@@ -92,15 +92,13 @@ const VeladaTickets = () => {
               {/* <!-- 2nd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Fecha</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">17 de Agosto 2024</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">23 de Noviembre 2024</dd>
               </div>
 
               {/* <!-- 3rd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Lugar</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Gimnasio CEDES Don Bosco
-                </dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">SUM CEDES Don Bosco</dd>
               </div>
 
               {/* <!-- 5th detail --> */}
@@ -109,7 +107,7 @@ const VeladaTickets = () => {
                   Entradas disponible
                 </dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  ¡ Ya puedes reservar tus entradas para ser parte de este evento !
+                  ¡ Ya puedes reservar tus entradas para disfrutar de este concierto !
                 </dd>
               </div>
             </dl>
@@ -118,7 +116,7 @@ const VeladaTickets = () => {
             <button
               href="#0"
               target="_blank"
-              className="bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
+              className="bg-[#293964] text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
               onClick={handleOpenModal}
             >
               Reservar entradas
@@ -140,30 +138,32 @@ const VeladaTickets = () => {
           {/* <!-- Description --> */}
           <div className="order-1 lg:order-2 lg:col-span-7 lg:pl-16">
             <h3 className="text-xl font-medium leading-8 font-display text-slate-900 sm:text-2xl sm:leading-10">
-              Celebración del Día de las Madres con la Banda CEDES Don Bosco
+              Concierto Una Noche de Películas con el Ensamble de Exalumnos
             </h3>
 
             {/* <!-- Content --> */}
             <div className="mt-6 prose sm:prose-lg sm:mt-8">
               <p>
-                Este 17 de agosto de 2024, la Banda CEDES Don Bosco te invita a una velada especial
-                para celebrar el Día de las Madres. Un evento lleno de música, alegría y momentos
-                inolvidables, dedicado a todas las madres que son el pilar de nuestras familias.
+                Este 23 de noviembre de 2024, el Ensamble de Exalumnos te invita a disfrutar de una
+                noche mágica en el concierto Una Noche de Películas. Un evento especial lleno de
+                música inspirada en las bandas sonoras más emblemáticas del cine, preparado para el
+                disfrute de toda la familia.
               </p>
               <p>
-                Durante esta velada, la Big Band de la banda amenizará el evento en honor a las
-                madres. Además, habrá actividades venta de comidas y otras sorpresas.
-              </p>
-
-              <p>
-                No te pierdas esta oportunidad de compartir un momento único con tu familia y
-                disfrutar de la música en vivo de nuestros talentosos jóvenes. Las entradas están
-                disponibles para la compra en línea, asegúrate de adquirir las tuyas cuanto antes.
+                Durante este concierto, el ensamble interpretará una selección de temas que han
+                marcado la historia del cine. Además, habrá venta de comidas y muchas sorpresas que
+                harán de esta noche una experiencia inolvidable.
               </p>
 
               <p>
-                Te esperamos en el Gimnasio de CEDES Don Bosco para celebrar juntas esta fecha tan
-                especial y rendir homenaje a todas las madres.{" "}
+                No te pierdas esta oportunidad de disfrutar de la música en vivo de nuestros
+                talentosos exalumnos en un ambiente único. Las entradas están disponibles para la
+                compra en línea, asegúrate de adquirir las tuyas cuanto antes.
+              </p>
+
+              <p>
+                Te esperamos en el SUM de CEDES Don Bosco para vivir una noche de música y cine como
+                nunca antes.
               </p>
             </div>
           </div>
