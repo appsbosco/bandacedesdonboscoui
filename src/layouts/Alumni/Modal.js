@@ -127,6 +127,9 @@ const Modal = ({ onClose }) => {
     } catch (error) {
       console.error("Error al inscribirse:", error.message);
       setMessage(error.message);
+      setTimeout(() => {
+        setMessage(null);
+      }, 2000);
     }
   };
 
