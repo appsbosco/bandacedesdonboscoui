@@ -30,6 +30,36 @@ const instrumentos = [
   "Bajo eléctrico",
 ];
 
+const instrumentLinks = {
+  Flauta: "https://drive.google.com/drive/folders/1oy2A6-X3wDa97k1h-61NLt-GJsrZiLUq?usp=drive_link",
+  Piccolo:
+    "https://drive.google.com/drive/folders/1Um8GtdvXl9DYkKLgbA130z2062yAmi6X?usp=drive_link",
+  Oboe: "https://drive.google.com/drive/folders/1AFTYnECbMsHUyQWRmdF7IUeTH-NUAhHH?usp=drive_link",
+  Clarinete:
+    "https://drive.google.com/drive/folders/1TxCHNsGyEd-9BmLRWDcV84hx7MerBZZZ?usp=drive_link",
+  "Clarinete bajo":
+    "https://drive.google.com/drive/folders/1I3AhZVvhVACcFSLJmHHuVem5in8tfFXN?usp=drive_link",
+  "Saxofón alto":
+    "https://drive.google.com/drive/folders/1318DhpK_ylzLehhyF_ECdPn3rBGilqoK?usp=drive_link",
+  "Saxofón tenor":
+    "https://drive.google.com/drive/folders/16Huuf3c6zp3ki79zu3dHSsi4x159pENl?usp=drive_link",
+  "Saxofón barítono":
+    "https://drive.google.com/drive/folders/1JvLHXilWyFhS_-IlpOqB_NUV1nqSodLK?usp=drive_link",
+  Trompeta:
+    "https://drive.google.com/drive/folders/1WBhEWXf1au09xB1HDivSsHpm0FDpaxCw?usp=drive_link",
+  Trombón:
+    "https://drive.google.com/drive/folders/1mEoapy4qUfx88m2fcflyDYRw8ozZCqK9?usp=drive_link",
+  Eufonio:
+    "https://drive.google.com/drive/folders/11afDGImW9l3MTrR6Cs5-U-19gUuF-1ii?usp=drive_link",
+  Tuba: "https://drive.google.com/drive/folders/1GKGpgPu1-HpAsaggP5XxWJFz7dWPauNQ?usp=drive_link",
+  Percusión:
+    "https://drive.google.com/drive/folders/1ZIMGNLOzV7qCFPzZoe6_JYFzpoPEj88E?usp=drive_link",
+  Mallets:
+    "https://drive.google.com/drive/folders/1wACsr_XWaeWfgFXOI2PqWRDuj3cdj_BF?usp=drive_link",
+  "Bajo eléctrico":
+    "https://drive.google.com/drive/folders/1Kz-fxBgJF2y8WnKQfUSGXkCx65thmtmM?usp=drive_link",
+};
+
 const Modal = ({ onClose }) => {
   const [addExAlumno] = useMutation(ADD_EXALUMNO);
   const [sendEmail] = useMutation(SEND_EMAIL);
@@ -96,35 +126,20 @@ const Modal = ({ onClose }) => {
       }, 2000);
     } catch (error) {
       console.error("Error al inscribirse:", error.message);
+      setMessage(error.message);
     }
   };
 
   useEffect(() => {
     if (isRegistrationSuccessful) {
+      const repertorioLink = instrumentLinks[instrument] || "#";
+
       const emailContent = `
-      <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-      <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
-      <html lang="en">
-        <head></head>
-        <div
-          id="__react-email-preview"
-          style="
-            display: none;
-            overflow: hidden;
-            line-height: 1px;
-            opacity: 0;
-            max-height: 0;
-            max-width: 0;
-          "
-        >
-          <p style="font-size: 32px; line-height: 1.3; margin: 16px 0; font-weight: 700; color: #484848">
-            ¡Hola, ${fullName} ! Te has inscrito exitosamente
-          </p>
-          <div>
-             ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
-          </div>
-        </div>
-      
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="UTF-8" />
+        </head>
         <body
           style="
             background-color: #ffffff;
@@ -199,37 +214,7 @@ const Modal = ({ onClose }) => {
                             </tr>
                           </tbody>
                         </table>
-                        <!-- <table
-                          align="center"
-                          border="0"
-                          cellpadding="0"
-                          cellspacing="0"
-                          role="presentation"
-                          width="100%"
-                        >
-                          <tbody>
-                            <tr>
-                              <td>
-                                <img
-                                  alt=""
-                                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
-                                  
-                                  style="
-                                  display: block;
-                                  outline: none;
-                                  border: none;
-                                  text-decoration: none;
-                                  margin: 0 auto;
-                                  margin-bottom: 16px;
-                                  border-radius: 50%;
-                                  max-width: 100%;
-                                  height: auto;
-                                  "
-                                />
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table> -->
+
                         <table
                           style="padding-bottom: 20px"
                           align="center"
@@ -261,7 +246,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        ¡Hola, ${fullName} ! Tienes un nuevo concierto.
+                                        ¡Hola, ${fullName}! Te has inscrito exitosamente.
                                       </p>
                                       <p
                                         style="
@@ -274,14 +259,9 @@ const Modal = ({ onClose }) => {
                                           border-radius: 4px;
                                         "
                                       >
-                                        "Esperamos que este correo le encuentre lleno/a de entusiasmo y
-                                        listo/a para unirse a una nuevo concierto. Nos complace anunciarle
-                                        que se ha inscrito exitosamente al próximo concierto con la banda
-                                        de exalumnos. Va a ser una increíble presentación y queremos
-                                        contar con cada uno de ustedes para hacer de este evento un
-                                        verdadero éxito."
+                                        "Esperamos que este correo te encuentre lleno/a de entusiasmo y listo/a para unirte a un nuevo concierto. Nos complace anunciarte que te has inscrito exitosamente al próximo concierto con la banda de exalumnos. Va a ser una increíble presentación y queremos contar con cada uno de ustedes para hacer de este evento un verdadero éxito."
                                       </p>
-      
+
                                       <p
                                         style="
                                           font-size: 20px;
@@ -301,10 +281,49 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        Los ensayos serán los días: Sábado 11, 18 y 25 de noviembre a las
-                                        6:00pm.
+                                        Los ensayos serán los días:
                                       </p>
-      
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        - Jueves 5 de Octubre de 6:00pm a 8:00pm
+                                      </p>
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        - Jueves 19 de Octubre de 6:00pm a 8:00pm
+                                      </p>
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        - Jueves 26 de Octubre de 6:00pm a 8:00pm
+                                      </p>
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        - Jueves 16 de Noviembre de 7:00pm a 9:00pm
+                                      </p>
+
                                       <br />
                                       <p
                                         style="
@@ -347,7 +366,31 @@ const Modal = ({ onClose }) => {
                                       >
                                         Lugar: SUM CEDES Don Bosco
                                       </p>
-      
+
+                                      <br />
+
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                          font-weight: bold;
+                                        "
+                                      >
+                                        Repertorio
+                                      </p>
+                                      <p
+                                        style="
+                                          font-size: 18px;
+                                          line-height: 1.4;
+                                          margin: 16px 0;
+                                          color: #484848;
+                                        "
+                                      >
+                                        Puedes descargar el repertorio para tu instrumento aquí: <a href="${repertorioLink}" target="_blank" style="color: #1a0dab; text-decoration: underline;">Descargar Repertorio</a>
+                                      </p>
+
                                       <br />
                                       <p
                                         style="
@@ -358,12 +401,11 @@ const Modal = ({ onClose }) => {
                                           padding-bottom: 16px;
                                         "
                                       >
-                                        ¡Sigamos haciendo música y preparémonos para ofrecer una
-                                        presentación inolvidable! ¡Nos vemos pronto!
+                                        ¡Sigamos haciendo música y preparémonos para ofrecer una presentación inolvidable! ¡Nos vemos pronto!
                                       </p>
-      
+
                                       <a
-                                        href="https://chat.whatsapp.com/FuhuVnTWKmx6GXyL7aMFKT"
+                                        href="https://chat.whatsapp.com/ELC6XzbrSq96zyXEpGZThT"
                                         target="_blank"
                                         style="
                                           background-color: #293964;
@@ -374,50 +416,11 @@ const Modal = ({ onClose }) => {
                                           text-align: center;
                                           display: inline-block;
                                           width: 100%;
-                                          p-y: 19px;
                                           line-height: 100%;
                                           max-width: 100%;
                                           padding: 19px 0px;
                                         "
-                                        ><span
-                                          ><!--[if mso
-                                            ]><i
-                                              style="
-                                                letter-spacing: undefinedpx;
-                                                mso-font-width: -100%;
-                                                mso-text-raise: 28.5;
-                                              "
-                                              hidden
-                                              >&nbsp;</i
-                                            ><!
-                                          [endif]--></span
-                                        ><span
-                                          style="
-                                            background-color: #293964;
-                                            border-radius: 3px;
-                                            color: #fff;
-                                            font-size: 18px;
-                                            text-decoration: none;
-                                            text-align: center;
-                                            display: inline-block;
-                                            width: 100%;
-                                            p-y: 19px;
-                                            max-width: 100%;
-                                            line-height: 120%;
-                                            text-transform: none;
-                                            mso-padding-alt: 0px;
-                                            mso-text-raise: 14.25px;
-                                          "
-                                          >Unirse al grupo de WhatsApp</span
-                                        ><span
-                                          ><!--[if mso
-                                            ]><i
-                                              style="letter-spacing: undefinedpx; mso-font-width: -100%"
-                                              hidden
-                                              >&nbsp;</i
-                                            ><!
-                                          [endif]--></span
-                                        ></a
+                                        >Unirse al grupo de WhatsApp</a
                                       >
                                     </tr>
                                   </tbody>
@@ -465,8 +468,7 @@ const Modal = ({ onClose }) => {
                                           margin-bottom: 10px;
                                         "
                                       >
-                                        Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos
-                                        reservados
+                                        Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos reservados
                                       </p>
                                       <a
                                         target="_blank"
@@ -493,8 +495,7 @@ const Modal = ({ onClose }) => {
           </table>
         </body>
       </html>
-      
-  `;
+      `;
 
       sendEmail({
         variables: {
@@ -506,7 +507,7 @@ const Modal = ({ onClose }) => {
         },
       });
     }
-  }, [isRegistrationSuccessful, email, sendEmail]);
+  }, [isRegistrationSuccessful, email, sendEmail, instrument]);
 
   return (
     <div id="authentication-modal" tabIndex="-1" aria-hidden="true" className="modal-backdrop">
