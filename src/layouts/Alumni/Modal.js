@@ -294,7 +294,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        - Jueves 5 de Octubre de 6:00pm a 8:00pm
+                                        - Sábado 5 de Octubre de 6:00pm a 8:00pm
                                       </p>
                                       <p
                                         style="
@@ -304,7 +304,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        - Jueves 19 de Octubre de 6:00pm a 8:00pm
+                                        - Sábado 19 de Octubre de 6:00pm a 8:00pm
                                       </p>
                                       <p
                                         style="
@@ -314,7 +314,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        - Jueves 26 de Octubre de 6:00pm a 8:00pm
+                                        - Sábado 26 de Octubre de 6:00pm a 8:00pm
                                       </p>
                                       <p
                                         style="
@@ -324,7 +324,7 @@ const Modal = ({ onClose }) => {
                                           color: #484848;
                                         "
                                       >
-                                        - Jueves 16 de Noviembre de 7:00pm a 9:00pm
+                                        - Sábado 16 de Noviembre de 7:00pm a 9:00pm
                                       </p>
 
                                       <br />
