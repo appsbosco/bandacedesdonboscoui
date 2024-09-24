@@ -28,6 +28,7 @@ const instrumentos = [
   "Percusión",
   "Mallets",
   "Bajo eléctrico",
+  "Corno Francés",
 ];
 
 const instrumentLinks = {
@@ -58,6 +59,8 @@ const instrumentLinks = {
     "https://drive.google.com/drive/folders/1wACsr_XWaeWfgFXOI2PqWRDuj3cdj_BF?usp=drive_link",
   "Bajo eléctrico":
     "https://drive.google.com/drive/folders/1Kz-fxBgJF2y8WnKQfUSGXkCx65thmtmM?usp=drive_link",
+  "Corno Francés":
+    "https://drive.google.com/drive/folders/1XXmZ6rDP7nvURUHw6BBDVHa72W-AAgtK?usp=drive_link",
 };
 
 const Modal = ({ onClose }) => {
