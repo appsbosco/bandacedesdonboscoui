@@ -43,7 +43,7 @@ const ClassAttendance = () => {
           !instructor.students.some((student) => student.id === user.id)
       );
 
-      setFilteredStudents(studentsWithSameInstrument);
+      setFilteredStudents(allUsers);
       setAssignedStudents(instructor.students);
     }
   }, [usersData, userData]);
