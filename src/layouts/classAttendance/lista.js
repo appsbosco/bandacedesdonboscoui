@@ -36,14 +36,22 @@ const ClassAttendance = () => {
       const allUsers = usersData.getUsers;
 
       // Filtrar estudiantes que tocan el mismo instrumento y no son instructores
+      // const studentsWithSameInstrument = allUsers.filter(
+      //   (user) =>
+      //     user.instrument === instructor.instrument &&
+      //     user.role !== "Instructor de instrumento" &&
+      //     !instructor.students.some((student) => student.id === user.id)
+      // );
       const studentsWithSameInstrument = allUsers.filter(
         (user) =>
-          user.instrument === instructor.instrument &&
           user.role !== "Instructor de instrumento" &&
+          user.role !== "Staff" &&
+          user.role !== "Director" &&
+          user.role !== "Dirección Logística" &&
           !instructor.students.some((student) => student.id === user.id)
       );
 
-      setFilteredStudents(allUsers);
+      setFilteredStudents(studentsWithSameInstrument);
       setAssignedStudents(instructor.students);
     }
   }, [usersData, userData]);

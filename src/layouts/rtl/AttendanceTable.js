@@ -121,7 +121,9 @@ const AttendanceTable = () => {
   ];
 
   const rows = users
-    .filter((user) => user.instrument === userInstrument)
+    .filter(
+      (user) => user.instrument === userInstrument && user.role !== "Instructor de instrumento"
+    )
     .map((user) => ({
       id: user.id,
       name: user.name + " " + user.firstSurName + " " + user.secondSurName,
