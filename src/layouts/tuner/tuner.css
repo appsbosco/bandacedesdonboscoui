@@ -35,6 +35,9 @@ h1 {
   transform-origin: bottom center;
 }
 
+.text {
+  text-align: justify;
+}
 .meter-scale {
   display: flex;
   justify-content: space-between;

@@ -171,7 +171,6 @@ export const protectedRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "title", title: "Asistencia", key: "attendance" },
 
   {
     type: "collapse",
@@ -363,7 +362,7 @@ const routes = [
     noCollapse: true,
     href: null,
   },
-  { type: "tuner", title: "Afinar", key: "tuner-pages" },
+  { type: "tuner", title: "Afinador", key: "tuner-pages" },
   {
     type: "collapse",
     name: "Afinador",
@@ -478,8 +477,18 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Afinador", key: "tuner-pages" },
+  {
+    type: "collapse",
+    name: "Afinador",
+    key: "Tuner",
+    route: "/Tuner",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <Tuner />,
+    noCollapse: true,
+    href: null,
+  },
   { type: "title", title: "Pagos", key: "pagos" },
-
   {
     type: "collapse",
     name: "Pagos",
@@ -490,7 +499,7 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "title", title: "Asistencia", key: "attendance" },
+  { type: "title", title: "Asistencia", key: "attendance-pages" },
 
   {
     type: "collapse",
@@ -924,7 +933,7 @@ export const membersRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "tuner", title: "Afinar", key: "tuner-pages" },
+  { type: "tuner", title: "Afinador", key: "tuner-pages" },
   {
     type: "collapse",
     name: "Afinador",

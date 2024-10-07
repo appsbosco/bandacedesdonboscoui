@@ -294,7 +294,7 @@ const Tuner = () => {
   return (
     <DashboardLayout>
       <DashboardNavbar />
-      <Card>
+      <Card className="text">
         <SoftBox p={2}>
           <Grid container spacing={3}>
             <Grid item xs={12} lg={6}>
