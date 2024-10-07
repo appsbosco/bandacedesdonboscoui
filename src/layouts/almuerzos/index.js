@@ -342,7 +342,7 @@ const Almuerzos = () => {
                     data-modal-hide="popup-modal"
                     type="button"
                     onClick={() => setOpen(false)}
-                    className=" bg-cyan-950 dont-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center"
+                    className=" bg-cyan-950 dont-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center text-white"
                   >
                     Cerrar
                   </button>

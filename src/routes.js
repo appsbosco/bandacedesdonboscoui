@@ -54,6 +54,7 @@ import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import Raffle from "layouts/tickets/Raffle";
 import ClassAttendance from "layouts/classAttendance/lista";
+import Tuner from "layouts/tuner";
 
 export const protectedRoutes = [
   {
@@ -362,7 +363,17 @@ const routes = [
     noCollapse: true,
     href: null,
   },
-
+  { type: "tuner", title: "Afinar", key: "tuner-pages" },
+  {
+    type: "collapse",
+    name: "Afinador",
+    key: "Tuner",
+    route: "/Tuner",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <Tuner />,
+    noCollapse: true,
+    href: null,
+  },
   {
     type: "collapse",
     name: "Almuerzos",
@@ -910,6 +921,17 @@ export const membersRoutes = [
     route: "/almuerzos",
     icon: <RestaurantIcon size="12px" />,
     component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
+  { type: "tuner", title: "Afinar", key: "tuner-pages" },
+  {
+    type: "collapse",
+    name: "Afinador",
+    key: "Tuner",
+    route: "/Tuner",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <Tuner />,
     noCollapse: true,
     href: null,
   },

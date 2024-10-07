@@ -1,0 +1,104 @@
+/* src/styles.css */
+
+.tuner-container {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.display {
+  background-color: #1c1f24;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.note {
+  font-size: 72px;
+  margin: 0;
+}
+
+.frequency {
+  font-size: 24px;
+  margin: 0;
+}
+
+.meter {
+  position: relative;
+}
+
+.needle {
+  top: 0;
+
+  transform-origin: bottom center;
+}
+
+.meter-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 100px;
+}
+
+.meter-scale img {
+  margin-top: -30rem;
+}
+
+@media (max-width: 500px) {
+  .meter-scale img {
+    margin-top: -22rem;
+  }
+}
+
+.meter-scale span {
+  font-size: 14px;
+}
+
+.detune {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.controls label {
+  margin-right: 10px;
+}
+
+.controls input {
+  width: 80px;
+  padding: 5px;
+  font-size: 16px;
+}
+
+.error {
+  color: #ff4d4d;
+  font-size: 18px;
+}
+
+/* Indicadores de color */
+.tuner-container.green {
+  background-color: #e0ffe0;
+}
+
+.tuner-container.yellow {
+  background-color: #fffbe0;
+}
+
+.tuner-container.red {
+  background-color: #ffe0e0;
+}
+
+/* Animaciones */
+.arrow-up {
+  /* Estilos para la flecha hacia arriba */
+}
+
+.arrow-down {
+  /* Estilos para la flecha hacia abajo */
+}
