@@ -205,14 +205,13 @@ const Tuner = () => {
   const getNoteSpecificFeedback = (note) => {
     const windInstrumentTips = {
       C4: "El Do medio es esencial en instrumentos de viento. Asegúrate de tener una buena postura y apoyarte en el diafragma.",
-      D4: "El Re puede ser desafiante en afinación. Verifica que tus dedos cubran correctamente los orificios o llaves.",
+      D4: "El Re puede ser complicado en afinación. Verifica que tus dedos cubran correctamente los orificios o llaves.",
       E4: "El Mi suele requerir un control preciso de la embocadura. Practica escalas lentas para mejorar.",
       F4: "El Fa necesita una columna de aire estable. Concéntrate en tu respiración.",
       G4: "El Sol es una nota común. Trabaja en la claridad y proyección del sonido.",
       A4: "El La es la referencia de afinación. Usa esta nota para calibrar tu instrumento.",
       B4: "El Si puede ser sensible. Asegúrate de una embocadura relajada pero firme.",
       C5: "El Do agudo requiere más control. Practica notas largas para fortalecer tu embocadura.",
-      // Añade consejos para otras notas relevantes
     };
 
     // Manejar notas con sostenidos y bemoles
