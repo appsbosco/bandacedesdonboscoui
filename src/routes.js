@@ -362,17 +362,6 @@ const routes = [
     noCollapse: true,
     href: null,
   },
-  { type: "tuner", title: "Afinador", key: "tuner-pages" },
-  {
-    type: "collapse",
-    name: "Afinador",
-    key: "Tuner",
-    route: "/Tuner",
-    icon: <SentimentSatisfiedAltIcon size="12px" />,
-    component: <Tuner />,
-    noCollapse: true,
-    href: null,
-  },
   {
     type: "collapse",
     name: "Almuerzos",
@@ -380,6 +369,16 @@ const routes = [
     route: "/almuerzos",
     icon: <RestaurantIcon size="12px" />,
     component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Afinador",
+    key: "tuner",
+    route: "/tuner",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <Tuner />,
     noCollapse: true,
     href: null,
   },
@@ -481,8 +480,8 @@ export const adminRoutes = [
   {
     type: "collapse",
     name: "Afinador",
-    key: "Tuner",
-    route: "/Tuner",
+    key: "tuner",
+    route: "/tuner",
     icon: <SentimentSatisfiedAltIcon size="12px" />,
     component: <Tuner />,
     noCollapse: true,
@@ -531,7 +530,7 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "title", title: "Almuerzos", key: "almuerzos" },
+  { type: "title", title: "Almuerzos", key: "almuerzos-pages" },
 
   {
     type: "collapse",
@@ -751,7 +750,7 @@ export const staffRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "title", title: "Almuerzos", key: "almuerzos" },
+  { type: "title", title: "Almuerzos", key: "almuerzos-pages" },
 
   {
     type: "collapse",
@@ -923,6 +922,7 @@ export const membersRoutes = [
     noCollapse: true,
     href: null,
   },
+  { type: "title", title: "Almuerzos", key: "almuerzos-pages" },
   {
     type: "collapse",
     name: "Almuerzos",
@@ -933,12 +933,12 @@ export const membersRoutes = [
     noCollapse: true,
     href: null,
   },
-  { type: "tuner", title: "Afinador", key: "tuner-pages" },
+  { type: "title", title: "Afinador", key: "tuner-pages" },
   {
     type: "collapse",
     name: "Afinador",
-    key: "Tuner",
-    route: "/Tuner",
+    key: "tuner",
+    route: "/tuner",
     icon: <SentimentSatisfiedAltIcon size="12px" />,
     component: <Tuner />,
     noCollapse: true,
