@@ -31,18 +31,28 @@ const Tuner = () => {
   const analyserNodeRef = useRef(null);
   const mediaStreamSourceRef = useRef(null);
 
+  const animationFrameIdRef = useRef(null);
+  const streamRef = useRef(null);
+
   useEffect(() => {
     const startAudio = async () => {
       try {
-        const AudioContext = window.AudioContext;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioContextRef.current = new AudioContext();
+
+        // Resumir el AudioContext si está suspendido
+        if (audioContextRef.current.state === "suspended") {
+          await audioContextRef.current.resume();
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
+        streamRef.current = stream; // Almacenar el stream para detenerlo más tarde
         mediaStreamSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
 
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
-        analyserNodeRef.current.fftSize = 4096; // Aumentar fftSize para mayor resolución
+        analyserNodeRef.current.fftSize = 4096;
 
         mediaStreamSourceRef.current.connect(analyserNodeRef.current);
 
@@ -56,6 +66,15 @@ const Tuner = () => {
     startAudio();
 
     return () => {
+      // Cancelar el requestAnimationFrame
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+      // Detener los tracks del stream de audio
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      // Cerrar el AudioContext
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
@@ -93,7 +112,7 @@ const Tuner = () => {
       setDetuneHistory([]);
     }
 
-    requestAnimationFrame(updatePitch);
+    animationFrameIdRef.current = requestAnimationFrame(updatePitch);
   };
 
   function applyHammingWindow(buffer) {
