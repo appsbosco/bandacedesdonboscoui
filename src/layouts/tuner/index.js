@@ -15,8 +15,7 @@ import wavesWhite from "assets/images/shapes/waves-white.svg";
 import HappyFace from "./happy.svg";
 import NeutralFace from "./neutral.svg";
 import SadFace from "./sad.svg";
-import Manecilla from "./manecilla.svg";
-import Scale from "./scale.svg";
+import SemicircleTuner from "./Meter.jsx";
 
 const Tuner = () => {
   const [note, setNote] = useState("");
@@ -42,20 +41,10 @@ const Tuner = () => {
         });
         mediaStreamSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
 
-        // Crear un filtro de paso banda
-        const bandpassFilter = audioContextRef.current.createBiquadFilter();
-        bandpassFilter.type = "bandpass";
-        bandpassFilter.frequency.value = 440; // Frecuencia central
-        bandpassFilter.Q.value = 1; // Factor de calidad
-
-        // Conectar el filtro al stream de entrada
-        mediaStreamSourceRef.current.connect(bandpassFilter);
-
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
-        analyserNodeRef.current.fftSize = 2048;
+        analyserNodeRef.current.fftSize = 4096; // Aumentar fftSize para mayor resolución
 
-        // Conectar el filtro al analizador
-        bandpassFilter.connect(analyserNodeRef.current);
+        mediaStreamSourceRef.current.connect(analyserNodeRef.current);
 
         updatePitch();
       } catch (err) {
@@ -78,7 +67,11 @@ const Tuner = () => {
     const buffer = new Float32Array(bufferLength);
     analyserNodeRef.current.getFloatTimeDomainData(buffer);
 
-    const ac = autoCorrelate(buffer, audioContextRef.current.sampleRate);
+    // Aplicar ventana Hamming
+    const windowedBuffer = applyHammingWindow(buffer);
+
+    // Utilizar el algoritmo YIN
+    const ac = yin(windowedBuffer, audioContextRef.current.sampleRate);
 
     if (ac !== -1) {
       setFrequency(ac);
@@ -103,50 +96,90 @@ const Tuner = () => {
     requestAnimationFrame(updatePitch);
   };
 
-  function autoCorrelate(buffer, sampleRate) {
-    let SIZE = buffer.length;
-    let MAX_SAMPLES = Math.floor(SIZE / 2);
-    let bestOffset = -1;
-    let bestCorrelation = 0;
-    let rms = 0;
-    let foundGoodCorrelation = false;
-    let correlations = new Array(MAX_SAMPLES);
+  function applyHammingWindow(buffer) {
+    const windowedBuffer = new Float32Array(buffer.length);
+    for (let i = 0; i < buffer.length; i++) {
+      windowedBuffer[i] =
+        buffer[i] * (0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (buffer.length - 1)));
+    }
+    return windowedBuffer;
+  }
 
-    for (let i = 0; i < SIZE; i++) {
-      let val = buffer[i];
-      rms += val * val;
+  function yin(buffer, sampleRate) {
+    const threshold = 0.1; // Umbral para determinar el período de la señal
+    const probabilityThreshold = 0.1;
+    const yinBuffer = new Float32Array(buffer.length / 2);
+    let tauEstimate = -1;
+    let pitchInHertz = -1;
+
+    // Paso 1: Calcular la función de diferencia
+    for (let tau = 0; tau < yinBuffer.length; tau++) {
+      yinBuffer[tau] = 0;
+      for (let i = 0; i < yinBuffer.length; i++) {
+        const delta = buffer[i] - buffer[i + tau];
+        yinBuffer[tau] += delta * delta;
+      }
     }
 
-    rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.0025) return -1;
+    // Paso 2: Calcular la función acumulativa normalizada
+    yinBuffer[0] = 1;
+    let runningSum = 0;
+    for (let tau = 1; tau < yinBuffer.length; tau++) {
+      runningSum += yinBuffer[tau];
+      yinBuffer[tau] *= tau / runningSum;
+    }
 
-    let lastCorrelation = 1;
-    for (let offset = 0; offset < MAX_SAMPLES; offset++) {
-      let correlation = 0;
-
-      for (let i = 0; i < MAX_SAMPLES; i++) {
-        correlation += Math.abs(buffer[i] - buffer[i + offset]);
-      }
-      correlation = 1 - correlation / MAX_SAMPLES;
-      correlations[offset] = correlation;
-
-      if (correlation > 0.9 && correlation > lastCorrelation) {
-        foundGoodCorrelation = true;
-        if (correlation > bestCorrelation) {
-          bestCorrelation = correlation;
-          bestOffset = offset;
+    // Paso 3: Buscar el valor de tau donde la función cae por debajo del umbral
+    for (let tau = 1; tau < yinBuffer.length; tau++) {
+      if (yinBuffer[tau] < threshold) {
+        while (tau + 1 < yinBuffer.length && yinBuffer[tau + 1] < yinBuffer[tau]) {
+          tau++;
         }
-      } else if (foundGoodCorrelation) {
-        let shift =
-          (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / correlations[bestOffset];
-        return sampleRate / (bestOffset + 8 * shift);
+        tauEstimate = tau;
+        break;
       }
-      lastCorrelation = correlation;
     }
-    if (bestCorrelation > 0.01) {
-      return sampleRate / bestOffset;
+
+    // Paso 4: Refinar tau mediante interpolación parabólica (opcional)
+    if (tauEstimate !== -1) {
+      const betterTau = parabolicInterpolation(yinBuffer, tauEstimate);
+      pitchInHertz = sampleRate / betterTau;
     }
-    return -1;
+
+    return pitchInHertz;
+  }
+
+  function parabolicInterpolation(yinBuffer, tau) {
+    const x0 = tau < 1 ? tau : tau - 1;
+    const x2 = tau + 1 < yinBuffer.length ? tau + 1 : tau;
+
+    if (x0 === tau) {
+      if (yinBuffer[tau] <= yinBuffer[x2]) {
+        return tau;
+      } else {
+        return x2;
+      }
+    }
+    if (x2 === tau) {
+      if (yinBuffer[tau] <= yinBuffer[x0]) {
+        return tau;
+      } else {
+        return x0;
+      }
+    }
+
+    const s0 = yinBuffer[x0];
+    const s1 = yinBuffer[tau];
+    const s2 = yinBuffer[x2];
+
+    const a = (s0 + s2 - 2 * s1) / 2;
+    const b = (s2 - s0) / 2;
+
+    if (a === 0) {
+      return tau;
+    }
+
+    return tau - b / (2 * a);
   }
 
   function getClosestNote(freq) {
@@ -308,20 +341,7 @@ const Tuner = () => {
                   Toca una nota para comenzar
                 </SoftTypography>
                 <SoftBox mb={3} mt={3}>
-                  <div className="meter">
-                    <img src={Scale} alt="Escala" style={{ width: "100%" }} />
-                    <div className="meter-scale">
-                      <img
-                        src={Manecilla}
-                        alt="Aguja"
-                        className="needle"
-                        style={{
-                          transform: `rotate(${detune * 0.1}deg)`,
-                          width: "100%",
-                        }}
-                      />
-                    </div>
-                  </div>
+                  <SemicircleTuner detune={detune} />
 
                   <SoftTypography variant="body2" color="text" style={{ whiteSpace: "pre-wrap" }}>
                     {getFeedbackMessage()}
