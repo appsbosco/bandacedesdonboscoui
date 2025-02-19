@@ -1058,6 +1058,16 @@ export const instructorsRoutes = [
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Almuerzos",
+    key: "almuerzos",
+    route: "/almuerzos",
+    icon: <RestaurantIcon size="12px" />,
+    component: <Almuerzos />,
+    noCollapse: true,
+    href: null,
+  },
   { type: "title", title: "Miembros", key: "account-pages" },
   {
     type: "collapse",
