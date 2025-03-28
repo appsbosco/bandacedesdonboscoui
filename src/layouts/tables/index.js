@@ -6,7 +6,7 @@ import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import TableWithFilteringSorting from "examples/Tables/Table/Table";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./reset.css";
 import {
   Box,
@@ -129,20 +129,6 @@ const Tables = () => {
 
   const isMobile = useMediaQuery({ maxWidth: 640 });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await refetch();
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    if (!loading) {
-      fetchData();
-    }
-  }, [loading, refetch]);
-
   const {
     data: medicalRecordData,
     loading: medicalRecordLoading,
@@ -196,58 +182,59 @@ const Tables = () => {
   };
 
   //Get sex from medical record
-  const mapMedicalRecordsToUsers = (users, medicalRecords) => {
+  // const mapMedicalRecordsToUsers = (users, medicalRecords) => {
+  //   const medicalRecordsMap = Object.fromEntries(
+  //     medicalRecords.filter((record) => record.user).map((record) => [record.user.id, record])
+  //   );
+  //   return users.map((user) => ({
+  //     ...user,
+  //     sex: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].sex : "N/A",
+  //     identification:
+  //       user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].identification : "N/A",
+  //     address: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].address : "N/A",
+  //     familyMemberName:
+  //       user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].familyMemberName : "N/A",
+  //     familyMemberNumberId:
+  //       user && medicalRecordsMap[user.id]
+  //         ? medicalRecordsMap[user.id].familyMemberNumberId
+  //         : "N/A",
+  //     familyMemberRelationship:
+  //       user && medicalRecordsMap[user.id]
+  //         ? medicalRecordsMap[user.id].familyMemberRelationship
+  //         : "N/A",
+  //   }));
+  // };
+
+  const musiciansData = useMemo(() => {
+    if (!data || !medicalRecordData) return [];
+
     const medicalRecordsMap = Object.fromEntries(
-      medicalRecords.filter((record) => record.user).map((record) => [record.user.id, record])
+      medicalRecordData.getMedicalRecords
+        .filter((record) => record.user)
+        .map((record) => [record.user.id, record])
     );
-    return users.map((user) => ({
-      ...user,
-      sex: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].sex : "N/A",
-      identification:
-        user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].identification : "N/A",
-      address: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].address : "N/A",
-      familyMemberName:
-        user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].familyMemberName : "N/A",
-      familyMemberNumberId:
-        user && medicalRecordsMap[user.id]
-          ? medicalRecordsMap[user.id].familyMemberNumberId
-          : "N/A",
-      familyMemberRelationship:
-        user && medicalRecordsMap[user.id]
-          ? medicalRecordsMap[user.id].familyMemberRelationship
-          : "N/A",
-    }));
-  };
+
+    return data.getUsers
+      .filter((user) =>
+        ["Principal de sección", "Integrante BCDB", "Asistente de sección"].includes(user.role)
+      )
+      .map((user) => {
+        const medical = medicalRecordsMap[user.id] || {};
+        return {
+          ...user,
+          age: calculateAge(user.birthday),
+          identification: medical.identification || "N/A",
+          address: medical.address || "N/A",
+          familyMemberName: medical.familyMemberName || "N/A",
+          familyMemberNumberId: medical.familyMemberNumberId || "N/A",
+          familyMemberRelationship: medical.familyMemberRelationship || "N/A",
+        };
+      });
+  }, [data, medicalRecordData]);
 
   useEffect(() => {
-    if (data && medicalRecordData) {
-      const updatedData = mapMedicalRecordsToUsers(
-        data.getUsers,
-        medicalRecordData.getMedicalRecords
-      );
-
-      const musiciansData = updatedData.filter(
-        (user) =>
-          user.role === "Principal de sección" ||
-          user.role === "Integrante BCDB" ||
-          user.role === "Asistente de sección"
-      );
-      const updatedMusiciansData = musiciansData.map((user) => ({
-        ...user,
-        age: calculateAge(user.birthday),
-        identification: user.identification,
-        // notificationTokens: user.notificationTokens,
-        address: user.address,
-        familyMemberName: user.familyMemberName,
-        familyMemberNumberId: user.familyMemberNumberId,
-        familyMemberRelationship: user.familyMemberRelationship,
-      }));
-
-      setUpdatedMusiciansData(updatedMusiciansData);
-
-      console.log("Musicians data", updatedMusiciansData);
-    }
-  }, [data, medicalRecordData]);
+    setUpdatedMusiciansData(musiciansData);
+  }, [musiciansData]);
 
   // Filter users by role
 

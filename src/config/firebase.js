@@ -8,19 +8,19 @@ import { getMessaging, getToken } from "firebase/messaging";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
 const firebaseConfig = {
   apiKey: "AIzaSyAOgbxy6F-X6LouEHgNluCITlwN7uaN018",
   authDomain: "bcdb-app-9466f.firebaseapp.com",
   projectId: "bcdb-app-9466f",
-  storageBucket: "bcdb-app-9466f.appspot.com",
+  storageBucket: "bcdb-app-9466f.firebasestorage.app",
   messagingSenderId: "406724473775",
   appId: "1:406724473775:web:f05efa64455b951006355a",
   measurementId: "G-21V5MDTRXN",
 };
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
 export const messaging = getMessaging(app);
 
 export const generateToken = async () => {
