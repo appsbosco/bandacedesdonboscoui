@@ -4,6 +4,8 @@ import moment from "moment";
 
 import { useQuery, useMutation } from "@apollo/client";
 import { TextField, Button, Card, Box, Grid } from "@mui/material";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import { GET_PAYMENT_EVENTS, GET_PAYMENTS_BY_EVENT, GET_USERS } from "graphql/queries";
 import {
   CREATE_PAYMENT_EVENT,
@@ -42,6 +44,7 @@ const PaymentComponent = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editPaymentId, setEditPaymentId] = useState(null);
   const [editInitialAmount, setEditInitialAmount] = useState(null);
+  const [tabIndex, setTabIndex] = useState(0);
 
   const {
     data: paymentEventsData,
@@ -257,257 +260,278 @@ const PaymentComponent = () => {
     },
   ];
 
+  const handleTabChange = (event, newValue) => {
+    setTabIndex(newValue);
+  };
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
-      <Card className="mb-6">
-        <SoftBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
-          <SoftTypography variant="h6" fontWeight="medium">
-            Registro de evento de pago
-          </SoftTypography>
-        </SoftBox>
-        <SoftBox p={2}>
-          <form onSubmit={handleEventSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Nombre del registro
-                  </SoftTypography>
-                  <Input
-                    label="Nombre del registro"
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    required
-                  />
-                </SoftBox>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Descripción del registro
-                  </SoftTypography>
-                  <Input
-                    label="Descripción del registro"
-                    value={eventDescription}
-                    onChange={(e) => setEventDescription(e.target.value)}
-                    required
-                  />
-                </SoftBox>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Fecha del registro
-                  </SoftTypography>
+      <Tabs value={tabIndex} onChange={handleTabChange} centered>
+        <Tab label="Evento" />
+        <Tab label="Registrar pago" />
+        <Tab label="Ver pagos" />
+      </Tabs>
 
-                  <Input
-                    label="Fecha del registro"
-                    type="Date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    required
-                  />
-                </SoftBox>
-              </Grid>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={12}>
-              {" "}
-              {/* Added Grid item for the button */}
-              <Grid container justifyContent="flex-end">
-                {" "}
-                {/* Set justify prop to "flex-end" */}
-                <Button type="submit" variant="contained" color="info" onClick={handleEventSubmit}>
-                  Registrar
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </SoftBox>
-      </Card>
-
-      <Card style={{ zIndex: "1" }}>
-        <SoftBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
-          <SoftTypography variant="h6" fontWeight="medium">
-            Agregar un pago
-          </SoftTypography>
-        </SoftBox>
-        <SoftBox p={2}>
-          <form>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Seleccione un evento
-                  </SoftTypography>
-                  <CustomSelect
-                    labelId="event-label"
-                    value={selectedEvent?._id || ""}
-                    onChange={(e) => {
-                      const eventId = e.target.value;
-                      const event = paymentEvents.find((event) => event._id === eventId);
-                      setSelectedEvent(event);
-                    }}
-                    options={paymentEvents.map((event) => ({
-                      value: event._id,
-                      label: event.name,
-                    }))}
-                  />
-                </SoftBox>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Seleccione un usuario
-                  </SoftTypography>
-                  <CustomSelect
-                    labelId="user-label"
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                    options={usersData?.getUsers.map((user) => ({
-                      value: user.id,
-                      label: `${user.name} ${user.firstSurName} ${user.secondSurName}`,
-                    }))}
-                  />
-                </SoftBox>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Ingrese el monto
-                  </SoftTypography>
-
-                  <Input
-                    label="Monto"
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    required
-                  />
-                </SoftBox>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <SoftBox
-                  borderRadius="lg"
-                  display="flex-col"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={3}
-                >
-                  <SoftTypography variant="h6" fontWeight="medium">
-                    Descripción
-                  </SoftTypography>
-                  <Input
-                    autoFocus
-                    margin="dense"
-                    label=""
-                    type="text"
-                    fullWidth
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </SoftBox>
-              </Grid>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={12}>
-              {" "}
-              {/* Added Grid item for the button */}
-              <Grid container justifyContent="flex-end">
-                {" "}
-                {/* Set justify prop to "flex-end" */}
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="info"
-                  onClick={handlePaymentSubmit}
-                >
-                  Agregar
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </SoftBox>
-      </Card>
-      <SoftBox py={3}>
-        <Card>
-          <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
-            <SoftTypography variant="h6">Pagos BCDB</SoftTypography>
+      {tabIndex === 0 && (
+        <Card className="mb-6">
+          <SoftBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
+            <SoftTypography variant="h6" fontWeight="medium">
+              Registro de evento de pago
+            </SoftTypography>
           </SoftBox>
+          <SoftBox p={2}>
+            <form onSubmit={handleEventSubmit}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Nombre del registro
+                    </SoftTypography>
+                    <Input
+                      label="Nombre del registro"
+                      value={eventName}
+                      onChange={(e) => setEventName(e.target.value)}
+                      required
+                    />
+                  </SoftBox>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Descripción del registro
+                    </SoftTypography>
+                    <Input
+                      label="Descripción del registro"
+                      value={eventDescription}
+                      onChange={(e) => setEventDescription(e.target.value)}
+                      required
+                    />
+                  </SoftBox>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Fecha del registro
+                    </SoftTypography>
 
-          <Box sx={{ height: 700, width: 1 }}>
-            <SoftBox display="flex-col" justifyContent="space-between" alignItems="center" p={3}>
-              <SoftTypography variant="h6">
-                Historial de pagos para:{" "}
-                {selectedEvent?.name ? selectedEvent?.name : "Seleccione un evento"}
-              </SoftTypography>
+                    <Input
+                      label="Fecha del registro"
+                      type="Date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      required
+                    />
+                  </SoftBox>
+                </Grid>
+              </Grid>
 
-              <SoftTypography variant="body2" color="text">
-                {selectedEvent?.description ? selectedEvent?.description : " "}
-              </SoftTypography>
-            </SoftBox>
-
-            <SoftBox
-              sx={{
-                "& .MuiTableRow-root:not(:last-child)": {
-                  "& td": {
-                    borderBottom: `${borderWidth[1]} solid ${borderColor}`,
-                  },
-                },
-              }}
-            >
-              <TableWithFilteringSorting data={formattedPayments} columns={eventColumns} />
-              <EditModal
-                open={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                paymentId={editPaymentId}
-                initialAmount={editInitialAmount}
-                onUpdate={handleUpdatePayment}
-              />
-            </SoftBox>
-          </Box>
+              <Grid item xs={12} sm={6} md={12}>
+                {" "}
+                {/* Added Grid item for the button */}
+                <Grid container justifyContent="flex-end">
+                  {" "}
+                  {/* Set justify prop to "flex-end" */}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="info"
+                    onClick={handleEventSubmit}
+                  >
+                    Registrar
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </SoftBox>
         </Card>
-      </SoftBox>
+      )}
 
+      {tabIndex === 1 && (
+        <Card style={{ zIndex: "1" }}>
+          <SoftBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
+            <SoftTypography variant="h6" fontWeight="medium">
+              Agregar un pago
+            </SoftTypography>
+          </SoftBox>
+          <SoftBox p={2}>
+            <form>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Seleccione un evento
+                    </SoftTypography>
+                    <CustomSelect
+                      labelId="event-label"
+                      value={selectedEvent?._id || ""}
+                      onChange={(e) => {
+                        const eventId = e.target.value;
+                        const event = paymentEvents.find((event) => event._id === eventId);
+                        setSelectedEvent(event);
+                      }}
+                      options={paymentEvents.map((event) => ({
+                        value: event._id,
+                        label: event.name,
+                      }))}
+                    />
+                  </SoftBox>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Seleccione un usuario
+                    </SoftTypography>
+                    <CustomSelect
+                      labelId="user-label"
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      options={usersData?.getUsers.map((user) => ({
+                        value: user.id,
+                        label: `${user.name} ${user.firstSurName} ${user.secondSurName}`,
+                      }))}
+                    />
+                  </SoftBox>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Ingrese el monto
+                    </SoftTypography>
+
+                    <Input
+                      label="Monto"
+                      type="tel"
+                      inputMode="numeric"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      required
+                    />
+                  </SoftBox>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <SoftBox
+                    borderRadius="lg"
+                    display="flex-col"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={3}
+                  >
+                    <SoftTypography variant="h6" fontWeight="medium">
+                      Descripción
+                    </SoftTypography>
+                    <Input
+                      autoFocus
+                      margin="dense"
+                      label=""
+                      type="text"
+                      fullWidth
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    />
+                  </SoftBox>
+                </Grid>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={12}>
+                {" "}
+                {/* Added Grid item for the button */}
+                <Grid container justifyContent="flex-end">
+                  {" "}
+                  {/* Set justify prop to "flex-end" */}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="info"
+                    onClick={handlePaymentSubmit}
+                  >
+                    Agregar
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </SoftBox>
+        </Card>
+      )}
+
+      {tabIndex === 2 && (
+        <SoftBox py={3}>
+          <Card>
+            <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
+              <SoftTypography variant="h6">Pagos BCDB</SoftTypography>
+            </SoftBox>
+
+            <Box sx={{ height: 700, width: 1 }}>
+              <SoftBox display="flex-col" justifyContent="space-between" alignItems="center" p={3}>
+                <SoftTypography variant="h6">
+                  Historial de pagos para:{" "}
+                  {selectedEvent?.name ? selectedEvent?.name : "Seleccione un evento"}
+                </SoftTypography>
+
+                <SoftTypography variant="body2" color="text">
+                  {selectedEvent?.description ? selectedEvent?.description : " "}
+                </SoftTypography>
+              </SoftBox>
+
+              <SoftBox
+                sx={{
+                  "& .MuiTableRow-root:not(:last-child)": {
+                    "& td": {
+                      borderBottom: `${borderWidth[1]} solid ${borderColor}`,
+                    },
+                  },
+                }}
+              >
+                <TableWithFilteringSorting data={formattedPayments} columns={eventColumns} />
+                <EditModal
+                  open={isEditModalOpen}
+                  onClose={() => setIsEditModalOpen(false)}
+                  paymentId={editPaymentId}
+                  initialAmount={editInitialAmount}
+                  onUpdate={handleUpdatePayment}
+                />
+              </SoftBox>
+            </Box>
+          </Card>
+        </SoftBox>
+      )}
       <Footer />
     </DashboardLayout>
   );
