@@ -1,0 +1,116 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "blog": "Blog",
+    "calendar": "Calendar",
+    "contact": "Contact",
+    "dashboard": "Dashboard",
+    "register": "Register",
+    "login": "Log In",
+    "reserve_tickets": "Reserve Tickets",
+    "sign_up_disabled": "Sign Up"
+  },
+  "hero": {
+    "title_prefix": "Welcome",
+    "title_suffix": "to the official page of Banda CEDES Don Bosco",
+    "description": "Here you can discover the music and talent of our renowned band. Composed of passionate and committed musicians, our band stands out for its excellence and energy on stage. Thank you for visiting us!",
+    "contact": "Contact Us",
+    "label_family": "Family",
+    "label_friends": "Friends",
+    "label_passion": "Passion",
+    "handwritten": "More than a band!"
+  },
+  "values": {
+    "title": "Our",
+    "highlight": "values",
+    "description": "Friendship, passion, and family. Our members share a deep connection and work together to deliver emotional and energetic performances. Discover the talent and unity of this incredible band!",
+    "friendship_title": "Friendship",
+    "friendship_text": "We value friendship, creating strong and lasting bonds among our members, who share a love for music and work together to achieve common goals.",
+    "passion_title": "Passion",
+    "passion_text": "Each member is driven by a deep love for music and strives to convey emotions and feelings through their performances.",
+    "family_title": "Family",
+    "family_text": "We are a family united by a shared love for music, creating a harmonious environment that goes beyond music.",
+    "difference_label": "What sets us apart",
+    "members": "Members",
+    "history": "Years of history"
+  },
+  "footer": {
+    "newsletter_title": "Get in touch with us",
+    "newsletter_description": "Contact us on our social media and discover all we have to offer! Find us on Facebook, Instagram, and WhatsApp",
+    "input_placeholder": "Enter your message",
+    "send_button": "Send",
+    "cta_title": "Let's create something amazing together!",
+    "cta_text": "We will be happy to answer your questions and provide all the information you need.",
+    "cta_button": "Contact us",
+    "social_facebook": "Facebook",
+    "social_instagram": "Instagram",
+    "social_whatsapp": "WhatsApp",
+    "copyright": "Copyright © 2024 Banda CEDES Don Bosco. All rights reserved",
+    "developed_by": "Developed by Josué Chinchilla Salazar"
+  },
+  "about": {
+    "history_title_1": "History",
+    "history_title_2": "of the CEDES Don Bosco Band",
+
+    "history_title": "History of the CEDES Don Bosco Band",
+    "history_p1": "Founded in 1965, the CEDES Don Bosco Band (BCDB) was created alongside the founding of the Don Bosco Technical School, originally located in Barrio Don Bosco, San José, Costa Rica. From the very beginning, the band has been a symbol of excellence, discipline, and social transformation through music. In 2001, with the school's move to the modern CEDES Don Bosco educational complex in Concepción Arriba de Alajuelita, the band was strengthened as a national artistic benchmark.",
+    "history_p2": "Throughout nearly six decades of history, the band has been led by only three directors, showing an unusual level of stability. Its current director is Maestro Luis Fernando Solano Gamboa, who leads with passion and commitment, fostering not only musicians but also integral human beings.",
+    "history_p3": "Today, the band is made up of 280 members, including active students and alumni from the Centro de Enseñanza Don Bosco, Escuela San Juan Bosco, and Colegio Técnico Profesional Don Bosco. Members range in age from 8 to 24, with many coming from communities in vulnerable situations.",
+    "trajectory_title": "Our",
+    "trajectory_subtitle": "journey",
+
+    "trajectory_p1": "The CEDES Don Bosco Band has proudly represented Costa Rica internationally, performing in festivals and parades in El Salvador, Panama, and the United States (most recently in Minnesota, January 2024), with an upcoming international tour scheduled for January 2025 in Ciudad Cayalá, Guatemala. Nationally, the band has shone in over 18 editions of the Festival de la Luz in San José, winning first place in 2007, second place in 2023, and third place in 2024. It has also been featured in key national events, such as the inauguration of the National Stadium (2011), Central American and Caribbean Games (2013), NACAC Athletics Championship (2015), the 120th anniversary parade of the National Theatre (2017), Mega Bandas MEP, and presidential inaugurations (2006 and 2014).",
+    "trajectory_p2": "The CEDES Don Bosco Band is known for its versatility in both repertoire and presentation formats, currently able to perform as a concert band, marching band, or big band. The band consists of: 166 wind players, 35 percussionists (Drumline and Mallets), 29 Color Guard members, 27 dancers, one director, two instructors, and a staff of 20 parents.",
+    "trajectory_p3": "Total BCDB: 280 members.",
+    "mission_vision_title": "Mission and Vision",
+    "mission_vision_p": "The main purpose is to teach musical knowledge through the practice of an instrument, in order to joyfully serve the Lord, following the educational principles of Saint John Bosco.",
+    "mission_title": "Mission",
+    "mission_p": "To holistically educate children and youth through music education, using the band as a tool for personal and social transformation. Inspired by the values of the Salesian charism, we foster discipline, commitment, artistic excellence, and joyful service to others, offering a path of hope, development, and belonging, especially for those from vulnerable communities.",
+    "vision_title": "Vision",
+    "vision_p": "To become a leading symphonic marching band in Latin America, recognized for its musical quality, social impact, and educational model. We aim to empower new generations to become positive leaders, well-rounded professionals, and agents of change within their communities, always spreading a message of unity, peace, and joy through music."
+  },
+  "calendar": {
+    "hero": {
+      "title": "Welcome to ",
+      "title_suffix": "our schedule",
+      "description": "Here you can find out about the band's upcoming performances"
+    },
+    "upcoming": {
+      "title": "Upcoming performances",
+      "empty": "No upcoming performances"
+    }
+  },
+  "contact": {
+    "title": "How can we help you? Let’s talk",
+    "description": "You can",
+    "title_sufix_1": "contact us",
+    "title_sufix_2": "through these channels",
+    "email": {
+      "title": "Email",
+      "description": "We will send you an email.",
+      "cta": "banda@cedesdonbosco.ed.cr"
+    },
+    "phone": {
+      "title": "Call us",
+      "description": "Available on weekdays from 7 a.m. to 6 p.m.",
+      "cta": "+506 8380-7124"
+    },
+    "form": {
+      "title": "Fill out our form below to get started",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "BCDB",
+        "email": "Email",
+        "emailPlaceholder": "example@email.com",
+        "phone": "Phone",
+        "phoneOptional": "Optional",
+        "phonePlaceholder": "+506 8888-8888",
+        "message": "Message",
+        "messageLimit": "Maximum 500 characters",
+        "messagePlaceholder": "Tell us a bit about your idea..."
+      },
+      "submit": "Send"
+    }
+  }
+}

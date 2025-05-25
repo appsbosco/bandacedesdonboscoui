@@ -12,6 +12,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UserProvider } from "./UserContext";
 import MetaTagProvider from "MetaTagProvider";
+import "./i18n";
 
 const rootElement = document.getElementById("root");
 

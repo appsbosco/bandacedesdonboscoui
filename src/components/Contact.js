@@ -5,9 +5,11 @@ import contact from "../assets/images/contact.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { SEND_EMAIL } from "graphql/mutations";
 import { useMutation } from "@apollo/client";
+import { useTranslation } from "react-i18next";
 
 const Contact = () => {
   const [sendEmail] = useMutation(SEND_EMAIL);
+  const { t } = useTranslation();
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -114,7 +116,7 @@ const Contact = () => {
               <div className="absolute inset-y-0 left-0 hidden w-full -translate-x-full bg-slate-50 lg:block"></div>
               <div className="relative max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
                 <h2 className="font-display text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl sm:leading-tight lg:text-[40px] lg:leading-tight xl:text-5xl xl:leading-tight">
-                  ¿Cómo podemos ayudarte? Hablemos
+                  {t("contact.title")}
                   <span className="ml-4 sm:ml-6">👋</span>
                 </h2>
 
@@ -128,7 +130,9 @@ const Contact = () => {
 
                 <div className="relative mt-14 h-fit w-fit font-writing text-2xl tracking-wide text-slate-600 sm:mt-20 sm:text-[27px]">
                   <span className="inline-block w-52 max-w-[220px] transform sm:w-auto sm:-rotate-6">
-                    Puedes <span className="text-sky-700">contactarnos</span> por estos canales
+                    {t("contact.description")}{" "}
+                    <span className="text-sky-700"> {t("contact.title_sufix_1")}</span>{" "}
+                    {t("contact.title_sufix_2")}
                   </span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -176,9 +180,11 @@ const Contact = () => {
                       />
                     </svg>
                     <div className="sm:pt-0.5">
-                      <p className="text-lg font-display text-slate-900">Email</p>
+                      <p className="text-lg font-display text-slate-900">
+                        {t("contact.email.title")}
+                      </p>
                       <p className="mt-1.5 text-base text-slate-600 sm:mt-2">
-                        Te enviaremos un correo electrónico.
+                        {t("contact.email.description")}
                         <a
                           href="mailto:hey@janedoe.com"
                           className="inline-block mt-5 duration-200 ease-in-out text-sky-700 hover:text-sky-600 sm:mt-6"
@@ -206,9 +212,11 @@ const Contact = () => {
                     </svg>
 
                     <div className="sm:pt-0.5">
-                      <p className="text-lg font-display text-slate-900">Llámanos</p>
+                      <p className="text-lg font-display text-slate-900">
+                        {t("contact.phone.title")}
+                      </p>
                       <p className="mt-2 text-base text-slate-600">
-                        Disponible los días de semana de 7 a.m. a 6 p.m.
+                        {t("contact.phone.description")}
                         <a
                           href="tel:+13234567891"
                           className="inline-block mt-6 duration-200 ease-in-out text-sky-700 hover:text-sky-600"
@@ -226,7 +234,7 @@ const Contact = () => {
             <div className="px-5 py-16 sm:py-24 sm:px-6 lg:col-span-6 lg:pl-0 lg:pr-8 lg:pt-32 xl:col-span-5 xl:col-start-8 2xl:pr-0 ">
               <div className="max-w-lg mx-auto lg:mr-0">
                 <h3 className="text-3xl font-semibold font-display text-slate-900">
-                  Complete nuestro formulario a continuación para comenzar
+                  {t("contact.form.title")}
                 </h3>
 
                 <form action="#" method="POST" onSubmit={handleSubmit} className="mt-10">
@@ -236,7 +244,7 @@ const Contact = () => {
                         htmlFor="name"
                         className="block font-medium leading-6 text-md text-slate-900"
                       >
-                        Nombre
+                        {t("contact.form.fields.name")}
                       </label>
                       <div className="mt-2">
                         <input
@@ -244,7 +252,7 @@ const Contact = () => {
                           name="name"
                           id="name"
                           autoComplete="name"
-                          placeholder="BCDB"
+                          placeholder={t("contact.form.fields.name")}
                           className="block w-full px-4 py-4 leading-4 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         />
                       </div>
@@ -254,7 +262,7 @@ const Contact = () => {
                         htmlFor="email"
                         className="block font-medium leading-6 text-md text-slate-900"
                       >
-                        Email
+                        {t("contact.form.fields.email")}
                       </label>
                       <div className="mt-2">
                         <input
@@ -262,7 +270,7 @@ const Contact = () => {
                           id="email"
                           type="email"
                           autoComplete="email"
-                          placeholder="ejemplo@email.com"
+                          placeholder={t("contact.form.fields.emailPlaceholder")}
                           className="block w-full px-4 py-4 leading-4 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         />
                       </div>
@@ -271,10 +279,10 @@ const Contact = () => {
                       <div className="flex justify-between leading-6 text-md">
                         <label htmlFor="phone" className="block font-medium text-slate-900">
                           {" "}
-                          Celular{" "}
+                          {t("contact.form.fields.phone")}
                         </label>
                         <p id="phone-description" className="text-slate-500/80">
-                          Opcional
+                          {t("contact.form.fields.phoneOptional")}
                         </p>
                       </div>
                       <div className="mt-2">
@@ -292,10 +300,10 @@ const Contact = () => {
                     <div>
                       <div className="flex justify-between leading-6 text-md">
                         <label htmlFor="message" className="block font-medium text-slate-900">
-                          Mensaje
+                          {t("contact.form.fields.message")}
                         </label>
                         <p id="message-description" className="text-slate-500/80">
-                          Máximo 500 caracteres
+                          {t("contact.form.fields.messageLimit")}
                         </p>
                       </div>
                       <div className="mt-2">
@@ -304,7 +312,7 @@ const Contact = () => {
                           name="message"
                           rows="5"
                           aria-describedby="message-description"
-                          placeholder="Cuéntanos un poco sobre tu idea..."
+                          placeholder={t("contact.form.fields.messageLimit")}
                           className="block w-full px-4 py-4 leading-6 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         ></textarea>
                       </div>
@@ -315,7 +323,7 @@ const Contact = () => {
                       type="submit"
                       className="inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none bg-slate-900 text-white hover:bg-sky-800 w-full text-base sm:text-lg"
                     >
-                      Enviar
+                      {t("contact.form.submit")}
                     </button>
                   </div>
                 </form>

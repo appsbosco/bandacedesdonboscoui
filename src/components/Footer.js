@@ -1,8 +1,12 @@
 import React from "react";
 import newsletter from "../assets/images/newsletter-bg.svg";
 import logocedes from "../assets/images/logocedeswhite.webp";
+import { useTranslation } from "react-i18next";
 
 const Footer = () => {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+
   return (
     <>
       <section className="pt-12 sm:pt-16 bg-white">
@@ -19,11 +23,10 @@ const Footer = () => {
               <div className="relative flex flex-col items-center w-full lg:flex-row">
                 <div className="max-w-2xl text-center lg:pr-4 lg:text-left">
                   <h3 className="text-4xl font-semibold text-white font-display sm:text-5xl">
-                    Ponte en contacto con nosotros
+                    {t("footer.newsletter_title")}
                   </h3>
                   <p className="max-w-lg mx-auto mt-4 text-lg text-sky-50 lg:mx-0 lg:mt-6">
-                    ¡Contáctanos en nuestras redes sociales y descubre todo lo que tenemos para
-                    ofrecerte! Encuéntranos en Facebook, Instagram y WhatsApp
+                    {t("footer.newsletter_description")}{" "}
                   </p>
                 </div>
 
@@ -43,7 +46,7 @@ const Footer = () => {
                     type="submit"
                     className="absolute right-1.5 top-1.5 inline-flex h-11 items-center rounded-full bg-sky-900 py-3 px-5 text-sm font-semibold text-sky-50 outline-none transition duration-200 ease-in-out hover:bg-sky-800 focus:outline-none sm:px-7 sm:text-md"
                   >
-                    Enviar
+                    {t("footer.send_button")}
                   </button>
                 </form>
               </div>
@@ -84,14 +87,14 @@ const Footer = () => {
             <div className="grid items-center max-w-xl gap-5 mx-auto lg:mx-0 lg:max-w-none lg:grid-cols-12 lg:gap-12 xl:gap-20">
               <div className="lg:col-span-7">
                 <h3 className="text-4xl font-semibold text-center text-white font-display sm:text-5xl lg:max-w-xl lg:text-left">
-                  ¡ Hagamos algo grandioso juntos !
+                  {t("footer.cta_title")}
                 </h3>
                 <div className="hidden lg:block">
                   <a
-                    href="#"
+                    href={`/${lang}/contacto`}
                     className="mt-12 bg-white hover:bg-sky-50 text-slate-700 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
                   >
-                    Contáctanos
+                    {t("footer.cta_button")}
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -109,15 +112,14 @@ const Footer = () => {
               </div>
               <div className="flex flex-col items-center lg:col-span-5 lg:items-start">
                 <p className="text-lg text-center text-slate-50 lg:max-w-sm lg:text-left">
-                  Estaremos encantados de responder tus preguntas y brindarte toda la información
-                  que necesites.
+                  {t("footer.cta_text")}
                 </p>
 
                 <a
                   href="#"
                   className="mt-10 inline-flex items-center justify-center gap-x-2.5 rounded-full bg-white py-3 px-7 text-md font-semibold leading-none text-slate-700 duration-200 ease-in-out hover:bg-sky-50 lg:hidden"
                 >
-                  Contáctanos
+                  {t("footer.cta_button")}
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
@@ -209,12 +211,10 @@ const Footer = () => {
               />
 
               <p className="mt-8 text-base text-slate-400/90 md:mt-0 text-center">
-                Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos reservados{" "}
+                {t("footer.copyright")}{" "}
               </p>
 
-              <p className="mt-8 text-base text-slate-400/90 md:mt-0">
-                Desarrollado por Josué Chinchilla Salazar{" "}
-              </p>
+              <p className="mt-8 text-base text-slate-400/90 md:mt-0">{t("footer.developed_by")}</p>
             </div>
           </div>
         </footer>

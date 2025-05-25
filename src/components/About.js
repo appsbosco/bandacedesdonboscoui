@@ -8,8 +8,11 @@ import aboutHero from "../assets/images/about.webp";
 import mision from "../assets/images/mision.webp";
 import vision from "../assets/images/vision.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import { useTranslation } from "react-i18next";
 
 const About = () => {
+  const { t } = useTranslation();
+
   return (
     <>
       <Header />
@@ -34,23 +37,19 @@ const About = () => {
                 >
                   <path d="M247.564 18.5807C241.772 13.3568 232.473 12.7526 225.225 11.4427C217.124 9.97395 208.996 8.57031 200.846 7.46093C186.542 5.51302 172.169 4.08854 157.79 3.01562C126.033 0.645827 94.0929 0.0338481 62.3387 2.36979C42.1785 3.85416 22.008 5.90885 2.32917 10.8463C-0.0155171 11.4349 0.207047 14.6719 2.6889 14.7083C22.0261 14.9896 41.3866 12.6406 60.7109 11.8568C79.9471 11.0807 99.2274 10.6719 118.484 10.9557C142.604 11.3125 166.719 12.8333 190.722 15.5156C199.956 16.5469 209.195 17.6016 218.411 18.8255C227.864 20.0807 237.259 22 246.767 20.7422C247.709 20.6198 248.426 19.3568 247.564 18.5807Z" />
                 </svg>
-                <span className="relative">Historia </span>
+                <span className="relative">{t("about.history_title_1")} </span>
               </span>
-              de la Banda CEDES Don Bosco
+              {t("about.history_title_2")}
             </h1>
             <p className="mt-8 text-lg leading-8 text-slate-700 text-justify">
-              La Banda de CEDES Don Bosco (BCDB) está conformada por alumnos y exalumnos de CEDES
-              Don Bosco con una edad promedio de 8 años a 24 años, específicamente de la Escuela San
-              Juan Bosco, del Colegio Técnico Profesional Don Bosco y del Centro de Formación
-              Profesional. La Banda fue creada desde los inicios del Colegio Técnico Don Bosco en
-              San José en el año 1965, antiguamente ubicado en barrio Don Bosco.
+              {t("about.history_p1")}{" "}
             </p>
             <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
-              La BCDB ha participado en diferentes festivales tanto a nivel nacional como
-              internacional en países como, El Salvador, Panamá y Estados Unidos. A nivel nacional
-              ha participado en 17 ediciones del Festival de la Luz de la Municipalidad de San José
-              desde el año 1998, siendo ganadores de la edición del 2007 en la categoría “Mejor
-              Banda Colegial”.
+              {t("about.history_p2")}
+            </p>
+
+            <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
+              {t("about.history_p3")}
             </p>
           </div>
         </div>
@@ -111,7 +110,7 @@ const About = () => {
             <div className="lg:order-2">
               <div className="max-w-2xl mx-auto lg:mx-0">
                 <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-                  Nuestra
+                  {t("about.trajectory_title")}
                   <span className="relative whitespace-nowrap">
                     <svg
                       width="329"
@@ -140,30 +139,20 @@ const About = () => {
                       </g>
                     </svg>
 
-                    <span className="relative text-sky-700"> trayectoria</span>
+                    <span className="relative text-sky-700"> {t("about.trajectory_subtitle")}</span>
                   </span>
                 </h2>
 
                 <p className="mt-6 text-lg leading-8 text-slate-700 text-justify ">
-                  Por su gran profesionalismo la banda ha sido parte de eventos de gran relevancia
-                  en el país como la Inauguración del Estadio Nacional, Inauguración de los Juegos
-                  Centroamericanos y del Caribe, Inauguración del Campeonato Centroamericano y del
-                  Caribe de Atletismo NACAC, desfile del 120 Aniversario del Teatro Nacional, Primer
-                  Mega Banda de Marcha para el traspaso de poderes del segundo mandato de Oscar
-                  Arias, Mega Banda MEP del Festival Estudiantil de la Artes (FEA).
+                  {t("about.trajectory_p1")}
                 </p>
 
                 <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
-                  La Banda de CEDES Don Bosco se caracteriza por su versatilidad tanto en
-                  repertorios como en su formato para las distintas presentaciones, actualmente se
-                  puede presentar bajo el formato de Banda de Concierto, Banda de Marcha y Big Band.
-                  Nuestra banda está conformada por: 110 Instrumentistas de viento, 10 integrantes
-                  de mallets, 19 integrantes de drumline, 23 Color Guard, 22 integrantes de danza,
-                  un director, y un staff de 15 padres de familia.
+                  {t("about.trajectory_p2")}{" "}
                 </p>
 
                 <p className="mt-6 text-lg leading-8 text-slate-700 text-justify">
-                  Total BCDB: 200 integrantes.
+                  {t("about.trajectory_p3")}
                 </p>
               </div>
             </div>
@@ -188,13 +177,11 @@ const About = () => {
           <div className="max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <h2 className="text-5xl font-semibold font-display text-slate-900 sm:text-6xl lg:leading-none">
-                Misión y visión
+                {t("about.mission_vision_title")}
               </h2>
 
               <p className="text-lg text-slate-700 lg:ml-auto lg:max-w-lg text-justify">
-                El propósito principal es impartir conocimientos musicales mediante la práctica de
-                un instrumento, con el fin de brindar un servicio alegre al Señor, siguiendo los
-                principios educativos de San Juan Bosco.
+                {t("about.mission_vision_p")}
               </p>
             </div>
 
@@ -213,12 +200,10 @@ const About = () => {
                 </a>
                 <div className="flex flex-col items-center order-2">
                   <h3 className="text-center font-display text-[28px] font-medium text-slate-900">
-                    Misión
+                    {t("about.mission_title")}
                   </h3>
                   <p className="mt-5 text-base leading-8 text-center text-slate-700">
-                    Enseñar el arte de la música a través de la ejecución de un instrumento musical
-                    con la finalidad de “servir al señor con alegría” mediante la pedagogía de San
-                    Juan Bosco.
+                    {t("about.mission_p")}{" "}
                   </p>
                 </div>
               </div>
@@ -237,12 +222,10 @@ const About = () => {
                 </a>
                 <div className="flex flex-col items-center order-1">
                   <h3 className="text-center font-display text-[28px] font-medium text-slate-900">
-                    Visión
+                    {t("about.vision_title")}
                   </h3>
                   <p className="mt-5 text-base leading-8 text-center text-slate-700">
-                    Ser una agrupación musical consolidada dentro del complejo educativo CEDES Don
-                    Bosco con el objetivo de apoyar la educación integral de los jóvenes y de
-                    proyección socio cultural.
+                    {t("about.vision_p")}{" "}
                   </p>
                 </div>
               </div>

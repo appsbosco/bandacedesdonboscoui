@@ -3,10 +3,13 @@ import React, { useState } from "react";
 import logo from "../assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 import { useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 
 const Header = ({ openModal }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const { i18n, t } = useTranslation();
+  const lang = i18n.language;
   const isAuthenticated = localStorage.getItem("token");
 
   const toggleMobileMenu = () => {
@@ -33,37 +36,37 @@ const Header = ({ openModal }) => {
           {/* Desktop navigation links */}
           <div className="items-center hidden md:flex md:space-x-6 lg:space-x-8">
             <a
-              href="/"
+              href={`/${lang}`}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
-              Inicio
+              {t("nav.home")}
             </a>
             <a
-              href="/nosotros"
+              href={`/${lang}/nosotros`}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
-              Nosotros
-            </a>
-
-            <a
-              href="/blog"
-              className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
-            >
-              Blog
+              {t("nav.about")}
             </a>
 
             <a
-              href="/calendario"
+              href={`/${lang}/blog`}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
-              Calendario
+              {t("nav.blog")}
             </a>
 
             <a
-              href="/contacto"
+              href={`/${lang}/calendario`}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
-              Contacto
+              {t("nav.calendar")}
+            </a>
+
+            <a
+              href={`/${lang}/contacto`}
+              className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
+            >
+              {t("nav.contact")}
             </a>
 
             {/* {!(
@@ -189,32 +192,32 @@ const Header = ({ openModal }) => {
                   {/* Mobile menu links */}
                   <div className="flex flex-col space-y-4">
                     <a
-                      href="/"
+                      href={`/${lang}`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Inicio
                     </a>
                     <a
-                      href="/nosotros"
+                      href={`/${lang}/nosotros`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Nosotros
                     </a>
 
                     <a
-                      href="/blog"
+                      href={`/${lang}/blog`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Blog
                     </a>
                     <a
-                      href="/calendario"
+                      href={`/${lang}/calendario`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Calendario
                     </a>
                     <a
-                      href="/contacto"
+                      href={`/${lang}/contacto`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       Contacto

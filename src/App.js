@@ -40,6 +40,10 @@ import Guatemala from "layouts/guatemala/Guatemala";
 import Apoyo from "layouts/apoyo/Apoyo";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import { instructorsRoutes } from "routes";
+import LanguageRedirect from "./LanguageRedirect";
+import { useNavigate } from "react-router-dom";
+import About from "components/About";
+import Contact from "components/Contact";
 
 function isTokenExpired(token) {
   try {
@@ -56,6 +60,11 @@ export default function App() {
   const [onMouseEnter, setOnMouseEnter] = useState(false);
   const [rtlCache, setRtlCache] = useState(null);
   const { pathname } = useLocation();
+
+  const navigate = useNavigate();
+  // Check if user is authenticated
+  const token = localStorage.getItem("token");
+  const isAuthenticated = token && !isTokenExpired(token);
 
   useMemo(() => {
     const cacheRtl = createCache({
@@ -104,30 +113,31 @@ export default function App() {
       return null;
     });
 
+  useEffect(() => {
+    const isLangPath = /^\/(es|en)(\/.*)?$/.test(pathname);
+    const isLandingPath = pathname === "/" || isLangPath;
+
+    const shouldRedirectToLogin =
+      !isAuthenticated &&
+      !isLandingPath &&
+      (pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/members") ||
+        pathname.startsWith("/inventory") ||
+        pathname.startsWith("/performance-attendance") ||
+        pathname.startsWith("/attendance") ||
+        pathname.startsWith("/attendance-history") ||
+        pathname.startsWith("/events") ||
+        pathname.startsWith("/almuer") ||
+        pathname.startsWith("/Profile"));
+
+    if (shouldRedirectToLogin) {
+      navigate("/autenticacion/iniciar-sesion", { replace: true });
+    }
+  }, [pathname, isAuthenticated, navigate]);
+
   const { data: userData, loading, error } = useQuery(GET_USERS_BY_ID);
 
   const userRole = userData?.getUser?.role;
-
-  // Check if user is authenticated
-  const token = localStorage.getItem("token");
-  const isAuthenticated = token && !isTokenExpired(token);
-
-  // Redirect to login if not authenticated and trying to access /dashboard
-  const shouldRedirectToLogin =
-    !isAuthenticated &&
-    (pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/members") ||
-      pathname.startsWith("/inventory") ||
-      pathname.startsWith("/performance-attendance") ||
-      pathname.startsWith("/attendance") ||
-      pathname.startsWith("/attendance-history") ||
-      pathname.startsWith("/events") ||
-      pathname.startsWith("/almuer") ||
-      pathname.startsWith("/Profile"));
-
-  if (shouldRedirectToLogin) {
-    return <Navigate to="/autenticacion/iniciar-sesion" />;
-  }
 
   let renderedRoutes = null;
 
@@ -147,9 +157,12 @@ export default function App() {
   } else if (userRole === "Staff") {
     const staffRoutesFiltered = [...routes, ...staffRoutes];
     renderedRoutes = getRoutes(staffRoutesFiltered);
-  } else if (userRole === "CEDES" || userRole === "Instructor de instrumento") {
+  } else if (userRole === "CEDES") {
     const cedesRoutesFiltered = [...routes, ...cedesRoutes];
     renderedRoutes = getRoutes(cedesRoutesFiltered);
+  } else if (userRole === "Instructor de instrumento") {
+    const instructorsRoutesFiltered = [...routes, ...instructorsRoutes];
+    renderedRoutes = getRoutes(instructorsRoutesFiltered);
   } else if (
     userRole !== "Integrante BCDB" &&
     userRole !== "Instructor Drumline" &&
@@ -216,13 +229,16 @@ export default function App() {
     );
   });
 
+  const hideSidenavForLang = /^\/(es|en|fr)(\/.*)?$/.test(pathname);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
-      {layout === "dashboard" && (
+      {layout === "dashboard" && !hideSidenavForLang && (
         <>
           {pathname !== "/" &&
+            pathname !== "/:lang" &&
             pathname !== "/autenticacion/iniciar-sesion" &&
             pathname !== "/autenticacion/registrarse-privado" &&
             pathname !== "/autenticacion/registro-privado" &&
@@ -256,9 +272,17 @@ export default function App() {
       )}
 
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<LanguageRedirect />} />
+
+        <Route path="/:lang" element={<Landing />} />
+        <Route path="/:lang/nosotros" element={<About />} />
+        <Route path="/:lang/blog" element={<BlogListing />} />
+        <Route path="/:lang/blog/:id" element={<ArticlePage />} />
+        <Route path="/:lang/contacto" element={<Contact />} />
+
+        <Route path="/:lang/calendario" element={<CalendarListing />} />
         {renderedRoutes.map((route) => route)}
-        <Route path="/blog" element={<BlogListing />} />
+
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-guatemala" element={<Guatemala />} />
@@ -266,7 +290,7 @@ export default function App() {
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
-        <Route path="/blog/:id" element={<ArticlePage />} />
+
         <Route path="/autenticacion/registrarse-privado" component={SignUp} />
         <Route path="/autenticacion/iniciar-sesion" component={SignIn} />
       </Routes>

@@ -1,0 +1,114 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "about": "Nosotros",
+    "blog": "Blog",
+    "calendar": "Calendario",
+    "contact": "Contacto",
+    "dashboard": "Dashboard",
+    "register": "Registrarse",
+    "login": "Iniciar Sesión",
+    "reserve_tickets": "Reservar entradas",
+    "sign_up_disabled": "Inscribirme"
+  },
+  "hero": {
+    "title_prefix": "Bienvenido",
+    "title_suffix": "a la página oficial de la Banda CEDES Don Bosco",
+    "description": "Aquí podrán conocer de la música y el talento de nuestra reconocida banda. Conformada por músicos apasionados y comprometidos, nuestra banda destaca por su excelencia y energía en el escenario. ¡Gracias por visitarnos!",
+    "contact": "Contáctanos",
+    "label_family": "Familia",
+    "label_friends": "Amigos",
+    "label_passion": "Pasión",
+    "handwritten": "¡Más que una banda!"
+  },
+  "values": {
+    "title": "Nuestros",
+    "highlight": "valores",
+    "description": "Amistad, pasión y familia. Nuestros miembros comparten una conexión profunda y trabajan juntos para ofrecer actuaciones emotivas y llenas de energía. ¡Descubre el talento y la unión de esta increíble banda!",
+    "friendship_title": "Amistad",
+    "friendship_text": "Valoramos la amistad, creando lazos fuertes y duraderos entre nuestros miembros, quienes comparten su amor por la música y trabajan juntos para alcanzar metas comunes.",
+    "passion_title": "Pasión",
+    "passion_text": "Cada miembro está impulsado por un amor profundo hacia la música y se esfuerza por transmitir emociones y sentimientos a través de sus interpretaciones.",
+    "family_title": "Familia",
+    "family_text": "Somos una familia unida por el amor compartido por la música, creando un ambiente de armonía que va más allá de la música.",
+    "difference_label": "Lo que nos diferencia",
+    "members": "Integrantes",
+    "history": "Años de historia"
+  },
+  "footer": {
+    "newsletter_title": "Ponte en contacto con nosotros",
+    "newsletter_description": "¡Contáctanos en nuestras redes sociales y descubre todo lo que tenemos para ofrecerte! Encuéntranos en Facebook, Instagram y WhatsApp",
+    "input_placeholder": "Ingresa tu mensaje",
+    "send_button": "Enviar",
+    "cta_title": "¡ Hagamos algo grandioso juntos !",
+    "cta_text": "Estaremos encantados de responder tus preguntas y brindarte toda la información que necesites.",
+    "cta_button": "Contáctanos",
+    "social_facebook": "Facebook",
+    "social_instagram": "Instagram",
+    "social_whatsapp": "WhatsApp",
+    "copyright": "Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos reservados",
+    "developed_by": "Desarrollado por Josué Chinchilla Salazar"
+  },
+  "about": {
+    "history_title_1": "Historia",
+    "history_title_2": "de la Banda CEDES Don Bosco",
+    "history_p1": "Fundada en 1965, la Banda CEDES Don Bosco (BCDB) nace paralelamente a la creación del Colegio Técnico Don Bosco, originalmente ubicado en barrio Don Bosco, San José, Costa Rica. Desde sus inicios, la banda ha sido un símbolo de excelencia, disciplina y transformación social a través de la música. En 2001, con el traslado del colegio al moderno complejo educativo CEDES Don Bosco en Concepción Arriba de Alajuelita, la banda se fortalece como una agrupación artística de referencia nacional.",
+    "history_p2": "A lo largo de sus casi seis décadas de historia, la banda ha sido dirigida por tan solo tres directores, demostrando una estabilidad poco común en agrupaciones de este tipo. Actualmente, su director es el maestro Luis Fernando Solano Gamboa, quien lidera con pasión y compromiso un equipo que no solo forma músicos, sino seres humanos íntegros.",
+    "history_p3": "Hoy, la banda está compuesta por 280 integrantes, entre estudiantes activos y exalumnos del Centro de Enseñanza Don Bosco, la Escuela San Juan Bosco y el Colegio Técnico Profesional Don Bosco. Las edades de los miembros oscilan entre los 8 y los 24 años, con una participación destacada de jóvenes provenientes de comunidades en situación de vulnerabilidad.",
+    "trajectory_title": "Nuestra",
+    "trajectory_subtitle": "trayectoria",
+    "trajectory_p1": "La Banda CEDES Don Bosco ha representado con orgullo a Costa Rica en escenarios internacionales, participando en festivales y desfiles en El Salvador, Panamá, Estados Unidos (recientemente en Minnesota, enero 2024), y tiene prevista su próxima gira internacional en enero de 2025 a Ciudad Cayalá, Guatemala. A nivel nacional, la banda ha brillado en más de 18 ediciones del Festival de la Luz de San José, siendo ganadora absoluta en 2007 y consiguiendo el segundo lugar en 2023 y el tercer lugar en 2024. Además, ha sido protagonista en momentos históricos del país, como: Inauguración del Estadio Nacional de Costa Rica (2011), Juegos Centroamericanos y del Caribe (2013), Campeonato NACAC de Atletismo (2015), Desfile del 120° aniversario del Teatro Nacional (2017), Mega Bandas MEP y traspasos presidenciales (2006 y 2014).",
+    "trajectory_p2": "La Banda de CEDES Don Bosco se caracteriza por su versatilidad tanto en repertorios como en su formato para las distintas presentaciones, actualmente se puede presentar bajo el formato de Banda de Concierto, Banda de Marcha y Big Band. Nuestra banda está conformada por: 166 Instrumentistas de viento, 35 percusionistas (Drumline y Mallets), 29 Color Guard, 27 integrantes de danza, un director, 2 instructores y un staff de 20 padres de familia.",
+    "trajectory_p3": "Total BCDB: 280 integrantes.",
+    "mission_vision_title": "Misión y visión",
+    "mission_vision_p": "El propósito principal es impartir conocimientos musicales mediante la práctica de un instrumento, con el fin de brindar un servicio alegre al Señor, siguiendo los principios educativos de San Juan Bosco.",
+    "mission_title": "Misión",
+    "mission_p": "Formar integralmente a niños y jóvenes a través de la educación musical, utilizando la banda como una herramienta de transformación personal y social. Inspirados en los valores del carisma salesiano, cultivamos la disciplina, el compromiso, la excelencia artística y el servicio alegre al prójimo, ofreciendo un camino de esperanza, desarrollo y pertenencia para quienes provienen, en su mayoría, de comunidades en situación de vulnerabilidad.",
+    "vision_title": "Visión",
+    "vision_p": "Consolidarnos como una banda sinfónica de marcha referente en América Latina por su calidad musical, impacto social y modelo educativo, siendo una plataforma que empodera a las nuevas generaciones para convertirse en líderes positivos, profesionales íntegros y agentes de cambio dentro de sus comunidades, llevando siempre un mensaje de unidad, paz y alegría a través de la música."
+  },
+
+  "calendar": {
+    "hero": {
+      "title": "Bienvenidos a",
+      "title_suffix": "nuestro calendario",
+      "description": "Aquí podrás enterarte sobre las próximas presentaciones de nuestra banda"
+    },
+    "upcoming": {
+      "title": "Próximas presentaciones",
+      "empty": "No hay presentaciones próximas"
+    },
+    "contact": {
+      "title": "¿Cómo podemos ayudarte? Hablemos",
+      "description": "Puedes",
+      "title_sufix_1": "contactarnos",
+      "title_sufix_2": "por estos canales",
+      "email": {
+        "title": "Email",
+        "description": "Te enviaremos un correo electrónico.",
+        "cta": "banda@cedesdonbosco.ed.cr"
+      },
+      "phone": {
+        "title": "Llámanos",
+        "description": "Disponible los días de semana de 7 a.m. a 6 p.m.",
+        "cta": "+506 8380-7124"
+      },
+      "form": {
+        "title": "Complete nuestro formulario a continuación para comenzar",
+        "fields": {
+          "name": "Nombre",
+          "namePlaceholder": "BCDB",
+          "email": "Email",
+          "emailPlaceholder": "ejemplo@email.com",
+          "phone": "Celular",
+          "phoneOptional": "Opcional",
+          "phonePlaceholder": "+506 8888-8888",
+          "message": "Mensaje",
+          "messageLimit": "Máximo 500 caracteres",
+          "messagePlaceholder": "Cuéntanos un poco sobre tu idea..."
+        },
+        "submit": "Enviar"
+      }
+    }
+  }
+}
