@@ -27,7 +27,7 @@ export default styled(Avatar)(({ theme, ownerState }) => {
 
   // backgroundImage value
   const backgroundValue =
-    bgColor === "transparent"
+    bgColor === "rgba(0,0,0,0)"
       ? transparent.main
       : linearGradient(gradients[bgColor].main, gradients[bgColor].state);
 

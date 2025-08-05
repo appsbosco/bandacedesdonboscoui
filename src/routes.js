@@ -283,7 +283,7 @@ const routes = [
     type: "collapse",
     name: "Velada",
     key: "concierto-noche-de-peliculas",
-    route: "/concierto-noche-de-peliculas",
+    route: "/60-aniversaio",
     icon: "",
     component: <VeladaTickets />,
     noCollapse: true,

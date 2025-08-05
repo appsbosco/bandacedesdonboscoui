@@ -62,7 +62,7 @@ function DefaultProjectCard({
     <div style={{ height: "100%" }}>
       <Card
         sx={{
-          backgroundColor: "transparent",
+          backgroundColor: "rgba(0,0,0,0)",
           boxShadow: "none",
           overflow: "visible",
           position: "relative",

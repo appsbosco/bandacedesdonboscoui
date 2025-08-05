@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
 import Footer from "components/Footer";
-import velada from "../../assets/images/IMG_7558.webp";
+import mothersDayEvent from "../../assets/images/mothers-day-event.jpg";
 import Header from "components/Header";
 
 const VeladaTickets = () => {
@@ -30,52 +30,16 @@ const VeladaTickets = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-lg mx-auto sm:max-w-3xl lg:mx-0 lg:max-w-none">
             <h1 className="text-4xl font-semibold leading-tight font-display text-slate-900 sm:text-5xl sm:leading-tight lg:text-6xl lg:leading-tight">
-              Velada 60° Aniversario Banda CEDES Don Bosco
+              Velada del Día de las Madres - Banda CEDES Don Bosco
             </h1>
-
-            {/* <!-- Tags list --> */}
-            {/* <ul className="flex flex-wrap items-center gap-4 mt-8 sm:gap-6">
-              <li>
-                <a
-                  href="#0"
-                  className="inline-block px-6 py-2 text-sm font-medium transition duration-200 ease-in-out rounded-full bg-slate-50 text-slate-800 ring-1 ring-slate-100/80 hover:bg-slate-100/95 hover:text-slate-900 lg:text-md"
-                >
-                  Branding
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#0"
-                  className="inline-block px-6 py-2 text-sm font-medium transition duration-200 ease-in-out rounded-full bg-slate-50 text-slate-800 ring-1 ring-slate-100/80 hover:bg-slate-100/95 hover:text-slate-900 lg:text-md"
-                >
-                  Product
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#0"
-                  className="inline-block px-6 py-2 text-sm font-medium transition duration-200 ease-in-out rounded-full bg-slate-50 text-slate-800 ring-1 ring-slate-100/80 hover:bg-slate-100/95 hover:text-slate-900 lg:text-md"
-                >
-                  Design
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#0"
-                  className="inline-block px-6 py-2 text-sm font-medium transition duration-200 ease-in-out rounded-full bg-slate-50 text-slate-800 ring-1 ring-slate-100/80 hover:bg-slate-100/95 hover:text-slate-900 lg:text-md"
-                >
-                  Custom Website
-                </a>
-              </li>
-            </ul> */}
           </div>
         </div>
 
         {/* <!-- Image --> */}
         <div className="relative block w-full mt-16 overflow-hidden aspect-w-16 aspect-h-9 md:aspect-w-5 md:aspect-h-2 lg:mt-20">
           <img
-            src={velada}
-            alt="Gira Guatemala Banda CEDES Don Bosco"
+            src={mothersDayEvent}
+            alt="Velada del Día de las Madres"
             className="object-cover w-full bg-slate-100"
           />
         </div>
@@ -88,28 +52,40 @@ const VeladaTickets = () => {
             {/* <!-- Details list --> */}
             <dl className="space-y-8">
               {/* <!-- 1st detail --> */}
+              <div>
+                <dt className="text-lg font-medium font-display text-slate-900">Evento</dt>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
+                  Velada del Día de las Madres - Banda CEDES Don Bosco
+                </dd>
+              </div>
 
               {/* <!-- 2nd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Fecha</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700"> 16 de agosto de 2025</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">15 de agosto de 2024</dd>
               </div>
 
               {/* <!-- 3rd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Lugar</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Gimnasio CEDES Don Bosco
+                  Auditorio CEDES Don Bosco
+                </dd>
+              </div>
+
+              {/* <!-- 4th detail --> */}
+              <div>
+                <dt className="text-lg font-medium font-display text-slate-900">Participantes</dt>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
+                  Integrantes de la Banda CEDES Don Bosco y sus familias
                 </dd>
               </div>
 
               {/* <!-- 5th detail --> */}
               <div>
-                <dt className="text-lg font-medium font-display text-slate-900">
-                  Entradas disponible
-                </dt>
+                <dt className="text-lg font-medium font-display text-slate-900">Entradas</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  ¡ Ya puedes reservar tus entradas para disfrutar de este evento !
+                  Compra tus entradas ahora y asegura tu lugar en esta velada especial.
                 </dd>
               </div>
             </dl>
@@ -118,10 +94,10 @@ const VeladaTickets = () => {
             <button
               href="#0"
               target="_blank"
-              className="bg-[#293964] text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
+              className="bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none mt-14 font-medium"
               onClick={handleOpenModal}
             >
-              Reservar entradas
+              Comprar entradas
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -140,25 +116,31 @@ const VeladaTickets = () => {
           {/* <!-- Description --> */}
           <div className="order-1 lg:order-2 lg:col-span-7 lg:pl-16">
             <h3 className="text-xl font-medium leading-8 font-display text-slate-900 sm:text-2xl sm:leading-10">
-              Celebración 60° Aniversario · Natalicio de Don Bosco · Día de la Madre
+              Celebración del Día de las Madres con la Banda CEDES Don Bosco
             </h3>
 
             {/* <!-- Content --> */}
             <div className="mt-6 prose sm:prose-lg sm:mt-8">
               <p>
-                Únete a nosotros el <strong>16 de agosto de 2025</strong> para celebrar los 60 años
-                de la Banda CEDES Don Bosco, conmemorando además el natalicio de Don Bosco y
-                rindiendo homenaje a las madres que nos inspiran.
+                Este 15 de agosto de 2024, la Banda CEDES Don Bosco te invita a una velada especial
+                para celebrar el Día de las Madres. Un evento lleno de música, alegría y momentos
+                inolvidables, dedicado a todas las madres que son el pilar de nuestras familias.
               </p>
               <p>
-                Disfruta de un programa especial con interpretaciones exclusivas, testimonios de
-                familia y un reconocimiento emotivo a todas las madres presentes. Será una velada
-                íntima y familiar en el <em>Gimnasio de CEDES Don Bosco</em>.
+                Durante esta velada, los integrantes de la banda realizarán presentaciones musicales
+                en honor a las madres, creando un ambiente emotivo y festivo. Además, habrá
+                actividades especiales y sorpresas para todas las asistentes.
               </p>
 
               <p>
-                ¡Te esperamos para hacer de esta noche un recuerdo inolvidable para la familia CEDES
-                Don Bosco!
+                No te pierdas esta oportunidad de compartir un momento único con tu familia y
+                disfrutar de la música en vivo de nuestros talentosos jóvenes. Las entradas están
+                disponibles para la compra en línea, asegúrate de adquirir las tuyas cuanto antes.
+              </p>
+
+              <p>
+                Te esperamos en el Auditorio CEDES Don Bosco para celebrar juntas esta fecha tan
+                especial y rendir homenaje a todas las madres.
               </p>
             </div>
           </div>

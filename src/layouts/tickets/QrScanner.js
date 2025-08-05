@@ -119,7 +119,7 @@ const QRScanner = () => {
       if (scanning) {
         processFrame();
       }
-    }, 500); // Adjust the interval as needed
+    }, 1000);
 
     return () => {
       scanning = false;
@@ -161,7 +161,10 @@ const QRScanner = () => {
                 ref={webcamRef}
                 screenshotFormat="image/png"
                 videoConstraints={videoConstraints}
-                style={{ width: "100%" }}
+                style={{
+                  width: "100%",
+                  transform: "scaleX(-1)",
+                }}
                 className="m-10 rounded-sm"
               />
             </SoftBox>

@@ -46,21 +46,26 @@ const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: mod
   const [allergies, setAllergies] = useState(initialValues ? initialValues.allergies : "");
 
   const handleSubmit = () => {
-    onSubmit({
-      identification,
-      sex,
-      bloodType,
-      address,
-      familyMemberName,
-      familyMemberNumber,
-      familyMemberNumberId,
-      familyMemberRelationship,
-      familyMemberOccupation,
-      illness,
-      medicine,
-      medicineOnTour,
-      allergies,
-    });
+    try {
+      console.log("Submitting form...");
+      onSubmit({
+        identification,
+        sex,
+        bloodType,
+        address,
+        familyMemberName,
+        familyMemberNumber,
+        familyMemberNumberId,
+        familyMemberRelationship,
+        familyMemberOccupation,
+        illness,
+        medicine,
+        medicineOnTour,
+        allergies,
+      });
+    } catch (error) {
+      console.error("Error during form submission:", error);
+    }
   };
 
   const bloodTypes = [

@@ -30,3 +30,4 @@ commit.sh
 
 # Local Netlify folder
 .netlify
+.qodo

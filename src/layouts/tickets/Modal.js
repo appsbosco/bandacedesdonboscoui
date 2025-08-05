@@ -59,7 +59,7 @@ const Modal = ({ onClose }) => {
   const [message, setMessage] = useState("");
 
   const [purchaseInput, setPurchaseInput] = useState({
-    eventId: "66eb482d2f79ce5e83950239",
+    eventId: "6887aef1f539d32d81515d6f",
     buyerName: "",
     buyerEmail: "",
     ticketQuantity: 2,

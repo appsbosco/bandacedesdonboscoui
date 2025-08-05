@@ -49,7 +49,7 @@ export default styled(Box)(({ theme, ownerState }) => {
   ];
 
   const validColors = [
-    "transparent",
+    "rgba(0,0,0,0)",
     "white",
     "black",
     "primary",

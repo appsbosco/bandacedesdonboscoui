@@ -15,7 +15,7 @@ Coded by Josué Chinchilla
 
 const appBar = {
   defaultProps: {
-    color: "transparent",
+    color: "rgba(0,0,0,0)",
   },
 
   styleOverrides: {
