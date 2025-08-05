@@ -87,7 +87,7 @@ const Header = ({ openModal }) => {
             {/* Call to action */}
             {isAuthenticated != null &&
             pathname !== "/gira-guatemala" &&
-            pathname !== "/60-aniversaio" &&
+            pathname !== "/60-aniversario" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/proyecto-exalumnos" &&
             pathname !== "/color-guard-camp" ? (
@@ -99,7 +99,7 @@ const Header = ({ openModal }) => {
               </a>
             ) : pathname === "/autenticacion/iniciar-sesion" ? (
               <></>
-            ) : pathname === "/60-aniversaio" ? (
+            ) : pathname === "/60-aniversario" ? (
               <>
                 <button
                   onClick={openModal}
@@ -110,7 +110,7 @@ const Header = ({ openModal }) => {
                 </button>
               </>
             ) : pathname === "/gira-guatemala" ||
-              pathname === "/60-aniversaio" ||
+              pathname === "/60-aniversario" ||
               pathname === "/proyecto-exalumnos" ||
               pathname === "/color-guard-camp" ||
               pathname === "/grupo-apoyo" ? (
