@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import Card from "@mui/material/Card";
@@ -30,9 +30,88 @@ const QRScanner = () => {
   const webcamRef = useRef(null);
   const [message, setMessage] = useState("");
   const [scanInfo, setScanInfo] = useState(null);
+  const [lastScanned, setLastScanned] = useState(null);
   const [validateTicket] = useMutation(VALIDATE_TICKET, {
     refetchQueries: [{ query: GET_TICKETS }],
   });
+
+  const handleScan = useCallback(
+    async (data) => {
+      if (data === lastScanned) return;
+
+      setLastScanned(data);
+
+      try {
+        const response = await validateTicket({ variables: { qrCode: data } });
+        const ticket = response.data.validateTicket;
+        console.log(ticket); // Log the ticket details for debugging
+
+        if (ticket.paid) {
+          setMessage("Entrada paga y válida. Puede ingresar.");
+          setScanInfo(`Escaneos: ${ticket.scans}/${ticket.ticketQuantity}`);
+        } else {
+          setMessage("Entrada no está pagada. Por favor proceda al pago.");
+        }
+      } catch (error) {
+        const msg = error.message || "Error desconocido. Intente de nuevo.";
+        if (msg.includes("Ticket not paid")) {
+          setMessage("La entrada no está pagada. Por favor proceda al pago.");
+        } else if (msg.includes("Invalid ticket")) {
+          setMessage("La entrada es inválida. Intente de nuevo o contacte soporte.");
+        } else {
+          setMessage(msg);
+        }
+      }
+    },
+    [lastScanned, validateTicket]
+  );
+
+  const processFrame = useCallback(() => {
+    if (!webcamRef.current) return;
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (!imageSrc) return;
+
+    const img = new Image();
+    img.src = imageSrc;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      const scaleFactor = 0.8; // reduce resolution for performance
+      canvas.width = img.width * scaleFactor;
+      canvas.height = img.height * scaleFactor;
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
+
+      if (code?.data) {
+        handleScan(code.data);
+      }
+    };
+  }, [handleScan]);
+
+  useEffect(() => {
+    let intervalId = setInterval(() => processFrame(), 500);
+    return () => clearInterval(intervalId);
+  }, [processFrame]);
+
+  useEffect(() => {
+    if (message) {
+      const timeout = setTimeout(() => {
+        setMessage("");
+        setScanInfo(null);
+        setLastScanned(null);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [message]);
+
+  const videoConstraints = {
+    facingMode: "environment",
+  };
 
   const showMessage = () => {
     const imageSource = message === "Entrada paga y válida. Puede ingresar." ? login : loginerror;
@@ -69,81 +148,6 @@ const QRScanner = () => {
     );
   };
 
-  const processFrame = async () => {
-    if (!webcamRef.current) return;
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) return;
-
-    const img = new Image();
-    img.src = imageSrc;
-    img.onload = async () => {
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = img.videoWidth || img.width;
-      canvas.height = img.videoHeight || img.height;
-      context.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code && code.data) {
-        await handleScan(code.data);
-      }
-    };
-  };
-
-  const handleScan = async (data) => {
-    try {
-      const response = await validateTicket({ variables: { qrCode: data } });
-      const ticket = response.data.validateTicket;
-
-      if (ticket.paid) {
-        setMessage("Entrada paga y válida. Puede ingresar.");
-        setScanInfo(`Escaneos: ${ticket.scans}/${ticket.ticketQuantity}`);
-      } else {
-        setMessage("Entrada no está pagada. Por favor proceda al pago.");
-      }
-    } catch (error) {
-      const errorMessage = error.message || "An error occurred. Please try again.";
-      if (errorMessage.includes("Ticket not paid")) {
-        setMessage("La entrada no está pagada. Por favor proceda al pago.");
-      } else if (errorMessage.includes("Invalid ticket")) {
-        setMessage("La entrada es inválida. Por favor intente de nuevo o contacte soporte.");
-      } else {
-        setMessage(errorMessage);
-      }
-    }
-  };
-
-  useEffect(() => {
-    let scanning = true;
-    const interval = setInterval(() => {
-      if (scanning) {
-        processFrame();
-      }
-    }, 1000);
-
-    return () => {
-      scanning = false;
-      clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
-    let timeoutId = null;
-    if (message) {
-      timeoutId = setTimeout(() => {
-        setMessage("");
-        setScanInfo(null);
-      }, 3000);
-    }
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [message]);
-
-  const videoConstraints = {
-    facingMode: "environment",
-  };
-
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -155,17 +159,18 @@ const QRScanner = () => {
               <SoftTypography variant="h6">Checkeo de entradas</SoftTypography>
             </SoftBox>
 
-            <SoftBox display="flex">
+            <SoftBox display="flex" justifyContent="center">
               <Webcam
-                audio={false}
                 ref={webcamRef}
-                screenshotFormat="image/png"
+                audio={false}
+                screenshotFormat="image/jpeg"
                 videoConstraints={videoConstraints}
                 style={{
                   width: "100%",
+                  maxWidth: "600px",
+                  borderRadius: "8px",
                   transform: "scaleX(-1)",
                 }}
-                className="m-10 rounded-sm"
               />
             </SoftBox>
           </Card>
