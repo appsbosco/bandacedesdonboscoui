@@ -165,6 +165,7 @@ const QRScanner = () => {
                 audio={false}
                 screenshotFormat="image/jpeg"
                 videoConstraints={videoConstraints}
+                mirrored={false}
                 style={{
                   width: "100%",
                   maxWidth: "600px",
