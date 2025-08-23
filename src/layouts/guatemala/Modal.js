@@ -88,235 +88,261 @@ const Modal = ({ onClose }) => {
   useEffect(() => {
     if (isRegistrationSuccessful && authorized) {
       const emailContent = `
-      <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-      <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
-      <html lang="en">
-        <head></head>
-        <div
-          id="__react-email-preview"
-          style="
-            display: none;
-            overflow: hidden;
-            line-height: 1px;
-            opacity: 0;
-            max-height: 0;
-            max-width: 0;
-          "
-        >
-          <p style="font-size: 32px; line-height: 1.3; margin: 16px 0; font-weight: 700; color: #484848">
-            ¡Hola, ${fullName} ! Has hecho la inscripción exitosamente
-          </p>
-          <div>
-             ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
-          </div>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
+    <html lang="en">
+      <head></head>
+      <div
+        id="__react-email-preview"
+        style="
+          display: none;
+          overflow: hidden;
+          line-height: 1px;
+          opacity: 0;
+          max-height: 0;
+          max-width: 0;
+        "
+      >
+        <p style="font-size: 32px; line-height: 1.3; margin: 16px 0; font-weight: 700; color: #484848">
+          ¡Hola, ${fullName} ! Has hecho la inscripción exitosamente
+        </p>
+        <div>
+           ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
         </div>
-      
-        <body
+      </div>
+    
+      <body
+        style="
+          background-color: #ffffff;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
+            Cantarell, 'Helvetica Neue', sans-serif;
+        "
+      >
+        <table
           style="
             background-color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
               Cantarell, 'Helvetica Neue', sans-serif;
           "
+          align="center"
+          border="0"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          width="100%"
         >
-          <table
-            style="
-              background-color: #ffffff;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
-                Cantarell, 'Helvetica Neue', sans-serif;
-            "
-            align="center"
-            border="0"
-            cellpadding="0"
-            cellspacing="0"
-            role="presentation"
-            width="100%"
-          >
-            <tbody>
-              <tr>
-                <td>
-                  <table
-                    align="center"
-                    role="presentation"
-                    cellspacing="0"
-                    cellpadding="0"
-                    border="0"
-                    width="100%"
-                    style="max-width: 37.5em; margin: 0 auto; padding: 20px 0 48px; width: 580px"
-                  >
-                    <tr style="width: 100%">
-                      <td>
-                        <table
-                          align="center"
-                          border="0"
-                          cellpadding="0"
-                          cellspacing="0"
-                          role="presentation"
-                          width="100%"
-                        >
-                          <tbody>
-                            <tr>
-                              <td>
-                                <img
-                                  alt="BCDB"
-                                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
-                                  style="
-                                    display: block;
-                                    outline: none;
-                                    border: none;
-                                    text-decoration: none;
-                                    margin: 0;
-                                    padding: 0;
-                                    max-width: 30%;
-                                    height: auto;
-                                  "
-                                />
-                                <p
-                                  style="
-                                    font-size: 26px;
-                                    line-height: 1.3;
-                                    margin: 16px 0;
-                                    font-weight: 700;
-                                    color: #484848;
-                                  "
-                                >
-                                  Gira Guatemala Banda CEDES Don Bosco, 2024 🙌🏻 🎶
-                                </p>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <!-- <table
-                          align="center"
-                          border="0"
-                          cellpadding="0"
-                          cellspacing="0"
-                          role="presentation"
-                          width="100%"
-                        >
-                          <tbody>
-                            <tr>
-                              <td>
-                                <img
-                                  alt=""
-                                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
-                                  
-                                  style="
+          <tbody>
+            <tr>
+              <td>
+                <table
+                  align="center"
+                  role="presentation"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                  width="100%"
+                  style="max-width: 37.5em; margin: 0 auto; padding: 20px 0 48px; width: 580px"
+                >
+                  <tr style="width: 100%">
+                    <td>
+                      <table
+                        align="center"
+                        border="0"
+                        cellpadding="0"
+                        cellspacing="0"
+                        role="presentation"
+                        width="100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td>
+                              <img
+                                alt="BCDB"
+                                src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
+                                style="
                                   display: block;
                                   outline: none;
                                   border: none;
                                   text-decoration: none;
-                                  margin: 0 auto;
-                                  margin-bottom: 16px;
-                                  border-radius: 50%;
-                                  max-width: 100%;
+                                  margin: 0;
+                                  padding: 0;
+                                  max-width: 30%;
                                   height: auto;
-                                  "
-                                />
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table> -->
-                        <table
-                          style="padding-bottom: 20px"
-                          align="center"
-                          border="0"
-                          cellpadding="0"
-                          cellspacing="0"
-                          role="presentation"
-                          width="100%"
-                        >
-                          <tbody>
-                            <tr>
-                              <td>
-                                <table
-                                  width="100%"
-                                  align="center"
-                                  role="presentation"
-                                  cellspacing="0"
-                                  cellpadding="0"
-                                  border="0"
-                                >
-                                  <tbody style="width: 100%">
-                                    <tr style="width: 100%">
-                                      <p
-                                        style="
-                                          font-size: 32px;
-                                          line-height: 1.3;
-                                          margin: 16px 0;
-                                          font-weight: 700;
-                                          color: #484848;
-                                        "
-                                      >
-                                      Estimado/a ${fullName},
-                                       
-                                      </p>
-                                      <p
-                                        style="
-                                          font-size: 18px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                          padding: 24px;
-                                          background-color: #f2f3f3;
-                                          border-radius: 4px;
-                                        "
-                                      >
-                                        "¡Gracias por hacer la inscripción de su hijo/a o exalumno a la Gira Cultural de nuestra banda a Guatemala, que se llevará a cabo del 26 de enero al 3 de febrero de 2025! Estamos encantados de contar con su participación en esta experiencia que promete ser tan enriquecedora como educativa."
-                                      </p>
-      
-                                      <p
-                                        style="
-                                          font-size: 20px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                          font-weight: bold;
-                                        "
-                                      >
-                                      Detalles Importantes de la Gira:                                    
-                                      </p>
-                                      <p
-                                        style="
-                                          font-size: 18px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                        "
-                                      >
-                                      Fecha: 26 de enero al 3 de febrero de 2025
-                                      </p>
-      
+                                "
+                              />
+                              <p
+                                style="
+                                  font-size: 26px;
+                                  line-height: 1.3;
+                                  margin: 16px 0;
+                                  font-weight: 700;
+                                  color: #484848;
+                                "
+                              >
+                                Gira Panamá Banda CEDES Don Bosco, 2025 🙌🏻 🎶
+                              </p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <!-- <table
+                        align="center"
+                        border="0"
+                        cellpadding="0"
+                        cellspacing="0"
+                        role="presentation"
+                        width="100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td>
+                              <img
+                                alt=""
+                                src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
+                                
+                                style="
+                                display: block;
+                                outline: none;
+                                border: none;
+                                text-decoration: none;
+                                margin: 0 auto;
+                                margin-bottom: 16px;
+                                border-radius: 50%;
+                                max-width: 100%;
+                                height: auto;
+                                "
+                              />
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table> -->
+                      <table
+                        style="padding-bottom: 20px"
+                        align="center"
+                        border="0"
+                        cellpadding="0"
+                        cellspacing="0"
+                        role="presentation"
+                        width="100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td>
+                              <table
+                                width="100%"
+                                align="center"
+                                role="presentation"
+                                cellspacing="0"
+                                cellpadding="0"
+                                border="0"
+                              >
+                                <tbody style="width: 100%">
+                                  <tr style="width: 100%">
+                                    <p
+                                      style="
+                                        font-size: 32px;
+                                        line-height: 1.3;
+                                        margin: 16px 0;
+                                        font-weight: 700;
+                                        color: #484848;
+                                      "
+                                    >
+                                    Estimado/a ${fullName},
                                      
-                                    
-                                      <p
-                                        style="
-                                          font-size: 18px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                        "
-                                      >
-                                      Actividades Principales: Visitas a colegios y universidades salesianas, lugares turísticos, y excursiones culturales y turísticas.
-                                      </p>
+                                    </p>
+                                    <p
+                                      style="
+                                        font-size: 18px;
+                                        line-height: 1.4;
+                                        margin: 16px 0;
+                                        color: #484848;
+                                        padding: 24px;
+                                        background-color: #f2f3f3;
+                                        border-radius: 4px;
+                                      "
+                                    >
+                                      "¡Gracias por hacer la inscripción de su hijo/a o exalumno a la Gira Cultural de nuestra banda a <strong>Panamá</strong>, que se llevará a cabo del <strong>14 al 16 de diciembre de 2025</strong>! Estamos encantados de contar con su participación en esta experiencia que promete ser tan enriquecedora como educativa."
+                                    </p>
+    
+                                    <p
+                                      style="
+                                        font-size: 20px;
+                                        line-height: 1.4;
+                                        margin: 16px 0;
+                                        color: #484848;
+                                        font-weight: bold;
+                                      "
+                                    >
+                                    Detalles Importantes de la Gira:                                    
+                                    </p>
+                                    <p
+                                      style="
+                                        font-size: 18px;
+                                        line-height: 1.4;
+                                        margin: 16px 0;
+                                        color: #484848;
+                                      "
+                                    >
+                                    Fecha: <strong>14 al 16 de diciembre de 2025</strong>
+                                    </p>
+    
                                    
-                            
-      
-                                      <br />
-                                      <p
-                                        style="
-                                          font-size: 18px;
-                                          line-height: 1.4;
-                                          margin: 16px 0;
-                                          color: #484848;
-                                          padding-bottom: 16px;
-                                        "
-                                      >
-                                        ¡Estamos emocionados por la oportunidad de vivir esta experiencia juntos y de fortalecer los lazos que nos unen a través de la música y la cultura! ¡Nos vemos muy pronto!
-                                      </p>
-      
-                                      <a
-                                        href=""
-                                        target="_blank"
+                                  
+                                    <p
+                                      style="
+                                        font-size: 18px;
+                                        line-height: 1.4;
+                                        margin: 16px 0;
+                                        color: #484848;
+                                      "
+                                    >
+                                      Actividades Principales: <strong>14</strong> – Festival Navideño “Ciudad de las Estrellas”, Ciudad de Panamá, a partir de las <strong>3:00 p.m.</strong>. <strong>15</strong> – Tour por esclusas de <strong>Miraflores</strong>, <strong>Canal de Panamá</strong> y <strong>Albrook Mall</strong>; <strong>retorno a Costa Rica después de la cena</strong>. <strong>16</strong> – Llegada a Costa Rica <strong>aprox. 6:00 p.m.</strong>. <strong>Fin de la temporada navideña.</strong>
+                                    </p>
+                                 
+                          
+                                    <br />
+                                    <p
+                                      style="
+                                        font-size: 18px;
+                                        line-height: 1.4;
+                                        margin: 16px 0;
+                                        color: #484848;
+                                        padding-bottom: 16px;
+                                      "
+                                    >
+                                      ¡Estamos emocionados por la oportunidad de vivir esta experiencia juntos y de fortalecer los lazos que nos unen a través de la música y la cultura! ¡Nos vemos muy pronto!
+                                    </p>
+    
+                                    <a
+                                      href=""
+                                      target="_blank"
+                                      style="
+                                        background-color: #293964;
+                                        border-radius: 3px;
+                                        color: #fff;
+                                        font-size: 18px;
+                                        text-decoration: none;
+                                        text-align: center;
+                                        display: inline-block;
+                                        width: 100%;
+                                        p-y: 19px;
+                                        line-height: 100%;
+                                        max-width: 100%;
+                                        padding: 19px 0px;
+                                      "
+                                      ><span
+                                        ><!--[if mso
+                                          ]><i
+                                            style="
+                                              letter-spacing: undefinedpx;
+                                              mso-font-width: -100%;
+                                              mso-text-raise: 28.5;
+                                            "
+                                            hidden
+                                            >&nbsp;</i
+                                          ><!
+                                        [endif]--></span
+                                      ><span
                                         style="
                                           background-color: #293964;
                                           border-radius: 3px;
@@ -327,133 +353,106 @@ const Modal = ({ onClose }) => {
                                           display: inline-block;
                                           width: 100%;
                                           p-y: 19px;
-                                          line-height: 100%;
                                           max-width: 100%;
-                                          padding: 19px 0px;
+                                          line-height: 120%;
+                                          text-transform: none;
+                                          mso-padding-alt: 0px;
+                                          mso-text-raise: 14.25px;
                                         "
-                                        ><span
-                                          ><!--[if mso
-                                            ]><i
-                                              style="
-                                                letter-spacing: undefinedpx;
-                                                mso-font-width: -100%;
-                                                mso-text-raise: 28.5;
-                                              "
-                                              hidden
-                                              >&nbsp;</i
-                                            ><!
-                                          [endif]--></span
-                                        ><span
-                                          style="
-                                            background-color: #293964;
-                                            border-radius: 3px;
-                                            color: #fff;
-                                            font-size: 18px;
-                                            text-decoration: none;
-                                            text-align: center;
-                                            display: inline-block;
-                                            width: 100%;
-                                            p-y: 19px;
-                                            max-width: 100%;
-                                            line-height: 120%;
-                                            text-transform: none;
-                                            mso-padding-alt: 0px;
-                                            mso-text-raise: 14.25px;
-                                          "
-                                          >Nos vemos pronto</span
-                                        ><span
-                                          ><!--[if mso
-                                            ]><i
-                                              style="letter-spacing: undefinedpx; mso-font-width: -100%"
-                                              hidden
-                                              >&nbsp;</i
-                                            ><!
-                                          [endif]--></span
-                                        ></a
-                                      >
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <hr
-                          style="
-                            width: 100%;
-                            border: none;
-                            border-top: 1px solid #eaeaea;
-                            border-color: #cccccc;
-                            margin: 20px 0;
-                          "
-                        />
-                        <table
-                          align="center"
-                          border="0"
-                          cellpadding="0"
-                          cellspacing="0"
-                          role="presentation"
-                          width="100%"
-                        >
-                          <tbody>
-                            <tr>
-                              <td>
-                                <table
-                                  width="100%"
-                                  align="center"
-                                  role="presentation"
-                                  cellspacing="0"
-                                  cellpadding="0"
-                                  border="0"
-                                >
-                                  <tbody style="width: 100%">
-                                    <tr style="width: 100%">
-                                      <p
-                                        style="
-                                          font-size: 14px;
-                                          line-height: 24px;
-                                          margin: 16px 0;
-                                          color: #9ca299;
-                                          margin-bottom: 10px;
-                                        "
-                                      >
-                                        Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos
-                                        reservados
-                                      </p>
-                                      <a
-                                        target="_blank"
-                                        style="
-                                          color: #9ca299;
-                                          text-decoration: underline;
-                                          font-size: 14px;
-                                        "
-                                        href="https://bandacedesdonbosco.com/"
-                                      ></a>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </body>
-      </html>
-      
-  `;
+                                        >Nos vemos pronto</span
+                                      ><span
+                                        ><!--[if mso
+                                          ]><i
+                                            style="letter-spacing: undefinedpx; mso-font-width: -100%"
+                                            hidden
+                                            >&nbsp;</i
+                                          ><!
+                                        [endif]--></span
+                                      ></a
+                                    >
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <hr
+                        style="
+                          width: 100%;
+                          border: none;
+                          border-top: 1px solid #eaeaea;
+                          border-color: #cccccc;
+                          margin: 20px 0;
+                        "
+                      />
+                      <table
+                        align="center"
+                        border="0"
+                        cellpadding="0"
+                        cellspacing="0"
+                        role="presentation"
+                        width="100%"
+                      >
+                        <tbody>
+                          <tr>
+                            <td>
+                              <table
+                                width="100%"
+                                align="center"
+                                role="presentation"
+                                cellspacing="0"
+                                cellpadding="0"
+                                border="0"
+                              >
+                                <tbody style="width: 100%">
+                                  <tr style="width: 100%">
+                                    <p
+                                      style="
+                                        font-size: 14px;
+                                        line-height: 24px;
+                                        margin: 16px 0;
+                                        color: #9ca299;
+                                        margin-bottom: 10px;
+                                      "
+                                    >
+                                      Copyright © 2025 Banda CEDES Don Bosco. Todos los derechos
+                                      reservados
+                                    </p>
+                                    <a
+                                      target="_blank"
+                                      style="
+                                        color: #9ca299;
+                                        text-decoration: underline;
+                                        font-size: 14px;
+                                      "
+                                      href="https://bandacedesdonbosco.com/"
+                                    ></a>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+    </html>
+    
+`;
 
       sendEmail({
         variables: {
           input: {
             to: email,
             subject:
-              "Confirmación de inscripción: Gira Cultural Banda CEDES Don Bosco - Guatemala 2025",
+              "Confirmación de inscripción: Gira Cultural Banda CEDES Don Bosco - Panamá 2025",
             html: emailContent,
           },
         },
@@ -480,7 +479,7 @@ const Modal = ({ onClose }) => {
     "Trombón",
     "Tuba",
     "Eufonio",
-    "Corno Francés",
+    "Melófono",
     "Mallets",
     "Percusión",
     "Color Guard",

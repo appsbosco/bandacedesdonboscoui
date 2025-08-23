@@ -248,7 +248,7 @@ export default function App() {
             pathname !== "/proyecto-exalumnos" &&
             pathname !== "/60-aniversario" &&
             pathname !== "/raffle" &&
-            pathname !== "/gira-guatemala" &&
+            pathname !== "/gira-panama" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/color-guard-camp" &&
             pathname !== "/contacto" &&
@@ -285,7 +285,7 @@ export default function App() {
 
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
-        <Route path="/gira-guatemala" element={<Guatemala />} />
+        <Route path="/gira-panama" element={<Guatemala />} />
         <Route path="/60-aniversario" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 

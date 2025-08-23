@@ -273,7 +273,7 @@ const routes = [
     type: "collapse",
     name: "Guatemala",
     key: "guatemala",
-    route: "/gira-guatemala",
+    route: "/gira-panama",
     icon: "",
     component: <Guatemala />,
     noCollapse: true,

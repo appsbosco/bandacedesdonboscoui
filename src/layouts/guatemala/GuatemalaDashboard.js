@@ -56,7 +56,7 @@ const Tables = () => {
         <SoftBox mb={3}>
           <Card>
             <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
-              <SoftTypography variant="h6">Inscripciones Guatemala</SoftTypography>
+              <SoftTypography variant="h6">Inscripciones Panamá</SoftTypography>
             </SoftBox>
 
             <SoftBox

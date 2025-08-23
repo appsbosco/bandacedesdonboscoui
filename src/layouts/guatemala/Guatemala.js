@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
 import Footer from "components/Footer";
-import guatemala from "../../assets/images/antigua-guatemala.jpg";
+import guatemala from "../../assets/images/panama-gira.webp";
 import Header from "components/Header";
 
 const Guatemala = () => {
@@ -30,7 +30,7 @@ const Guatemala = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-lg mx-auto sm:max-w-3xl lg:mx-0 lg:max-w-none">
             <h1 className="text-4xl font-semibold leading-tight font-display text-slate-900 sm:text-5xl sm:leading-tight lg:text-6xl lg:leading-tight">
-              Gira Guatemala 2025 - Banda CEDES Don Bosco
+              Gira Panamá 2025 - Banda CEDES Don Bosco
             </h1>
 
             {/* <!-- Tags list --> */}
@@ -91,7 +91,7 @@ const Guatemala = () => {
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Próxima gira</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  Guatemala 2025 - Banda CEDES Don Bosco
+                  Panamá 2025 - Banda CEDES Don Bosco
                 </dd>
               </div>
 
@@ -99,14 +99,14 @@ const Guatemala = () => {
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Fecha</dt>
                 <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">
-                  26 de enero al 3 de febrero de 2025
+                  14 de diciembre al 15 de diciembre de 2025
                 </dd>
               </div>
 
               {/* <!-- 3rd detail --> */}
               <div>
                 <dt className="text-lg font-medium font-display text-slate-900">Lugar</dt>
-                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">Guatemala</dd>
+                <dd className="mt-2.5 max-w-sm leading-7 text-slate-700">Ciudad de Panamá</dd>
               </div>
 
               {/* <!-- 4th detail --> */}
@@ -155,18 +155,39 @@ const Guatemala = () => {
           {/* <!-- Description --> */}
           <div className="order-1 lg:order-2 lg:col-span-7 lg:pl-16">
             <h3 className="text-xl font-medium leading-8 font-display text-slate-900 sm:text-2xl sm:leading-10">
-              Gira Cultural de la Banda CEDES Don Bosco a Guatemala 2025
+              Gira Cultural de la Banda CEDES Don Bosco a Panamá 2025
             </h3>
 
             {/* <!-- Content --> */}
             <div className="mt-6 prose sm:prose-lg sm:mt-8">
               <p>
-                Del 26 de enero al 3 de febrero de 2025, la Banda CEDES Don Bosco realizará una gira
-                cultural en Guatemala. Esta gira no solo será una oportunidad para exhibir el
-                talento y la disciplina de nuestros jóvenes, sino también para profundizar en el
-                intercambio cultural y educativo con instituciones hermanas.
+                La Banda CEDES Don Bosco participará en el{" "}
+                <strong>Desfile Navideño “Ciudad de las Estrellas”</strong> en Ciudad de Panamá, una
+                vitrina ideal para compartir nuestro trabajo musical y el espíritu salesiano.
               </p>
+
+              <ol className="list-decimal pl-6 space-y-2">
+                <li>
+                  <strong>14</strong>: <em>Festival Navideño “Ciudad de las Estrellas”</em>, Ciudad
+                  de Panamá, a partir de las <strong>3:00 p.m.</strong>
+                </li>
+                <li>
+                  <strong>15</strong>: Tour por <em>esclusas de Miraflores</em>,{" "}
+                  <em>Canal de Panamá</em> y <em>Albrook Mall</em>.{" "}
+                  <strong>Retorno a Costa Rica después de la cena.</strong>
+                </li>
+                <li>
+                  <strong>16</strong>: Llegada a Costa Rica <strong>aprox. 6:00 p.m.</strong> —{" "}
+                  <strong>Fin de la temporada Navideña.</strong>
+                </li>
+              </ol>
+
               <p>
+                Además de la presentación principal, la agenda incluye actividades formativas y de
+                integración para fortalecer valores de disciplina, excelencia y compañerismo entre
+                nuestros estudiantes.
+              </p>
+              {/* <p>
                 Durante esta semana, la banda visitará diversos colegios salesianos, universidades,
                 lugares turíticos, entreo otros, en Guatemala, donde realizarán presentaciones
                 musicales, fortaleciendo lazos y compartiendo experiencias educativas basadas en el
@@ -188,7 +209,7 @@ const Guatemala = () => {
                 experiencia del entorno educativo y cultural de Guatemala. La interacción con otros
                 jóvenes y educadores salesianos será fundamental para inspirar a nuestros músicos y
                 reafirmar su sentido de identidad y pertenencia a la comunidad salesiana.
-              </p>
+              </p> */}
             </div>
           </div>
         </div>

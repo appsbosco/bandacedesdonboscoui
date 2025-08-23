@@ -86,7 +86,7 @@ const Header = ({ openModal }) => {
           <div className="flex items-center">
             {/* Call to action */}
             {isAuthenticated != null &&
-            pathname !== "/gira-guatemala" &&
+            pathname !== "/gira-panama" &&
             pathname !== "/60-aniversario" &&
             pathname !== "/grupo-apoyo" &&
             pathname !== "/proyecto-exalumnos" &&
@@ -109,7 +109,7 @@ const Header = ({ openModal }) => {
                   Reservar entradas
                 </button>
               </>
-            ) : pathname === "/gira-guatemala" ||
+            ) : pathname === "/gira-panama" ||
               pathname === "/60-aniversario" ||
               pathname === "/proyecto-exalumnos" ||
               pathname === "/color-guard-camp" ||
@@ -119,7 +119,6 @@ const Header = ({ openModal }) => {
                   onClick={openModal}
                   className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
                   // href="/autenticacion/iniciar-sesion"
-                  disabled
                 >
                   Inscribirme
                 </button>

@@ -69,7 +69,7 @@ const Contact = () => {
                   margin-bottom: 10px;
                 "
               >
-                Copyright © 2024 Banda CEDES Don Bosco. Todos los derechos
+                Copyright © 2025 Banda CEDES Don Bosco. Todos los derechos
                 reservados
               </p>               
               </td>
