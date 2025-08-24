@@ -505,7 +505,7 @@ const Modal = ({ onClose }) => {
 
           <div className="px-6 py-6 lg:px-8">
             <h3 className=" mb-8 text-3xl font-medium text-gray-900 ">
-              Asistencia Gira Guatemala - 2025
+              Asistencia Gira Panamá - 2025
             </h3>
             <form className="space-y-6" action="#" onSubmit={handleSubmit}>
               <div>
