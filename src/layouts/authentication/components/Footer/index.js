@@ -86,7 +86,7 @@ function Footer() {
         </Grid>
         <Grid item xs={12} lg={8} sx={{ textAlign: "center" }}>
           <SoftTypography variant="body2" color="secondary">
-            Copyright &copy; 2023 Banda CEDES Don Bosco - Todos los derechos reservados -
+            Copyright &copy; 2025 Banda CEDES Don Bosco - Todos los derechos reservados -
             Desarrollado por Josué Chinchilla.
           </SoftTypography>
         </Grid>

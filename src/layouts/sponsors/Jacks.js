@@ -589,6 +589,10 @@ const Jacks = () => {
               <p className="text-white/80 text-lg">
                 Gracias a {"Jack's"} por creer en el talento costarricense 🇨🇷
               </p>
+              <p className="text-white/80 text-lg">
+                Copyright &copy; 2025 Banda CEDES Don Bosco - Todos los derechos reservados -
+                Desarrollado por Josué Chinchilla.
+              </p>
             </div>
           </div>
         </section>
