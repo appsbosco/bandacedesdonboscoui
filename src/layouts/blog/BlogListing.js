@@ -4,10 +4,12 @@ import Header from "components/Header";
 import Footer from "components/Footer";
 import BlogHero from "./blog-hero-bg.svg";
 import articles from "./ArticlesData";
+import { useParams } from "react-router-dom";
 
 const articlesPerPage = 3;
 
 const BlogListing = () => {
+  const { lang } = useParams();
   const [currentPage, setCurrentPage] = useState(1);
 
   // Calculate the index range of the articles to display on the current page
@@ -108,7 +110,7 @@ const BlogListing = () => {
           <div className="grid max-w-lg gap-8 mx-auto mt-14 sm:mt-16 md:mx-0 md:max-w-none md:grid-cols-2 lg:grid-cols-3 lg:gap-y-6 lg:gap-x-5 xl:gap-x-6 xl:gap-y-8">
             {currentArticles.map((article, index) => (
               <div key={article.id}>
-                <Link to={`/blog/${article.id}`}>
+                <Link to={`/${lang}/blog/${article.id}`}>
                   <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
                     <div className="w-full px-4 pt-4">
                       <a

@@ -44,6 +44,7 @@ import LanguageRedirect from "./LanguageRedirect";
 import { useNavigate } from "react-router-dom";
 import About from "components/About";
 import Contact from "components/Contact";
+import Jacks from "layouts/sponsors/Jacks";
 
 function isTokenExpired(token) {
   try {
@@ -286,6 +287,7 @@ export default function App() {
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-panama" element={<Guatemala />} />
+        <Route path="/:lang/patrocinadores/alimentos-jacks" element={<Jacks />} />
         <Route path="/60-aniversario" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 
