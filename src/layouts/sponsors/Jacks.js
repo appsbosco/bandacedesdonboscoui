@@ -591,7 +591,7 @@ const Jacks = () => {
               </p>
               <p className="text-white/80 text-lg">
                 Copyright &copy; 2025 Banda CEDES Don Bosco - Todos los derechos reservados -
-                Desarrollado por Josué Chinchilla.
+                Desarrollado por Josué Chinchilla Salazar.
               </p>
             </div>
           </div>
