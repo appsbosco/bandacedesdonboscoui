@@ -182,7 +182,7 @@ const Values = () => {
                       {t("values.history")}
                     </dt>
                     <dd className="order-first text-3xl font-extrabold text-white sm:text-4xl">
-                      59
+                      60
                     </dd>
                   </div>
                 </div>

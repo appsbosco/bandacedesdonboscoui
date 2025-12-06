@@ -45,6 +45,8 @@ import { useNavigate } from "react-router-dom";
 import About from "components/About";
 import Contact from "components/Contact";
 import Jacks from "layouts/sponsors/Jacks";
+import DiamondSponsor from "layouts/sponsors/Diamante";
+import INSSponsorPage from "layouts/sponsors/Ins";
 
 function isTokenExpired(token) {
   try {
@@ -288,6 +290,8 @@ export default function App() {
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-panama" element={<Guatemala />} />
         <Route path="/:lang/patrocinadores/alimentos-jacks" element={<Jacks />} />
+        <Route path="/:lang/patrocinadores/ins" element={<INSSponsorPage />} />
+
         <Route path="/60-aniversario" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
 
