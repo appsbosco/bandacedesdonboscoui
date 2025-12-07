@@ -49,11 +49,11 @@ const TableWithFilteringSorting = ({
   return (
     <Box sx={{ height: height, width: 1 }}>
       <DataGrid
-        initialState={{
-          pagination: {
-            paginationModel: { pageSize: 10, page: 0 },
-          },
-        }}
+        // initialState={{
+        //   pagination: {
+        //     paginationModel: { pageSize: 25, page: 0 },
+        //   },
+        // }}
         rows={data}
         columns={updatedColumns}
         slots={{
@@ -70,6 +70,9 @@ const TableWithFilteringSorting = ({
         onRowClick={onRowClick}
         pageSizeOptions={[10, 25, 50]}
         getRowHeight={() => "auto"}
+        rowBuffer={50}
+        columnBuffer={3}
+        density="compact"
         getEstimatedRowHeight={() => 200}
         sx={{
           "&.MuiDataGrid-root--densityCompact .MuiDataGrid-cell": { py: "8px" },

@@ -90,13 +90,22 @@ const GET_MEDICAL_RECORDS = gql`
 `;
 
 const Tables = () => {
-  const { data: userData } = useQuery(GET_USERS_BY_ID);
-  const { data: parentData } = useQuery(GET_PARENTS);
+  const { data: userData } = useQuery(GET_USERS_BY_ID, {
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
+  const { data: parentData } = useQuery(GET_PARENTS, {
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
 
   const [deleteUser] = useMutation(DELETE_USER);
   const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD);
 
-  const { loading, error, data, refetch } = useQuery(GET_USERS);
+  const { loading, error, data, refetch } = useQuery(GET_USERS, {
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
   const [selectedUser, setSelectedUser] = useState(null);
   const [updatedMusiciansData, setUpdatedMusiciansData] = useState([]);
 
@@ -180,30 +189,6 @@ const Tables = () => {
 
     return age;
   };
-
-  //Get sex from medical record
-  // const mapMedicalRecordsToUsers = (users, medicalRecords) => {
-  //   const medicalRecordsMap = Object.fromEntries(
-  //     medicalRecords.filter((record) => record.user).map((record) => [record.user.id, record])
-  //   );
-  //   return users.map((user) => ({
-  //     ...user,
-  //     sex: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].sex : "N/A",
-  //     identification:
-  //       user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].identification : "N/A",
-  //     address: user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].address : "N/A",
-  //     familyMemberName:
-  //       user && medicalRecordsMap[user.id] ? medicalRecordsMap[user.id].familyMemberName : "N/A",
-  //     familyMemberNumberId:
-  //       user && medicalRecordsMap[user.id]
-  //         ? medicalRecordsMap[user.id].familyMemberNumberId
-  //         : "N/A",
-  //     familyMemberRelationship:
-  //       user && medicalRecordsMap[user.id]
-  //         ? medicalRecordsMap[user.id].familyMemberRelationship
-  //         : "N/A",
-  //   }));
-  // };
 
   const musiciansData = useMemo(() => {
     if (!data || !medicalRecordData) return [];
