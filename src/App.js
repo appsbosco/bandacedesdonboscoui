@@ -280,7 +280,7 @@ export default function App() {
         <Route path="/:lang" element={<Landing />} />
         <Route path="/:lang/nosotros" element={<About />} />
         <Route path="/:lang/blog" element={<BlogListing />} />
-        <Route path="/:lang/blog/:id" element={<ArticlePage />} />
+        <Route path="/:lang/blog/:slug" element={<ArticlePage />} />
         <Route path="/:lang/contacto" element={<Contact />} />
 
         <Route path="/:lang/calendario" element={<CalendarListing />} />

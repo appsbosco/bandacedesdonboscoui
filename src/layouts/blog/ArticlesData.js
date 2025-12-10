@@ -1,5 +1,120 @@
 const articles = [
   {
+    id: 9,
+    slug: "declaratoria-interes-cultural-banda-cedes-don-bosco-rose-parade-2027",
+    title:
+      "Participación de la Banda CEDES Don Bosco en el Rose Parade 2027 es declarada de Interés Cultural",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404713/JSV_2854_ofwefd.webp",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404761/2023-Rose-Parade_x5wqnx.png",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404760/PAS-L-ROSE-2024-0102-LC83_tc49gc.webp",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404761/download_unnvvq.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404901/gettyimages-1191153683_lwdakz.jpg",
+    ],
+    type: "Anuncio",
+    description:
+      "Por decreto ejecutivo, el Ministerio de Cultura y Juventud declara de Interés Cultural la participación de la Banda CEDES Don Bosco en el Rose Parade 2027 en Pasadena, California, reconociendo su aporte a la formación de la juventud y a la proyección cultural de Costa Rica ante el mundo.",
+    date: "10 de diciembre de 2025",
+    content: [
+      {
+        title: "",
+        text: "Hoy escribimos historia. La participación de la Banda CEDES Don Bosco en el Rose Parade 2027 en Pasadena, California, ha sido declarada de INTERÉS CULTURAL por el Ministerio de Cultura y Juventud mediante decreto ejecutivo. Este reconocimiento no solo celebra una invitación internacional sin precedentes, sino que también reconoce formalmente a la banda como un proyecto que contribuye al desarrollo cultural, educativo y social de Costa Rica.",
+      },
+      {
+        title: "¿Qué significa una declaratoria de Interés Cultural?",
+        text: "Cuando una actividad, proyecto o manifestación artística es declarada de Interés Cultural por el Estado costarricense, se reconoce oficialmente su valor para la identidad, la memoria y el desarrollo cultural del país. No es un simple diploma: es una señal clara de que lo que se hace tiene impacto en la sociedad, fortalece el tejido comunitario y proyecta al país hacia el mundo. Esta declaratoria abre puertas para una mayor articulación con instituciones públicas y privadas, facilita el respaldo institucional y refuerza la legitimidad del proyecto ante patrocinadores, organizaciones y ciudadanos.",
+      },
+      {
+        title: "Mucho más que una banda: una escuela de vida",
+        text: "La Banda CEDES Don Bosco lleva décadas formando generaciones de jóvenes en la disciplina, el trabajo en equipo, la constancia y el amor por Costa Rica. Cada ensayo al amanecer, cada presentación bajo la lluvia, cada desfile y concierto han sido parte de una escuela de vida en la que la música es el lenguaje, pero el mensaje va mucho más allá de las notas: responsabilidad, solidaridad, respeto y sueños compartidos. La declaratoria de Interés Cultural reconoce este aporte silencioso y constante a la formación de la juventud costarricense.",
+      },
+      {
+        title: "De Alajuelita al mundo: un símbolo de la juventud costarricense",
+        text: "Que una banda colegial de Alajuelita sea declarada de Interés Cultural por su participación en uno de los desfiles más importantes del planeta tiene un profundo significado simbólico. Habla de una juventud que no se rinde, de comunidades que se organizan, de familias que acompañan, de educadores que creen y de un país pequeño en territorio, pero enorme en talento y pasión. Esta declaratoria reconoce que la Banda CEDES Don Bosco no representa solo a una institución educativa, sino a miles de jóvenes que sueñan en grande desde cada rincón de Costa Rica.",
+      },
+      {
+        title: "El respaldo del Ministerio de Cultura y Juventud",
+        text: "Agradecemos especialmente al ministro de Cultura y Juventud, Jorge Rodríguez; al director general de Bandas del Ministerio, Andrey Cruz; y a todo el equipo del Ministerio de Cultura y Juventud. Su apoyo no se limita a la firma de un documento: implica acompañamiento, confianza y una clara comprensión de que la cultura también se construye desde las bandas, los colegios, los barrios y las comunidades. Esta declaratoria es el resultado de un trabajo conjunto entre la institucionalidad cultural del país y un proyecto educativo-musical que ha demostrado excelencia, continuidad y compromiso.",
+      },
+      {
+        title: "El Rose Parade: un escenario global para la identidad costarricense",
+        text: "El Rose Parade, celebrado cada 1.º de enero en Pasadena, California, es uno de los desfiles más vistos del mundo, con millones de espectadores en transmisión internacional. Allí, la Banda CEDES Don Bosco llevará no solo música, sino identidad: los colores de la bandera, la energía de la juventud costarricense, el carisma salesiano y el espíritu alegre y trabajador de nuestro país. La declaratoria de Interés Cultural subraya que esta participación no es un viaje cualquiera, sino una misión cultural: mostrar quiénes somos, de dónde venimos y cómo vivimos la música como parte de nuestra forma de ser.",
+      },
+      {
+        title: "Un reconocimiento a generaciones enteras",
+        text: "Este decreto honra el esfuerzo de generaciones de estudiantes, educadores, familias y exalumnos que han construido la historia de la Banda CEDES Don Bosco. Cada persona que alguna vez se puso el uniforme, cargó un instrumento, animó desde las graderías o apoyó en silencio desde su casa forma parte de este logro. La declaratoria de Interés Cultural también es un gesto de gratitud histórica: reconoce que la banda es un proyecto de larga duración, que ha sabido mantenerse, transformarse y seguir creciendo sin perder su esencia.",
+      },
+      {
+        title: "Puentes entre la educación, la cultura y la comunidad",
+        text: "La Banda CEDES Don Bosco es un punto de encuentro entre educación, arte y comunidad. Los estudiantes aprenden música, sí, pero también aprenden a llegar a tiempo, a cuidar su instrumento, a respetar al compañero, a superar el cansancio y a trabajar por un objetivo común. Las familias acompañan, se organizan, venden rifas, asisten a presentaciones y hacen posible lo que a veces parece imposible. La declaratoria de Interés Cultural reconoce este tejido invisible de relaciones humanas que sostienen el proyecto día a día.",
+      },
+      {
+        title: "Responsabilidad, orgullo y un nuevo compromiso",
+        text: "Ser declarados de Interés Cultural no solo es un honor: también es una responsabilidad. Significa que, cuando la banda pise el Colorado Boulevard en Pasadena, lo hará en nombre de un país entero. Cada compás interpretado, cada formación en el desfile y cada sonrisa compartida con el público serán un acto de representación nacional. La banda asume este compromiso con humildad y determinación, sabiendo que detrás de cada uniforme hay una historia, y detrás de cada historia, un sueño compartido con Costa Rica.",
+      },
+      {
+        title: "Lo que viene: preparación, apoyo y camino compartido",
+        text: "De aquí al 1.º de enero de 2027, la Banda CEDES Don Bosco vivirá un intenso proceso de preparación musical, física, logística y emocional. La declaratoria de Interés Cultural será una aliada fundamental para tocar puertas, sumar patrocinadores, fortalecer alianzas y asegurar que ningún estudiante se quede fuera por razones económicas. Invitamos a empresas, instituciones y personas que aman la cultura y la juventud a sumarse a este camino. Cada aporte, cada gesto y cada palabra de aliento ayudan a que el sonido de Costa Rica llegue más fuerte a Pasadena.",
+      },
+      {
+        title: "Este logro es de todos",
+        text: "A todos los que han creído, apoyado, ensayado, soñado y caminado junto a la banda, les decimos gracias. Este logro no pertenece a una sola generación, ni a un solo grupo: es de todos. De las familias que madrugan, de los exalumnos que siguen apoyando, de los docentes y staff que no se rinden, de los patrocinadores que confían y de cada persona que, al ver a la banda pasar, siente un nudo en la garganta y orgullo en el corazón. Hoy la participación en el Rose Parade 2027 es de Interés Cultural, pero siempre ha sido de interés del alma de Costa Rica. ¡Sigamos escribiendo esta historia juntos! 🇨🇷🥁",
+      },
+    ],
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+    },
+    lecture: "5 minutos de lectura",
+  },
+  {
+    id: 8,
+    slug: "banda-cedes-don-bosco-desfile-de-las-rosas-2027",
+    title: "Banda CEDES Don Bosco seleccionada para el Desfile de las Rosas 2027",
+    images: [
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765405023/Rose-Parade-band-photo_72_yfqfts.jpg",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765405023/public_curmko.webp",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765405023/LDN-L-ROSE-PARADE-2023-SR-33-5_ltrszp.webp",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765404760/PAS-L-ROSE-2024-0102-LC83_tc49gc.webp",
+      "https://res.cloudinary.com/dnv9akklf/image/upload/v1765405614/GettyImages-1237520178_o2epvn.webp",
+    ],
+    type: "Anuncio",
+    description:
+      "El 16 de agosto de 2025, la Banda CEDES Don Bosco recibió la invitación oficial para participar en el Desfile de las Rosas 2027 en Pasadena, California, convirtiéndose en la primera banda colegial costarricense seleccionada.",
+    date: "16 de agosto de 2025",
+    content: [
+      {
+        title: "",
+        text: "El 16 de agosto de 2025 quedará grabado para siempre en la historia de la Banda CEDES Don Bosco y de la música costarricense. Ese día, la banda recibió la invitación oficial para participar en el Desfile de las Rosas 2027 en Pasadena, California, uno de los desfiles más prestigiosos del mundo.",
+      },
+      {
+        title: "",
+        text: "Con esta invitación, la Banda CEDES Don Bosco se convierte en la primera banda colegial costarricense seleccionada para marchar en el Rose Parade. Es un hito que trasciende a la institución y representa a todo un país, a su juventud y a su fuerza cultural en un escenario internacional.",
+      },
+      {
+        title: "",
+        text: "Detrás de este logro hay años de disciplina, ensayos, sacrificio y pasión. Cada madrugada de práctica, cada paso en la cancha, cada nota tocada en conciertos y presentaciones han ido construyendo el camino hasta este momento. Esta invitación no es casualidad: es el resultado del trabajo constante de estudiantes, staff, familias y de toda la comunidad de CEDES Don Bosco.",
+      },
+      {
+        title: "",
+        text: "De las empinadas calles de Alajuelita al icónico Colorado Boulevard en Pasadena, el camino que hoy inicia está lleno de retos, sueños y oportunidades. La banda se prepara ahora para un intenso periodo de preparación, logística, recaudación de fondos y diseño artístico para llevar con orgullo la bandera de Costa Rica a uno de los desfiles más vistos del planeta.",
+      },
+      {
+        title: "",
+        text: "Queremos agradecer a nuestros estudiantes, familias, exalumnos, staff, patrocinadores y amigos de la banda que han creído en este proyecto desde el primer día. Este logro le pertenece a cada persona que ha apoyado, animado y confiado en el potencial de la Banda CEDES Don Bosco.",
+      },
+      {
+        title: "",
+        text: "Este es solo el inicio de un nuevo capítulo. De aquí al 1.º de enero de 2027, seguiremos compartiendo cada paso de este viaje. Gracias por caminar a nuestro lado, por celebrar con nosotros y por ayudarnos a llevar el sonido de Costa Rica hasta Pasadena. ¡Pura vida! 🇨🇷✨",
+      },
+    ],
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+    },
+    lecture: "3 minutos de lectura",
+  },
+  {
     id: 7,
     title: "Independencia de Costa Rica en Parque Diversiones Costa Rica",
     images: [
