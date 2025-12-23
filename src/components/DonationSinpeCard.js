@@ -89,7 +89,7 @@ const DonationSinpeCard = ({
                   clipRule="evenodd"
                 />
               </svg>
-              Rumbo al Desfile
+              Rumbo al Rose Parade 2027
             </div>
 
             <div className="relative px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-16 mt-6">
