@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import SponsorBadge from "components/SponsorBadge";
 import DonationSinpeCard from "components/DonationSinpeCard";
+import Snowfall from "react-snowfall";
 
 const Landing = () => {
   const { lang } = useParams();
@@ -22,6 +23,7 @@ const Landing = () => {
 
   return (
     <>
+      <Snowfall />
       <Header />
       <Hero />
       <SponsorBadge />
