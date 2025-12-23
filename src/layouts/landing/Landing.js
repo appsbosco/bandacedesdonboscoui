@@ -7,6 +7,8 @@ import Footer from "components/Footer";
 import { useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import SponsorBadge from "components/SponsorBadge";
+import DonationSinpeCard from "components/DonationSinpeCard";
 
 const Landing = () => {
   const { lang } = useParams();
@@ -22,9 +24,12 @@ const Landing = () => {
     <>
       <Header />
       <Hero />
+      <SponsorBadge />
+      <DonationSinpeCard />
       <Values />
       <Decor />
       <Blog />
+
       <Footer />
     </>
   );
