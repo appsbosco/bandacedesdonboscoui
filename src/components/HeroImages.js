@@ -31,7 +31,7 @@ const HERO_IMAGES = [
   },
 ];
 
-const TRANSITION_INTERVAL = 3000; // 5 segundos
+const TRANSITION_INTERVAL = 5000; // 5 segundos
 
 export default function HeroSection() {
   const { i18n, t } = useTranslation();
