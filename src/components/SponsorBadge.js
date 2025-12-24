@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import INS_LOGO_URL from "../assets/images/Logo INS.webp";
 
-const INS_WEBSITE_URL = "https://www.ins-cr.com/";
+const INS_WEBSITE_URL = "https://www.grupoins.com/";
 
 const SponsorBadge = () => {
   const { t } = useTranslation();
