@@ -24,11 +24,11 @@ const Landing = () => {
   return (
     <>
       <Snowfall
-        snowflakeCount={386}
+        snowflakeCount={286}
         speed={[0.5, 2]}
         wind={[-0.5, 2.0]}
         color="#009688"
-        radius={[0.5, 3]}
+        radius={[0.5, 2.5]}
       />
       <Header />
       <Hero />

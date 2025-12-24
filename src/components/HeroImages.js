@@ -21,10 +21,10 @@ const HERO_IMAGES = [
     src: landing3,
     alt: "Banda CEDES Don Bosco - Presentación",
   },
-  {
-    src: landing4,
-    alt: "Banda CEDES Don Bosco - Ensayo",
-  },
+  // {
+  //   src: landing4,
+  //   alt: "Banda CEDES Don Bosco - Ensayo",
+  // },
   {
     src: landing5,
     alt: "Banda CEDES Don Bosco - Ensayo",
