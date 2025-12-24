@@ -25,8 +25,8 @@ const Landing = () => {
     <>
       <Snowfall
         snowflakeCount={286}
-        speed={[0.5, 2]}
-        wind={[-0.5, 2.0]}
+        speed={[0.5, 1.0]}
+        wind={[-0.5, 1.0]}
         color="#009688"
         radius={[0.5, 2.5]}
       />

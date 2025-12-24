@@ -140,28 +140,53 @@ const DonationSinpeCard = ({
                       </svg>
                       SINPE Móvil
                     </dt>
-                    <dd className="flex items-center justify-between">
-                      <span className="text-2xl font-bold font-display text-slate-900 sm:text-3xl">
+                    {/* <dl className="grid gap-5 mt-6 sm:grid-cols-2">
+                      <dd className="flex items-center gap-2 text-xl font-semibold font-display text-slate-900 sm:text-2xl">
                         {sinpeNumber}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopySinpe}
-                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-                        aria-label="Copiar número SINPE"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="w-5 h-5"
-                          aria-hidden="true"
+                        <button
+                          type="button"
+                          onClick={handleCopySinpe}
+                          className="inline-flex items-center mr-3 justify-center rounded-lg p-1.5 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                          aria-label="Copiar número SINPE"
                         >
-                          <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                          <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                        </svg>
-                      </button>
-                    </dd>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="w-5 h-5"
+                            aria-hidden="true"
+                          >
+                            <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                            <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                          </svg>
+                        </button>
+                      </dd>
+                    </dl> */}
+                    <dl className="grid gap-5 mt-6 sm:grid-cols-2">
+                      <dd className="flex items-center justify-between">
+                        <span className="text-2xl font-bold font-display text-slate-900 sm:text-3xl">
+                          {sinpeNumber}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={handleCopySinpe}
+                          className="relative z-10 inline-flex items-center justify-center rounded-lg p-1.5 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                          aria-label="Copiar número SINPE"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="w-5 h-5"
+                            aria-hidden="true"
+                          >
+                            <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                            <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                          </svg>
+                        </button>
+                      </dd>
+                    </dl>
                   </div>
 
                   <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-white p-5 ring-1 ring-slate-200/60 sm:p-6">
