@@ -1,5 +1,5 @@
 import React from "react";
-import cover from "../assets/images/cover-landing.webp";
+import cover from "../assets/images/cover-gb.webp";
 import coverMobile from "../assets/images/cover-landing-mobile.png";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";

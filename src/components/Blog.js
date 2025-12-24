@@ -1,17 +1,20 @@
-import React from "react";
-import bicentenario from "../assets/images/bicentenario.webp";
-import saprissa from "../assets/images/ricardosaprissa.webp";
-import liga from "../assets/images/morerasoto.webp";
+import React, { useMemo } from "react";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 
+import articles from "../layouts/blog/ArticlesData";
+
 const Blog = () => {
+  const latestArticles = useMemo(() => {
+    // Por si en algún momento ArticlesData deja de venir ordenado:
+    const sorted = [...articles].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    return sorted.slice(0, 3); // últimos 3
+  }, []);
+
   return (
     <section className="py-16 overflow-hidden bg-white sm:pt-24 lg:pt-28">
-      {/* Container */}
       <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
         <h2 className="max-w-2xl mx-auto text-4xl font-semibold leading-tight text-center font-display text-slate-900 sm:text-5xl sm:leading-tight">
-          {/* Highlighted word in section headline */}
           <span className="relative whitespace-nowrap">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -28,14 +31,12 @@ const Blog = () => {
           <br /> recientes de nuestra banda
         </h2>
 
-        {/* Articles list */}
         <div className="relative grid max-w-lg gap-8 mx-auto mt-14 sm:mt-16 md:mx-0 md:max-w-none md:grid-cols-2 lg:grid-cols-3 lg:gap-y-6 lg:gap-x-5 xl:gap-x-6 xl:gap-y-8">
-          {/* Floating handwritten text with arrow */}
+          {/* Texto flotante */}
           <div className="absolute hidden gap-6 -top-20 lg:-left-4 xl:flex 2xl:-left-24">
             <span className="inline-block text-2xl tracking-wide transform -rotate-12 font-writing text-slate-600">
               Últimas presentaciones
             </span>
-
             <svg
               viewBox="0 0 85 29"
               fill="none"
@@ -47,193 +48,84 @@ const Blog = () => {
                 stroke="currentColor"
                 strokeWidth="2.5"
                 strokeLinecap="round"
-              ></path>
+              />
             </svg>
           </div>
 
-          {/* 1rst Article */}
-          <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
-            {/* Image */}
-            <div className="w-full px-4 pt-4">
-              <a
-                href="https://bandacedesdonbosco.com/blog/7"
-                className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
-              >
-                <LazyLoadImage
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/q_auto,f_auto/v1696387427/DSC04973_1_rnqlxx_gnzeny.webp"
-                  alt=""
-                  className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                />
+          {latestArticles.map((article) => {
+            const href = article.slug ? `/blog/${article.slug}` : `/blog/${article.id}`;
+            const coverImage = article.images?.[0] ?? "";
+            const typeLabel = article.type ?? "Banda de marcha";
+            const dateLabel = article.date ?? "";
 
-                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
-              </a>
-            </div>
-
-            {/* Content */}
-            <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
-              <a
-                href="https://bandacedesdonbosco.com/blog/6"
-                className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
+            return (
+              <article
+                key={article.id}
+                className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100"
               >
-                <LibraryMusicIcon />
-                Banda de marcha
-              </a>
-              <div className="flex-1">
-                <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
-                  <a href="">
-                    <span className="absolute inset-0"></span>
-                    Independencia de Costa Rica en Parque Diversiones Costa Rica
-                  </a>
-                </h3>
-                <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
-                  El día de ayer, celebramos la Independencia de Costa Rica en Parque Diversiones
-                  Costa Rica.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.75"
-                    stroke="currentColor"
-                    className="w-5 h-5 text-slate-400"
+                {/* Image */}
+                <div className="w-full px-4 pt-4">
+                  <a
+                    href={href}
+                    className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
+                    <LazyLoadImage
+                      src={coverImage}
+                      alt={article.title || "Blog"}
+                      className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
                     />
-                  </svg>
-                  <time dateTime="2023-03-24">Setiembre 19, 2023</time>
-                </span>
-              </div>
-            </div>
-          </article>
-
-          {/* 2nd Article */}
-          <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
-            {/* Image */}
-            <div className="w-full px-4 pt-4">
-              <a
-                href="https://bandacedesdonbosco.com/blog/6"
-                className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
-              >
-                <LazyLoadImage
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1696387529/DSC03770-min_mfuohi_pdkjek.webp"
-                  alt=""
-                  className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                />
-
-                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
-              </a>
-            </div>
-
-            {/* Content */}
-            <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
-              <a
-                href="https://bandacedesdonbosco.com/blog/6"
-                className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
-              >
-                <LibraryMusicIcon />
-                Banda de marcha
-              </a>
-              <div className="flex-1">
-                <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
-                  <a href="">
-                    <span className="absolute inset-0"></span>
-                    Audición festival de la Luz
+                    <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5" />
                   </a>
-                </h3>
-                <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
-                  Un viaje visual a través de nuestra audición para el Festival de La Luz 2023. Un
-                  reconocimiento a todos quienes nos apoyaron en esta presentación.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.75"
-                    stroke="currentColor"
-                    className="w-5 h-5 text-slate-400"
+                </div>
+
+                {/* Content */}
+                <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
+                  <a
+                    href={href}
+                    className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
-                    />
-                  </svg>
-                  <time dateTime="2023-03-24">Setiembre 10, 2023</time>
-                </span>
-              </div>
-            </div>
-          </article>
-
-          {/* 3rd Article */}
-          <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
-            {/* Image */}
-            <div className="w-full px-4 pt-4">
-              <a
-                href="https://bandacedesdonbosco.com/blog/4"
-                className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2"
-              >
-                <LazyLoadImage
-                  src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1696387640/IMG_4789_pbmiqm_nbwroi.webp"
-                  alt=""
-                  className="object-cover w-full transition duration-300 rounded-xl bg-slate-100 group-hover:scale-105"
-                />
-
-                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-slate-900/5"></div>
-              </a>
-            </div>
-
-            {/* Content */}
-            <div className="relative flex flex-col flex-1 px-5 pt-8 pb-10 group xl:px-7">
-              <a
-                href="https://bandacedesdonbosco.com/blog/4"
-                className="relative z-10 flex items-center gap-2.5 text-md text-sky-700 transition duration-200 ease-in-out hover:text-sky-600"
-              >
-                <LibraryMusicIcon />
-                Banda de marcha
-              </a>
-              <div className="flex-1">
-                <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
-                  <a href="">
-                    <span className="absolute inset-0"></span>
-                    Competencia WAMSB
+                    <LibraryMusicIcon />
+                    {typeLabel}
                   </a>
-                </h3>
-                <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
-                  Nuestra banda tuvo el honor de participar en la competencia de bandas WAMSB en la
-                  Fortuna de San Carlos, un evento que reúne a talentosas agrupaciones musicales de
-                  diferentes partes del país.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.75"
-                    stroke="currentColor"
-                    className="w-5 h-5 text-slate-400"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
-                    />
-                  </svg>
-                  <time dateTime="2023-03-24">Julio 31, 2023</time>
-                </span>
-              </div>
-            </div>
-          </article>
+
+                  <div className="flex-1">
+                    <h3 className="mt-4 text-xl font-medium leading-normal transition duration-200 ease-in-out font-display text-slate-900 decoration-slate-400 group-hover:text-sky-900">
+                      <a href={href}>
+                        <span className="absolute inset-0" />
+                        {article.title}
+                      </a>
+                    </h3>
+
+                    <p className="mt-3.5 text-md leading-7 text-slate-700 line-clamp-3">
+                      {article.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-8 text-sm text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.75"
+                        stroke="currentColor"
+                        className="w-5 h-5 text-slate-400"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+                        />
+                      </svg>
+
+                      {/* Si tu date no es ISO, mejor no forzar dateTime */}
+                      <time>{dateLabel}</time>
+                    </span>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
