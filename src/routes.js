@@ -54,6 +54,8 @@ import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import Raffle from "layouts/tickets/Raffle";
 import ClassAttendance from "layouts/classAttendance/lista";
+import { DocumentsDashboard } from "components/documents/DocumentsDashboard";
+
 import Tuner from "layouts/tuner";
 
 export const protectedRoutes = [
@@ -488,6 +490,19 @@ export const adminRoutes = [
     noCollapse: true,
     href: null,
   },
+
+  { type: "title", title: "Documentos", key: "documents-pages" },
+  {
+    type: "collapse",
+    name: "Documentos",
+    key: "documents",
+    route: "/documents",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <DocumentsDashboard />,
+    noCollapse: true,
+    href: null,
+  },
+
   { type: "title", title: "Pagos", key: "pagos" },
   {
     type: "collapse",
@@ -942,6 +957,18 @@ export const membersRoutes = [
     route: "/tuner",
     icon: <SentimentSatisfiedAltIcon size="12px" />,
     component: <Tuner />,
+    noCollapse: true,
+    href: null,
+  },
+
+  { type: "title", title: "Documentos", key: "documents-pages" },
+  {
+    type: "collapse",
+    name: "Documentos",
+    key: "documents",
+    route: "/documents",
+    icon: <SentimentSatisfiedAltIcon size="12px" />,
+    component: <DocumentsDashboard />,
     noCollapse: true,
     href: null,
   },

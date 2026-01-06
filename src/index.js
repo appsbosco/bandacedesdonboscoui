@@ -13,6 +13,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { UserProvider } from "./UserContext";
 import MetaTagProvider from "MetaTagProvider";
 import "./i18n";
+import { ToastProvider } from "components/ui/Toast";
 
 const rootElement = document.getElementById("root");
 
@@ -20,12 +21,14 @@ const renderApp = () => (
   <BrowserRouter>
     <MetaTagProvider>
       <SoftUIControllerProvider>
-        <ApolloProvider client={client}>
-          <UserProvider>
-            <App />
-          </UserProvider>
-          <ToastContainer />
-        </ApolloProvider>
+        <ToastProvider>
+          <ApolloProvider client={client}>
+            <UserProvider>
+              <App />
+            </UserProvider>
+            <ToastContainer />
+          </ApolloProvider>
+        </ToastProvider>
       </SoftUIControllerProvider>
     </MetaTagProvider>
   </BrowserRouter>

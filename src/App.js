@@ -44,8 +44,11 @@ import { useNavigate } from "react-router-dom";
 import About from "components/About";
 import Contact from "components/Contact";
 import Jacks from "layouts/sponsors/Jacks";
-import DiamondSponsor from "layouts/sponsors/Diamante";
-import INSSponsorPage from "layouts/sponsors/Ins";
+import INS from "layouts/sponsors/INS";
+
+import { DocumentsDashboard } from "components/documents/DocumentsDashboard";
+import DocumentFlowPage from "components/documents/DocumentFlowPage";
+import { DocumentDetail } from "components/documents/DocumentDetail";
 
 function isTokenExpired(token) {
   try {
@@ -289,7 +292,12 @@ export default function App() {
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
         <Route path="/gira-panama" element={<Guatemala />} />
         <Route path="/:lang/patrocinadores/alimentos-jacks" element={<Jacks />} />
-        <Route path="/:lang/patrocinadores/ins" element={<INSSponsorPage />} />
+        <Route path="/:lang/patrocinadores/ins" element={<INS />} />
+
+        <Route path="/documents" element={<DocumentsDashboard />} />
+        <Route path="/documents/new" element={<DocumentFlowPage />} />
+        <Route path="/documents/:id" element={<DocumentDetail />} />
+        <Route path="/" element={<Navigate to="/documents" replace />} />
 
         <Route path="/60-aniversario" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
