@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import PropTypes from "prop-types";
 
 export function Modal({ isOpen, onClose, children, title, size = "md" }) {
   const sizes = {
@@ -89,5 +90,13 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
     </div>
   );
 }
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func,
+  children: PropTypes.node,
+  title: PropTypes.node, // permite string o JSX
+  size: PropTypes.oneOf(["sm", "md", "lg", "xl", "full"]),
+};
 
 export default Modal;

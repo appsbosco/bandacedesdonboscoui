@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 const variants = {
   primary: "bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/25",
@@ -76,3 +77,15 @@ export function Button({
 }
 
 export default Button;
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  variant: PropTypes.oneOf(["primary", "secondary", "ghost", "danger", "success"]),
+  size: PropTypes.oneOf(["sm", "md", "lg", "xl"]),
+  className: PropTypes.string,
+  disabled: PropTypes.bool,
+  loading: PropTypes.bool,
+  icon: PropTypes.node,
+  iconPosition: PropTypes.oneOf(["left", "right"]),
+  fullWidth: PropTypes.bool,
+};

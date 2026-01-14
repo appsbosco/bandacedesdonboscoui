@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 export function Skeleton({ className = "", variant = "rect" }) {
   const variants = {
@@ -17,6 +18,11 @@ export function Skeleton({ className = "", variant = "rect" }) {
     />
   );
 }
+
+Skeleton.propTypes = {
+  className: PropTypes.string,
+  variant: PropTypes.oneOf(["rect", "circle", "text"]),
+};
 
 export function DocumentCardSkeleton() {
   return (
@@ -42,6 +48,10 @@ export function DocumentListSkeleton({ count = 3 }) {
     </div>
   );
 }
+
+DocumentListSkeleton.propTypes = {
+  count: PropTypes.number,
+};
 
 export function FormFieldSkeleton() {
   return (
