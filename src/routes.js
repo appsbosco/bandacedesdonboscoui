@@ -9,7 +9,7 @@ import Profile from "layouts/profile";
 import RTL from "layouts/rtl";
 import Tables from "layouts/tables";
 import VirtualReality from "layouts/virtual-reality";
-
+import FolderCopyIcon from "@mui/icons-material/FolderCopy";
 // Banda CEDES Don Bosco icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EventIcon from "@mui/icons-material/Event";
@@ -54,9 +54,10 @@ import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import Raffle from "layouts/tickets/Raffle";
 import ClassAttendance from "layouts/classAttendance/lista";
-import { DocumentsDashboard } from "components/documents/DocumentsDashboard";
-
+import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import Tuner from "layouts/tuner";
+import DocumentsPage from "components/documents/DocumentsPage";
+import NewDocumentPage from "components/documents/NewDocumentPage";
 
 export const protectedRoutes = [
   {
@@ -497,8 +498,18 @@ export const adminRoutes = [
     name: "Documentos",
     key: "documents",
     route: "/documents",
-    icon: <SentimentSatisfiedAltIcon size="12px" />,
-    component: <DocumentsDashboard />,
+    icon: <FolderCopyIcon size="12px" />,
+    component: <DocumentsPage />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Subir documentos",
+    key: "new-document",
+    route: "/documents/new-document",
+    icon: <DriveFolderUploadIcon size="12px" />,
+    component: <NewDocumentPage />,
     noCollapse: true,
     href: null,
   },
@@ -967,11 +978,22 @@ export const membersRoutes = [
     name: "Documentos",
     key: "documents",
     route: "/documents",
-    icon: <SentimentSatisfiedAltIcon size="12px" />,
-    component: <DocumentsDashboard />,
+    icon: <FolderCopyIcon size="12px" />,
+    component: <DocumentsPage />,
     noCollapse: true,
     href: null,
   },
+  {
+    type: "collapse",
+    name: "Subir documentos",
+    key: "new-document",
+    route: "/documents/new-document",
+    icon: <DriveFolderUploadIcon size="12px" />,
+    component: <NewDocumentPage />,
+    noCollapse: true,
+    href: null,
+  },
+
   { type: "title", title: "Cuenta", key: "account-pages" },
   {
     type: "collapse",

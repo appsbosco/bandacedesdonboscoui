@@ -1,71 +1,30 @@
 import { gql } from "@apollo/client";
+import {
+  DOCUMENT_FRAGMENT,
+  DOCUMENT_CARD_FRAGMENT,
+  PAGINATION_FRAGMENT,
+} from "../../graphql/documents/document-fragments.gql.js";
 
-// Fragments
-export const DOCUMENT_FIELDS = gql`
-  fragment DocumentFields on Document {
-    _id
-    type
-    status
-    source
-    notes
-    retentionUntil
-    lastAccessedAt
-    isDeleted
-    createdAt
-    updatedAt
-    isExpired
-    daysUntilExpiration
-    images {
-      _id
-      url
-      provider
-      publicId
-      uploadedAt
-    }
-    extracted {
-      fullName
-      givenNames
-      surname
-      nationality
-      issuingCountry
-      documentNumber
-      passportNumber
-      visaType
-      dateOfBirth
-      sex
-      expirationDate
-      issueDate
-      mrzRaw
-      mrzValid
-      ocrText
-      ocrConfidence
-    }
-  }
-`;
-
-// Queries
 export const MY_DOCUMENTS = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_CARD_FRAGMENT}
+  ${PAGINATION_FRAGMENT}
   query MyDocuments($filters: DocumentFiltersInput, $pagination: PaginationInput) {
     myDocuments(filters: $filters, pagination: $pagination) {
       documents {
-        ...DocumentFields
+        ...DocumentCardFragment
       }
       pagination {
-        total
-        limit
-        skip
-        hasMore
+        ...PaginationFragment
       }
     }
   }
 `;
 
 export const DOCUMENT_BY_ID = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_FRAGMENT}
   query DocumentById($id: ID!) {
     documentById(id: $id) {
-      ...DocumentFields
+      ...DocumentFragment
     }
   }
 `;
@@ -73,50 +32,48 @@ export const DOCUMENT_BY_ID = gql`
 export const DOCUMENTS_EXPIRING_SUMMARY = gql`
   query DocumentsExpiringSummary($referenceDate: DateTime) {
     documentsExpiringSummary(referenceDate: $referenceDate) {
-      total
       expired
       expiringIn30Days
       expiringIn60Days
       expiringIn90Days
       valid
-      noExpirationDate
+      total
     }
   }
 `;
 
-// Mutations
 export const CREATE_DOCUMENT = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_FRAGMENT}
   mutation CreateDocument($input: CreateDocumentInput!) {
     createDocument(input: $input) {
-      ...DocumentFields
+      ...DocumentFragment
     }
   }
 `;
 
 export const ADD_DOCUMENT_IMAGE = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_FRAGMENT}
   mutation AddDocumentImage($input: AddDocumentImageInput!) {
     addDocumentImage(input: $input) {
-      ...DocumentFields
+      ...DocumentFragment
     }
   }
 `;
 
 export const UPSERT_DOCUMENT_EXTRACTED_DATA = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_FRAGMENT}
   mutation UpsertDocumentExtractedData($input: UpsertDocumentExtractedDataInput!) {
     upsertDocumentExtractedData(input: $input) {
-      ...DocumentFields
+      ...DocumentFragment
     }
   }
 `;
 
 export const SET_DOCUMENT_STATUS = gql`
-  ${DOCUMENT_FIELDS}
+  ${DOCUMENT_FRAGMENT}
   mutation SetDocumentStatus($documentId: ID!, $status: DocumentStatus!) {
     setDocumentStatus(documentId: $documentId, status: $status) {
-      ...DocumentFields
+      ...DocumentFragment
     }
   }
 `;

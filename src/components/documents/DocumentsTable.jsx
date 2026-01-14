@@ -12,7 +12,7 @@ import {
 } from "../../utils/documentHelpers";
 import { formatDate, getExpirationColor, getExpirationText } from "../../utils/dateHelpers";
 import { useMutation } from "@apollo/client";
-import { DELETE_DOCUMENT, MY_DOCUMENTS } from "../../graphql/documents.gql";
+import { DELETE_DOCUMENT, MY_DOCUMENTS } from "../../graphql/documents/documents.gql";
 import { useToast } from "../ui/Toast";
 import PropTypes from "prop-types";
 

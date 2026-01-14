@@ -16,7 +16,6 @@ export function loadOpenCV() {
     script.async = true;
 
     script.onload = () => {
-      // Wait for cv to initialize
       const checkCV = setInterval(() => {
         if (window.cv && window.cv.Mat) {
           clearInterval(checkCV);
@@ -25,7 +24,6 @@ export function loadOpenCV() {
         }
       }, 100);
 
-      // Timeout after 10s
       setTimeout(() => {
         clearInterval(checkCV);
         if (!cvLoaded) {

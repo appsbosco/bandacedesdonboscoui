@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@apollo/client";
-import { DOCUMENTS_EXPIRING_SUMMARY } from "../../graphql/documents.gql";
+import { DOCUMENTS_EXPIRING_SUMMARY } from "../../graphql/documents/documents.gql";
 import { Skeleton } from "../ui/Skeleton";
 
 export function ExpirationSummaryCards() {

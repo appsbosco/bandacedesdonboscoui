@@ -1,125 +1,224 @@
 import React, { useState } from "react";
-import { Select } from "../ui/Select";
-import { Input } from "../ui/Input";
-import { Button } from "../ui/Button";
+import { DOCUMENT_TYPES, DOCUMENT_STATUSES } from "../../utils/constants";
 import PropTypes from "prop-types";
 
-export function DocumentsFilters({ filters, onFiltersChange }) {
-  const [localFilters, setLocalFilters] = useState(filters);
+/**
+ * DocumentFilters - Filtros rápidos para la lista de documentos
+ */
+export function DocumentFilters({ filters, onFilterChange }) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleChange = (key, value) => {
-    setLocalFilters((prev) => ({ ...prev, [key]: value }));
+  const documentTypes = Object.values(DOCUMENT_TYPES);
+  const statuses = Object.values(DOCUMENT_STATUSES);
+
+  const handleFilterChange = (key, value) => {
+    onFilterChange({
+      ...filters,
+      [key]: value === filters[key] ? null : value,
+    });
   };
 
-  const handleApply = () => {
-    onFiltersChange(localFilters);
+  const clearFilters = () => {
+    onFilterChange({});
   };
 
-  const handleReset = () => {
-    const resetFilters = {};
-    setLocalFilters(resetFilters);
-    onFiltersChange(resetFilters);
-  };
-
-  const quickFilters = [
-    { label: "Todos", days: null },
-    { label: "Expiran en 7 días", days: 7 },
-    { label: "Expiran en 30 días", days: 30 },
-    { label: "Expiran en 60 días", days: 60 },
-    { label: "Expiran en 90 días", days: 90 },
-  ];
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Filtros</h3>
-        <Button variant="ghost" size="sm" onClick={handleReset}>
-          Limpiar
-        </Button>
-      </div>
-
-      {/* Quick filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {quickFilters.map((filter, index) => (
-          <button
-            key={index}
-            onClick={() => {
-              handleChange("expiresInDays", filter.days);
-              onFiltersChange({ ...localFilters, expiresInDays: filter.days });
-            }}
-            className={`
-              px-3 py-1.5 rounded-full text-sm font-medium transition-colors
-              ${
-                localFilters.expiresInDays === filter.days
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }
-            `}
+    <div className="mb-6">
+      {/* Header con toggle */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            {filter.label}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          Filtros
+          {activeFiltersCount > 0 && (
+            <span className="px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded-full">
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
+
+        {activeFiltersCount > 0 && (
+          <button
+            onClick={clearFilters}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            Limpiar filtros
           </button>
-        ))}
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Select
-          label="Tipo"
-          value={localFilters.type || ""}
-          onChange={(e) => handleChange("type", e.target.value || null)}
-          options={[
-            { label: "Pasaporte", value: "PASSPORT" },
-            { label: "Visa", value: "VISA" },
-          ]}
-          placeholder="Todos"
-        />
+      {/* Filtros expandidos */}
+      {isExpanded && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Filtro por tipo */}
+          <div>
+            <label className="block text-xs text-slate-500 mb-2">Tipo de documento</label>
+            <div className="flex flex-wrap gap-2">
+              {documentTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => handleFilterChange("type", type.id)}
+                  className={`
+                    px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                    ${
+                      filters.type === type.id
+                        ? "bg-primary-500/20 text-primary-400 border border-primary-500/50"
+                        : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                    }
+                  `}
+                >
+                  {type.label}
 
-        <Select
-          label="Estado"
-          value={localFilters.status || ""}
-          onChange={(e) => handleChange("status", e.target.value || null)}
-          options={[
-            { label: "Subido", value: "UPLOADED" },
-            { label: "Datos Capturados", value: "DATA_CAPTURED" },
-            { label: "Verificado", value: "VERIFIED" },
-            { label: "Rechazado", value: "REJECTED" },
-          ]}
-          placeholder="Todos"
-        />
+                  {/* <span className="mr-1">{type.icon}</span> */}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <Select
-          label="Fuente"
-          value={localFilters.source || ""}
-          onChange={(e) => handleChange("source", e.target.value || null)}
-          options={[
-            { label: "Manual", value: "MANUAL" },
-            { label: "OCR", value: "OCR" },
-          ]}
-          placeholder="Todas"
-        />
+          {/* Filtro por estado */}
+          <div>
+            <label className="block text-xs text-slate-500 mb-2">Estado</label>
+            <div className="flex flex-wrap gap-2">
+              {statuses.map((status) => (
+                <button
+                  key={status.id}
+                  onClick={() => handleFilterChange("status", status.id)}
+                  className={`
+                    px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                    ${
+                      filters.status === status.id
+                        ? "bg-primary-500/20 text-primary-400 border border-primary-500/50"
+                        : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                    }
+                  `}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <Input
-          label="Expira antes de"
-          type="date"
-          value={localFilters.expiresBefore || ""}
-          onChange={(e) => handleChange("expiresBefore", e.target.value || null)}
-        />
-      </div>
+          {/* Filtro por expiración */}
+          <div>
+            <label className="block text-xs text-slate-500 mb-2">Expiración</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleFilterChange("expired", true)}
+                className={`
+                  px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                  ${
+                    filters.expired === true
+                      ? "bg-red-500/20 text-red-400 border border-red-500/50"
+                      : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                  }
+                `}
+              >
+                Expirados
+              </button>
+              <button
+                onClick={() => handleFilterChange("expiresInDays", 30)}
+                className={`
+                  px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                  ${
+                    filters.expiresInDays === 30
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/50"
+                      : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                  }
+                `}
+              >
+                Expira en 30 días
+              </button>
+              <button
+                onClick={() => handleFilterChange("expiresInDays", 90)}
+                className={`
+                  px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                  ${
+                    filters.expiresInDays === 90
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/50"
+                      : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                  }
+                `}
+              >
+                Expira en 90 días
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="mt-4 flex gap-2">
-        <Button onClick={handleApply} variant="primary" size="sm">
-          Aplicar Filtros
-        </Button>
-      </div>
+      {/* Pills de filtros activos (cuando está colapsado) */}
+      {!isExpanded && activeFiltersCount > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {filters.type && (
+            <span className="px-2 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg flex items-center gap-1">
+              {DOCUMENT_TYPES[filters.type]?.label}
+              <button onClick={() => handleFilterChange("type", null)} className="hover:text-white">
+                ×
+              </button>
+            </span>
+          )}
+          {filters.status && (
+            <span className="px-2 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg flex items-center gap-1">
+              {DOCUMENT_STATUSES[filters.status]?.label}
+              <button
+                onClick={() => handleFilterChange("status", null)}
+                className="hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {filters.expired && (
+            <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-lg flex items-center gap-1">
+              Expirados
+              <button
+                onClick={() => handleFilterChange("expired", null)}
+                className="hover:text-red-300"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {filters.expiresInDays && (
+            <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-lg flex items-center gap-1">
+              Expira en {filters.expiresInDays} días
+              <button
+                onClick={() => handleFilterChange("expiresInDays", null)}
+                className="hover:text-amber-300"
+              >
+                ×
+              </button>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-DocumentsFilters.propTypes = {
+
+export default DocumentFilters;
+
+DocumentFilters.propTypes = {
   filters: PropTypes.shape({
-    type: PropTypes.oneOf(["PASSPORT", "VISA", null]),
-    status: PropTypes.oneOf(["UPLOADED", "DATA_CAPTURED", "VERIFIED", "REJECTED", null]),
-    source: PropTypes.oneOf(["MANUAL", "OCR", null]),
-    expiresBefore: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
-    expiresInDays: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
-  }).isRequired,
-  onFiltersChange: PropTypes.func.isRequired,
+    type: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    status: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    expired: PropTypes.bool,
+    expiresInDays: PropTypes.number,
+  }),
+  onFilterChange: PropTypes.func.isRequired,
+};
+
+DocumentFilters.defaultProps = {
+  filters: {},
 };

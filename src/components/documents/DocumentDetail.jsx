@@ -7,7 +7,7 @@ import {
   UPSERT_DOCUMENT_EXTRACTED_DATA,
   SET_DOCUMENT_STATUS,
   MY_DOCUMENTS,
-} from "../../graphql/documents.gql";
+} from "../../graphql/documents/documents.gql";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";

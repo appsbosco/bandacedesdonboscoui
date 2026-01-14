@@ -46,9 +46,9 @@ import Contact from "components/Contact";
 import Jacks from "layouts/sponsors/Jacks";
 import INS from "layouts/sponsors/INS";
 
-import { DocumentsDashboard } from "components/documents/DocumentsDashboard";
-import DocumentFlowPage from "components/documents/DocumentFlowPage";
 import { DocumentDetail } from "components/documents/DocumentDetail";
+import DocumentsPage from "components/documents/DocumentsPage";
+import NewDocumentPage from "components/documents/NewDocumentPage";
 
 function isTokenExpired(token) {
   try {
@@ -294,8 +294,8 @@ export default function App() {
         <Route path="/:lang/patrocinadores/alimentos-jacks" element={<Jacks />} />
         <Route path="/:lang/patrocinadores/ins" element={<INS />} />
 
-        <Route path="/documents" element={<DocumentsDashboard />} />
-        <Route path="/documents/new" element={<DocumentFlowPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/documents/new-document" element={<NewDocumentPage />} />
         <Route path="/documents/:id" element={<DocumentDetail />} />
         <Route path="/" element={<Navigate to="/documents" replace />} />
 

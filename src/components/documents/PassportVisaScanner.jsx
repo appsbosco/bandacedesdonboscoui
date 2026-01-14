@@ -1,112 +1,97 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { loadOpenCV } from "../../utils/loadOpenCV";
-import { mapCanvasToVideo } from "../../utils/coverMapping";
-import { orderQuadPoints } from "../../utils/orderQuadPoints";
-import { calculateQualityScore } from "../../utils/qualityScore";
 import DocumentPreview from "./DocumentPreview";
+import HelpSheet from "./HelpSheet";
 import PropTypes from "prop-types";
 
-const AUTO_CAPTURE_THRESHOLD = 30; // frames consecutivos con OK
-const DETECTION_INTERVAL = 100; // ms entre detecciones
+const QUALITY_THRESHOLD = {
+  brightness: 0.35,
+  sharpness: 0.4,
+  stability: 0.7,
+};
+
+const AUTO_CAPTURE_DELAY = 1200;
+const FALLBACK_BUTTON_DELAY = 15000;
 
 export default function PassportVisaScanner({ documentId, documentType, onComplete, onCancel }) {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const cvLoadedRef = useRef(false);
-  const detectionIntervalRef = useRef(null);
-  const okFramesRef = useRef(0);
+  const lastFrameRef = useRef(null);
+  const captureTimeoutRef = useRef(null);
+  const fallbackTimeoutRef = useRef(null);
 
-  const [status, setStatus] = useState("INITIALIZING"); // INITIALIZING, READY, DETECTING, CAPTURING, CAPTURED
+  const [status, setStatus] = useState("INITIALIZING");
   const [message, setMessage] = useState("Iniciando cámara...");
-  const [alignmentScore, setAlignmentScore] = useState(null); // null, BAD, FAIR, GOOD, OK
-  const [alignmentProgress, setAlignmentProgress] = useState(0); // 0-100
-  const [debugMode, setDebugMode] = useState(true);
-  const [debugMetrics, setDebugMetrics] = useState(null);
+  const [qualityScore, setQualityScore] = useState(0);
+  const [countdown, setCountdown] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [cvReady, setCvReady] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showManualCapture, setShowManualCapture] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugTaps, setDebugTaps] = useState(0);
+  const [debugMetrics, setDebugMetrics] = useState(null);
 
-  // Cargar OpenCV
   useEffect(() => {
     loadOpenCV()
-      .then(() => {
-        cvLoadedRef.current = true;
-        setCvReady(true);
-        console.log("✅ OpenCV loaded");
-      })
-      .catch((err) => {
-        console.error("❌ Failed to load OpenCV:", err);
-        setMessage("Error cargando sistema de detección");
-      });
+      .then(() => console.log("✅ OpenCV ready"))
+      .catch((err) => console.warn("⚠️ OpenCV not available:", err));
   }, []);
 
-  // Iniciar cámara
   useEffect(() => {
     startCamera();
-    return () => {
-      stopCamera();
-    };
+    return () => stopCamera();
   }, []);
 
   useEffect(() => {
-    // Si ya hay cámara lista (videoWidth > 0) y cv listo, arrancamos detección.
-    const video = videoRef.current;
-    if (!cvReady || !video) return;
+    if (status !== "READY") return;
+    const interval = setInterval(analyzeQuality, 100);
+    return () => clearInterval(interval);
+  }, [status]);
 
-    const id = setInterval(() => {
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        startDetection();
-        clearInterval(id);
-      }
-    }, 100);
-
-    return () => clearInterval(id);
-  }, [cvReady]);
+  useEffect(() => {
+    if (status === "READY") {
+      fallbackTimeoutRef.current = setTimeout(() => {
+        setShowManualCapture(true);
+      }, FALLBACK_BUTTON_DELAY);
+    }
+    return () => {
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+    };
+  }, [status]);
 
   const startCamera = async () => {
     try {
-      const constraints = {
-        video: { facingMode: { ideal: "environment" } }, // más compatible
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
         audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
       streamRef.current = stream;
 
-      const video = videoRef.current;
-      if (!video) return;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
 
-      video.srcObject = stream;
-
-      // esperar a que el video tenga dimensiones reales
-      await new Promise((resolve) => {
-        const onReady = () => {
-          video.removeEventListener("loadedmetadata", onReady);
-          resolve();
-        };
-        video.addEventListener("loadedmetadata", onReady);
-      });
-
-      await video.play();
-
-      // Torch (sin romper en browsers que no soportan)
       const track = stream.getVideoTracks()[0];
       const capabilities = track.getCapabilities?.();
       if (capabilities?.torch) setTorchSupported(true);
 
       setStatus("READY");
-      setMessage("Posiciona tu documento en el marco");
-      // ⚠️ OJO: NO llames startDetection aquí si OpenCV no ha cargado aún (ver B)
+      setMessage("Coloca el documento dentro del marco");
     } catch (error) {
       console.error("Camera error:", error);
       if (error.name === "NotAllowedError") {
         setPermissionDenied(true);
         setMessage("Permiso de cámara denegado");
       } else {
-        setMessage("No se pudo acceder a la cámara (usa HTTPS o revisa permisos)");
+        setMessage("No se pudo acceder a la cámara");
       }
     }
   };
@@ -116,289 +101,147 @@ export default function PassportVisaScanner({ documentId, documentType, onComple
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
+    if (captureTimeoutRef.current) clearTimeout(captureTimeoutRef.current);
+    if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
   };
 
   const toggleTorch = async () => {
     if (!streamRef.current) return;
     const track = streamRef.current.getVideoTracks()[0];
     try {
-      await track.applyConstraints({
-        advanced: [{ torch: !torchEnabled }],
-      });
+      await track.applyConstraints({ advanced: [{ torch: !torchEnabled }] });
       setTorchEnabled(!torchEnabled);
     } catch (error) {
       console.error("Torch error:", error);
     }
   };
 
-  const startDetection = () => {
-    if (detectionIntervalRef.current) return;
-
-    detectionIntervalRef.current = setInterval(() => {
-      detectDocument();
-    }, DETECTION_INTERVAL);
-  };
-
-  const detectDocument = useCallback(() => {
-    if (
-      !cvLoadedRef.current ||
-      !videoRef.current ||
-      !canvasRef.current ||
-      status === "CAPTURING" ||
-      status === "CAPTURED"
-    ) {
-      return;
-    }
-
+  const analyzeQuality = useCallback(() => {
     const video = videoRef.current;
-    if (video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
-      return;
-    }
+    if (!video || video.readyState < 2 || status !== "READY") return;
 
-    const canvas = canvasRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-    const container = canvas.parentElement; // El div contenedor
+    ctx.drawImage(video, 0, 0);
 
-    // ⚠️ CRÍTICO: Canvas debe ser del tamaño del CONTENEDOR
-    if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+
+    // Brightness
+    let sumBrightness = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      sumBrightness += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+    }
+    const avgBrightness = sumBrightness / (pixels.length / 4) / 255;
+
+    // Sharpness
+    const grayData = [];
+    for (let i = 0; i < pixels.length; i += 4) {
+      grayData.push((pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3);
     }
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    try {
-      const cv = window.cv;
-
-      // ⚠️ CREAR Mat del tamaño del VIDEO REAL (no del canvas)
-      const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
-
-      // Dibujar video en un canvas temporal del tamaño correcto
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = video.videoWidth;
-      tempCanvas.height = video.videoHeight;
-      const tempCtx = tempCanvas.getContext("2d");
-      tempCtx.drawImage(video, 0, 0);
-      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-      src.data.set(imageData.data);
-
-      // ... resto del código de detección igual ...
-      // Convert to grayscale
-      const gray = new cv.Mat();
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-      // Gaussian blur
-      const blurred = new cv.Mat();
-      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-
-      // Canny edge detection - AJUSTADO
-      const edges = new cv.Mat();
-      const brightness = cv.mean(gray)[0];
-      const cannyLow = Math.max(30, brightness * 0.33);
-      const cannyHigh = Math.min(200, brightness * 0.66);
-      cv.Canny(blurred, edges, cannyLow, cannyHigh);
-
-      // Morph close
-      const morphed = new cv.Mat();
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-      cv.morphologyEx(edges, morphed, cv.MORPH_CLOSE, kernel);
-      kernel.delete();
-
-      // Find contours
-      const contours = new cv.MatVector();
-      const hierarchy = new cv.Mat();
-      cv.findContours(morphed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-      let bestContour = null;
-      let maxArea = 0;
-      const minArea = video.videoWidth * video.videoHeight * 0.06; // 6% del video
-
-      // Find largest rectangular contour
-      for (let i = 0; i < contours.size(); i++) {
-        const contour = contours.get(i);
-        const area = cv.contourArea(contour);
-
-        if (area > minArea && area > maxArea) {
-          const peri = cv.arcLength(contour, true);
-          const approx = new cv.Mat();
-          cv.approxPolyDP(contour, approx, 0.02 * peri, true);
-
-          if (approx.rows === 4) {
-            if (bestContour) bestContour.delete();
-            bestContour = approx;
-            maxArea = area;
-          } else {
-            approx.delete();
-          }
-        }
-        contour.delete();
-      }
-
-      if (bestContour) {
-        // Extract quad points (en coordenadas del video)
-        const points = [];
-        for (let i = 0; i < 4; i++) {
-          points.push({
-            x: bestContour.data32S[i * 2],
-            y: bestContour.data32S[i * 2 + 1],
-          });
-        }
-
-        const orderedPoints = orderQuadPoints(points);
-
-        // Map to display coordinates (canvas overlay)
-        const displayPoints = orderedPoints.map((p) => mapCanvasToVideo(p, video, tempCanvas));
-
-        // Calculate quality score
-        const quality = calculateQualityScore(
-          src,
-          orderedPoints,
-          video.videoWidth,
-          video.videoHeight
+    const width = canvas.width;
+    let laplacianSum = 0;
+    let count = 0;
+    for (let y = 1; y < canvas.height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        const laplacian = Math.abs(
+          4 * grayData[idx] -
+            grayData[idx - 1] -
+            grayData[idx + 1] -
+            grayData[idx - width] -
+            grayData[idx + width]
         );
-
-        // Determine alignment score - UMBRALES RELAJADOS
-        let score = "BAD";
-        let progress = 0;
-        let msg = "Acércate más al documento";
-
-        if (quality.perspective > 0.5 && quality.brightness > 0.5) {
-          if (quality.sharpness > 0.6 && quality.motion < 0.2) {
-            score = "OK";
-            progress = 100;
-            msg = "¡Perfecto! Capturando...";
-          } else if (quality.sharpness > 0.45) {
-            score = "GOOD";
-            progress = 75;
-            msg = "Mantén estable";
-          } else if (quality.sharpness > 0.3) {
-            score = "FAIR";
-            progress = 50;
-            msg = "Mejora el enfoque";
-          }
-        } else if (quality.brightness < 0.35) {
-          msg = "Necesitas más luz";
-          progress = 25;
-        } else if (quality.perspective < 0.4) {
-          msg = "Alinea el documento de frente";
-          progress = 30;
-        }
-
-        setAlignmentScore(score);
-        setAlignmentProgress(progress);
-        setMessage(msg);
-
-        if (debugMode) {
-          setDebugMetrics({
-            sharpness: (quality.sharpness * 100).toFixed(0),
-            brightness: (quality.brightness * 100).toFixed(0),
-            perspective: (quality.perspective * 100).toFixed(0),
-            motion: (quality.motion * 100).toFixed(0),
-            area: Math.round(maxArea),
-          });
-        }
-
-        // Draw contour overlay en el canvas de display
-        drawOverlay(ctx, displayPoints, score);
-
-        // Auto-capture logic
-        if (score === "OK") {
-          okFramesRef.current += 1;
-          if (okFramesRef.current >= AUTO_CAPTURE_THRESHOLD) {
-            captureFrame();
-          }
-        } else {
-          okFramesRef.current = 0;
-        }
-
-        bestContour.delete();
-      } else {
-        // No document detected
-        setAlignmentScore(null);
-        setAlignmentProgress(0);
-        setMessage("Busca un documento en el marco");
-        okFramesRef.current = 0;
-        setDebugMetrics(null);
+        laplacianSum += laplacian;
+        count++;
       }
-
-      // Cleanup
-      src.delete();
-      gray.delete();
-      blurred.delete();
-      edges.delete();
-      morphed.delete();
-      contours.delete();
-      hierarchy.delete();
-    } catch (error) {
-      console.error("Detection error:", error);
     }
-  }, [status, debugMode, documentType]);
+    const sharpness = count > 0 ? Math.min(laplacianSum / count / 100, 1) : 0;
 
-  const drawOverlay = (ctx, points, score) => {
-    const colors = {
-      BAD: "#ef4444",
-      FAIR: "#f59e0b",
-      GOOD: "#3b82f6",
-      OK: "#10b981",
-    };
+    // Stability
+    let stability = 1;
+    if (lastFrameRef.current) {
+      let diff = 0;
+      const lastPixels = lastFrameRef.current.data;
+      for (let i = 0; i < pixels.length; i += 4) {
+        diff += Math.abs(pixels[i] - lastPixels[i]);
+      }
+      const avgDiff = diff / (pixels.length / 4) / 255;
+      stability = Math.max(0, 1 - avgDiff * 5);
+    }
+    lastFrameRef.current = imageData;
 
-    const color = colors[score] || "#ef4444";
+    const brightnessPassed = avgBrightness >= QUALITY_THRESHOLD.brightness;
+    const sharpnessPassed = sharpness >= QUALITY_THRESHOLD.sharpness;
+    const stabilityPassed = stability >= QUALITY_THRESHOLD.stability;
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
+    const score = Math.round(
+      (brightnessPassed ? 33 : (avgBrightness * 33) / QUALITY_THRESHOLD.brightness) +
+        (sharpnessPassed ? 33 : (sharpness * 33) / QUALITY_THRESHOLD.sharpness) +
+        (stabilityPassed ? 34 : (stability * 34) / QUALITY_THRESHOLD.stability)
+    );
 
-    // Draw quad
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    ctx.lineTo(points[1].x, points[1].y);
-    ctx.lineTo(points[2].x, points[2].y);
-    ctx.lineTo(points[3].x, points[3].y);
-    ctx.closePath();
-    ctx.stroke();
+    setQualityScore(score);
 
-    // Draw corner markers
-    const markerSize = 20;
-    points.forEach((p) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(p.x - markerSize / 2, p.y - markerSize / 2, markerSize, markerSize);
-    });
+    if (!brightnessPassed) {
+      setMessage("Necesitas más luz");
+    } else if (!stabilityPassed) {
+      setMessage("Mantén el dispositivo estable");
+    } else if (!sharpnessPassed) {
+      setMessage("Acércate un poco más");
+    } else {
+      setMessage("¡Perfecto! Preparando captura...");
+    }
 
-    ctx.shadowBlur = 0;
-  };
+    if (debugMode) {
+      setDebugMetrics({
+        brightness: (avgBrightness * 100).toFixed(0),
+        sharpness: (sharpness * 100).toFixed(0),
+        stability: (stability * 100).toFixed(0),
+        score,
+      });
+    }
+
+    if (brightnessPassed && sharpnessPassed && stabilityPassed) {
+      if (!captureTimeoutRef.current) {
+        captureTimeoutRef.current = setTimeout(() => {
+          setCountdown(3);
+          setTimeout(() => setCountdown(2), 300);
+          setTimeout(() => setCountdown(1), 600);
+          setTimeout(() => {
+            setCountdown(null);
+            captureFrame();
+          }, 900);
+        }, AUTO_CAPTURE_DELAY - 900);
+      }
+    } else {
+      if (captureTimeoutRef.current) {
+        clearTimeout(captureTimeoutRef.current);
+        captureTimeoutRef.current = null;
+      }
+      setCountdown(null);
+    }
+  }, [status, debugMode]);
 
   const captureFrame = useCallback(() => {
-    if (status === "CAPTURING" || status === "CAPTURED") return;
+    if (status !== "READY") return;
 
     setStatus("CAPTURING");
     setMessage("Capturando...");
-    okFramesRef.current = 0;
 
-    // Stop detection
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
-
-    // Capture high-quality frame
     const video = videoRef.current;
-    const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = video.videoWidth;
-    captureCanvas.height = video.videoHeight;
-    const captureCtx = captureCanvas.getContext("2d");
-    captureCtx.drawImage(video, 0, 0);
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
 
-    captureCanvas.toBlob(
+    canvas.toBlob(
       (blob) => {
-        const file = new File([blob], `${documentType}_${Date.now()}.jpg`, {
-          type: "image/jpeg",
-        });
+        const file = new File([blob], `${documentType}_${Date.now()}.jpg`, { type: "image/jpeg" });
         setCapturedImage(file);
         setStatus("CAPTURED");
         stopCamera();
@@ -411,39 +254,51 @@ export default function PassportVisaScanner({ documentId, documentType, onComple
   const handleRetake = () => {
     setCapturedImage(null);
     setStatus("READY");
-    setMessage("Posiciona tu documento en el marco");
-    okFramesRef.current = 0;
+    setMessage("Coloca el documento dentro del marco");
+    setQualityScore(0);
+    setCountdown(null);
+    setShowManualCapture(false);
     startCamera();
   };
 
-  const handleUsePhoto = () => {
-    // Preview component will handle upload
+  const handleDebugTap = () => {
+    setDebugTaps((prev) => {
+      const newCount = prev + 1;
+      if (newCount >= 5) {
+        setDebugMode((dm) => !dm);
+        return 0;
+      }
+      setTimeout(() => setDebugTaps(0), 2000);
+      return newCount;
+    });
   };
 
   if (permissionDenied) {
     return (
       <div className="h-full flex items-center justify-center bg-black text-white p-8">
         <div className="text-center max-w-md">
-          <svg
-            className="w-16 h-16 mx-auto mb-4 text-red-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <h3 className="text-xl font-bold mb-2">Permiso de cámara requerido</h3>
-          <p className="text-gray-300 mb-6">
-            Por favor permite el acceso a tu cámara para escanear documentos.
+          <div className="w-20 h-20 mx-auto mb-6 bg-red-500/20 rounded-full flex items-center justify-center">
+            <svg
+              className="w-10 h-10 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold mb-3">Permiso de cámara requerido</h3>
+          <p className="text-gray-300 mb-8">
+            Necesitamos acceso a tu cámara para escanear documentos.
           </p>
           <button
             onClick={onCancel}
-            className="bg-white text-black px-6 py-3 rounded-lg font-semibold"
+            className="bg-white text-black font-semibold px-8 py-3 rounded-xl"
           >
             Cerrar
           </button>
@@ -464,75 +319,130 @@ export default function PassportVisaScanner({ documentId, documentType, onComple
     );
   }
 
+  const frameColor =
+    qualityScore >= 80
+      ? "border-green-500 shadow-green-500/50"
+      : qualityScore >= 50
+      ? "border-yellow-500 shadow-yellow-500/50"
+      : "border-gray-400 shadow-gray-400/30";
+
   return (
-    <div className="relative h-full w-full bg-black">
-      {/* Video */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+    <div className="fixed inset-0 bg-black">
+      {/* Video Layer - FONDO */}
+      <div className="absolute inset-0">
+        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
 
-      {/* Canvas Overlay */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ objectFit: "fill" }} // CRÍTICO: fill, no cover
-      />
-
-      {/* UI Overlay */}
-      <div className="absolute inset-0 flex flex-col">
+      {/* UI Layer - ENCIMA */}
+      <div
+        className="absolute inset-0 flex flex-col pointer-events-none"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
         {/* Top Bar */}
-        <div className="bg-gradient-to-b from-black/70 to-transparent p-4 pt-16">
-          <div className="max-w-md mx-auto">
-            {/* Status Message */}
-            <div className="text-center mb-4">
-              <p className="text-white text-lg font-semibold drop-shadow-lg">{message}</p>
-            </div>
-
-            {/* Progress Bar */}
-            {alignmentScore && (
-              <div className="bg-black/50 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ${
-                    alignmentScore === "OK"
-                      ? "bg-green-500"
-                      : alignmentScore === "GOOD"
-                      ? "bg-blue-500"
-                      : alignmentScore === "FAIR"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
-                  }`}
-                  style={{ width: `${alignmentProgress}%` }}
+        <div className="relative px-6 py-4 pointer-events-auto">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={onCancel}
+              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
                 />
-              </div>
-            )}
+              </svg>
+            </button>
+
+            <button
+              onClick={() => setShowHelp(true)}
+              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div className="text-center">
+            <h2
+              onClick={handleDebugTap}
+              className="text-white text-xl font-bold mb-1 drop-shadow-lg"
+            >
+              {message}
+            </h2>
+            <p className="text-white/80 text-sm drop-shadow">
+              {documentType === "PASSPORT"
+                ? "Alinea la zona MRZ en la banda inferior"
+                : "Centra el documento en el marco"}
+            </p>
+          </div>
+
+          <div className="mt-4 h-1.5 bg-black/30 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${
+                qualityScore >= 80
+                  ? "bg-green-500"
+                  : qualityScore >= 50
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
+              }`}
+              style={{ width: `${qualityScore}%` }}
+            />
           </div>
         </div>
 
-        {/* Center - Guide Frame */}
-        {/* Center - Guide Frame */}
-        <div className="flex-1 flex items-center justify-center p-8 bg-red-500/20">
-          <div className="relative w-full max-w-md h-[260px] sm:h-[340px] border-4 border-white/60 rounded-2xl">
-            {/* Corner markers */}
-            <div className="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
-            <div className="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
-            <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
+        {/* Center Frame */}
+        <div className="flex-1 flex items-center justify-center px-8 pointer-events-none">
+          <div className="relative w-full max-w-md">
+            <div
+              className={`relative w-full aspect-[3/2] border-4 rounded-2xl transition-all duration-300 ${frameColor}`}
+              style={{ boxShadow: `0 0 40px var(--tw-shadow-color)` }}
+            >
+              <div className="absolute -top-3 -left-3 w-10 h-10 border-t-4 border-l-4 border-white rounded-tl-xl" />
+              <div className="absolute -top-3 -right-3 w-10 h-10 border-t-4 border-r-4 border-white rounded-tr-xl" />
+              <div className="absolute -bottom-3 -left-3 w-10 h-10 border-b-4 border-l-4 border-white rounded-bl-xl" />
+              <div className="absolute -bottom-3 -right-3 w-10 h-10 border-b-4 border-r-4 border-white rounded-br-xl" />
+
+              {documentType === "PASSPORT" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1/4 border-t-2 border-white/30 bg-blue-500/10 backdrop-blur-sm rounded-b-2xl flex items-center justify-center">
+                  <span className="text-white/60 text-xs font-semibold uppercase tracking-wider">
+                    Zona MRZ
+                  </span>
+                </div>
+              )}
+
+              {countdown && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center animate-ping-slow">
+                    <span className="text-5xl font-bold text-blue-600">{countdown}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Bottom Controls */}
-        <div className="bg-gradient-to-t from-black/70 to-transparent p-6 pb-8">
-          <div className="max-w-md mx-auto flex items-center justify-between">
-            {/* Torch */}
+        <div className="relative px-6 py-6 pointer-events-auto">
+          <div className="flex items-center justify-center gap-4">
             {torchSupported && (
               <button
                 onClick={toggleTorch}
-                className={`p-4 rounded-full transition-colors ${
-                  torchEnabled ? "bg-yellow-500 text-black" : "bg-white/20 text-white"
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  torchEnabled
+                    ? "bg-yellow-500 text-black"
+                    : "bg-white/20 text-white backdrop-blur-sm"
                 }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -541,64 +451,30 @@ export default function PassportVisaScanner({ documentId, documentType, onComple
               </button>
             )}
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Manual Capture (emergency) */}
-            {alignmentScore === "GOOD" && (
-              <button onClick={captureFrame} className="p-4 bg-white rounded-full shadow-lg">
-                <svg
-                  className="w-6 h-6 text-black"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+            {showManualCapture && (
+              <button
+                onClick={captureFrame}
+                className="flex-1 max-w-xs bg-white text-black font-semibold py-4 px-6 rounded-xl shadow-2xl"
+              >
+                Capturar manualmente
               </button>
             )}
-
-            {/* Debug Toggle */}
-            <button
-              onClick={() => setDebugMode(!debugMode)}
-              className="p-4 bg-white/20 rounded-full text-white"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                />
-              </svg>
-            </button>
           </div>
-
-          {/* Debug Metrics */}
-          {debugMode && debugMetrics && (
-            <div className="mt-4 bg-black/70 rounded-lg p-4 text-white text-xs font-mono max-w-md mx-auto">
-              <div className="grid grid-cols-2 gap-2">
-                <div>Sharpness: {debugMetrics.sharpness}%</div>
-                <div>Brightness: {debugMetrics.brightness}%</div>
-                <div>Perspective: {debugMetrics.perspective}%</div>
-                <div>Motion: {debugMetrics.motion}%</div>
-                <div className="col-span-2">Area: {debugMetrics.area}px</div>
-              </div>
-            </div>
-          )}
         </div>
+
+        {debugMode && debugMetrics && (
+          <div className="absolute bottom-32 left-4 right-4 bg-black/90 backdrop-blur-md rounded-lg p-4 text-white text-xs font-mono pointer-events-none">
+            <div className="grid grid-cols-2 gap-2">
+              <div>Brightness: {debugMetrics.brightness}%</div>
+              <div>Sharpness: {debugMetrics.sharpness}%</div>
+              <div>Stability: {debugMetrics.stability}%</div>
+              <div>Score: {debugMetrics.score}%</div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showHelp && <HelpSheet onClose={() => setShowHelp(false)} documentType={documentType} />}
     </div>
   );
 }

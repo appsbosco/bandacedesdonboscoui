@@ -1,98 +1,93 @@
 import React, { useEffect } from "react";
-import { createPortal } from "react-dom";
-import PropTypes from "prop-types";
 
-export function Modal({ isOpen, onClose, title, children, size = "md", footer }) {
+export function Modal({ isOpen, onClose, children, title, size = "md" }) {
+  const sizes = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    full: "max-w-full mx-4",
+  };
+
+  // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = "";
     }
 
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
+  // Cerrar con Escape
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape" && onClose) {
         onClose();
       }
     };
 
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    if (isOpen) {
+      window.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const sizes = {
-    sm: "max-w-md",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
-    full: "max-w-7xl",
-  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-
-        {/* Modal panel */}
-        <div
-          className={`
-          relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl 
-          transition-all sm:my-8 w-full ${sizes[size]}
+      {/* Modal */}
+      <div
+        className={`
+          relative w-full ${sizes[size]}
+          bg-slate-900 border border-slate-700
+          rounded-2xl shadow-2xl
+          animate-slide-up
         `}
-        >
-          {/* Header */}
-          {title && (
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                <button
-                  onClick={onClose}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                  aria-label="Cerrar"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
+      >
+        {/* Header */}
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-slate-800 transition-colors touch-target"
+            >
+              <svg
+                className="w-5 h-5 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
 
-          {/* Content */}
-          <div className="px-6 py-4">{children}</div>
-
-          {/* Footer */}
-          {footer && <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">{footer}</div>}
-        </div>
+        {/* Content */}
+        <div className="p-6">{children}</div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
 
-Modal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  title: PropTypes.string,
-  children: PropTypes.node,
-  size: PropTypes.oneOf(["sm", "md", "lg", "full"]),
-  footer: PropTypes.node,
-};
+export default Modal;

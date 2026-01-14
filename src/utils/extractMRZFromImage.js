@@ -1,7 +1,8 @@
-import { parseMRZ } from "./parseMRZ";
+import { parseMRZ } from "./mrzParser";
 
 /**
- * Extrae MRZ de una imagen usando heurísticas y OCR simple
+ * Extrae MRZ de una imagen
+ * IMPORTANTE: Retorna objeto vacío si no puede extraer, NO datos inventados
  */
 export async function extractMRZFromImage(imageFile) {
   return new Promise((resolve) => {
@@ -10,14 +11,13 @@ export async function extractMRZFromImage(imageFile) {
 
     img.onload = async () => {
       try {
-        // Crear canvas
         const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0);
 
-        // Extraer zona inferior (MRZ típicamente está en el 20% inferior)
+        // Extraer zona inferior (MRZ)
         const mrzHeight = Math.floor(img.height * 0.2);
         const mrzCanvas = document.createElement("canvas");
         mrzCanvas.width = img.width;
@@ -35,27 +35,28 @@ export async function extractMRZFromImage(imageFile) {
           mrzHeight
         );
 
-        // Usar OCR (Tesseract.js) como fallback si está disponible
+        // Intentar OCR (si Tesseract está disponible)
         let mrzText = await attemptOCR(mrzCanvas);
 
-        if (!mrzText) {
-          // Fallback: usar patrón heurístico básico
-          mrzText = generateMockMRZ(); // Para demo
+        if (mrzText) {
+          const parsed = parseMRZ(mrzText);
+          URL.revokeObjectURL(url);
+          resolve(parsed || { needsManualReview: true });
+        } else {
+          // NO hay OCR disponible → retornar vacío para revisión manual
+          URL.revokeObjectURL(url);
+          resolve({ needsManualReview: true });
         }
-
-        const parsed = parseMRZ(mrzText);
-        URL.revokeObjectURL(url);
-        resolve(parsed || {});
       } catch (error) {
         console.error("MRZ extraction error:", error);
         URL.revokeObjectURL(url);
-        resolve({});
+        resolve({ needsManualReview: true });
       }
     };
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      resolve({});
+      resolve({ needsManualReview: true });
     };
 
     img.src = url;
@@ -63,13 +64,21 @@ export async function extractMRZFromImage(imageFile) {
 }
 
 async function attemptOCR(canvas) {
-  // TODO: Implementar Tesseract.js si se necesita
-  // Por ahora retornar null para usar mock
-  return null;
-}
+  // Verificar si Tesseract está disponible
+  if (typeof window !== "undefined" && window.Tesseract) {
+    try {
+      const worker = await window.Tesseract.createWorker("eng");
+      const {
+        data: { text },
+      } = await worker.recognize(canvas);
+      await worker.terminate();
+      return text;
+    } catch (error) {
+      console.error("Tesseract OCR error:", error);
+      return null;
+    }
+  }
 
-function generateMockMRZ() {
-  // Para demo/testing - remover en producción
-  return `P<CRISANCHEZ<<JOSUE<<<<<<<<<<<<<<<<<<<<<<<<<
-L12345678<CRI8901011M2501015<<<<<<<<<<<<<<04`;
+  // Sin Tesseract, retornar null
+  return null;
 }
