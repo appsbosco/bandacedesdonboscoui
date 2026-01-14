@@ -1,5 +1,6 @@
 import { gql } from "@apollo/client";
 
+// Document Fragments
 export const DOCUMENT_FRAGMENT = gql`
   fragment DocumentFragment on Document {
     id: _id
