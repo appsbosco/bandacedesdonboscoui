@@ -3,8 +3,8 @@ import { setContext } from "@apollo/client/link/context";
 
 // Create an HTTP link
 const httpLink = createHttpLink({
-  uri: "http://localhost:4000/api/graphql",
-  // uri: "https://bandacedesdonboscoapi.vercel.app/api/graphql",
+  // uri: "http://localhost:4000/api/graphql",
+  uri: "https://bandacedesdonboscoapi.vercel.app/api/graphql",
 });
 
 const authLink = setContext((_, { headers }) => {
