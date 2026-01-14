@@ -17,8 +17,6 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Card from "@mui/material/Card";
 
-import { DOCUMENT_TYPES } from "../../utils/constants";
-
 // Componentes adicionales
 import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
@@ -64,13 +62,11 @@ function NewDocumentPage() {
       setIsSaving(true);
 
       try {
-        const docTypeInfo = DOCUMENT_TYPES[documentType] || {};
-
         const { data: docData } = await createDocument({
           variables: {
             input: {
               type: documentType,
-              source: "SCAN",
+              // source: "SCAN",
             },
           },
         });
@@ -100,17 +96,14 @@ function NewDocumentPage() {
           },
         });
 
-        // Solo guardar datos extraídos si el documento tiene MRZ o si hay datos
-        if (docTypeInfo.hasMRZ || Object.values(extractedData).some((v) => v)) {
-          await upsertExtractedData({
-            variables: {
-              input: {
-                documentId,
-                ...extractedData,
-              },
+        await upsertExtractedData({
+          variables: {
+            input: {
+              documentId,
+              ...extractedData,
             },
-          });
-        }
+          },
+        });
 
         toast.success("¡Documento guardado exitosamente!");
         navigate(`/documents/${documentId}`);
@@ -131,75 +124,6 @@ function NewDocumentPage() {
       navigate,
     ]
   );
-  // const handleConfirmData = useCallback(
-  //   async (extractedData) => {
-  //     if (!capturedCanvas || !documentType) return;
-
-  //     setIsSaving(true);
-
-  //     try {
-  //       const { data: docData } = await createDocument({
-  //         variables: {
-  //           input: {
-  //             type: documentType,
-  //             // source: "SCAN",
-  //           },
-  //         },
-  //       });
-
-  //       const documentId = docData?.createDocument?.id;
-  //       if (!documentId) throw new Error("No se pudo crear el documento");
-
-  //       const blob = await optimizeForUpload(capturedCanvas, {
-  //         maxWidth: 2560,
-  //         maxHeight: 2560,
-  //         quality: 0.95,
-  //       });
-
-  //       const cloudinaryResult = await uploadToCloudinary(blob, {
-  //         folder: `documents/${documentType.toLowerCase()}`,
-  //         tags: [documentType, documentId],
-  //       });
-
-  //       await addDocumentImage({
-  //         variables: {
-  //           input: {
-  //             documentId,
-  //             url: cloudinaryResult.url,
-  //             publicId: cloudinaryResult.publicId,
-  //             provider: "CLOUDINARY",
-  //           },
-  //         },
-  //       });
-
-  //       await upsertExtractedData({
-  //         variables: {
-  //           input: {
-  //             documentId,
-  //             ...extractedData,
-  //           },
-  //         },
-  //       });
-
-  //       toast.success("¡Documento guardado exitosamente!");
-  //       navigate(`/documents/${documentId}`);
-  //     } catch (error) {
-  //       console.error("Error saving document:", error);
-  //       toast.error(error.message || "Error al guardar el documento");
-  //     } finally {
-  //       setIsSaving(false);
-  //     }
-  //   },
-  //   [
-  //     capturedCanvas,
-  //     documentType,
-  //     createDocument,
-  //     addDocumentImage,
-  //     upsertExtractedData,
-  //     toast,
-  //     navigate,
-  //   ]
-  // );
 
   const handleCancel = useCallback(() => {
     navigate("/documents");
