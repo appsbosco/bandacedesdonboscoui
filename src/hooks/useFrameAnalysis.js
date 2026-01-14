@@ -60,7 +60,7 @@ export function useFrameAnalysis(options = {}) {
           const isFrameOk =
             result.overallOk &&
             result.documentDetected &&
-            result.overallScore >= 0.75 &&
+            result.overallScore >= 0.7 &&
             result.focus.ok &&
             result.glare.ok;
 

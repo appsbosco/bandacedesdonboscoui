@@ -99,27 +99,27 @@ export const DOCUMENT_SOURCES = {
 
 export const SCANNER_CONFIG = {
   scanArea: {
-    x: 0.05,
-    y: 0.25,
-    width: 0.9,
-    height: 0.5,
+    x: 0.08,
+    y: 0.15,
+    width: 0.84,
+    height: 0.7,
   },
   thresholds: {
-    focus: 0.3,
-    brightness: { min: 80, max: 200 },
-    glare: 0.03,
-    alignment: 0.6,
-    documentFill: 0.4,
+    focus: 0.25,
+    brightness: { min: 70, max: 210 },
+    glare: 0.04,
+    alignment: 0.5,
+    documentFill: 0.35,
   },
-  stabilityTime: 800,
+  stabilityTime: 600,
   analysisResolution: 400,
   captureResolution: {
     width: 1920,
     height: 1080,
   },
-  analysisFPS: 12,
-  warmupTime: 1500,
-  minConsecutiveFrames: 5,
+  analysisFPS: 15,
+  warmupTime: 1200,
+  minConsecutiveFrames: 4,
 };
 
 export const SCANNER_MESSAGES = {

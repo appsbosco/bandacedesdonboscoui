@@ -31,7 +31,7 @@ export function WizardStep2({ documentType, onCapture, onCancel }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 pb-10">
+    <div className="min-h-screen bg-slate-50 p-4 pb-10 mb-10">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-5">
           <button
@@ -92,7 +92,7 @@ export function WizardStep2({ documentType, onCapture, onCancel }) {
             </div>
           </div>
 
-          <div className="px-5 pb-5 space-y-3">
+          <div className="px-5 pb-5 space-y-3 mb-10">
             <button
               onClick={handleContinue}
               className="w-full py-4 rounded-2xl font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg transition-all"
@@ -112,7 +112,7 @@ export function WizardStep2({ documentType, onCapture, onCancel }) {
 
             <button
               onClick={handleRetry}
-              className="w-full py-3.5 rounded-2xl font-semibold bg-white text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+              className="w-full py-3.5 rounded-2xl font-semibold bg-white text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50 transition-colors mb-10"
             >
               Escanear de nuevo
             </button>

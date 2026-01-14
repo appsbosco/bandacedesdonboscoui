@@ -10,10 +10,10 @@ import QualityIndicators from "./QualityIndicators";
 
 export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPORT" }) {
   const [phase, setPhase] = useState("initializing");
-  const [capturedImage, setCapturedImage] = useState(null);
   const [error, setError] = useState(null);
 
   const cameraStartTimeRef = useRef(0);
+  const hasTriggeredCaptureRef = useRef(false);
 
   const {
     videoRef,
@@ -27,17 +27,42 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
     idealHeight: 1080,
   });
 
+  const handleAutoCapture = useCallback(() => {
+    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
+
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
+
+    hasTriggeredCaptureRef.current = true;
+    setPhase("capturing");
+
+    setTimeout(() => {
+      try {
+        const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
+          enhance: false,
+        });
+        setPhase("captured");
+        if (onCapture) onCapture(processedCanvas);
+      } catch (err) {
+        console.error("Capture error:", err);
+        setError("Error al capturar la imagen");
+        setPhase("scanning");
+        hasTriggeredCaptureRef.current = false;
+      }
+    }, 150);
+  }, [phase, videoRef, onCapture]);
+
   const { analysis, reset: resetAnalysis } = useFrameAnalysis({
     videoRef,
     isActive: phase === "scanning" && cameraReady,
     scanArea: SCANNER_CONFIG.scanArea,
+    onConditionMet: handleAutoCapture,
   });
 
   useEffect(() => {
     cameraStartTimeRef.current = Date.now();
     startCamera()
       .then(() => {
-        setTimeout(() => setPhase("scanning"), 500);
+        setTimeout(() => setPhase("scanning"), 400);
       })
       .catch((err) => {
         setError(cameraError || err.message);
@@ -47,16 +72,11 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
   }, []);
 
   const handleManualCapture = useCallback(() => {
-    if (phase !== "scanning" || !videoRef.current) return;
+    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
+    if (!analysis.documentDetected) return;
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
 
-    if (!analysis.documentDetected) {
-      return;
-    }
-
-    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) {
-      return;
-    }
-
+    hasTriggeredCaptureRef.current = true;
     setPhase("capturing");
 
     setTimeout(() => {
@@ -64,24 +84,16 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
         const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
           enhance: false,
         });
-        setCapturedImage(processedCanvas);
         setPhase("captured");
         if (onCapture) onCapture(processedCanvas);
       } catch (err) {
         console.error("Capture error:", err);
         setError("Error al capturar la imagen");
         setPhase("scanning");
+        hasTriggeredCaptureRef.current = false;
       }
-    }, 200);
+    }, 150);
   }, [phase, videoRef, analysis.documentDetected, onCapture]);
-
-  const handleRetry = useCallback(() => {
-    setCapturedImage(null);
-    setError(null);
-    setPhase("scanning");
-    cameraStartTimeRef.current = Date.now();
-    resetAnalysis();
-  }, [resetAnalysis]);
 
   if (error || cameraError) {
     return (
@@ -107,6 +119,7 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
           <button
             onClick={() => {
               setError(null);
+              hasTriggeredCaptureRef.current = false;
               startCamera();
             }}
             className="w-full py-3 px-6 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-2xl transition-colors"
@@ -135,22 +148,6 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
           phase === "captured" ? "hidden" : ""
         }`}
       />
-
-      {phase === "captured" && capturedImage && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
-          <canvas
-            ref={(el) => {
-              if (el && capturedImage) {
-                const ctx = el.getContext("2d");
-                el.width = capturedImage.width;
-                el.height = capturedImage.height;
-                ctx.drawImage(capturedImage, 0, 0);
-              }
-            }}
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-      )}
 
       {phase === "scanning" && (
         <ScannerOverlay
@@ -182,7 +179,9 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
             phase === "initializing"
               ? "bg-sky-500/30 text-sky-100"
               : phase === "scanning"
-              ? "bg-white/20 text-white"
+              ? analysis.overallOk
+                ? "bg-emerald-500/30 text-emerald-100"
+                : "bg-white/20 text-white"
               : phase === "capturing"
               ? "bg-emerald-500/30 text-emerald-100"
               : "bg-emerald-500/30 text-emerald-100"
@@ -190,7 +189,7 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
         >
           {phase === "initializing" && SCANNER_MESSAGES.initializing}
           {phase === "scanning" &&
-            (analysis.overallOk ? SCANNER_MESSAGES.focusing : SCANNER_MESSAGES.ready)}
+            (analysis.overallOk ? "¡Capturando automático!" : SCANNER_MESSAGES.ready)}
           {phase === "capturing" && SCANNER_MESSAGES.capturing}
           {phase === "captured" && SCANNER_MESSAGES.success}
         </div>
@@ -199,9 +198,11 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
       {phase === "scanning" && (
         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center z-20">
           <p className="text-white/80 text-sm mb-4 text-center">
-            {analysis.documentDetected
-              ? "Presiona el botón para capturar"
-              : "Coloca el documento horizontal dentro del marco"}
+            {analysis.overallOk
+              ? "Mantén firme, captura automática..."
+              : analysis.documentDetected
+              ? "Ajusta posición para captura automática"
+              : "Coloca el documento dentro del marco"}
           </p>
 
           <button
@@ -209,7 +210,7 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
             disabled={!analysis.documentDetected}
             className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
               analysis.overallOk
-                ? "border-emerald-400 bg-emerald-400/20 scale-110"
+                ? "border-emerald-400 bg-emerald-400/30 scale-110 animate-pulse"
                 : analysis.documentDetected
                 ? "border-white bg-white/20 hover:bg-white/30"
                 : "border-white/30 bg-white/5 opacity-50 cursor-not-allowed"
@@ -222,12 +223,14 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
             />
           </button>
 
-          <p className="text-white/50 text-xs mt-3">Toca para capturar</p>
+          <p className="text-white/50 text-xs mt-3">
+            {analysis.overallOk ? "Captura automática activa" : "O toca para capturar manual"}
+          </p>
         </div>
       )}
 
       {phase === "capturing" && (
-        <div className="absolute inset-0 bg-white/30 z-30 animate-fade-in flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/40 z-30 animate-fade-in flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 mx-auto animate-pulse">
               <svg
@@ -244,7 +247,9 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
                 />
               </svg>
             </div>
-            <p className="text-white font-medium text-lg">{SCANNER_MESSAGES.capturing}</p>
+            <p className="text-white font-medium text-lg drop-shadow-lg">
+              {SCANNER_MESSAGES.capturing}
+            </p>
           </div>
         </div>
       )}
