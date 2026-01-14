@@ -12,7 +12,7 @@ import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { Skeleton } from "../ui/Skeleton";
-import { DocumentForm } from "./DocumentForm";
+// import { DocumentForm } from "./DocumentForm";
 import { useToast } from "../ui/Toast";
 import {
   getStatusColor,
@@ -246,12 +246,12 @@ export function DocumentDetail() {
           {editMode ? (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">Editar Datos</h2>
-              <DocumentForm
+              {/* <DocumentForm
                 documentType={document.type}
                 initialData={document.extracted}
                 onSubmit={handleUpdate}
                 submitLabel={updating ? "Guardando..." : "Guardar Cambios"}
-              />
+              /> */}
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow p-6">

@@ -1,11 +1,9 @@
+// DocumentCard.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 import { getDocumentTypeInfo, getStatusInfo, getExpirationStatus } from "../../utils/constants";
 import PropTypes from "prop-types";
 
-/**
- * DocumentCard - Tarjeta de documento para la lista
- */
 export function DocumentCard({ document }) {
   const { id, type, status, images, extracted, isExpired, daysUntilExpiration, createdAt } =
     document;
@@ -22,94 +20,165 @@ export function DocumentCard({ document }) {
       : null);
   const documentNumber = extracted?.passportNumber || extracted?.documentNumber;
 
+  const isUrgent = !!extracted?.expirationDate && !isExpired && !!expirationStatus?.urgent;
+  const isVigente =
+    !!extracted?.expirationDate &&
+    !isExpired &&
+    !expirationStatus?.urgent &&
+    expirationStatus?.label === "Vigente";
+
   return (
     <Link
       to={`/documents/${id}`}
       className="
         block
-        rounded-3xl
+        rounded-2xl
         bg-white
-        ring-1 ring-slate-200
-        shadow-sm hover:shadow-md
+        border border-slate-200
+        hover:border-slate-300
         transition-all duration-200
-        p-4
-        focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2
+        p-3 sm:p-4
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         group
       "
     >
-      <div className="flex gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         {/* Thumbnail */}
-        <div className="w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden bg-slate-50 ring-1 ring-slate-200 relative">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
           {thumbnailUrl ? (
             <img src={thumbnailUrl} alt={typeInfo.label} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-3xl">
+            <div className="w-full h-full flex items-center justify-center text-3xl text-slate-400">
               {typeInfo.icon}
             </div>
           )}
+        </div>
 
-          {/* Badge de expirado */}
-          {isExpired && (
-            <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-              <span className="text-xs font-bold text-red-400 bg-red-500/30 px-2 py-1 rounded">
-                EXPIRADO
+        {/* Content */}
+        <div className="min-w-0 flex-1 flex flex-col pt-0.5">
+          {/* Top row: type + badge | chevron */}
+          <div className="flex items-start justify-between gap-3 min-w-0">
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500 shrink-0">{typeInfo.label}</span>
+
+              <span
+                className="
+                  min-w-0
+                  max-w-[11.5rem]
+                  text-xs font-medium
+                  px-2.5 py-1
+                  rounded-md
+                  bg-amber-50 text-amber-700
+                  border border-amber-200
+                  whitespace-nowrap
+                  overflow-hidden text-ellipsis
+                "
+                title="Datos Capturados"
+              >
+                Datos Capturados
               </span>
             </div>
-          )}
-        </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          {/* Tipo y estado */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-slate-400">{typeInfo.label}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
+            <div className="flex-shrink-0 pt-0.5">
+              <svg
+                className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
           </div>
 
-          {/* Nombre o número */}
-          <h3 className="text-slate-900 font-semibold truncate mb-1 group-hover:text-primary-700 transition-colors">
-            {displayName || documentNumber || "Documento sin datos"}
+          {/* ID (document number) */}
+          <h3
+            className="
+              mt-2
+              text-base sm:text-lg
+              font-semibold
+              text-slate-900
+              group-hover:text-blue-600
+              transition-colors
+              min-w-0
+              truncate
+            "
+            title={documentNumber || "Documento sin datos"}
+          >
+            {documentNumber || "Documento sin datos"}
           </h3>
 
-          {/* Número de documento si hay nombre */}
-          {displayName && documentNumber && (
-            <p className="text-sm text-slate-500 truncate mb-2">{documentNumber}</p>
+          {/* Name (max 2 lines) */}
+          {displayName && (
+            <p
+              className="mt-1.5 text-sm text-slate-600 min-w-0 break-words"
+              title={displayName}
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {displayName}
+            </p>
           )}
 
-          {/* Expiración */}
-          <div className="flex items-center gap-2">
+          {/* Status row */}
+          <div className="mt-3 flex items-center gap-1.5 min-w-0">
             {extracted?.expirationDate ? (
-              <span className={`text-xs ${expirationStatus.color} flex items-center gap-1`}>
-                {expirationStatus.urgent && (
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                )}
-                {isExpired ? "Expirado" : `Expira: ${expirationStatus.label}`}
-              </span>
+              <>
+                <svg
+                  className={`w-4 h-4 flex-shrink-0 ${
+                    isExpired
+                      ? "text-red-500"
+                      : isUrgent
+                      ? "text-amber-500"
+                      : isVigente
+                      ? "text-emerald-500"
+                      : "text-slate-400"
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+
+                <span
+                  className={`text-sm font-medium min-w-0 truncate ${
+                    isExpired
+                      ? "text-red-600"
+                      : isUrgent
+                      ? "text-amber-600"
+                      : isVigente
+                      ? "text-emerald-600"
+                      : "text-slate-600"
+                  }`}
+                  title={isExpired ? "Expirado" : `Expira en ${expirationStatus.label}`}
+                >
+                  {isExpired ? "Expirado" : `Expira en ${expirationStatus.label}`}
+                </span>
+              </>
             ) : (
-              <span className="text-xs text-slate-600">Sin fecha de expiración</span>
+              <span
+                className="text-sm text-slate-500 min-w-0 truncate"
+                title="Sin fecha de expiración"
+              >
+                Sin fecha de expiración
+              </span>
             )}
           </div>
-        </div>
-
-        {/* Flecha */}
-        <div className="flex items-center">
-          <svg
-            className="w-5 h-5 text-slate-600 group-hover:text-slate-400 transition-colors"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
         </div>
       </div>
     </Link>
@@ -124,7 +193,7 @@ const ExtractedShape = PropTypes.shape({
   surname: PropTypes.string,
   passportNumber: PropTypes.string,
   documentNumber: PropTypes.string,
-  expirationDate: PropTypes.string, // o Date si lo manejás así, pero en GraphQL casi siempre viene string ISO
+  expirationDate: PropTypes.string,
 });
 
 const ImageShape = PropTypes.shape({

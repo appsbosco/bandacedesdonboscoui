@@ -60,7 +60,7 @@ export function DocumentFilters({ filters, onFilterChange }) {
 
       {/* Filtros expandidos */}
       {isExpanded && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-4 animate-fade-in  bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-200 py-4 px-4 rounded-3xl">
           {/* Filtro por tipo */}
           <div>
             <label className="block text-xs text-slate-500 mb-2">Tipo de documento</label>

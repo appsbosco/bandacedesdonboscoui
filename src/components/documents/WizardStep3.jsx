@@ -3,6 +3,7 @@ import React, { useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import { OCRExtractor } from "../../components/documents/OCRExtractor";
 import { getDocumentTypeInfo } from "../../utils/constants";
+import { DOCUMENT_TYPES } from "../../utils/constants";
 
 function toDateTimeISO(value) {
   if (!value) return null;
@@ -39,23 +40,53 @@ export function WizardStep3({
 
   const docTypeInfo = getDocumentTypeInfo(documentType);
 
-  const handleOCRComplete = useCallback((result) => {
-    setOcrResult(result);
-    const extracted = result.extracted || {};
-    setEditedData({
-      fullName: extracted.fullName || "",
-      givenNames: extracted.givenNames || "",
-      surname: extracted.surname || "",
-      passportNumber: extracted.passportNumber || extracted.documentNumber || "",
-      nationality: extracted.nationality || "",
-      issuingCountry: extracted.issuingCountry || "",
-      dateOfBirth: extracted.dateOfBirth || "",
-      sex: extracted.sex || "",
-      issueDate: extracted.issueDate || "",
-      expirationDate: extracted.expirationDate || "",
-    });
-    setPhase("confirming");
-  }, []);
+  const handleOCRComplete = useCallback(
+    (result) => {
+      const docTypeInfo = DOCUMENT_TYPES[documentType] || {};
+      const hasMRZ = docTypeInfo.hasMRZ;
+
+      // Si el documento requiere MRZ y no se detectó o confianza < 80%, pedir reintento
+      if (hasMRZ && (!result.mrz || (result.confidence && result.confidence < 80))) {
+        setPhase("mrz_failed");
+        setOcrResult(result);
+        return;
+      }
+
+      setOcrResult(result);
+      const extracted = result.extracted || {};
+      setEditedData({
+        fullName: extracted.fullName || "",
+        givenNames: extracted.givenNames || "",
+        surname: extracted.surname || "",
+        passportNumber: extracted.passportNumber || extracted.documentNumber || "",
+        nationality: extracted.nationality || "",
+        issuingCountry: extracted.issuingCountry || "",
+        dateOfBirth: extracted.dateOfBirth || "",
+        sex: extracted.sex || "",
+        issueDate: extracted.issueDate || "",
+        expirationDate: extracted.expirationDate || "",
+      });
+      setPhase("confirming");
+    },
+    [documentType]
+  );
+  // const handleOCRComplete = useCallback((result) => {
+  //   setOcrResult(result);
+  //   const extracted = result.extracted || {};
+  //   setEditedData({
+  //     fullName: extracted.fullName || "",
+  //     givenNames: extracted.givenNames || "",
+  //     surname: extracted.surname || "",
+  //     passportNumber: extracted.passportNumber || extracted.documentNumber || "",
+  //     nationality: extracted.nationality || "",
+  //     issuingCountry: extracted.issuingCountry || "",
+  //     dateOfBirth: extracted.dateOfBirth || "",
+  //     sex: extracted.sex || "",
+  //     issueDate: extracted.issueDate || "",
+  //     expirationDate: extracted.expirationDate || "",
+  //   });
+  //   setPhase("confirming");
+  // }, []);
 
   const handleOCRError = useCallback(() => {
     setPhase("confirming");
@@ -121,6 +152,99 @@ export function WizardStep3({
 
   const mrzDetected = !!ocrResult?.mrz;
 
+  if (phase === "mrz_failed") {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 pb-10">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-5">
+            <button
+              onClick={onCancel}
+              className="p-2 rounded-xl hover:bg-slate-200 text-slate-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <span className="text-sm text-slate-500">Paso 3 de 3</span>
+            <div className="w-10" />
+          </div>
+
+          <div className="rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 overflow-hidden">
+            <div className="px-5 py-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-amber-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">MRZ no detectado</h2>
+              <p className="text-slate-500 text-sm mb-6">
+                No pudimos leer la zona MRZ del documento. Asegúrate de que:
+              </p>
+              <ul className="text-left text-slate-600 text-sm space-y-2 mb-6 px-4">
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500">•</span>
+                  El documento esté bien iluminado
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500">•</span>
+                  La zona MRZ (líneas inferiores) sea visible
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500">•</span>
+                  La imagen no esté borrosa ni cortada
+                </li>
+              </ul>
+
+              <div className="space-y-3">
+                <button
+                  onClick={onRetry}
+                  className="w-full py-4 rounded-2xl font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg transition-all"
+                >
+                  Escanear de nuevo
+                </button>
+                <button
+                  onClick={() => {
+                    const extracted = ocrResult?.extracted || {};
+                    setEditedData({
+                      fullName: extracted.fullName || "",
+                      givenNames: extracted.givenNames || "",
+                      surname: extracted.surname || "",
+                      passportNumber: extracted.passportNumber || extracted.documentNumber || "",
+                      nationality: extracted.nationality || "",
+                      issuingCountry: extracted.issuingCountry || "",
+                      dateOfBirth: extracted.dateOfBirth || "",
+                      sex: extracted.sex || "",
+                      issueDate: extracted.issueDate || "",
+                      expirationDate: extracted.expirationDate || "",
+                    });
+                    setPhase("confirming");
+                  }}
+                  className="w-full py-3.5 rounded-2xl font-semibold bg-white text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  Continuar sin MRZ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (phase === "extracting") {
     return (
       <div className="min-h-screen bg-slate-50 p-4 pb-10">

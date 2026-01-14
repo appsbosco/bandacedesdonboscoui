@@ -295,7 +295,7 @@ export default function App() {
         <Route path="/:lang/patrocinadores/ins" element={<INS />} />
 
         <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/documents/new-document" element={<NewDocumentPage />} />
+        <Route path="/new-document" element={<NewDocumentPage />} />
         <Route path="/documents/:id" element={<DocumentDetail />} />
         <Route path="/" element={<Navigate to="/documents" replace />} />
 

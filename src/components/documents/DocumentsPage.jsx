@@ -59,17 +59,17 @@ function DocumentsPage() {
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-slate-200">
               <div className="max-w-lg mx-auto px-4 py-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-semibold text-slate-900">Mis Documentos</h1>
+                  <h1 className="text-xl font-semibold text-slate-900 my-auto">Mis Documentos</h1>
 
                   {paginationInfo?.total > 0 && (
-                    <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full ring-1 ring-slate-200">
+                    <span className="px-4 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full ring-1 ring-slate-200">
                       {paginationInfo.total} documento{paginationInfo.total !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
 
                 {/* Subtitulo */}
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-500 mt-3">
                   Filtra, revisa y escanea nuevos documentos
                 </p>
               </div>
@@ -78,12 +78,12 @@ function DocumentsPage() {
             {/* Content */}
             <main className="max-w-lg mx-auto px-4 py-6">
               {/* Filters card */}
-              <div className="rounded-3xl bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-200 p-4 mb-4">
+              <div className="rounded-3xlp-4 mb-4">
                 <DocumentFilters filters={filters} onFilterChange={handleFilterChange} />
               </div>
 
               {/* List card */}
-              <div className="rounded-3xl bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-200 p-4">
+              <div className="rounded-3xl ">
                 <DocumentList
                   documents={documents}
                   loading={loading}
