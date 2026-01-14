@@ -1,10 +1,8 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 
-// Create an HTTP link
 const httpLink = createHttpLink({
-  uri: "http://localhost:4000/api/graphql",
-  // uri: "https://bandacedesdonboscoapi.vercel.app/api/graphql",
+  uri: process.env.VITE_GRAPHQL_URL,
 });
 
 const authLink = setContext((_, { headers }) => {
@@ -17,7 +15,6 @@ const authLink = setContext((_, { headers }) => {
   };
 });
 
-// Create ApolloClient instance
 const client = new ApolloClient({
   link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
