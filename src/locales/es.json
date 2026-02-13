@@ -110,5 +110,82 @@
         "submit": "Enviar"
       }
     }
+  },
+  "donation": {
+    "header": {
+      "badge": "Rumbo al Rose Parade 2027",
+      "title": "Apoye a la Banda CEDES Don Bosco",
+      "subtitle": "Contribuya al sueño de 280 jóvenes músicos costarricenses. Seleccione su aporte y complete la donación de forma segura con BAC Credomatic."
+    },
+    "badge": {
+      "recommended": "Recomendado"
+    },
+    "options": {
+      "basic": {
+        "label": "Mantenimiento Básico",
+        "impact1": "Suma al fondo general para llevar a jóvenes músicos al Rose Parade 2027",
+        "impact2": "Apoya costos de logística de viaje (traslados internos, coordinación, operación)",
+        "impact3": "Contribuye a que más estudiantes puedan participar, sin importar el monto"
+      },
+      "transport": {
+        "label": "Transporte y Logística",
+        "impact1": "Apoya traslados terrestres del grupo durante el viaje (aeropuerto–hotel–eventos)",
+        "impact2": "Contribuye al transporte interno requerido por ensayos, actividades y logística",
+        "impact3": "Refuerza la movilidad del grupo para cumplir horarios oficiales en Pasadena"
+      },
+      "equipment": {
+        "label": "Equipamiento Técnico",
+        "impact1": "Contribuye al alquiler, traslado o manejo de instrumentos y equipo especializado",
+        "impact2": "Apoya costos asociados a equipaje especial y logística musical del contingente"
+      },
+      "international": {
+        "label": "Preparación Internacional",
+        "impact1": "Aporta de forma significativa a costos esenciales del viaje (hospedaje y alimentación)",
+
+        "impact2": "Refuerza becas y apoyos para estudiantes con mayores necesidades económicas",
+        "impact3": "Acelera el cumplimiento del presupuesto total para Pasadena 2027"
+      }
+    },
+    "cta": {
+      "select": "Seleccionar este monto",
+      "selected": "Monto seleccionado"
+    },
+    "security": {
+      "badge": "Procesado por BAC Credomatic",
+      "description": "Su información de pago es procesada directamente por BAC Credomatic. No almacenamos datos de su tarjeta."
+    },
+    "iframe": {
+      "title": "Formulario de pago seguro para donación de ${{amount}} USD"
+    },
+    "impact_button": "¿En qué ayuda mi donación?",
+    "modal": {
+      "title": "Impacto de su donación",
+      "description": "Cómo se utilizan los fondos para la preparación al Rose Parade 2027",
+      "close": "Cerrar modal",
+      "footer": "Cada aporte, sin importar el monto, contribuye directamente a la preparación de 280 jóvenes músicos costarricenses para su presentación en el Rose Parade 2027."
+    },
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "q1": {
+        "question": "¿Es seguro donar aquí?",
+        "answer": "Sí. El pago se procesa directamente por BAC Credomatic mediante su plataforma Click. No almacenamos información de tarjetas."
+      },
+      "q2": {
+        "question": "¿Recibiré un comprobante?",
+        "answer": "Sí. BAC Credomatic envía automáticamente un recibo digital a su correo tras completar la transacción."
+      },
+      "q3": {
+        "question": "¿Por qué BAC solicita mis datos en otra página?",
+        "answer": "El formulario es procesado directamente por BAC Credomatic para garantizar la seguridad de su información de pago. Nosotros no tenemos acceso a estos datos."
+      },
+      "q4": {
+        "question": "¿Puedo donar otro monto?",
+        "answer": "Los montos disponibles son $10, $25, $50 y $100. Para aportes personalizados, contáctenos en"
+      }
+    },
+    "thanks": {
+      "title": "Gracias por su apoyo",
+      "message": "Cada aporte fortalece el sueño de 280 jóvenes músicos costarricenses de representar al país en el Rose Parade 2027."
+    }
   }
 }

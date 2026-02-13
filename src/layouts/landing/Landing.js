@@ -8,8 +8,8 @@ import { useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import SponsorBadge from "components/SponsorBadge";
-import DonationSinpeCard from "components/DonationSinpeCard";
-import Snowfall from "react-snowfall";
+
+import DonationSection from "components/Donations";
 
 const Landing = () => {
   const { lang } = useParams();
@@ -23,17 +23,11 @@ const Landing = () => {
 
   return (
     <>
-      <Snowfall
-        snowflakeCount={286}
-        speed={[0.5, 1.0]}
-        wind={[-0.5, 1.0]}
-        color="#009688"
-        radius={[0.5, 2.5]}
-      />
       <Header />
       <Hero />
+      <DonationSection />
       <SponsorBadge />
-      <DonationSinpeCard />
+      {/* <DonationSinpeCard /> */}
       <Values />
       <Decor />
       <Blog />

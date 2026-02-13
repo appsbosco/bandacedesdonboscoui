@@ -4,11 +4,14 @@ import logo from "../assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 import { useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-
+import DonationModal from "./DonationsModal";
 const Header = ({ openModal }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+
   const { pathname } = useLocation();
   const { i18n, t } = useTranslation();
+
   const lang = i18n.language;
   const isAuthenticated = localStorage.getItem("token");
 
@@ -130,12 +133,32 @@ const Header = ({ openModal }) => {
               // >
               //   Registrarse
               // </a>
-              <a
+
+              // <a
+              //   className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+              //   href="/autenticacion/iniciar-sesion"
+              // >
+              //   Iniciar Sesión
+              // </a>
+              <button
+                onClick={() => setIsDonationModalOpen(true)}
                 className="text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
-                href="/autenticacion/iniciar-sesion"
               >
-                Iniciar Sesión
-              </a>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {t("nav.donate", "Donar")}
+              </button>
             )}
           </div>
 
@@ -221,6 +244,12 @@ const Header = ({ openModal }) => {
                     >
                       Contacto
                     </a>
+                    <a
+                      href={`/autenticacion/iniciar-sesion`}
+                      className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                    >
+                      Iniciar Sesión
+                    </a>
                     {/* {pathname !== "/autenticacion/registrarse-privado" &&
                       pathname !== "/autenticacion/iniciar-sesion" && (
                         <a
@@ -236,6 +265,8 @@ const Header = ({ openModal }) => {
             </div>
           </div>
         </nav>
+
+        <DonationModal isOpen={isDonationModalOpen} onClose={() => setIsDonationModalOpen(false)} />
       </div>
     </header>
   );
