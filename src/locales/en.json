@@ -124,30 +124,30 @@
     },
     "options": {
       "basic": {
-        "label": "Basic Fund",
-        "impact1": "Adds to the general fund to take young musicians to the Rose Parade 2027",
-        "impact2": "Supports travel logistics costs (local transfers, coordination, operations)",
-        "impact3": "Helps more students participate, regardless of the amount"
+        "label": "No One Left Behind Fund",
+        "impact1": "Your gift opens a spot for a young musician to march at the Rose Parade 2027",
+        "impact2": "Covers the essentials that keep the trip running (coordination, operations, local transfers)",
+        "impact3": "A great place to start: every amount adds up and opens more opportunities"
       },
       "transport": {
-        "label": "Transportation and Logistics",
-        "impact1": "Supports the group’s ground transfers during the trip (airport–hotel–events)",
-        "impact2": "Contributes to local transportation needed for rehearsals, activities, and logistics",
-        "impact3": "Strengthens the group’s mobility to meet official schedules in Pasadena"
+        "label": "Safe transportation and logistics",
+        "impact1": "Helps cover airport–hotel–event transfers so the group can move safely together in Pasadena",
+        "impact2": "Keeps students on time for rehearsals, performances, and official activities",
+        "impact3": "Prevents delays and extra costs—your support keeps the plan on track"
       },
       "equipment": {
-        "label": "Technical Equipment",
-        "impact1": "Contributes to the rental, transport, or handling of instruments and specialized equipment",
-        "impact2": "Supports costs associated with special baggage and the contingent’s music logistics"
+        "label": "Instruments and technical gear",
+        "impact1": "Protects the group’s sound by supporting instrument handling, transport, and care",
+        "impact2": "Helps cover special baggage, rentals, and music logistics so they can perform at their best",
+        "impact3": "When the gear is ready, the performance is possible—your gift makes that happen"
       },
       "international": {
-        "label": "International Preparation",
-        "impact1": "Makes a significant contribution to essential travel costs (lodging and meals)",
-        "impact2": "Strengthens scholarships and support for students with greater financial need",
-        "impact3": "Helps reach the overall budget goal for Pasadena 2027 faster"
+        "label": "Travel and scholarships (highest impact)",
+        "impact1": "Supports the biggest essentials of the trip: lodging and meals",
+        "impact2": "Strengthens scholarships so finances don’t decide who gets to represent their community",
+        "impact3": "Moves us faster toward the full Pasadena 2027 budget goal with a major boost"
       }
     },
-
     "cta": {
       "select": "Select this amount",
       "selected": "Amount selected"

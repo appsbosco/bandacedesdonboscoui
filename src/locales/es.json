@@ -122,28 +122,28 @@
     },
     "options": {
       "basic": {
-        "label": "Mantenimiento Básico",
-        "impact1": "Suma al fondo general para llevar a jóvenes músicos al Rose Parade 2027",
-        "impact2": "Apoya costos de logística de viaje (traslados internos, coordinación, operación)",
-        "impact3": "Contribuye a que más estudiantes puedan participar, sin importar el monto"
+        "label": "Fondo “que nadie se quede fuera”",
+        "impact1": "Tu aporte abre un cupo para que un joven músico llegue al Rose Parade 2027",
+        "impact2": "Cubre lo indispensable del viaje (coordinación, traslados internos, operación)",
+        "impact3": "Ideal para empezar: cada monto cuenta y abre más oportunidades"
       },
       "transport": {
-        "label": "Transporte y Logística",
-        "impact1": "Apoya traslados terrestres del grupo durante el viaje (aeropuerto–hotel–eventos)",
-        "impact2": "Contribuye al transporte interno requerido por ensayos, actividades y logística",
-        "impact3": "Refuerza la movilidad del grupo para cumplir horarios oficiales en Pasadena"
+        "label": "Transporte y logística",
+        "impact1": "Financia traslados aeropuerto–hotel–eventos para que el grupo se mueva seguro y unido en Pasadena",
+        "impact2": "Asegura puntualidad para ensayos, presentaciones y actividades oficiales",
+        "impact3": "Evita atrasos y costos extra: tu aporte mantiene el plan en marcha"
       },
       "equipment": {
-        "label": "Equipamiento Técnico",
-        "impact1": "Contribuye al alquiler, traslado o manejo de instrumentos y equipo especializado",
-        "impact2": "Apoya costos asociados a equipaje especial y logística musical del contingente"
+        "label": "Instrumentos y equipo técnico",
+        "impact1": "Protege el sonido del grupo apoyando el manejo, traslado y cuidado de instrumentos",
+        "impact2": "Cubre equipaje especial, alquileres y logística musical para presentarse al mejor nivel",
+        "impact3": "Con el equipo listo, el show es posible: tu aporte lo asegura"
       },
       "international": {
-        "label": "Preparación Internacional",
-        "impact1": "Aporta de forma significativa a costos esenciales del viaje (hospedaje y alimentación)",
-
-        "impact2": "Refuerza becas y apoyos para estudiantes con mayores necesidades económicas",
-        "impact3": "Acelera el cumplimiento del presupuesto total para Pasadena 2027"
+        "label": "Viaje y becas (mayor impacto)",
+        "impact1": "Tu aporte cubre lo más pesado del viaje: hospedaje y alimentación",
+        "impact2": "Fortalece becas para que el dinero no decida quién puede representar a su comunidad",
+        "impact3": "Acelera el cumplimiento de la meta total para Pasadena 2027 con un impulso grande"
       }
     },
     "cta": {
