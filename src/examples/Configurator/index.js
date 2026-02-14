@@ -49,6 +49,38 @@ function Configurator() {
   const [disabled, setDisabled] = useState(false);
   const sidenavColors = ["primary", "dark", "info", "success", "warning", "error"];
 
+  // Cargar configuración guardada al montar el componente
+  useEffect(() => {
+    const savedConfig = localStorage.getItem("bandaConfig");
+    if (savedConfig) {
+      try {
+        const config = JSON.parse(savedConfig);
+
+        if (config.sidenavColor) {
+          setSidenavColor(dispatch, config.sidenavColor);
+        }
+        if (config.transparentSidenav !== undefined) {
+          setTransparentSidenav(dispatch, config.transparentSidenav);
+        }
+        if (config.fixedNavbar !== undefined) {
+          setFixedNavbar(dispatch, config.fixedNavbar);
+        }
+      } catch (error) {
+        console.error("Error loading saved configuration:", error);
+      }
+    }
+  }, [dispatch]);
+
+  // Guardar configuración cada vez que cambie
+  useEffect(() => {
+    const config = {
+      sidenavColor,
+      transparentSidenav,
+      fixedNavbar,
+    };
+    localStorage.setItem("bandaConfig", JSON.stringify(config));
+  }, [sidenavColor, transparentSidenav, fixedNavbar]);
+
   // Use the useEffect hook to change the button state for the sidenav type based on window size.
   useEffect(() => {
     // A function that sets the disabled state of the buttons for the sidenav type.
