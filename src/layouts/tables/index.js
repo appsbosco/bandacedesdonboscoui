@@ -99,8 +99,15 @@ const Tables = () => {
     nextFetchPolicy: "cache-first",
   });
 
-  const [deleteUser] = useMutation(DELETE_USER);
-  const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD);
+  const [deleteUser] = useMutation(DELETE_USER, {
+    refetchQueries: [{ query: GET_USERS }, { query: GET_MEDICAL_RECORDS }, { query: GET_PARENTS }],
+    awaitRefetchQueries: true,
+  });
+
+  const [deleteMedicalRecord] = useMutation(DELETE_MEDICAL_RECORD, {
+    refetchQueries: [{ query: GET_MEDICAL_RECORDS }],
+    awaitRefetchQueries: true,
+  });
 
   const { loading, error, data, refetch } = useQuery(GET_USERS, {
     fetchPolicy: "cache-and-network",
@@ -303,21 +310,22 @@ const Tables = () => {
     // Handle error state
   }
 
-  const handleConfirmDelete = () => {
-    deleteUser({ variables: { deleteUserId: selectedUser?.id } })
-      .then(() => {
-        if (userMedicalRecord?.id) {
-          return deleteMedicalRecord({
-            variables: { deleteMedicalRecordId: userMedicalRecord.id },
-          });
-        }
-      })
-      .then(() => {
-        refetch();
-        setSelectedUser(null);
-        setOpenModal(false);
-        setShowConfirmation(false);
-      });
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteUser({ variables: { deleteUserId: selectedUser?.id } });
+
+      if (userMedicalRecord?.id) {
+        await deleteMedicalRecord({
+          variables: { deleteMedicalRecordId: userMedicalRecord.id },
+        });
+      }
+
+      setSelectedUser(null);
+      setOpenModal(false);
+      setShowConfirmation(false);
+    } catch (error) {
+      console.error("Error al eliminar usuario:", error);
+    }
   };
 
   const handleDeleteUser = (id, event) => {

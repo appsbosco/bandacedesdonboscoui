@@ -46,7 +46,7 @@ const getAttendanceConfig = (attendance) => {
   return ATTENDANCE_STATUS_CONFIG[attendance] || { label: "", color: "bg-gray-500" };
 };
 
-const calculateAttendancePercentages = (attendanceData, totalRehearsals = 50) => {
+const calculateAttendancePercentages = (attendanceData) => {
   const userAttendanceGroups = {};
 
   attendanceData.forEach((attendance) => {
@@ -71,8 +71,8 @@ const calculateAttendancePercentages = (attendanceData, totalRehearsals = 50) =>
 
   const userAttendancePercentages = {};
   for (const userId in userAttendanceGroups) {
-    const { userName, present } = userAttendanceGroups[userId];
-    const percentage = (present / totalRehearsals) * 100;
+    const { userName, present, total } = userAttendanceGroups[userId];
+    const percentage = (present / total) * 100; // Cambio: usar total real, no hardcodeado
     userAttendancePercentages[userName] = percentage;
   }
 
@@ -357,6 +357,8 @@ const AttendanceHistoryTable = () => {
 
   const { loading, error, data } = useQuery(GET_ALL_ATTENDANCE, {
     notifyOnNetworkStatusChange: true,
+    pollInterval: 30000, // Refetch cada 30 segundos (opcional)
+    fetchPolicy: "cache-and-network",
   });
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const isAdmin = userData?.getUser?.role === "Admin";
@@ -372,9 +374,13 @@ const AttendanceHistoryTable = () => {
       const uniqueInstruments = [
         ...new Set(validAttendances.map((a) => a.user?.instrument).filter(Boolean)),
       ];
-      setFilters((prev) => ({ ...prev, instruments: uniqueInstruments.sort() }));
+      setFilters((prev) => ({
+        ...prev,
+        instruments: uniqueInstruments.sort(),
+        instrument: prev.instrument === "all" ? "all" : prev.instrument, // Mantener el filtro actual
+      }));
     }
-  }, [data]);
+  }, [validAttendances.length]);
 
   // Transform data with percentages
   const processedRecords = validAttendances

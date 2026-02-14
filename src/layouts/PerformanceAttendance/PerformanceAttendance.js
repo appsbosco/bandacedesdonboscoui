@@ -287,7 +287,7 @@ const PerformanceAttendance = () => {
     <DashboardLayout>
       {showMessage()}
       <DashboardNavbar />
-      <SoftBox py={3}>
+      {/* <SoftBox py={3}>
         <Card>
           <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>
             <SoftTypography variant="h6">Toma de asistencia</SoftTypography>
@@ -344,7 +344,7 @@ const PerformanceAttendance = () => {
             </div>
           </SoftBox>
         </Card>
-      </SoftBox>
+      </SoftBox> */}
       <SoftBox py={3}>
         <Card>
           <SoftBox display="flex" justifyContent="space-between" alignItems="center" p={3}>

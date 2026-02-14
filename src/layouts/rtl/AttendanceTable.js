@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { ADD_ATTENDANCE } from "graphql/mutations";
-import { GET_USERS, GET_USERS_BY_ID } from "graphql/queries";
+import { GET_USERS, GET_USERS_BY_ID, GET_ALL_ATTENDANCE } from "graphql/queries";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -513,7 +513,8 @@ const AttendancePage = () => {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const { loading, error, data, refetch } = useQuery(GET_USERS);
   const [addAttendance] = useMutation(ADD_ATTENDANCE, {
-    refetchQueries: [{ query: GET_USERS }],
+    refetchQueries: [{ query: GET_USERS }, { query: GET_ALL_ATTENDANCE }],
+    awaitRefetchQueries: true,
   });
 
   // State
@@ -604,17 +605,20 @@ const AttendancePage = () => {
     const date = new Date().toISOString();
 
     try {
-      for (const record of attendanceRecords) {
-        await addAttendance({
-          variables: {
-            input: {
-              user: record.userId,
-              date,
-              attended: record.attended,
+      // Usar Promise.all en lugar de un loop secuencial
+      await Promise.all(
+        attendanceRecords.map((record) =>
+          addAttendance({
+            variables: {
+              input: {
+                user: record.userId,
+                date,
+                attended: record.attended,
+              },
             },
-          },
-        });
-      }
+          })
+        )
+      );
 
       setToast({ message: "¡Asistencia guardada correctamente!", type: "success" });
       setHasUnsavedChanges(false);
