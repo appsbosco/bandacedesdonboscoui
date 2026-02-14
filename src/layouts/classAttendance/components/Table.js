@@ -101,8 +101,9 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
   return (
     <div className="group border-b border-gray-100 hover:bg-gray-50 transition-colors">
       {/* Mobile Layout */}
-      <div className="lg:hidden px-4 py-4 space-y-3">
-        <div className="flex items-center gap-3">
+
+      <div className="block lg:hidden px-4 py-4 space-y-4">
+        <div className="flex items-center gap-3 mb-1">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
             {initial(name)}
             {initial(first)}
@@ -113,7 +114,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
               dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
             />
             {isSaved ? (
-              <span className="inline-flex items-center gap-1 text-xs text-green-600">
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-0.5">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -124,7 +125,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
                 Guardado
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+              <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">
                 <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                 Sin guardar
               </span>
@@ -133,8 +134,8 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
         </div>
 
         <div>
-          <p className="text-xs font-medium text-gray-600 mb-2">Asistencia</p>
-          <div className="flex gap-2 flex-wrap">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Asistencia</p>
+          <div className="grid grid-cols-3 gap-2">
             {ATTENDANCE_OPTIONS.map((status) => (
               <StatusButton
                 key={status.value}
@@ -150,7 +151,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
 
         {needsJustification && (
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Justificación</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-2">Justificación</label>
             <input
               type="text"
               value={currentJustification}
@@ -166,8 +167,8 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
         )}
 
         <div>
-          <p className="text-xs font-medium text-gray-600 mb-2">Estado de Pago</p>
-          <div className="flex gap-2 flex-wrap">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Estado de Pago</p>
+          <div className="grid grid-cols-3 gap-2">
             {PAYMENT_OPTIONS.map((status) => (
               <StatusButton
                 key={status.value}
@@ -181,9 +182,8 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
           </div>
         </div>
       </div>
-
       {/* Desktop Layout */}
-      <div className="max-lg:hidden grid grid-cols-12 gap-4 px-4 py-3 items-center">
+      <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 items-center">
         {" "}
         {/* Student Info - 3 cols */}
         <div className="col-span-3 flex items-center gap-3">
