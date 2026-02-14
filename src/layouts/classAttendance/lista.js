@@ -35,24 +35,25 @@ const ClassAttendance = () => {
       const instructor = userData.getUser;
       const allUsers = usersData.getUsers;
 
-      // Filtrar estudiantes que tocan el mismo instrumento y no son instructores
-      // const studentsWithSameInstrument = allUsers.filter(
-      //   (user) =>
-      //     user.instrument === instructor.instrument &&
-      //     user.role !== "Instructor de instrumento" &&
-      //     !instructor.students.some((student) => student.id === user.id)
-      // );
       const studentsWithSameInstrument = allUsers.filter(
         (user) =>
           user.role !== "Instructor de instrumento" &&
           user.role !== "Staff" &&
           user.role !== "Director" &&
           user.role !== "Dirección Logística" &&
+          user.name &&
+          user.firstSurName &&
           !instructor.students.some((student) => student.id === user.id)
       );
 
       setFilteredStudents(studentsWithSameInstrument);
-      setAssignedStudents(instructor.students);
+
+      // Filtrar estudiantes asignados sin nombre también
+      const validAssignedStudents = (instructor.students || []).filter(
+        (student) => student && student.name && student.firstSurName
+      );
+
+      setAssignedStudents(validAssignedStudents);
     }
   }, [usersData, userData]);
 
@@ -83,11 +84,25 @@ const ClassAttendance = () => {
     );
   };
 
+  // Reemplaza la función handleAssign completa:
   const handleAssign = async () => {
+    if (!selectedStudent) return;
+
     try {
-      await assignStudentToInstructor({
+      const result = await assignStudentToInstructor({
         variables: { studentId: selectedStudent },
       });
+
+      // No confiar en el refetch automático, actualizar manualmente
+      if (result.data && userData) {
+        const instructor = userData.getUser;
+        const studentToAdd = students.find((s) => s.id === selectedStudent);
+
+        if (studentToAdd && studentToAdd.name && studentToAdd.firstSurName) {
+          setAssignedStudents((prev) => [...prev, studentToAdd]);
+          setFilteredStudents((prev) => prev.filter((s) => s.id !== selectedStudent));
+        }
+      }
 
       setMessage(`¡Estudiante asignado correctamente!`);
       setSelectedStudent("");
@@ -116,20 +131,23 @@ const ClassAttendance = () => {
           <div className="xl:col-span-9">
             <div className="space-y-6">
               {message && showMessage()}
-
               <label className="block text-sm font-medium text-gray-700">Asignar estudiante</label>
+
               <CustomSelect
                 labelId="student-label"
                 name="studentId"
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
-                options={students.map((student) => ({
-                  value: student.id,
-                  label: `${student.name} ${student.firstSurName} ${student.secondSurName}`,
-                }))}
+                options={students
+                  .filter((student) => student.name && student.firstSurName)
+                  .map((student) => ({
+                    value: student.id,
+                    label: `${student.name} ${student.firstSurName} ${
+                      student.secondSurName || ""
+                    }`.trim(),
+                  }))}
                 required
               />
-
               <button
                 type="submit"
                 className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-white px-6 py-3 text-center text-sm font-medium text-black shadow-sm transition-all duration-500 hover:bg-black hover:text-white"
@@ -138,7 +156,6 @@ const ClassAttendance = () => {
               >
                 {assignLoading ? "Procesando..." : "Asignar estudiante"}
               </button>
-
               <AttendanceTable students={assignedStudents} />
             </div>
           </div>
