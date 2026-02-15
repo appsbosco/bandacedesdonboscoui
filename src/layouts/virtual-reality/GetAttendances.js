@@ -122,7 +122,7 @@ const AttendanceRow = ({ record, searchTerm }) => {
   return (
     <div className="group border-b border-gray-100 hover:bg-gray-50 transition-colors">
       {/* Mobile Layout */}
-      <div className="lg:hidden px-4 py-4 space-y-3">
+      <div className="block min-[1024px]:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
             {record.user?.name[0]}
@@ -158,7 +158,7 @@ const AttendanceRow = ({ record, searchTerm }) => {
       </div>
 
       {/* Desktop Layout */}
-      <div className=" lg:grid lg:grid-cols-12 gap-4 px-4 py-3 items-center">
+      <div className="hidden min-[1024px]:grid min-[1024px]:grid-cols-12 gap-4 px-4 py-3 items-center">
         {/* Student Info - 4 cols */}
         <div className="col-span-4 flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
