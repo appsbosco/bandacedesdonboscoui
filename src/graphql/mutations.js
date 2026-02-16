@@ -526,3 +526,57 @@ export const MARK_ATTENDANCE_AND_PAYMENT = gql`
     }
   }
 `;
+
+export const TAKE_ATTENDANCE_REHEARSAL = gql`
+  mutation TakeAttendance(
+    $date: String!
+    $section: Section!
+    $attendances: [BulkAttendanceInput!]!
+  ) {
+    takeAttendance(date: $date, section: $section, attendances: $attendances) {
+      id
+      date
+      section
+      status
+      takenBy {
+        id
+        name
+        firstSurName
+      }
+      takenAt
+      attendanceCount
+      attendances {
+        id
+        user {
+          id
+          name
+          firstSurName
+          secondSurName
+        }
+        status
+        notes
+      }
+    }
+  }
+`;
+
+export const CLOSE_SESSION = gql`
+  mutation CloseSession($id: ID!) {
+    closeSession(id: $id) {
+      id
+      status
+      closedAt
+    }
+  }
+`;
+
+export const UPDATE_SINGLE_ATTENDANCE = gql`
+  mutation UpdateAttendance($id: ID!, $status: AttendanceStatus!, $notes: String) {
+    updateAttendance(id: $id, status: $status, notes: $notes) {
+      id
+      status
+      notes
+      updatedAt
+    }
+  }
+`;

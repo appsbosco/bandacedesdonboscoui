@@ -546,3 +546,97 @@ export const GET_INSTRUCTOR_STUDENTS_ATTENDANCE = gql`
     }
   }
 `;
+
+export const GET_ACTIVE_SESSION = gql`
+  query GetActiveSession($date: String!, $section: Section!) {
+    getActiveSession(date: $date, section: $section) {
+      id
+      date
+      dateNormalized
+      section
+      status
+      takenBy {
+        id
+        name
+        firstSurName
+        secondSurName
+      }
+      takenAt
+      closedAt
+      attendanceCount
+      attendances {
+        id
+        user {
+          id
+          name
+          firstSurName
+          secondSurName
+          instrument
+        }
+        status
+        notes
+      }
+    }
+  }
+`;
+
+export const GET_USERS_BY_SECTION = gql`
+  query GetUsersBySection($section: Section!) {
+    getUsers {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      instrument
+      role
+    }
+  }
+`;
+
+export const GET_ALL_ATTENDANCES_REHEARSAL = gql`
+  query GetAllAttendancesRehearsal($limit: Int, $offset: Int, $filter: AttendanceFilterInput) {
+    getAllAttendancesRehearsal(limit: $limit, offset: $offset, filter: $filter) {
+      id
+      user {
+        id
+        name
+        firstSurName
+        secondSurName
+        instrument
+      }
+      session {
+        id
+        date
+        section
+        takenBy {
+          id
+          name
+          firstSurName
+        }
+      }
+      status
+      notes
+      createdAt
+      legacyDate
+      legacyAttended
+    }
+  }
+`;
+export const GET_USER_ATTENDANCE_STATS = gql`
+  query GetUserAttendanceStats($userId: ID!, $startDate: String, $endDate: String) {
+    getUserAttendanceStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
+      userId
+      totalSessions
+      present
+      absentUnjustified
+      absentJustified
+      late
+      excusedBefore
+      excusedAfter
+      equivalentAbsences
+      attendancePercentage
+      exceedsLimit
+    }
+  }
+`;
