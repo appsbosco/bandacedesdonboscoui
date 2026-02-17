@@ -5,6 +5,39 @@ import { DELETE_USER, DELETE_MEDICAL_RECORD } from "../graphql/mutations";
 import { GET_USERS, GET_MEDICAL_RECORDS } from "../graphql/queries/members";
 import { calculateAgeFromBirthdayEs } from "../utils/date";
 
+function normalizeRole(role) {
+  return String(role || "")
+    .replace(/\u00A0/g, " ")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+// ===============================
+// Role groups (ALLOWLISTS)
+// ===============================
+const MUSICIAN_ROLES = new Set(
+  ["Principal de sección", "Integrante BCDB", "Asistente de sección"].map(normalizeRole)
+);
+
+const INSTRUCTOR_ROLES = new Set(["Instructor de instrumento"].map(normalizeRole));
+
+const PARENT_ROLES = new Set(["Padre/Madre de familia"].map(normalizeRole));
+
+const STAFF_ROLES = new Set(
+  [
+    "Director",
+    "Dirección Logística",
+    "CEDES",
+    "Logística",
+    "Instructura Color Guard",
+    "Instructor Drumline",
+    "Staff",
+  ].map(normalizeRole)
+);
+
 export function useUsersTables() {
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
     fetchPolicy: "cache-and-network",
@@ -57,39 +90,76 @@ export function useUsersTables() {
     return Object.fromEntries(records.filter((r) => r?.user?.id).map((r) => [r.user.id, r]));
   }, [medicalRecordData]);
 
-  const musiciansData = useMemo(() => {
-    const allowedRoles = ["Principal de sección", "Integrante BCDB", "Asistente de sección"];
+  // ===============================
+  // SINGLE SOURCE OF TRUTH: partition
+  // ===============================
+  const partition = useMemo(() => {
+    const buckets = {
+      musicians: [],
+      instructors: [],
+      parentsFromUsers: [],
+      staff: [],
+      unknown: [],
+      unknownRoles: [],
+    };
 
-    return (usersState || [])
-      .filter((u) => allowedRoles.includes(u.role))
-      .map((u) => {
-        const medical = medicalRecordsMap[u.id] || {};
-        return {
-          ...u,
-          age: u.birthday ? calculateAgeFromBirthdayEs(u.birthday) : "N/A",
-          identification: medical.identification || "N/A",
-          address: medical.address || "N/A",
-          familyMemberName: medical.familyMemberName || "N/A",
-          familyMemberNumberId: medical.familyMemberNumberId || "N/A",
-          familyMemberRelationship: medical.familyMemberRelationship || "N/A",
-        };
-      });
-  }, [usersState, medicalRecordsMap]);
+    const unknownSet = new Set();
+
+    for (const u of usersState || []) {
+      const key = normalizeRole(u?.role);
+
+      if (MUSICIAN_ROLES.has(key)) {
+        buckets.musicians.push(u);
+        continue;
+      }
+
+      if (INSTRUCTOR_ROLES.has(key)) {
+        buckets.instructors.push(u);
+        continue;
+      }
+
+      if (PARENT_ROLES.has(key)) {
+        buckets.parentsFromUsers.push(u);
+        continue;
+      }
+
+      if (STAFF_ROLES.has(key)) {
+        buckets.staff.push(u);
+        continue;
+      }
+
+      // Si el rol no cae en ningún grupo, NO lo metemos en staff.
+      buckets.unknown.push(u);
+      unknownSet.add(u?.role || "(sin role)");
+    }
+
+    buckets.unknownRoles = Array.from(unknownSet);
+
+    return buckets;
+  }, [usersState]);
+
+  const musiciansData = useMemo(() => {
+    return (partition.musicians || []).map((u) => {
+      const medical = medicalRecordsMap[u.id] || {};
+      return {
+        ...u,
+        age: u.birthday ? calculateAgeFromBirthdayEs(u.birthday) : "N/A",
+        identification: medical.identification || "N/A",
+        address: medical.address || "N/A",
+        familyMemberName: medical.familyMemberName || "N/A",
+        familyMemberNumberId: medical.familyMemberNumberId || "N/A",
+        familyMemberRelationship: medical.familyMemberRelationship || "N/A",
+      };
+    });
+  }, [partition.musicians, medicalRecordsMap]);
 
   const staffData = useMemo(() => {
-    return (usersState || []).filter(
-      (u) =>
-        u.role !== "Principal de sección" &&
-        u.role !== "Integrante BCDB" &&
-        u.role !== "Asistente de sección" &&
-        u.role !== "Instructor de instrumento" &&
-        u.role !== "Padre/Madre de familia"
-    );
-  }, [usersState]);
+    return partition.staff || [];
+  }, [partition.staff]);
 
   const instructorsData = useMemo(() => {
-    return (usersState || []).filter((u) => u.role === "Instructor de instrumento");
-  }, [usersState]);
+    return partition.instructors || [];
+  }, [partition.instructors]);
 
   const parentsData = parentData?.getParents || [];
 
@@ -131,6 +201,8 @@ export function useUsersTables() {
     staffData,
     instructorsData,
     parentsData,
+    unknownUsers: partition.unknown,
+    unknownRoles: partition.unknownRoles,
     getMedicalRecordForUserId,
     handleStateChange,
     deleteUserAndMedicalRecord,
