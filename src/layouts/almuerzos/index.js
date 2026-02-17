@@ -105,7 +105,26 @@ const Almuerzos = () => {
   });
 
   const [deleteProduct] = useMutation(DELETE_PRODUCT_OPTIMIZED, {
-    update: updateCacheAfterDeleteProduct,
+    optimisticResponse: (vars) => ({
+      deleteProduct: {
+        __typename: "Product",
+        id: vars.deleteProductId,
+      },
+    }),
+
+    update(cache, { data }) {
+      const deletedId = data?.deleteProduct?.id;
+      if (!deletedId) return;
+
+      cache.modify({
+        fields: {
+          products(existingRefs = [], { readField }) {
+            return existingRefs.filter((ref) => readField("id", ref) !== deletedId);
+          },
+        },
+      });
+    },
+
     onCompleted: () => {
       showToast("Producto eliminado exitosamente", "success");
     },
@@ -156,7 +175,11 @@ const Almuerzos = () => {
   const handleDeleteProduct = useCallback(
     async (productId) => {
       try {
-        await deleteProduct({ variables: { deleteProductId: productId } });
+        await deleteProduct({
+          variables: { deleteProductId: productId },
+        });
+
+        removeItem(productId);
       } catch (error) {
         console.error("Error deleting product:", error);
       }
@@ -210,10 +233,8 @@ const Almuerzos = () => {
       <div className="overflow-x-hidden">
         <DashboardNavbar />
 
-        {/* HERO (ultra clean) */}
         <div className="mb-6 mt-3">
           <div className="relative overflow-hidden rounded-2xl border border-default-200 bg-white">
-            {/* Imagen sutil */}
             <div
               className="absolute inset-0 bg-cover bg-center opacity-10"
               style={{ backgroundImage: `url(${HeroBg})` }}
