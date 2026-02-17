@@ -4,11 +4,7 @@ import { useCamera } from "../../hooks/useCamera";
 import { useFrameAnalysis } from "../../hooks/useFrameAnalysis";
 import { processScannedDocument } from "../../utils/imageProcessing";
 import { rectifyDocument } from "../../utils/perspectiveTransform";
-import {
-  SCANNER_CONFIG,
-  SCANNER_MESSAGES,
-  getDocumentTypeInfo,
-} from "../../utils/constants";
+import { SCANNER_CONFIG, SCANNER_MESSAGES, getDocumentTypeInfo } from "../../utils/constants";
 import ScannerOverlay from "./ScannerOverlay";
 import QualityIndicators from "./QualityIndicators";
 
@@ -24,11 +20,7 @@ import QualityIndicators from "./QualityIndicators";
  * - captureMeta contract: { device, browser, w, h, blurVar, glarePct, capturedAt }
  * - Accessible: min-h 44px buttons, aria-live regions, aria-labels
  */
-export function CameraAutoScanner({
-  onCapture,
-  onCancel,
-  documentType = "PASSPORT",
-}) {
+export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPORT" }) {
   const [phase, setPhase] = useState("initializing");
   const [error, setError] = useState(null);
 
@@ -71,33 +63,26 @@ export function CameraAutoScanner({
         // Try perspective correction if we have 4 corners
         if (analysisData?.normalizedCorners?.length === 4) {
           const ratio =
-            SCANNER_CONFIG.aspectRatios?.[
-              String(documentType).toUpperCase()
-            ] ||
+            SCANNER_CONFIG.aspectRatios?.[String(documentType).toUpperCase()] ||
             docInfo?.aspectRatio ||
             1.42;
 
-          return rectifyDocument(
-            videoRef.current,
-            analysisData.normalizedCorners,
-            { aspectRatio: ratio, padding: 10 }
-          );
+          return rectifyDocument(videoRef.current, analysisData.normalizedCorners, {
+            aspectRatio: ratio,
+            padding: 10,
+          });
         }
 
         // Fallback: crop to scan area
-        return processScannedDocument(
-          videoRef.current,
-          SCANNER_CONFIG.scanArea,
-          { enhance: false }
-        );
+        return processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
+          enhance: false,
+        });
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("[scanner] capture processing error:", err);
-        return processScannedDocument(
-          videoRef.current,
-          SCANNER_CONFIG.scanArea,
-          { enhance: false }
-        );
+        return processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
+          enhance: false,
+        });
       }
     },
     [videoRef, documentType, docInfo]
@@ -122,14 +107,8 @@ export function CameraAutoScanner({
 
   // ── Auto-capture trigger ──
   const handleAutoCapture = useCallback(() => {
-    if (
-      phase !== "scanning" ||
-      !videoRef.current ||
-      hasTriggeredCaptureRef.current
-    )
-      return;
-    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime)
-      return;
+    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
 
     hasTriggeredCaptureRef.current = true;
     setPhase("capturing");
@@ -145,8 +124,7 @@ export function CameraAutoScanner({
           onCapture(processedCanvas, {
             requiresMRZ: !!docInfo?.requiresMRZ,
             documentType,
-            hadPerspectiveCorrection:
-              lastAnalysisRef.current?.normalizedCorners?.length === 4,
+            hadPerspectiveCorrection: lastAnalysisRef.current?.normalizedCorners?.length === 4,
             scores: lastAnalysisRef.current?.scores,
             captureMeta: buildCaptureMeta(lastAnalysisRef.current),
           });
@@ -215,15 +193,9 @@ export function CameraAutoScanner({
 
   // ── Manual capture ──
   const handleManualCapture = useCallback(() => {
-    if (
-      phase !== "scanning" ||
-      !videoRef.current ||
-      hasTriggeredCaptureRef.current
-    )
-      return;
+    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
     if (!analysis?.documentDetected || !analysis?.captureEnabled) return;
-    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime)
-      return;
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
 
     hasTriggeredCaptureRef.current = true;
     setPhase("capturing");
@@ -239,8 +211,7 @@ export function CameraAutoScanner({
           onCapture(processedCanvas, {
             requiresMRZ: !!docInfo?.requiresMRZ,
             documentType,
-            hadPerspectiveCorrection:
-              analysis?.normalizedCorners?.length === 4,
+            hadPerspectiveCorrection: analysis?.normalizedCorners?.length === 4,
             scores: analysis?.scores,
             captureMeta: buildCaptureMeta(analysis),
           });
@@ -300,14 +271,8 @@ export function CameraAutoScanner({
             />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-white mb-2">
-          Error de Cámara
-        </h2>
-        <p
-          className="text-slate-300 mb-6 max-w-sm"
-          role="alert"
-          aria-live="assertive"
-        >
+        <h2 className="text-xl font-semibold text-white mb-2">Error de Cámara</h2>
+        <p className="text-slate-300 mb-6 max-w-sm" role="alert" aria-live="assertive">
           {error || cameraError}
         </p>
         <div className="space-y-3 w-full max-w-xs">
@@ -376,12 +341,7 @@ export function CameraAutoScanner({
           className="p-3 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors min-w-[44px] min-h-[44px]"
           aria-label="Cancelar escaneo"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -426,11 +386,7 @@ export function CameraAutoScanner({
           <button
             onClick={handleManualCapture}
             disabled={!analysis.captureEnabled}
-            aria-label={
-              analysis.captureEnabled
-                ? "Capturar documento"
-                : "Esperando alineación"
-            }
+            aria-label={analysis.captureEnabled ? "Capturar documento" : "Esperando alineación"}
             className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
               analysis.autoCaptureReady
                 ? "border-emerald-400 bg-emerald-400/30 scale-110 animate-pulse"
