@@ -1,19 +1,54 @@
-// src/components/scanner/CameraAutoScanner.js
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { useCamera } from "../../hooks/useCamera";
 import { useFrameAnalysis } from "../../hooks/useFrameAnalysis";
 import { processScannedDocument } from "../../utils/imageProcessing";
-import { SCANNER_CONFIG, SCANNER_MESSAGES } from "../../utils/constants";
+import { rectifyDocument } from "../../utils/perspectiveTransform";
+import {
+  SCANNER_CONFIG,
+  SCANNER_MESSAGES,
+  getDocumentTypeInfo,
+} from "../../utils/constants";
 import ScannerOverlay from "./ScannerOverlay";
 import QualityIndicators from "./QualityIndicators";
 
-export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPORT" }) {
+/**
+ * CameraAutoScanner — production-grade document capture component.
+ *
+ * Phases: initializing → scanning → capturing → captured
+ *
+ * Guarantees:
+ * - Zero freezes (busy guard + adaptive throttle in useFrameAnalysis)
+ * - Zero leaks (isMountedRef + safeTimeout + stopCamera on unmount)
+ * - Perspective correction when 4 corners detected
+ * - captureMeta contract: { device, browser, w, h, blurVar, glarePct, capturedAt }
+ * - Accessible: min-h 44px buttons, aria-live regions, aria-labels
+ */
+export function CameraAutoScanner({
+  onCapture,
+  onCancel,
+  documentType = "PASSPORT",
+}) {
   const [phase, setPhase] = useState("initializing");
   const [error, setError] = useState(null);
 
   const cameraStartTimeRef = useRef(0);
   const hasTriggeredCaptureRef = useRef(false);
+  const lastAnalysisRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const timeoutIdsRef = useRef([]);
+
+  const docInfo = getDocumentTypeInfo(documentType);
+
+  // Helper: schedule a timeout that auto-cleans on unmount
+  const safeTimeout = useCallback((fn, ms) => {
+    const id = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      fn();
+    }, ms);
+    timeoutIdsRef.current.push(id);
+    return id;
+  }, []);
 
   const {
     videoRef,
@@ -23,78 +58,230 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
     stopCamera,
   } = useCamera({
     facingMode: "environment",
-    idealWidth: 1920,
-    idealHeight: 1080,
+    idealWidth: 1280,
+    idealHeight: 720,
   });
 
-  const handleAutoCapture = useCallback(() => {
-    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
+  // ── Process capture (pure → canvas) ──
+  const processCapture = useCallback(
+    (analysisData) => {
+      if (!videoRef.current) return null;
 
-    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
+      try {
+        // Try perspective correction if we have 4 corners
+        if (analysisData?.normalizedCorners?.length === 4) {
+          const ratio =
+            SCANNER_CONFIG.aspectRatios?.[
+              String(documentType).toUpperCase()
+            ] ||
+            docInfo?.aspectRatio ||
+            1.42;
+
+          return rectifyDocument(
+            videoRef.current,
+            analysisData.normalizedCorners,
+            { aspectRatio: ratio, padding: 10 }
+          );
+        }
+
+        // Fallback: crop to scan area
+        return processScannedDocument(
+          videoRef.current,
+          SCANNER_CONFIG.scanArea,
+          { enhance: false }
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[scanner] capture processing error:", err);
+        return processScannedDocument(
+          videoRef.current,
+          SCANNER_CONFIG.scanArea,
+          { enhance: false }
+        );
+      }
+    },
+    [videoRef, documentType, docInfo]
+  );
+
+  // Build captureMeta from analysis data
+  const buildCaptureMeta = useCallback(
+    (analysisData) => {
+      const video = videoRef.current;
+      return {
+        device: navigator.userAgent,
+        browser: navigator.userAgent,
+        w: video?.videoWidth || 0,
+        h: video?.videoHeight || 0,
+        blurVar: analysisData?.focus?.score ?? null,
+        glarePct: analysisData?.glare?.percent ?? null,
+        capturedAt: new Date().toISOString(),
+      };
+    },
+    [videoRef]
+  );
+
+  // ── Auto-capture trigger ──
+  const handleAutoCapture = useCallback(() => {
+    if (
+      phase !== "scanning" ||
+      !videoRef.current ||
+      hasTriggeredCaptureRef.current
+    )
+      return;
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime)
+      return;
 
     hasTriggeredCaptureRef.current = true;
     setPhase("capturing");
 
-    setTimeout(() => {
+    safeTimeout(() => {
       try {
-        const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
-          enhance: false,
-        });
+        const processedCanvas = processCapture(lastAnalysisRef.current);
+        if (!processedCanvas) throw new Error("Failed to process capture");
+
         setPhase("captured");
-        if (onCapture) onCapture(processedCanvas);
+
+        if (onCapture) {
+          onCapture(processedCanvas, {
+            requiresMRZ: !!docInfo?.requiresMRZ,
+            documentType,
+            hadPerspectiveCorrection:
+              lastAnalysisRef.current?.normalizedCorners?.length === 4,
+            scores: lastAnalysisRef.current?.scores,
+            captureMeta: buildCaptureMeta(lastAnalysisRef.current),
+          });
+        }
       } catch (err) {
-        console.error("Capture error:", err);
+        // eslint-disable-next-line no-console
+        console.error("[scanner] capture error:", err);
         setError("Error al capturar la imagen");
         setPhase("scanning");
         hasTriggeredCaptureRef.current = false;
       }
     }, 150);
-  }, [phase, videoRef, onCapture]);
+  }, [
+    phase,
+    videoRef,
+    onCapture,
+    processCapture,
+    buildCaptureMeta,
+    docInfo,
+    documentType,
+    safeTimeout,
+  ]);
 
-  const { analysis, reset: resetAnalysis } = useFrameAnalysis({
+  // ── Frame analysis ──
+  const { analysis } = useFrameAnalysis({
     videoRef,
     isActive: phase === "scanning" && cameraReady,
     scanArea: SCANNER_CONFIG.scanArea,
-    onConditionMet: handleAutoCapture,
+    onConditionMet: (result) => {
+      lastAnalysisRef.current = result;
+      handleAutoCapture();
+    },
   });
 
+  // Keep latest analysis in ref
   useEffect(() => {
+    if (analysis) lastAnalysisRef.current = analysis;
+  }, [analysis]);
+
+  // ── Camera init + full cleanup ──
+  useEffect(() => {
+    isMountedRef.current = true;
     cameraStartTimeRef.current = Date.now();
+
     startCamera()
       .then(() => {
-        setTimeout(() => setPhase("scanning"), 400);
+        if (isMountedRef.current) {
+          safeTimeout(() => setPhase("scanning"), 400);
+        }
       })
       .catch((err) => {
-        setError(cameraError || err.message);
+        if (isMountedRef.current) {
+          setError(cameraError || err.message);
+        }
       });
 
-    return () => stopCamera();
+    return () => {
+      isMountedRef.current = false;
+      // Clear all pending timeouts
+      timeoutIdsRef.current.forEach(clearTimeout);
+      timeoutIdsRef.current = [];
+      stopCamera();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Manual capture ──
   const handleManualCapture = useCallback(() => {
-    if (phase !== "scanning" || !videoRef.current || hasTriggeredCaptureRef.current) return;
-    if (!analysis.documentDetected) return;
-    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime) return;
+    if (
+      phase !== "scanning" ||
+      !videoRef.current ||
+      hasTriggeredCaptureRef.current
+    )
+      return;
+    if (!analysis?.documentDetected || !analysis?.captureEnabled) return;
+    if (Date.now() - cameraStartTimeRef.current < SCANNER_CONFIG.warmupTime)
+      return;
 
     hasTriggeredCaptureRef.current = true;
     setPhase("capturing");
 
-    setTimeout(() => {
+    safeTimeout(() => {
       try {
-        const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
-          enhance: false,
-        });
+        const processedCanvas = processCapture(analysis);
+        if (!processedCanvas) throw new Error("Failed to process capture");
+
         setPhase("captured");
-        if (onCapture) onCapture(processedCanvas);
+
+        if (onCapture) {
+          onCapture(processedCanvas, {
+            requiresMRZ: !!docInfo?.requiresMRZ,
+            documentType,
+            hadPerspectiveCorrection:
+              analysis?.normalizedCorners?.length === 4,
+            scores: analysis?.scores,
+            captureMeta: buildCaptureMeta(analysis),
+          });
+        }
       } catch (err) {
-        console.error("Capture error:", err);
+        // eslint-disable-next-line no-console
+        console.error("[scanner] manual capture error:", err);
         setError("Error al capturar la imagen");
         setPhase("scanning");
         hasTriggeredCaptureRef.current = false;
       }
     }, 150);
-  }, [phase, videoRef, analysis.documentDetected, onCapture]);
+  }, [
+    phase,
+    videoRef,
+    analysis,
+    onCapture,
+    processCapture,
+    buildCaptureMeta,
+    docInfo,
+    documentType,
+    safeTimeout,
+  ]);
 
+  // ── Status message ──
+  const getStatusMessage = () => {
+    if (phase === "initializing") return SCANNER_MESSAGES.initializing;
+    if (phase === "capturing") return SCANNER_MESSAGES.capturing;
+    if (phase === "captured") return SCANNER_MESSAGES.success;
+
+    if (phase === "scanning") {
+      if (analysis.autoCaptureReady) return "Capturando automático...";
+      if (analysis.captureEnabled) return "¡Listo! Mantén firme...";
+      if (analysis.documentDetected) return "Ajusta la posición";
+      return SCANNER_MESSAGES.ready;
+    }
+
+    return "";
+  };
+
+  // ── Error view ──
   if (error || cameraError) {
     return (
       <div className="camera-fullscreen bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
@@ -113,22 +300,40 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
             />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-white mb-2">Error de Cámara</h2>
-        <p className="text-slate-300 mb-6 max-w-sm">{error || cameraError}</p>
+        <h2 className="text-xl font-semibold text-white mb-2">
+          Error de Cámara
+        </h2>
+        <p
+          className="text-slate-300 mb-6 max-w-sm"
+          role="alert"
+          aria-live="assertive"
+        >
+          {error || cameraError}
+        </p>
         <div className="space-y-3 w-full max-w-xs">
           <button
             onClick={() => {
               setError(null);
               hasTriggeredCaptureRef.current = false;
-              startCamera();
+              setPhase("initializing");
+              cameraStartTimeRef.current = Date.now();
+              startCamera()
+                .then(() => {
+                  if (isMountedRef.current) {
+                    safeTimeout(() => setPhase("scanning"), 400);
+                  }
+                })
+                .catch((retryErr) => {
+                  if (isMountedRef.current) setError(retryErr.message);
+                });
             }}
-            className="w-full py-3 px-6 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-2xl transition-colors"
+            className="w-full py-3 px-6 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-2xl transition-colors min-h-[44px]"
           >
             Reintentar
           </button>
           <button
             onClick={onCancel}
-            className="w-full py-3 px-6 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-2xl transition-colors"
+            className="w-full py-3 px-6 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-2xl transition-colors min-h-[44px]"
           >
             Cancelar
           </button>
@@ -137,6 +342,7 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
     );
   }
 
+  // ── Main scanner view ──
   return (
     <div className="camera-fullscreen bg-black">
       <video
@@ -152,19 +358,30 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
       {phase === "scanning" && (
         <ScannerOverlay
           scanArea={SCANNER_CONFIG.scanArea}
-          isReady={analysis.overallOk}
-          isCapturing={false}
+          isReady={analysis.captureEnabled}
+          isCapturing={analysis.autoCaptureReady}
+          corners={analysis.normalizedCorners}
+          edgeAlignments={analysis.edgeAlignments}
+          hint={analysis.hint}
+          totalScore={analysis.scores?.totalScore}
         />
       )}
 
       {phase === "scanning" && <QualityIndicators analysis={analysis} />}
 
+      {/* Top bar: cancel + status */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
         <button
           onClick={onCancel}
-          className="p-3 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
+          className="p-3 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors min-w-[44px] min-h-[44px]"
+          aria-label="Cancelar escaneo"
         >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -175,31 +392,32 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
         </button>
 
         <div
-          className={`px-4 py-2 rounded-full backdrop-blur-sm text-sm font-medium ${
+          className={`px-4 py-2 rounded-full backdrop-blur-sm text-sm font-medium transition-all duration-300 ${
             phase === "initializing"
               ? "bg-sky-500/30 text-sky-100"
-              : phase === "scanning"
-              ? analysis.overallOk
-                ? "bg-emerald-500/30 text-emerald-100"
-                : "bg-white/20 text-white"
-              : phase === "capturing"
+              : analysis.autoCaptureReady
+              ? "bg-emerald-500/30 text-emerald-100 animate-pulse"
+              : analysis.captureEnabled
               ? "bg-emerald-500/30 text-emerald-100"
-              : "bg-emerald-500/30 text-emerald-100"
+              : analysis.documentDetected
+              ? "bg-amber-500/30 text-amber-100"
+              : "bg-white/20 text-white"
           }`}
+          role="status"
+          aria-live="polite"
         >
-          {phase === "initializing" && SCANNER_MESSAGES.initializing}
-          {phase === "scanning" &&
-            (analysis.overallOk ? "¡Capturando automático!" : SCANNER_MESSAGES.ready)}
-          {phase === "capturing" && SCANNER_MESSAGES.capturing}
-          {phase === "captured" && SCANNER_MESSAGES.success}
+          {getStatusMessage()}
         </div>
       </div>
 
+      {/* Bottom bar: instructions + capture button */}
       {phase === "scanning" && (
         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center z-20">
           <p className="text-white/80 text-sm mb-4 text-center">
-            {analysis.overallOk
+            {analysis.autoCaptureReady
               ? "Mantén firme, captura automática..."
+              : analysis.captureEnabled
+              ? "¡Listo para capturar!"
               : analysis.documentDetected
               ? "Ajusta posición para captura automática"
               : "Coloca el documento dentro del marco"}
@@ -207,30 +425,46 @@ export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPOR
 
           <button
             onClick={handleManualCapture}
-            disabled={!analysis.documentDetected}
+            disabled={!analysis.captureEnabled}
+            aria-label={
+              analysis.captureEnabled
+                ? "Capturar documento"
+                : "Esperando alineación"
+            }
             className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
-              analysis.overallOk
+              analysis.autoCaptureReady
                 ? "border-emerald-400 bg-emerald-400/30 scale-110 animate-pulse"
+                : analysis.captureEnabled
+                ? "border-emerald-400 bg-emerald-400/20 hover:bg-emerald-400/30"
                 : analysis.documentDetected
-                ? "border-white bg-white/20 hover:bg-white/30"
+                ? "border-white/50 bg-white/10"
                 : "border-white/30 bg-white/5 opacity-50 cursor-not-allowed"
             }`}
           >
             <div
               className={`w-14 h-14 rounded-full transition-all duration-300 ${
-                analysis.overallOk ? "bg-emerald-400" : "bg-white"
+                analysis.autoCaptureReady
+                  ? "bg-emerald-400"
+                  : analysis.captureEnabled
+                  ? "bg-emerald-400/80"
+                  : "bg-white/60"
               }`}
             />
           </button>
 
           <p className="text-white/50 text-xs mt-3">
-            {analysis.overallOk ? "Captura automática activa" : "O toca para capturar manual"}
+            {analysis.autoCaptureReady
+              ? "Captura automática activa"
+              : analysis.captureEnabled
+              ? "Toca para capturar"
+              : "Esperando alineación..."}
           </p>
         </div>
       )}
 
+      {/* Capture flash overlay */}
       {phase === "capturing" && (
-        <div className="absolute inset-0 bg-white/40 z-30 animate-fade-in flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/40 z-30 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 mx-auto animate-pulse">
               <svg
@@ -263,724 +497,10 @@ CameraAutoScanner.propTypes = {
   documentType: PropTypes.string,
 };
 
+CameraAutoScanner.defaultProps = {
+  onCapture: null,
+  onCancel: null,
+  documentType: "PASSPORT",
+};
+
 export default CameraAutoScanner;
-
-// import React, { useState, useCallback, useEffect, useRef } from "react";
-// import { useCamera } from "../../hooks/useCamera";
-// import { useFrameAnalysis } from "../../hooks/useFrameAnalysis";
-// import { processScannedDocument } from "../../utils/imageProcessing";
-// import { SCANNER_CONFIG, SCANNER_MESSAGES } from "../../utils/constants";
-// import ScannerOverlay from "./ScannerOverlay";
-// import QualityIndicators from "./QualityIndicators.jsx";
-// import PropTypes from "prop-types";
-
-// /**
-//  * CameraAutoScanner - Componente principal del escáner con captura automática
-//  */
-// export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPORT" }) {
-//   const [phase, setPhase] = useState("initializing");
-//   const [capturedImage, setCapturedImage] = useState(null);
-//   const [error, setError] = useState(null);
-
-//   const captureTimeoutRef = useRef(null);
-//   const hasTriggeredCaptureRef = useRef(false);
-//   const analysisRef = useRef(null);
-//   const cameraStartTimeRef = useRef(0);
-
-//   // Hook de cámara
-//   const {
-//     videoRef,
-//     isInitializing,
-//     isReady: cameraReady,
-//     error: cameraError,
-//     startCamera,
-//     stopCamera,
-//   } = useCamera({
-//     facingMode: "environment",
-//     idealWidth: 1920,
-//     idealHeight: 1080,
-//   });
-
-//   // Hook de análisis de frames
-//   const {
-//     analysis,
-//     captureReady,
-//     reset: resetAnalysis,
-//   } = useFrameAnalysis({
-//     videoRef,
-//     isActive: phase === "scanning" && cameraReady,
-//     onConditionMet: () => {
-//       const a = analysisRef.current;
-
-//       // ✅ WARMUP PERIOD: Evitar captura en los primeros 2 segundos
-//       const WARMUP_TIME = 2000;
-//       if (Date.now() - cameraStartTimeRef.current < WARMUP_TIME) {
-//         console.log("⏳ Warmup period, skipping capture");
-//         return;
-//       }
-
-//       // ✅ VALIDACIONES ESTRICTAS pero no extremas
-//       if (!a?.documentDetected) {
-//         console.log("❌ No document detected");
-//         return;
-//       }
-
-//       if (!a?.overallOk) {
-//         console.log("❌ Overall not OK");
-//         return;
-//       }
-
-//       if (typeof a?.overallScore === "number" && a.overallScore < 0.75) {
-//         console.log("❌ Score too low:", a.overallScore);
-//         return;
-//       }
-
-//       // ✅ Solo disparar una vez
-//       if (!hasTriggeredCaptureRef.current) {
-//         console.log("✅ ALL CONDITIONS MET - Triggering capture");
-//         hasTriggeredCaptureRef.current = true;
-//         handleAutoCapture();
-//       }
-//     },
-//   });
-
-//   useEffect(() => {
-//     analysisRef.current = analysis;
-//   }, [analysis]);
-
-//   // Iniciar cámara al montar
-//   useEffect(() => {
-//     cameraStartTimeRef.current = Date.now();
-
-//     startCamera()
-//       .then(() => {
-//         // ✅ Esperar un momento adicional antes de comenzar análisis
-//         setTimeout(() => {
-//           setPhase("scanning");
-//         }, 500);
-//       })
-//       .catch((err) => {
-//         setError(cameraError || err.message);
-//       });
-
-//     return () => {
-//       stopCamera();
-//       if (captureTimeoutRef.current) {
-//         clearTimeout(captureTimeoutRef.current);
-//       }
-//     };
-//   }, []);
-
-//   // Manejar captura automática
-//   const handleAutoCapture = useCallback(() => {
-//     if (phase !== "scanning" || !videoRef.current) return;
-
-//     setPhase("capturing");
-
-//     // Pequeño delay visual para feedback
-//     captureTimeoutRef.current = setTimeout(() => {
-//       try {
-//         // Procesar imagen con recorte y mejoras LIGERAS
-//         const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
-//           enhance: true,
-//           targetWidth: 1600,
-//           targetHeight: 1200,
-//         });
-
-//         setCapturedImage(processedCanvas);
-//         setPhase("captured");
-
-//         // Notificar al padre
-//         if (onCapture) {
-//           onCapture(processedCanvas);
-//         }
-//       } catch (err) {
-//         console.error("Capture error:", err);
-//         setError("Error al capturar la imagen");
-//         setPhase("scanning");
-//         hasTriggeredCaptureRef.current = false;
-//       }
-//     }, 300);
-//   }, [phase, videoRef, onCapture]);
-
-//   // Reintentar
-//   const handleRetry = useCallback(() => {
-//     setCapturedImage(null);
-//     setError(null);
-//     setPhase("scanning");
-//     hasTriggeredCaptureRef.current = false;
-//     cameraStartTimeRef.current = Date.now();
-//     resetAnalysis();
-//   }, [resetAnalysis]);
-
-//   // Captura manual (fallback)
-//   const handleManualCapture = useCallback(() => {
-//     if (phase !== "scanning") return;
-
-//     // ✅ Validar que el documento esté detectado antes de captura manual
-//     if (!analysis.documentDetected) {
-//       console.log("⚠️ Manual capture blocked: No document detected");
-//       return;
-//     }
-
-//     hasTriggeredCaptureRef.current = true;
-//     handleAutoCapture();
-//   }, [phase, analysis.documentDetected, handleAutoCapture]);
-
-//   // Render de error de cámara
-//   if (error || cameraError) {
-//     return (
-//       <div className="camera-fullscreen bg-scanner-bg flex flex-col items-center justify-center p-6 text-center">
-//         <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
-//           <svg
-//             className="w-10 h-10 text-red-400"
-//             fill="none"
-//             viewBox="0 0 24 24"
-//             stroke="currentColor"
-//           >
-//             <path
-//               strokeLinecap="round"
-//               strokeLinejoin="round"
-//               strokeWidth={2}
-//               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-//             />
-//           </svg>
-//         </div>
-
-//         <h2 className="text-xl font-semibold text-white mb-2">Error de Cámara</h2>
-
-//         <p className="text-slate-400 mb-6 max-w-sm">{error || cameraError}</p>
-
-//         <div className="space-y-3 w-full max-w-xs">
-//           <button
-//             onClick={() => {
-//               setError(null);
-//               startCamera();
-//             }}
-//             className="w-full py-3 px-6 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors touch-target"
-//           >
-//             Reintentar
-//           </button>
-
-//           <button
-//             onClick={onCancel}
-//             className="w-full py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition-colors touch-target"
-//           >
-//             Cancelar
-//           </button>
-//         </div>
-
-//         <p className="text-xs text-slate-500 mt-6 max-w-sm">
-//           Si el problema persiste, verifica los permisos de cámara en la configuración de tu
-//           navegador.
-//         </p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="camera-fullscreen bg-scanner-bg">
-//       {/* Video de cámara */}
-//       <video
-//         ref={videoRef}
-//         autoPlay
-//         playsInline
-//         muted
-//         className={`
-//           absolute inset-0 w-full h-full object-cover
-//           ${phase === "captured" ? "hidden" : ""}
-//         `}
-//       />
-
-//       {/* Imagen capturada (preview congelado) */}
-//       {phase === "captured" && capturedImage && (
-//         <div className="absolute inset-0 flex items-center justify-center bg-scanner-bg">
-//           <canvas
-//             ref={(el) => {
-//               if (el && capturedImage) {
-//                 const ctx = el.getContext("2d");
-//                 el.width = capturedImage.width;
-//                 el.height = capturedImage.height;
-//                 ctx.drawImage(capturedImage, 0, 0);
-//               }
-//             }}
-//             className="max-w-full max-h-full object-contain"
-//           />
-//         </div>
-//       )}
-
-//       {/* Overlay de escaneo */}
-//       {phase === "scanning" && (
-//         <ScannerOverlay
-//           scanArea={SCANNER_CONFIG.scanArea}
-//           isReady={analysis.overallOk}
-//           isCapturing={captureReady}
-//         />
-//       )}
-
-//       {/* Indicadores de calidad */}
-//       {phase === "scanning" && <QualityIndicators analysis={analysis} />}
-
-//       {/* Header con botón de cancelar */}
-//       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
-//         <button
-//           onClick={onCancel}
-//           className="p-3 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors touch-target"
-//         >
-//           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-//             <path
-//               strokeLinecap="round"
-//               strokeLinejoin="round"
-//               strokeWidth={2}
-//               d="M6 18L18 6M6 6l12 12"
-//             />
-//           </svg>
-//         </button>
-
-//         {/* Status badge */}
-//         <div
-//           className={`
-//           px-4 py-2 rounded-full backdrop-blur-sm text-sm font-medium
-//           ${phase === "initializing" ? "bg-blue-500/30 text-blue-300" : ""}
-//           ${phase === "scanning" ? "bg-slate-800/80 text-slate-300" : ""}
-//           ${phase === "capturing" ? "bg-green-500/30 text-green-300" : ""}
-//           ${phase === "captured" ? "bg-green-500/30 text-green-300" : ""}
-//         `}
-//         >
-//           {phase === "initializing" && SCANNER_MESSAGES.initializing}
-//           {phase === "scanning" &&
-//             (analysis.overallOk ? SCANNER_MESSAGES.focusing : SCANNER_MESSAGES.ready)}
-//           {phase === "capturing" && SCANNER_MESSAGES.capturing}
-//           {phase === "captured" && SCANNER_MESSAGES.success}
-//         </div>
-//       </div>
-
-//       {/* Footer con botón de captura manual */}
-//       {phase === "scanning" && (
-//         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center z-20">
-//           {/* Instrucción */}
-//           <p className="text-slate-400 text-sm mb-4 text-center">
-//             {analysis.documentDetected
-//               ? "Mantén firme para captura automática"
-//               : "Coloca el documento dentro del marco"}
-//           </p>
-
-//           {/* Botón de captura manual */}
-//           <button
-//             onClick={handleManualCapture}
-//             disabled={!analysis.documentDetected}
-//             className={`
-//               w-20 h-20 rounded-full border-4
-//               flex items-center justify-center
-//               transition-all duration-300
-//               touch-target
-//               ${
-//                 analysis.overallOk
-//                   ? "border-green-400 bg-green-400/20 scale-110"
-//                   : analysis.documentDetected
-//                   ? "border-white/50 bg-white/10 hover:bg-white/20"
-//                   : "border-white/20 bg-white/5 opacity-50 cursor-not-allowed"
-//               }
-//             `}
-//           >
-//             <div
-//               className={`
-//               w-14 h-14 rounded-full
-//               transition-all duration-300
-//               ${analysis.overallOk ? "bg-green-400" : "bg-white/80"}
-//             `}
-//             />
-//           </button>
-
-//           <p className="text-slate-500 text-xs mt-3">Toca para capturar manualmente</p>
-//         </div>
-//       )}
-
-//       {/* Overlay de capturando */}
-//       {phase === "capturing" && (
-//         <div className="absolute inset-0 bg-white/30 z-30 animate-fade-in flex items-center justify-center">
-//           <div className="text-center">
-//             <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 mx-auto animate-pulse">
-//               <svg
-//                 className="w-8 h-8 text-green-600"
-//                 fill="none"
-//                 viewBox="0 0 24 24"
-//                 stroke="currentColor"
-//               >
-//                 <path
-//                   strokeLinecap="round"
-//                   strokeLinejoin="round"
-//                   strokeWidth={2}
-//                   d="M5 13l4 4L19 7"
-//                 />
-//               </svg>
-//             </div>
-//             <p className="text-white font-medium text-lg">{SCANNER_MESSAGES.capturing}</p>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default CameraAutoScanner;
-
-// CameraAutoScanner.propTypes = {
-//   onCapture: PropTypes.func,
-//   onCancel: PropTypes.func,
-//   documentType: PropTypes.string,
-// };
-
-// CameraAutoScanner.defaultProps = {
-//   documentType: "PASSPORT",
-// };
-
-// // import React, { useState, useCallback, useEffect, useRef } from "react";
-// // import { useCamera } from "../../hooks/useCamera";
-// // import { useFrameAnalysis } from "../../hooks/useFrameAnalysis";
-// // import { processScannedDocument } from "../../utils/imageProcessing";
-// // import { SCANNER_CONFIG, SCANNER_MESSAGES } from "../../utils/constants";
-// // import ScannerOverlay from "./ScannerOverlay";
-// // import QualityIndicators from "./QualityIndicators.jsx";
-// // import PropTypes from "prop-types";
-
-// // /**
-// //  * CameraAutoScanner - Componente principal del escáner con captura automática
-// //  */
-// // export function CameraAutoScanner({ onCapture, onCancel, documentType = "PASSPORT" }) {
-// //   const [phase, setPhase] = useState("initializing"); // initializing, scanning, capturing, captured
-// //   const [capturedImage, setCapturedImage] = useState(null);
-// //   const [error, setError] = useState(null);
-
-// //   const captureTimeoutRef = useRef(null);
-// //   const hasTriggeredCaptureRef = useRef(false);
-// //   const analysisRef = useRef(null);
-// //   const scanningStartedAtRef = useRef(0);
-
-// //   // Hook de cámara
-// //   const {
-// //     videoRef,
-// //     isInitializing,
-// //     isReady: cameraReady,
-// //     error: cameraError,
-// //     startCamera,
-// //     stopCamera,
-// //   } = useCamera({
-// //     facingMode: "environment",
-// //     idealWidth: 1920,
-// //     idealHeight: 1080,
-// //   });
-
-// //   // Hook de análisis de frames
-// //   const {
-// //     analysis,
-// //     captureReady,
-// //     reset: resetAnalysis,
-// //   } = useFrameAnalysis({
-// //     videoRef,
-// //     isActive: phase === "scanning" && cameraReady,
-// //     onConditionMet: () => {
-// //       const a = analysisRef.current;
-
-// //       // 1) warmup (evita captura inmediata al arrancar cámara)
-// //       const warmupMs = 900;
-// //       if (Date.now() - scanningStartedAtRef.current < warmupMs) return;
-
-// //       // 2) gates duros (sin documento NO hay auto-capture)
-// //       if (!a?.documentDetected) return;
-// //       if (!a?.overallOk) return;
-
-// //       // 3) opcional: score mínimo
-// //       if (typeof a?.overallScore === "number" && a.overallScore < 0.85) return;
-
-// //       // Solo disparar una vez
-// //       if (!hasTriggeredCaptureRef.current) {
-// //         hasTriggeredCaptureRef.current = true;
-// //         handleAutoCapture();
-// //       }
-// //     },
-// //   });
-
-// //   useEffect(() => {
-// //     analysisRef.current = analysis;
-// //   }, [analysis]);
-
-// //   useEffect(() => {
-// //     if (phase === "scanning") {
-// //       scanningStartedAtRef.current = Date.now();
-// //     }
-// //   }, [phase]);
-
-// //   // Iniciar cámara al montar
-// //   useEffect(() => {
-// //     startCamera()
-// //       .then(() => {
-// //         setPhase("scanning");
-// //       })
-// //       .catch((err) => {
-// //         setError(cameraError || err.message);
-// //       });
-
-// //     return () => {
-// //       stopCamera();
-// //       if (captureTimeoutRef.current) {
-// //         clearTimeout(captureTimeoutRef.current);
-// //       }
-// //     };
-// //   }, []);
-
-// //   // Manejar captura automática
-// //   const handleAutoCapture = useCallback(() => {
-// //     if (phase !== "scanning" || !videoRef.current) return;
-
-// //     setPhase("capturing");
-
-// //     // Pequeño delay visual para feedback
-// //     captureTimeoutRef.current = setTimeout(() => {
-// //       try {
-// //         // Procesar imagen con recorte y mejoras
-// //         const processedCanvas = processScannedDocument(videoRef.current, SCANNER_CONFIG.scanArea, {
-// //           enhance: true,
-// //           targetWidth: 1600,
-// //           targetHeight: 1200,
-// //         });
-
-// //         setCapturedImage(processedCanvas);
-// //         setPhase("captured");
-
-// //         // Notificar al padre
-// //         if (onCapture) {
-// //           onCapture(processedCanvas);
-// //         }
-// //       } catch (err) {
-// //         console.error("Capture error:", err);
-// //         setError("Error al capturar la imagen");
-// //         setPhase("scanning");
-// //         hasTriggeredCaptureRef.current = false;
-// //       }
-// //     }, 300);
-// //   }, [phase, videoRef, onCapture]);
-
-// //   // Reintentar
-// //   const handleRetry = useCallback(() => {
-// //     setCapturedImage(null);
-// //     setError(null);
-// //     setPhase("scanning");
-// //     hasTriggeredCaptureRef.current = false;
-// //     resetAnalysis();
-// //   }, [resetAnalysis]);
-
-// //   // Captura manual (fallback)
-// //   const handleManualCapture = useCallback(() => {
-// //     if (phase !== "scanning") return;
-// //     hasTriggeredCaptureRef.current = true;
-// //     handleAutoCapture();
-// //   }, [phase, handleAutoCapture]);
-
-// //   // Render de error de cámara
-// //   if (error || cameraError) {
-// //     return (
-// //       <div className="camera-fullscreen bg-scanner-bg flex flex-col items-center justify-center p-6 text-center">
-// //         <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
-// //           <svg
-// //             className="w-10 h-10 text-red-400"
-// //             fill="none"
-// //             viewBox="0 0 24 24"
-// //             stroke="currentColor"
-// //           >
-// //             <path
-// //               strokeLinecap="round"
-// //               strokeLinejoin="round"
-// //               strokeWidth={2}
-// //               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-// //             />
-// //           </svg>
-// //         </div>
-
-// //         <h2 className="text-xl font-semibold text-white mb-2">Error de Cámara</h2>
-
-// //         <p className="text-slate-400 mb-6 max-w-sm">{error || cameraError}</p>
-
-// //         <div className="space-y-3 w-full max-w-xs">
-// //           <button
-// //             onClick={() => {
-// //               setError(null);
-// //               startCamera();
-// //             }}
-// //             className="w-full py-3 px-6 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors touch-target"
-// //           >
-// //             Reintentar
-// //           </button>
-
-// //           <button
-// //             onClick={onCancel}
-// //             className="w-full py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition-colors touch-target"
-// //           >
-// //             Cancelar
-// //           </button>
-// //         </div>
-
-// //         <p className="text-xs text-slate-500 mt-6 max-w-sm">
-// //           Si el problema persiste, verifica los permisos de cámara en la configuración de tu
-// //           navegador.
-// //         </p>
-// //       </div>
-// //     );
-// //   }
-
-// //   return (
-// //     <div className="camera-fullscreen bg-scanner-bg">
-// //       {/* Video de cámara */}
-// //       <video
-// //         ref={videoRef}
-// //         autoPlay
-// //         playsInline
-// //         muted
-// //         className={`
-// //           absolute inset-0 w-full h-full object-cover
-// //           ${phase === "captured" ? "hidden" : ""}
-// //         `}
-// //       />
-
-// //       {/* Imagen capturada (preview congelado) */}
-// //       {phase === "captured" && capturedImage && (
-// //         <div className="absolute inset-0 flex items-center justify-center bg-scanner-bg">
-// //           <canvas
-// //             ref={(el) => {
-// //               if (el && capturedImage) {
-// //                 const ctx = el.getContext("2d");
-// //                 el.width = capturedImage.width;
-// //                 el.height = capturedImage.height;
-// //                 ctx.drawImage(capturedImage, 0, 0);
-// //               }
-// //             }}
-// //             className="max-w-full max-h-full object-contain"
-// //           />
-// //         </div>
-// //       )}
-
-// //       {/* Overlay de escaneo */}
-// //       {phase === "scanning" && (
-// //         <ScannerOverlay
-// //           scanArea={SCANNER_CONFIG.scanArea}
-// //           isReady={analysis.overallOk}
-// //           isCapturing={captureReady}
-// //         />
-// //       )}
-
-// //       {/* Indicadores de calidad */}
-// //       {phase === "scanning" && <QualityIndicators analysis={analysis} />}
-
-// //       {/* Header con botón de cancelar */}
-// //       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
-// //         <button
-// //           onClick={onCancel}
-// //           className="p-3 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors touch-target"
-// //         >
-// //           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-// //             <path
-// //               strokeLinecap="round"
-// //               strokeLinejoin="round"
-// //               strokeWidth={2}
-// //               d="M6 18L18 6M6 6l12 12"
-// //             />
-// //           </svg>
-// //         </button>
-
-// //         {/* Status badge */}
-// //         <div
-// //           className={`
-// //           px-4 py-2 rounded-full backdrop-blur-sm text-sm font-medium
-// //           ${phase === "initializing" ? "bg-blue-500/30 text-blue-300" : ""}
-// //           ${phase === "scanning" ? "bg-slate-800/80 text-slate-300" : ""}
-// //           ${phase === "capturing" ? "bg-green-500/30 text-green-300" : ""}
-// //           ${phase === "captured" ? "bg-green-500/30 text-green-300" : ""}
-// //         `}
-// //         >
-// //           {phase === "initializing" && SCANNER_MESSAGES.initializing}
-// //           {phase === "scanning" &&
-// //             (analysis.overallOk ? SCANNER_MESSAGES.focusing : SCANNER_MESSAGES.ready)}
-// //           {phase === "capturing" && SCANNER_MESSAGES.capturing}
-// //           {phase === "captured" && SCANNER_MESSAGES.success}
-// //         </div>
-// //       </div>
-
-// //       {/* Footer con botón de captura manual */}
-// //       {phase === "scanning" && (
-// //         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center z-20">
-// //           {/* Instrucción */}
-// //           <p className="text-slate-400 text-sm mb-4 text-center">
-// //             {analysis.documentDetected
-// //               ? "Mantén firme para captura automática"
-// //               : "Coloca el documento dentro del marco"}
-// //           </p>
-
-// //           {/* Botón de captura manual */}
-// //           <button
-// //             onClick={handleManualCapture}
-// //             disabled={!analysis.documentDetected}
-// //             className={`
-// //               w-20 h-20 rounded-full border-4
-// //               flex items-center justify-center
-// //               transition-all duration-300
-// //               touch-target
-// //               ${
-// //                 analysis.overallOk
-// //                   ? "border-green-400 bg-green-400/20 scale-110"
-// //                   : analysis.documentDetected
-// //                   ? "border-white/50 bg-white/10 hover:bg-white/20"
-// //                   : "border-white/20 bg-white/5 opacity-50 cursor-not-allowed"
-// //               }
-// //             `}
-// //           >
-// //             <div
-// //               className={`
-// //               w-14 h-14 rounded-full
-// //               transition-all duration-300
-// //               ${analysis.overallOk ? "bg-green-400" : "bg-white/80"}
-// //             `}
-// //             />
-// //           </button>
-
-// //           <p className="text-slate-500 text-xs mt-3">Toca para capturar manualmente</p>
-// //         </div>
-// //       )}
-
-// //       {/* Overlay de capturando */}
-// //       {phase === "capturing" && (
-// //         <div className="absolute inset-0 bg-white/30 z-30 animate-fade-in flex items-center justify-center">
-// //           <div className="text-center">
-// //             <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 mx-auto animate-pulse">
-// //               <svg
-// //                 className="w-8 h-8 text-green-600"
-// //                 fill="none"
-// //                 viewBox="0 0 24 24"
-// //                 stroke="currentColor"
-// //               >
-// //                 <path
-// //                   strokeLinecap="round"
-// //                   strokeLinejoin="round"
-// //                   strokeWidth={2}
-// //                   d="M5 13l4 4L19 7"
-// //                 />
-// //               </svg>
-// //             </div>
-// //             <p className="text-white font-medium text-lg">{SCANNER_MESSAGES.capturing}</p>
-// //           </div>
-// //         </div>
-// //       )}
-// //     </div>
-// //   );
-// // }
-
-// // export default CameraAutoScanner;
-
-// // CameraAutoScanner.propTypes = {
-// //   onCapture: PropTypes.func,
-// //   onCancel: PropTypes.func,
-// //   documentType: PropTypes.string,
-// // };
-
-// // CameraAutoScanner.defaultProps = {
-// //   documentType: "PASSPORT",
-// // };

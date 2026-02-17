@@ -102,7 +102,7 @@ export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) 
                       {type.description}
                     </div>
 
-                    {type.hasMRZ && (
+                    {type.requiresMRZ && (
                       <div className="mt-4 inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs rounded-full ring-1 ring-emerald-200">
                         <svg
                           className="w-4 h-4"
@@ -139,7 +139,7 @@ export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) 
       active:scale-[0.99]
       ${
         canContinue
-          ? "bg-gradient-to-r from-sky-600  hover:from-sky-700 hover:to-sky-600 text-white ring-sky-300"
+          ? "bg-black hover:bg-gray-800 text-white ring-sky-300"
           : "bg-slate-100 text-slate-400 ring-slate-200 cursor-not-allowed"
       }
     `}
@@ -167,7 +167,9 @@ export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) 
               <span className="flex items-center justify-center gap-2">
                 Continuar
                 <span
-                  className={`${canContinue ? "bg-white/15" : "bg-slate-200"} rounded-full p-2`}
+                  className={`${
+                    canContinue ? "bg-black hover:bg-gray-800" : "bg-slate-200"
+                  } rounded-full p-2`}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path

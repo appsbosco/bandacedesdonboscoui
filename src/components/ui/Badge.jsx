@@ -9,6 +9,8 @@ const colors = {
   blue: "bg-blue-100 text-blue-800",
   indigo: "bg-indigo-100 text-indigo-800",
   orange: "bg-orange-100 text-orange-800",
+  sky: "bg-sky-100 text-sky-800",
+  amber: "bg-amber-100 text-amber-800",
 };
 
 export function Badge({ children, color = "gray", className = "", ...props }) {
@@ -28,6 +30,6 @@ export function Badge({ children, color = "gray", className = "", ...props }) {
 
 Badge.propTypes = {
   children: PropTypes.node.isRequired,
-  color: PropTypes.oneOf(["gray", "red", "yellow", "green", "blue", "indigo", "orange"]),
+  color: PropTypes.oneOf(["gray", "red", "yellow", "green", "blue", "indigo", "orange", "sky", "amber"]),
   className: PropTypes.string,
 };

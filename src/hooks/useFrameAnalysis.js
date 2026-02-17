@@ -1,19 +1,43 @@
-// src/hooks/useFrameAnalysis.js
 import { useState, useCallback, useRef, useEffect } from "react";
 import { analyzeFrame, getScaledImageData } from "../utils/imageAnalysis";
+import {
+  detectDocument,
+  calculateScores,
+  getEdgeAlignments,
+} from "../utils/documentDetection";
 import { SCANNER_CONFIG } from "../utils/constants";
 
-export function useFrameAnalysis(options = {}) {
-  const {
-    videoRef,
-    isActive = false,
-    fps = SCANNER_CONFIG.analysisFPS,
-    onConditionMet,
-    stabilityTime = SCANNER_CONFIG.stabilityTime,
-    scanArea = SCANNER_CONFIG.scanArea,
-  } = options;
+// ── Debug logger ───────────────────────────────────────
+function scannerLog(category, data) {
+  try {
+    if (
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("scannerDebug") === "1"
+    ) {
+      // eslint-disable-next-line no-console
+      console.log("[scanner] " + category, data);
+    }
+  } catch {
+    /* noop */
+  }
+}
 
-  const [analysis, setAnalysis] = useState({
+// ── Initial state factories ────────────────────────────
+function createEmptyScores() {
+  return {
+    insideScore: 0,
+    rotationScore: 0,
+    perspectiveScore: 0,
+    stabilityScore: 0,
+    totalScore: 0,
+    captureEnabled: false,
+    autoCaptureReady: false,
+    hint: "Coloca el documento dentro del recuadro",
+  };
+}
+
+function createInitialAnalysis() {
+  return {
     focus: { score: 0, ok: false, label: "Analizando..." },
     brightness: { score: 0, ok: false, label: "Analizando..." },
     glare: { score: 0, ok: false, label: "Analizando..." },
@@ -21,418 +45,336 @@ export function useFrameAnalysis(options = {}) {
     documentDetected: false,
     overallOk: false,
     overallScore: 0,
-  });
+    corners: null,
+    normalizedCorners: null,
+    scores: createEmptyScores(),
+    edgeAlignments: { top: 0, right: 0, bottom: 0, left: 0 },
+    captureEnabled: false,
+    autoCaptureReady: false,
+    hint: "",
+  };
+}
 
+function getQualityHint(result) {
+  if (!result.focus.ok) return "Enfoca mejor la cámara";
+  if (!result.brightness.ok) {
+    return result.brightness.raw < 80 ? "Necesitas más luz" : "Hay demasiada luz";
+  }
+  if (!result.glare.ok) return "Evita los reflejos";
+  if (!result.alignment.ok) return "Alinea el documento";
+  return "";
+}
+
+// ── Hook ───────────────────────────────────────────────
+/**
+ * Production-grade frame analysis hook.
+ *
+ * Guarantees:
+ * - Zero freezes: busy guard prevents stacked analyses
+ * - Adaptive degradation: auto-lowers resolution/fps when slow
+ * - Throttled React state: UI updates at ~4fps max
+ * - Pauses when tab hidden
+ * - Stable refs: rAF loop never restarts due to parent re-renders
+ * - Clean teardown: cancelAnimationFrame on unmount/deactivation
+ */
+export function useFrameAnalysis(options = {}) {
+  const {
+    videoRef,
+    isActive = false,
+    fps = SCANNER_CONFIG.analysisFPS || 8,
+    onConditionMet,
+    stabilityTime = SCANNER_CONFIG.stabilityTime || 800,
+    scanArea = SCANNER_CONFIG.scanArea,
+    streakFrames = SCANNER_CONFIG.streakFrames || 10,
+  } = options;
+
+  // ─ React state (pushed at throttled rate) ─
+  const [analysis, setAnalysis] = useState(createInitialAnalysis);
   const [captureReady, setCaptureReady] = useState(false);
 
-  const animationFrameRef = useRef(null);
-  const lastAnalysisRef = useRef(0);
-  const okStartTimeRef = useRef(null);
-  const consecutiveOkFramesRef = useRef(0);
-  const hasNotifiedRef = useRef(false);
+  // ─ Refs ─
+  const rafRef = useRef(null);
+  const busyRef = useRef(false);
+  const lastAnalysisTimeRef = useRef(0);
+  const lastStateUpdateRef = useRef(0);
+  const lastDebugLogRef = useRef(0);
+  const prevCornersRef = useRef(null);
 
+  // Auto-capture tracking
+  const okStartTimeRef = useRef(null);
+  const consecutiveOkRef = useRef(0);
+  const autoCaptureStreakRef = useRef(0);
+  const hasNotifiedRef = useRef(false);
+  const captureReadyRef = useRef(false);
+
+  // Adaptive interval + resolution
+  const intervalRef = useRef(1000 / fps);
+  const analysisResRef = useRef(SCANNER_CONFIG.analysisResolution || 400);
+
+  // Stable callback refs — prevents loop restart on parent re-render
+  const onConditionMetRef = useRef(onConditionMet);
+  useEffect(() => {
+    onConditionMetRef.current = onConditionMet;
+  }, [onConditionMet]);
+
+  // Reset target interval when fps prop changes
+  useEffect(() => {
+    intervalRef.current = 1000 / fps;
+  }, [fps]);
+
+  // ─ Single-frame analyzer (pure computation, no setState) ─
   const analyzeCurrentFrame = useCallback(() => {
     const video = videoRef?.current;
     if (!video || video.readyState < video.HAVE_CURRENT_DATA) return null;
 
     try {
-      const imageData = getScaledImageData(video, SCANNER_CONFIG.analysisResolution);
-      return analyzeFrame(imageData, scanArea);
-    } catch (error) {
-      console.error("Frame analysis error:", error);
+      const resolution = analysisResRef.current;
+      const imageData = getScaledImageData(video, resolution);
+
+      // Layer 1: quality metrics (blur, brightness, glare, alignment)
+      const quality = analyzeFrame(imageData, scanArea);
+
+      // Layer 2: document detection + scoring
+      const detection = detectDocument(imageData, scanArea);
+      let scores = createEmptyScores();
+      let edgeAlignments = { top: 0, right: 0, bottom: 0, left: 0 };
+
+      if (detection.detected) {
+        scores = calculateScores(detection, scanArea, prevCornersRef.current);
+        edgeAlignments = getEdgeAlignments(detection, scanArea);
+        prevCornersRef.current = detection.normalized;
+      } else {
+        prevCornersRef.current = null;
+      }
+
+      // Combine results
+      const documentDetected = detection.detected && quality.documentDetected;
+      const captureEnabled = scores.captureEnabled && quality.overallOk;
+      const autoCaptureReady = scores.autoCaptureReady && quality.overallOk;
+
+      // Determine primary hint
+      let hint = scores.hint;
+      if (!hint && !quality.overallOk) hint = getQualityHint(quality);
+      if (!detection.detected) hint = "Coloca el documento dentro del recuadro";
+
+      return {
+        ...quality,
+        corners: detection.corners,
+        normalizedCorners: detection.normalized,
+        documentDetected,
+        scores,
+        edgeAlignments,
+        captureEnabled,
+        autoCaptureReady,
+        hint,
+        overallOk:
+          quality.overallOk && detection.detected && scores.totalScore >= 0.85,
+        overallScore: detection.detected
+          ? (quality.overallScore + scores.totalScore) / 2
+          : quality.overallScore * 0.5,
+      };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[scanner] frame analysis error:", err);
       return null;
     }
   }, [videoRef, scanArea]);
 
-  useEffect(() => {
-    if (!isActive || !videoRef?.current) return;
+  // Keep a ref so the rAF loop always calls the latest version
+  const analyzeRef = useRef(analyzeCurrentFrame);
+  analyzeRef.current = analyzeCurrentFrame;
 
-    const interval = 1000 / fps;
+  // ─ Main rAF loop ─
+  //
+  // Dependencies are intentionally minimal — callbacks and the analyze
+  // function are accessed through refs so the loop is NOT torn down on
+  // every parent re-render.
+  useEffect(() => {
+    if (!isActive || !videoRef?.current) {
+      // Reset counters when inactive
+      autoCaptureStreakRef.current = 0;
+      consecutiveOkRef.current = 0;
+      okStartTimeRef.current = null;
+      hasNotifiedRef.current = false;
+      prevCornersRef.current = null;
+      return;
+    }
+
+    // Minimum interval between React state pushes (~4 fps)
+    const STATE_UPDATE_INTERVAL = 250;
+    const targetFps = fps;
+    const maxRes = SCANNER_CONFIG.analysisResolution || 400;
 
     const loop = (timestamp) => {
-      if (timestamp - lastAnalysisRef.current >= interval) {
-        lastAnalysisRef.current = timestamp;
-        const result = analyzeCurrentFrame();
+      // Pause analysis when tab is hidden
+      if (document.hidden) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      const currentInterval = intervalRef.current;
+
+      // Busy guard: skip if previous analysis hasn't finished
+      if (
+        timestamp - lastAnalysisTimeRef.current >= currentInterval &&
+        !busyRef.current
+      ) {
+        lastAnalysisTimeRef.current = timestamp;
+        busyRef.current = true;
+
+        // Measure analysis cost for adaptive throttle
+        const t0 = performance.now();
+        const result = analyzeRef.current();
+        const elapsed = performance.now() - t0;
+
+        busyRef.current = false;
+
+        // ── Adaptive throttle ──
+        if (elapsed > 60) {
+          // Slow: widen interval
+          intervalRef.current = Math.min(intervalRef.current * 1.3, 400);
+          // Very slow: also lower resolution
+          if (elapsed > 100 && analysisResRef.current > 200) {
+            analysisResRef.current = Math.max(
+              200,
+              analysisResRef.current - 50
+            );
+            scannerLog("adaptive", {
+              action: "lower_res",
+              res: analysisResRef.current,
+              elapsed: Math.round(elapsed),
+            });
+          }
+        } else if (elapsed < 25 && intervalRef.current > 1000 / targetFps) {
+          // Fast: recover toward target fps
+          intervalRef.current = Math.max(
+            intervalRef.current * 0.9,
+            1000 / targetFps
+          );
+          // Also recover resolution
+          if (analysisResRef.current < maxRes) {
+            analysisResRef.current = Math.min(
+              maxRes,
+              analysisResRef.current + 10
+            );
+          }
+        }
 
         if (result) {
-          setAnalysis(result);
+          // Throttled debug log (~1/sec)
+          const now = Date.now();
+          if (now - lastDebugLogRef.current >= 1000) {
+            lastDebugLogRef.current = now;
+            scannerLog("frame", {
+              detected: result.documentDetected,
+              qualityOk: result.overallOk,
+              total: result.scores?.totalScore?.toFixed(2),
+              captureEnabled: result.captureEnabled,
+              autoCaptureReady: result.autoCaptureReady,
+              hint: result.hint || "(none)",
+              elapsed: Math.round(elapsed),
+              interval: Math.round(intervalRef.current),
+              res: analysisResRef.current,
+            });
+          }
 
+          // ── Throttled UI update (~4 fps) ──
+          if (timestamp - lastStateUpdateRef.current >= STATE_UPDATE_INTERVAL) {
+            lastStateUpdateRef.current = timestamp;
+            setAnalysis(result);
+          }
+
+          // ── Auto-capture condition tracking (runs at analysis rate) ──
           const isFrameOk =
             result.overallOk &&
             result.documentDetected &&
-            result.overallScore >= 0.7 &&
+            result.captureEnabled &&
             result.focus.ok &&
             result.glare.ok;
 
           if (isFrameOk) {
-            consecutiveOkFramesRef.current++;
+            consecutiveOkRef.current++;
+
             if (!okStartTimeRef.current) {
               okStartTimeRef.current = timestamp;
             }
 
+            // Track auto-capture streak
+            if (result.autoCaptureReady) {
+              autoCaptureStreakRef.current++;
+            } else {
+              autoCaptureStreakRef.current = 0;
+            }
+
             const timeElapsed = timestamp - okStartTimeRef.current;
             const hasEnoughFrames =
-              consecutiveOkFramesRef.current >= SCANNER_CONFIG.minConsecutiveFrames;
+              consecutiveOkRef.current >=
+              (SCANNER_CONFIG.minConsecutiveFrames || 5);
             const hasStableTime = timeElapsed >= stabilityTime;
+            const hasStreak = autoCaptureStreakRef.current >= streakFrames;
 
-            if (hasEnoughFrames && hasStableTime && !hasNotifiedRef.current) {
-              setCaptureReady(true);
+            if (
+              hasEnoughFrames &&
+              hasStableTime &&
+              hasStreak &&
+              !hasNotifiedRef.current
+            ) {
+              // Only call setCaptureReady if it actually changes
+              if (!captureReadyRef.current) {
+                captureReadyRef.current = true;
+                setCaptureReady(true);
+              }
               hasNotifiedRef.current = true;
-              if (onConditionMet) onConditionMet(result);
+              // Force UI update so overlay reflects capture-ready state
+              setAnalysis(result);
+              if (onConditionMetRef.current) {
+                onConditionMetRef.current(result);
+              }
             }
           } else {
-            consecutiveOkFramesRef.current = 0;
+            consecutiveOkRef.current = 0;
             okStartTimeRef.current = null;
             hasNotifiedRef.current = false;
-            setCaptureReady(false);
+            autoCaptureStreakRef.current = 0;
+            // Only call setCaptureReady if it was previously true
+            if (captureReadyRef.current) {
+              captureReadyRef.current = false;
+              setCaptureReady(false);
+            }
           }
         }
       }
 
-      if (isActive) {
-        animationFrameRef.current = requestAnimationFrame(loop);
-      }
+      // Always schedule next frame; cleanup cancels when effect re-runs
+      rafRef.current = requestAnimationFrame(loop);
     };
 
-    animationFrameRef.current = requestAnimationFrame(loop);
+    rafRef.current = requestAnimationFrame(loop);
 
     return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, [isActive, fps, stabilityTime, analyzeCurrentFrame, onConditionMet, videoRef]);
+    // onConditionMet and analyzeCurrentFrame accessed via refs — NOT in deps
+  }, [isActive, fps, stabilityTime, streakFrames, videoRef]);
 
+  // ─ Reset ─
   const reset = useCallback(() => {
     okStartTimeRef.current = null;
-    consecutiveOkFramesRef.current = 0;
+    consecutiveOkRef.current = 0;
     hasNotifiedRef.current = false;
+    autoCaptureStreakRef.current = 0;
+    prevCornersRef.current = null;
+    captureReadyRef.current = false;
+    analysisResRef.current = SCANNER_CONFIG.analysisResolution || 400;
+    intervalRef.current = 1000 / fps;
     setCaptureReady(false);
-    setAnalysis({
-      focus: { score: 0, ok: false, label: "Analizando..." },
-      brightness: { score: 0, ok: false, label: "Analizando..." },
-      glare: { score: 0, ok: false, label: "Analizando..." },
-      alignment: { score: 0, ok: false, label: "Analizando..." },
-      documentDetected: false,
-      overallOk: false,
-      overallScore: 0,
-    });
-  }, []);
+    setAnalysis(createInitialAnalysis());
+  }, [fps]);
 
   return { analysis, captureReady, reset, analyzeCurrentFrame };
 }
 
 export default useFrameAnalysis;
-
-// // import { useState, useCallback, useRef, useEffect } from "react";
-// import { useState, useCallback, useRef, useEffect } from "react";
-// import { analyzeFrame, getScaledImageData } from "../utils/imageAnalysis";
-// import { SCANNER_CONFIG } from "../utils/constants";
-
-// /**
-//  * Hook para analizar frames en tiempo real y detectar condiciones de captura
-//  */
-// export function useFrameAnalysis(options = {}) {
-//   const {
-//     videoRef,
-//     isActive = false,
-//     fps = SCANNER_CONFIG.analysisFPS,
-//     onConditionMet,
-//     stabilityTime = SCANNER_CONFIG.stabilityTime,
-//   } = options;
-
-//   const [analysis, setAnalysis] = useState({
-//     focus: { score: 0, ok: false, label: "Analizando..." },
-//     brightness: { score: 0, ok: false, label: "Analizando..." },
-//     glare: { score: 0, ok: false, label: "Analizando..." },
-//     alignment: { score: 0, ok: false, label: "Analizando..." },
-//     documentDetected: false,
-//     overallOk: false,
-//     overallScore: 0,
-//   });
-
-//   const [captureReady, setCaptureReady] = useState(false);
-
-//   const animationFrameRef = useRef(null);
-//   const lastAnalysisRef = useRef(0);
-//   const okStartTimeRef = useRef(null);
-//   const canvasRef = useRef(null);
-//   const consecutiveOkFramesRef = useRef(0);
-//   const hasNotifiedRef = useRef(false);
-
-//   // Inicializar canvas para análisis
-//   useEffect(() => {
-//     if (!canvasRef.current) {
-//       canvasRef.current = document.createElement("canvas");
-//     }
-//   }, []);
-
-//   // Analizar un frame
-//   const analyzeCurrentFrame = useCallback(() => {
-//     const video = videoRef?.current;
-
-//     if (!video || video.readyState < video.HAVE_CURRENT_DATA) {
-//       return null;
-//     }
-
-//     try {
-//       // Obtener ImageData escalado para mejor performance
-//       const imageData = getScaledImageData(video, SCANNER_CONFIG.analysisResolution);
-
-//       // Analizar
-//       const result = analyzeFrame(imageData);
-
-//       return result;
-//     } catch (error) {
-//       console.error("Frame analysis error:", error);
-//       return null;
-//     }
-//   }, [videoRef]);
-
-//   // Loop de análisis
-//   useEffect(() => {
-//     if (!isActive || !videoRef?.current) {
-//       return;
-//     }
-
-//     const interval = 1000 / fps;
-
-//     const loop = (timestamp) => {
-//       // Throttle según FPS configurado
-//       if (timestamp - lastAnalysisRef.current >= interval) {
-//         lastAnalysisRef.current = timestamp;
-
-//         const result = analyzeCurrentFrame();
-
-//         if (result) {
-//           setAnalysis(result);
-
-//           // ✅ CAMBIO CLAVE: Verificar condiciones más estrictas
-//           const isFrameOk =
-//             result.overallOk && result.documentDetected && result.overallScore >= 0.85;
-
-//           if (isFrameOk) {
-//             // Incrementar contador de frames consecutivos OK
-//             consecutiveOkFramesRef.current++;
-
-//             // Iniciar timer si es el primer frame OK
-//             if (!okStartTimeRef.current) {
-//               okStartTimeRef.current = timestamp;
-//             }
-
-//             // ✅ NUEVAS CONDICIONES: Requiere múltiples frames consecutivos OK
-//             const timeElapsed = timestamp - okStartTimeRef.current;
-//             const hasEnoughConsecutiveFrames = consecutiveOkFramesRef.current >= 3;
-//             const hasStableTime = timeElapsed >= stabilityTime;
-
-//             if (hasEnoughConsecutiveFrames && hasStableTime && !hasNotifiedRef.current) {
-//               // Condición OK mantenida por el tiempo requerido Y suficientes frames
-//               setCaptureReady(true);
-//               hasNotifiedRef.current = true;
-
-//               if (onConditionMet) {
-//                 onConditionMet(result);
-//               }
-//             }
-//           } else {
-//             // ✅ Reset inmediato si las condiciones no se cumplen
-//             consecutiveOkFramesRef.current = 0;
-//             okStartTimeRef.current = null;
-//             hasNotifiedRef.current = false;
-//             setCaptureReady(false);
-//           }
-//         }
-//       }
-
-//       if (isActive) {
-//         animationFrameRef.current = requestAnimationFrame(loop);
-//       }
-//     };
-
-//     animationFrameRef.current = requestAnimationFrame(loop);
-
-//     return () => {
-//       if (animationFrameRef.current) {
-//         cancelAnimationFrame(animationFrameRef.current);
-//       }
-//     };
-//   }, [isActive, fps, stabilityTime, analyzeCurrentFrame, onConditionMet, videoRef]);
-
-//   // Reset estado
-//   const reset = useCallback(() => {
-//     okStartTimeRef.current = null;
-//     consecutiveOkFramesRef.current = 0;
-//     hasNotifiedRef.current = false;
-//     setCaptureReady(false);
-//     setAnalysis({
-//       focus: { score: 0, ok: false, label: "Analizando..." },
-//       brightness: { score: 0, ok: false, label: "Analizando..." },
-//       glare: { score: 0, ok: false, label: "Analizando..." },
-//       alignment: { score: 0, ok: false, label: "Analizando..." },
-//       documentDetected: false,
-//       overallOk: false,
-//       overallScore: 0,
-//     });
-//   }, []);
-
-//   // Calcular progreso de estabilidad (0-1)
-//   const stabilityProgress = useCallback(() => {
-//     if (!okStartTimeRef.current) return 0;
-//     const elapsed = performance.now() - okStartTimeRef.current;
-//     return Math.min(elapsed / stabilityTime, 1);
-//   }, [stabilityTime]);
-
-//   return {
-//     analysis,
-//     captureReady,
-//     reset,
-//     stabilityProgress,
-//     analyzeCurrentFrame,
-//   };
-// }
-
-// export default useFrameAnalysis;
-
-// // import { useState, useCallback, useRef, useEffect } from "react";
-// // import { analyzeFrame, getScaledImageData } from "../utils/imageAnalysis";
-// // import { SCANNER_CONFIG } from "../utils/constants";
-
-// // /**
-// //  * Hook para analizar frames en tiempo real y detectar condiciones de captura
-// //  */
-// // export function useFrameAnalysis(options = {}) {
-// //   const {
-// //     videoRef,
-// //     isActive = false,
-// //     fps = SCANNER_CONFIG.analysisFPS,
-// //     onConditionMet,
-// //     stabilityTime = SCANNER_CONFIG.stabilityTime,
-// //   } = options;
-
-// //   const [analysis, setAnalysis] = useState({
-// //     focus: { score: 0, ok: false, label: "Analizando..." },
-// //     brightness: { score: 0, ok: false, label: "Analizando..." },
-// //     glare: { score: 0, ok: false, label: "Analizando..." },
-// //     alignment: { score: 0, ok: false, label: "Analizando..." },
-// //     documentDetected: false,
-// //     overallOk: false,
-// //     overallScore: 0,
-// //   });
-
-// //   const [captureReady, setCaptureReady] = useState(false);
-
-// //   const animationFrameRef = useRef(null);
-// //   const lastAnalysisRef = useRef(0);
-// //   const okStartTimeRef = useRef(null);
-// //   const canvasRef = useRef(null);
-
-// //   // Inicializar canvas para análisis
-// //   useEffect(() => {
-// //     if (!canvasRef.current) {
-// //       canvasRef.current = document.createElement("canvas");
-// //     }
-// //   }, []);
-
-// //   // Analizar un frame
-// //   const analyzeCurrentFrame = useCallback(() => {
-// //     const video = videoRef?.current;
-
-// //     if (!video || video.readyState < video.HAVE_CURRENT_DATA) {
-// //       return null;
-// //     }
-
-// //     try {
-// //       // Obtener ImageData escalado para mejor performance
-// //       const imageData = getScaledImageData(video, SCANNER_CONFIG.analysisResolution);
-
-// //       // Analizar
-// //       const result = analyzeFrame(imageData);
-
-// //       return result;
-// //     } catch (error) {
-// //       console.error("Frame analysis error:", error);
-// //       return null;
-// //     }
-// //   }, [videoRef]);
-
-// //   // Loop de análisis
-// //   useEffect(() => {
-// //     if (!isActive || !videoRef?.current) {
-// //       return;
-// //     }
-
-// //     const interval = 1000 / fps;
-
-// //     const loop = (timestamp) => {
-// //       // Throttle según FPS configurado
-// //       if (timestamp - lastAnalysisRef.current >= interval) {
-// //         lastAnalysisRef.current = timestamp;
-
-// //         const result = analyzeCurrentFrame();
-
-// //         if (result) {
-// //           setAnalysis(result);
-
-// //           // Verificar estabilidad para auto-capture
-// //           if (result.overallOk) {
-// //             if (!okStartTimeRef.current) {
-// //               okStartTimeRef.current = timestamp;
-// //             } else if (timestamp - okStartTimeRef.current >= stabilityTime) {
-// //               // Condición OK mantenida por el tiempo requerido
-// //               setCaptureReady(true);
-// //               if (onConditionMet) {
-// //                 onConditionMet(result);
-// //               }
-// //             }
-// //           } else {
-// //             // Reset timer si las condiciones no se cumplen
-// //             okStartTimeRef.current = null;
-// //             setCaptureReady(false);
-// //           }
-// //         }
-// //       }
-
-// //       if (isActive) {
-// //         animationFrameRef.current = requestAnimationFrame(loop);
-// //       }
-// //     };
-
-// //     animationFrameRef.current = requestAnimationFrame(loop);
-
-// //     return () => {
-// //       if (animationFrameRef.current) {
-// //         cancelAnimationFrame(animationFrameRef.current);
-// //       }
-// //     };
-// //   }, [isActive, fps, stabilityTime, analyzeCurrentFrame, onConditionMet, videoRef]);
-
-// //   // Reset estado
-// //   const reset = useCallback(() => {
-// //     okStartTimeRef.current = null;
-// //     setCaptureReady(false);
-// //     setAnalysis({
-// //       focus: { score: 0, ok: false, label: "Analizando..." },
-// //       brightness: { score: 0, ok: false, label: "Analizando..." },
-// //       glare: { score: 0, ok: false, label: "Analizando..." },
-// //       alignment: { score: 0, ok: false, label: "Analizando..." },
-// //       documentDetected: false,
-// //       overallOk: false,
-// //       overallScore: 0,
-// //     });
-// //   }, []);
-
-// //   // Calcular progreso de estabilidad (0-1)
-// //   const stabilityProgress = useCallback(() => {
-// //     if (!okStartTimeRef.current) return 0;
-// //     const elapsed = performance.now() - okStartTimeRef.current;
-// //     return Math.min(elapsed / stabilityTime, 1);
-// //   }, [stabilityTime]);
-
-// //   return {
-// //     analysis,
-// //     captureReady,
-// //     reset,
-// //     stabilityProgress,
-// //     analyzeCurrentFrame,
-// //   };
-// // }
-
-// // export default useFrameAnalysis;

@@ -78,11 +78,33 @@ export const SET_DOCUMENT_STATUS = gql`
   }
 `;
 
+export const GET_SIGNED_UPLOAD = gql`
+  mutation GetSignedUpload($input: GetSignedUploadInput!) {
+    getSignedUpload(input: $input) {
+      timestamp
+      signature
+      apiKey
+      cloudName
+      folder
+      publicId
+    }
+  }
+`;
+
 export const DELETE_DOCUMENT = gql`
   mutation DeleteDocument($documentId: ID!) {
     deleteDocument(documentId: $documentId) {
       success
       message
+    }
+  }
+`;
+
+export const ENQUEUE_DOCUMENT_OCR = gql`
+  mutation EnqueueDocumentOcr($input: EnqueueDocumentOcrInput!) {
+    enqueueDocumentOcr(input: $input) {
+      success
+      jobId
     }
   }
 `;

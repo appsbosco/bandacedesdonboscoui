@@ -1,176 +1,99 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
 /**
- * Hook para manejar acceso y control de la cámara
+ * Camera access hook — production-grade, zero leaks.
+ *
+ * - Requests 1280x720 rear camera by default
+ * - Tracks stream in ref for reliable cleanup
+ * - Spanish error messages
+ * - Cleanup on unmount guaranteed
  */
 export function useCamera(options = {}) {
   const {
-    facingMode = "environment", // 'user' para frontal, 'environment' para trasera
-    idealWidth = 1920,
-    idealHeight = 1080,
-    onError,
+    facingMode = "environment",
+    idealWidth = 1280,
+    idealHeight = 720,
   } = options;
-
-  const [state, setState] = useState({
-    isInitializing: false,
-    isReady: false,
-    error: null,
-    stream: null,
-    capabilities: null,
-  });
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Obtener stream de cámara
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsReady(false);
+  }, []);
+
   const startCamera = useCallback(async () => {
-    setState((prev) => ({ ...prev, isInitializing: true, error: null }));
+    setError(null);
+    setIsReady(false);
+
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const msg = "Tu navegador no soporta acceso a la cámara";
+      setError(msg);
+      throw new Error(msg);
+    }
 
     try {
-      // Verificar soporte
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Tu navegador no soporta acceso a la cámara");
-      }
-
-      // Configuración de constraints
-      const constraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: facingMode },
           width: { ideal: idealWidth },
           height: { ideal: idealHeight },
-          aspectRatio: { ideal: 16 / 9 },
         },
         audio: false,
-      };
-
-      // Solicitar stream
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
 
       streamRef.current = stream;
 
-      // Obtener capabilities si está disponible
-      const track = stream.getVideoTracks()[0];
-      let capabilities = null;
-
-      if (track.getCapabilities) {
-        capabilities = track.getCapabilities();
-      }
-
-      // Conectar al video element si existe
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
 
-      setState({
-        isInitializing: false,
-        isReady: true,
-        error: null,
-        stream,
-        capabilities,
-      });
-
+      setIsReady(true);
       return stream;
-    } catch (error) {
-      console.error("Camera error:", error);
-
-      let errorMessage = "Error al acceder a la cámara";
-
-      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-        errorMessage =
-          "Permiso de cámara denegado. Por favor, permite el acceso en la configuración de tu navegador.";
-      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
-        errorMessage = "No se encontró ninguna cámara en tu dispositivo.";
-      } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
-        errorMessage = "La cámara está siendo usada por otra aplicación.";
-      } else if (error.name === "OverconstrainedError") {
-        errorMessage = "La cámara no cumple con los requisitos necesarios.";
+    } catch (err) {
+      let msg = "Error al acceder a la cámara";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        msg =
+          "Permiso de cámara denegado. Permite el acceso en la configuración de tu navegador.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        msg = "No se encontró ninguna cámara en tu dispositivo.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        msg = "La cámara está siendo usada por otra aplicación.";
+      } else if (err.name === "OverconstrainedError") {
+        msg = "La cámara no cumple con los requisitos necesarios.";
       }
-
-      setState({
-        isInitializing: false,
-        isReady: false,
-        error: errorMessage,
-        stream: null,
-        capabilities: null,
-      });
-
-      if (onError) {
-        onError(errorMessage);
-      }
-
-      throw error;
+      setError(msg);
+      throw err;
     }
-  }, [facingMode, idealWidth, idealHeight, onError]);
+  }, [facingMode, idealWidth, idealHeight]);
 
-  // Detener cámara
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    setState({
-      isInitializing: false,
-      isReady: false,
-      error: null,
-      stream: null,
-      capabilities: null,
-    });
-  }, []);
-
-  // Cambiar cámara (frontal/trasera)
-  const switchCamera = useCallback(async () => {
-    stopCamera();
-
-    const newFacingMode = facingMode === "environment" ? "user" : "environment";
-
-    return startCamera();
-  }, [facingMode, stopCamera, startCamera]);
-
-  // Aplicar torch (flash) si está disponible
-  const setTorch = useCallback(async (enabled) => {
-    if (!streamRef.current) return false;
-
-    const track = streamRef.current.getVideoTracks()[0];
-
-    try {
-      if (track.applyConstraints) {
-        await track.applyConstraints({
-          advanced: [{ torch: enabled }],
-        });
-        return true;
-      }
-    } catch (error) {
-      console.warn("Torch not supported:", error);
-    }
-
-    return false;
-  }, []);
-
-  // Cleanup al desmontar
+  // Cleanup on unmount — guaranteed track stop
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
     };
   }, []);
 
-  return {
-    ...state,
-    videoRef,
-    startCamera,
-    stopCamera,
-    switchCamera,
-    setTorch,
-  };
+  return { videoRef, isReady, error, startCamera, stopCamera };
 }
 
 export default useCamera;

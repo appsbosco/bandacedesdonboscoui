@@ -9,9 +9,13 @@ export const DOCUMENT_FRAGMENT = gql`
     status
     notes
     images {
+      kind
       url
-      provider
       publicId
+      width
+      height
+      bytes
+      mimeType
       uploadedAt
     }
     extracted {
@@ -29,9 +33,14 @@ export const DOCUMENT_FRAGMENT = gql`
       issueDate
       mrzRaw
       mrzValid
+      mrzFormat
+      reasonCodes
       ocrText
       ocrConfidence
     }
+    ocrAttempts
+    ocrLastError
+    ocrUpdatedAt
     isExpired
     daysUntilExpiration
     retentionUntil
@@ -46,6 +55,7 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
     type
     status
     images {
+      kind
       url
     }
     extracted {
