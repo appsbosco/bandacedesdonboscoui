@@ -94,12 +94,33 @@ export const GET_USERS = gql`
       grade
       phone
       role
-      instrument
       avatar
+      instrument
+    }
+  }
+`;
+
+export const GET_USERS_AND_BANDS = gql`
+  query getUsers {
+    getUsers {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      avatar
+      instrument
       bands
     }
   }
 `;
+
 export const GET_PARENTS = gql`
   query GetParents {
     getParents {

@@ -16,8 +16,6 @@ export const GET_USERS = gql`
       role
       avatar
       instrument
-      bands
-      notificationTokens
     }
   }
 `;
