@@ -210,19 +210,37 @@ const Almuerzos = () => {
       <div className="overflow-x-hidden">
         <DashboardNavbar />
 
-        {/* Hero Section */}
-        <div className="relative mb-8 rounded-2xl overflow-hidden shadow-xl">
-          <div
-            className="relative bg-cover bg-center h-64"
-            style={{ backgroundImage: `url(${HeroBg})` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40" />
-            <div className="relative z-10 h-full flex flex-col justify-center px-8 md:px-12 text-white">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">Solicitud de Almuerzos</h1>
-              <p className="text-lg md:text-xl max-w-2xl opacity-90">
-                Bienvenido a la plataforma de almuerzos de la Banda CEDES Don Bosco. Selecciona
-                entre una variedad de opciones deliciosas.
-              </p>
+        {/* HERO (ultra clean) */}
+        <div className="mb-6 mt-3">
+          <div className="relative overflow-hidden rounded-2xl border border-default-200 bg-white">
+            {/* Imagen sutil */}
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: `url(${HeroBg})` }}
+              aria-hidden="true"
+            />
+            {/* Overlay blanco para mantenerlo limpio */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/70" />
+
+            <div className="relative p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-default-950 leading-tight">
+                    Almuerzos
+                  </h1>
+                  <p className="text-sm text-default-600 mt-1">
+                    {currentTab === 0
+                      ? "Elegí tus productos y confirmá."
+                      : "Tus pedidos recientes aparecerán aquí."}
+                  </p>
+                </div>
+
+                {isAdmin && (
+                  <span className="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border border-default-200 bg-default-50 text-default-700">
+                    Admin
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
