@@ -47,3 +47,111 @@ export function calculateAgeFromBirthdayEs(birthdayStr) {
   if (age < 0 || age > 120) return "N/A";
   return age;
 }
+
+// ===========================
+// DATE UTILITIES
+// ===========================
+
+/**
+ * Check if product is available based on closingDate
+ */
+export function isProductAvailable(closingDate) {
+  const closing = toDate(closingDate);
+  if (!closing) return true;
+  return closing.getTime() > Date.now();
+}
+
+/**
+ * Get time remaining until closing
+ * Returns: { hours, minutes, isPastClosing }
+ */
+export function getTimeUntilClosing(closingDate) {
+  const closing = toDate(closingDate);
+  if (!closing) return null;
+
+  const diff = closing.getTime() - Date.now();
+
+  if (diff <= 0) return { hours: 0, minutes: 0, isPastClosing: true };
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  return { hours, minutes, isPastClosing: false };
+}
+
+/**
+ * Format closing time message
+ */
+export function getClosingMessage(closingDate) {
+  if (!closingDate) return "Disponible";
+
+  const timeInfo = getTimeUntilClosing(closingDate);
+
+  if (!timeInfo) return "Disponible";
+
+  if (timeInfo.isPastClosing) {
+    return "Cerrado";
+  }
+
+  if (timeInfo.hours === 0 && timeInfo.minutes < 60) {
+    return `Cierra en ${timeInfo.minutes}min`;
+  }
+
+  if (timeInfo.hours < 24) {
+    return `Cierra en ${timeInfo.hours}h`;
+  }
+
+  return "Disponible";
+}
+
+/**
+ * Format date for display
+ */
+export function formatOrderDate(dateValue) {
+  const date = toDate(dateValue);
+  if (!date) return "Fecha inválida";
+
+  return date.toLocaleDateString("es-CR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function toDate(value) {
+  if (value === null || value === undefined) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === "number") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  if (typeof value === "string") {
+    const s = value.trim();
+
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      const ms = s.length === 10 ? n * 1000 : n;
+      const d = new Date(ms);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    // ISO u otros formatos parseables
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  // Mongo Extended JSON
+  if (typeof value === "object") {
+    if ("$date" in value) return toDate(value.$date);
+    if ("$numberLong" in value) return toDate(value.$numberLong);
+  }
+
+  return null;
+}
