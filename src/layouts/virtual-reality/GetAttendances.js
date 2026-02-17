@@ -529,7 +529,7 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
             </option>
           ))}
         </select>
-
+        {/* 
         <select
           value={filters.section}
           onChange={(e) => onFilterChange("section", e.target.value)}
@@ -541,7 +541,7 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
               {sect}
             </option>
           ))}
-        </select>
+        </select> */}
       </div>
 
       <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-xs font-semibold text-gray-600 uppercase tracking-wide">

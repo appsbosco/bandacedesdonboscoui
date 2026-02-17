@@ -14,7 +14,7 @@ import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import "./style.css";
+// import "./style.css";
 import Input from "components/Input";
 import TextArea from "components/TextArea";
 import { GET_EVENTS } from "./queries";

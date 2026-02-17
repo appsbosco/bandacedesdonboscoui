@@ -7,7 +7,7 @@ import Billing from "layouts/billing";
 import Dashboard from "layouts/dashboard";
 import Profile from "layouts/profile";
 import RTL from "layouts/rtl";
-import Tables from "layouts/tables";
+import Tables from "layouts/members";
 import VirtualReality from "layouts/virtual-reality";
 import FolderCopyIcon from "@mui/icons-material/FolderCopy";
 // Banda CEDES Don Bosco icons
@@ -544,6 +544,16 @@ export const adminRoutes = [
     route: "/performance-attendance",
     icon: <FactCheckIcon size="12px" />,
     component: <PerformanceAttendance />,
+    noCollapse: true,
+    href: null,
+  },
+  {
+    type: "collapse",
+    name: "Asistencia",
+    key: "class-attendance",
+    route: "/class-attendance",
+    icon: <FactCheckIcon size="12px" />,
+    component: <ClassAttendance />,
     noCollapse: true,
     href: null,
   },
