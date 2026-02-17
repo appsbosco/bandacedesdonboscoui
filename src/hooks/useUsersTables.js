@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_USERS_BY_ID, GET_PARENTS } from "graphql/queries";
 import { DELETE_USER, DELETE_MEDICAL_RECORD } from "../graphql/mutations";
@@ -9,23 +9,17 @@ function normalizeRole(role) {
   return String(role || "")
     .replace(/\u00A0/g, " ")
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 }
 
-// ===============================
-// Role groups (ALLOWLISTS)
-// ===============================
 const MUSICIAN_ROLES = new Set(
   ["Principal de sección", "Integrante BCDB", "Asistente de sección"].map(normalizeRole)
 );
-
 const INSTRUCTOR_ROLES = new Set(["Instructor de instrumento"].map(normalizeRole));
-
 const PARENT_ROLES = new Set(["Padre/Madre de familia"].map(normalizeRole));
-
 const STAFF_ROLES = new Set(
   [
     "Director",
@@ -37,6 +31,27 @@ const STAFF_ROLES = new Set(
     "Staff",
   ].map(normalizeRole)
 );
+
+function mergeUsersById(prev, incoming) {
+  const prevMap = new Map((prev || []).map((u) => [String(u?.id || ""), u]));
+  const merged = [];
+  const seen = new Set();
+
+  for (const u of incoming || []) {
+    const id = String(u?.id || "");
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const old = prevMap.get(id);
+    merged.push(old ? { ...old, ...u } : u);
+  }
+
+  for (const [id, old] of prevMap.entries()) {
+    if (!id || seen.has(id)) continue;
+    merged.push(old);
+  }
+
+  return merged;
+}
 
 export function useUsersTables() {
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
@@ -53,9 +68,15 @@ export function useUsersTables() {
     loading: usersLoading,
     error: usersError,
     data: usersQueryData,
+    refetch: refetchUsers,
+    networkStatus,
   } = useQuery(GET_USERS, {
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
+    onError: (e) => {
+      console.error("[GET_USERS] error:", e);
+    },
   });
 
   const {
@@ -65,13 +86,28 @@ export function useUsersTables() {
   } = useQuery(GET_MEDICAL_RECORDS, {
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
+    onError: (e) => {
+      console.error("[GET_MEDICAL_RECORDS] error:", e);
+    },
   });
 
   const [usersState, setUsersState] = useState([]);
 
+  // Sync con MERGE
   useEffect(() => {
-    if (usersQueryData?.getUsers) setUsersState(usersQueryData.getUsers);
-  }, [usersQueryData]);
+    const incoming = usersQueryData?.getUsers || [];
+    if (!incoming.length) return;
+    setUsersState((prev) => mergeUsersById(prev, incoming));
+  }, [usersQueryData?.getUsers?.length]);
+
+  const didForceRefetch = useRef(false);
+  useEffect(() => {
+    if (didForceRefetch.current) return;
+    didForceRefetch.current = true;
+    Promise.resolve()
+      .then(() => refetchUsers())
+      .catch((e) => console.error("[GET_USERS] refetch error:", e));
+  }, [refetchUsers]);
 
   const [deleteUser] = useMutation(DELETE_USER, {
     refetchQueries: [{ query: GET_USERS }, { query: GET_MEDICAL_RECORDS }, { query: GET_PARENTS }],
@@ -90,9 +126,6 @@ export function useUsersTables() {
     return Object.fromEntries(records.filter((r) => r?.user?.id).map((r) => [r.user.id, r]));
   }, [medicalRecordData]);
 
-  // ===============================
-  // SINGLE SOURCE OF TRUTH: partition
-  // ===============================
   const partition = useMemo(() => {
     const buckets = {
       musicians: [],
@@ -112,31 +145,40 @@ export function useUsersTables() {
         buckets.musicians.push(u);
         continue;
       }
-
       if (INSTRUCTOR_ROLES.has(key)) {
         buckets.instructors.push(u);
         continue;
       }
-
       if (PARENT_ROLES.has(key)) {
         buckets.parentsFromUsers.push(u);
         continue;
       }
-
       if (STAFF_ROLES.has(key)) {
         buckets.staff.push(u);
         continue;
       }
 
-      // Si el rol no cae en ningún grupo, NO lo metemos en staff.
       buckets.unknown.push(u);
       unknownSet.add(u?.role || "(sin role)");
     }
 
     buckets.unknownRoles = Array.from(unknownSet);
-
     return buckets;
   }, [usersState]);
+
+  useEffect(() => {
+    const total = usersState?.length || 0;
+    const musicians = partition.musicians?.length || 0;
+    if (total > 0)
+      console.log(
+        "[UsersTables] total usersState:",
+        total,
+        "musicians:",
+        musicians,
+        "networkStatus:",
+        networkStatus
+      );
+  }, [usersState?.length, partition.musicians?.length, networkStatus]);
 
   const musiciansData = useMemo(() => {
     return (partition.musicians || []).map((u) => {
@@ -153,14 +195,8 @@ export function useUsersTables() {
     });
   }, [partition.musicians, medicalRecordsMap]);
 
-  const staffData = useMemo(() => {
-    return partition.staff || [];
-  }, [partition.staff]);
-
-  const instructorsData = useMemo(() => {
-    return partition.instructors || [];
-  }, [partition.instructors]);
-
+  const staffData = useMemo(() => partition.staff || [], [partition.staff]);
+  const instructorsData = useMemo(() => partition.instructors || [], [partition.instructors]);
   const parentsData = parentData?.getParents || [];
 
   const handleStateChange = useCallback((id, newState) => {
@@ -178,13 +214,10 @@ export function useUsersTables() {
   const deleteUserAndMedicalRecord = useCallback(
     async ({ userId, medicalRecordId }) => {
       if (!userId) return false;
-
       await deleteUser({ variables: { deleteUserId: userId } });
-
       if (medicalRecordId) {
         await deleteMedicalRecord({ variables: { deleteMedicalRecordId: medicalRecordId } });
       }
-
       return true;
     },
     [deleteUser, deleteMedicalRecord]
