@@ -499,7 +499,7 @@ const FinanceDashboard = () => {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatCard
                 label="Ingresos"
                 value={formatCRC(totalSales)}
@@ -510,11 +510,14 @@ const FinanceDashboard = () => {
                 value={formatCRC(totalExpenses)}
                 valueClass="text-red-600"
               />
-              <StatCard
-                label="Neto"
-                value={formatCRC(net)}
-                valueClass={net >= 0 ? "text-slate-900" : "text-red-600"}
-              />
+
+              <div className="col-span-2 sm:col-span-1">
+                <StatCard
+                  label="Neto"
+                  value={formatCRC(net)}
+                  valueClass={net >= 0 ? "text-slate-900" : "text-red-600"}
+                />
+              </div>
             </div>
             {session.status === "CLOSED" && session.difference !== null && (
               <div

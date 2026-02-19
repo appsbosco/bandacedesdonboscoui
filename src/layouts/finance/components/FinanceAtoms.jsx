@@ -204,7 +204,7 @@ export const CategoryPicker = ({ categories, selected, onSelect, loading }) => {
       </div>
     );
   if (!categories?.length)
-    return <p className="text-sm text-slate-400 italic">Sin categorías. Creá una en Catálogos.</p>;
+    return <p className="text-sm text-black italic">Sin categorías. Creá una en Catálogos.</p>;
   return (
     <div className="flex flex-wrap gap-2">
       {categories.map((cat) => (
@@ -215,7 +215,7 @@ export const CategoryPicker = ({ categories, selected, onSelect, loading }) => {
           className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-95 ${
             selected === cat.id
               ? "bg-rose-700 border-rose-700 text-white shadow-sm"
-              : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+              : " bg-slate-600 border-slate-200 text-slate-700 hover:border-slate-300"
           }`}
         >
           {cat.name}
@@ -261,14 +261,33 @@ export const ActivityPills = ({ activities, selected, onSelect, loading }) => {
 };
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-export const StatCard = ({ label, value, sub, valueClass = "text-slate-900" }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-5">
-    <p className="text-xs font-semibold text-slate-500 mb-1">{label}</p>
-    <p className={`text-2xl font-extrabold tracking-tight ${valueClass}`}>{value}</p>
-    {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
-  </div>
-);
+export const StatCard = ({ label, value, sub, valueClass = "text-slate-900" }) => {
+  const str = String(value ?? "");
+  const len = str.length;
 
+  // baja tamaño en montos largos (sin cambiar tu layout)
+  const sizeClass = len > 18 ? "text-lg" : len > 14 ? "text-xl" : "text-2xl";
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 overflow-hidden">
+      <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">
+        {label}
+      </p>
+
+      {/* min-w-0 + truncate evita que el texto “reviente” el card */}
+      <div className="min-w-0">
+        <p
+          className={`leading-none tracking-tight font-extrabold tabular-nums ${sizeClass} ${valueClass} truncate`}
+          title={str}
+        >
+          {str}
+        </p>
+      </div>
+
+      {sub && <p className="text-xs text-slate-500 mt-2 truncate">{sub}</p>}
+    </div>
+  );
+};
 // ─── SaleStatusPill / ExpenseStatusPill ───────────────────────────────────────
 export const SaleStatusPill = ({ status }) => {
   const cfg = {

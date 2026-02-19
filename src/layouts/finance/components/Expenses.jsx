@@ -3,7 +3,6 @@
  * Registro de gastos ultra-rápido. Categoría sticky para múltiples registros.
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -37,6 +36,7 @@ import {
   SaleStatusPill,
   VoidReasonModal,
 } from "../components/FinanceAtoms";
+import { FinancePageHeader } from "./FinancePageHeader";
 
 // ─── RecentExpensesPanel ──────────────────────────────────────────────────────
 
@@ -124,7 +124,6 @@ const RecentExpensesPanel = ({ expenses, loading, onVoid }) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const ExpensesPage = () => {
-  const navigate = useNavigate();
   const today = todayStr();
 
   const [amount, setAmount] = useState("");
@@ -247,23 +246,18 @@ const ExpensesPage = () => {
 
       <div className="page-content space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => navigate("/finance")}
-              className="text-xs text-slate-400 hover:text-slate-600 mb-1 flex items-center gap-1"
-            >
-              ← Caja
-            </button>
-            <h1 className="text-2xl font-bold text-slate-900">Registrar gasto</h1>
-          </div>
-          {session?.status === "OPEN" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Caja abierta
-            </span>
-          )}
-        </div>
+        <FinancePageHeader
+          title="Registrar gasto"
+          backTo="/finance"
+          right={
+            session?.status === "OPEN" ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Caja abierta
+              </span>
+            ) : null
+          }
+        />
 
         <div className="grid lg:grid-cols-2 gap-5">
           {/* Form */}
@@ -277,7 +271,7 @@ const ExpensesPage = () => {
                 {categoryId && (
                   <button
                     onClick={() => setCategoryId(null)}
-                    className="text-xs text-slate-400 hover:text-slate-600"
+                    className="text-xs bg-slate-600 text-slate-400 hover:text-slate-600"
                   >
                     Limpiar
                   </button>
@@ -294,7 +288,7 @@ const ExpensesPage = () => {
                   onClick={() => navigate("/finance/catalogs")}
                   className="text-xs text-rose-600 hover:underline mt-2"
                 >
-                  + Crear categorías en Catálogos
+                  + Crear categorías en catálogos
                 </button>
               )}
             </div>

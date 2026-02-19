@@ -3,7 +3,6 @@
  * CRUD de categorías de egreso y actividades/campañas.
  */
 import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -19,6 +18,7 @@ import {
 } from "graphql/mutations/finance";
 import { useNotice } from "../../../hooks/useFinance";
 import { Notice, Skeleton } from "../components/FinanceAtoms";
+import { FinancePageHeader } from "./FinancePageHeader";
 
 // ─── AddForm ─────────────────────────────────────────────────────────────────
 
@@ -260,7 +260,6 @@ const ActivitiesSection = () => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const CatalogsPage = () => {
-  const navigate = useNavigate();
   const [tab, setTab] = useState("categories");
 
   const TABS = [
@@ -272,18 +271,12 @@ const CatalogsPage = () => {
     <DashboardLayout>
       <DashboardNavbar />
       <div className="page-content space-y-5">
-        <div>
-          <button
-            onClick={() => navigate("/finance")}
-            className="text-xs text-slate-400 hover:text-slate-600 mb-1 flex items-center gap-1"
-          >
-            ← Caja
-          </button>
-          <h1 className="text-2xl font-bold text-slate-900">Catálogos</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Configurá categorías de gastos y actividades para tus reportes.
-          </p>
-        </div>
+        <FinancePageHeader
+          title="Catálogos"
+          description="Configurá categorías de gastos y actividades para tus reportes."
+          backTo="/finance"
+          backLabel="Volver a la caja"
+        />
 
         {/* Tab switcher */}
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start">
