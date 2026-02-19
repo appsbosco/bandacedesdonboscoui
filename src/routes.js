@@ -31,7 +31,6 @@ import PaymentComponent from "layouts/Payments/Payments";
 import PaidIcon from "@mui/icons-material/Paid";
 import ParentsProfile from "layouts/parentsProfile";
 import Email from "layouts/email";
-import Attendance from "layouts/attendance";
 import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
 import Alumni from "layouts/Alumni/Alumni";
 import SchoolIcon from "@mui/icons-material/School";
@@ -61,6 +60,14 @@ import DocumentsPage from "components/documents/DocumentsPage";
 import NewDocumentPage from "components/documents/NewDocumentPage";
 import ParentDashboardPage from "layouts/parentDashboard";
 
+import FinanceDashboard from "layouts/finance/index";
+import SalesPage from "layouts/finance/components/SalesPage";
+import ExpensesPage from "layouts/finance/components/Expenses";
+import ReportsPage from "layouts/finance/components/ReportsPage";
+import CatalogsPage from "layouts/finance/components/Catalogs";
+
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+
 /**
  * Helpers
  * - Evitan duplicación
@@ -80,6 +87,13 @@ const collapse = ({ name, key, route, icon, component }) => ({
   component,
   noCollapse: true,
   href: null,
+});
+
+const routeOnly = ({ key, route, component }) => ({
+  type: "route",
+  key,
+  route,
+  component,
 });
 
 const title = (titleText, key) => ({
@@ -434,6 +448,45 @@ const items = {
       icon,
       component: <ColorGuardCampDashboard />,
     }),
+
+  // Finance
+  finance: () =>
+    collapse({
+      name: "Finanzas",
+      key: "finance",
+      route: "/finance",
+      icon: muiIcon12(AccountBalanceWalletIcon),
+      component: <FinanceDashboard />,
+    }),
+
+  // subrutas (solo router; NO menú)
+  financeSales: () =>
+    routeOnly({
+      key: "finance-sales",
+      route: "/finance/sales",
+      component: <SalesPage />,
+    }),
+
+  financeExpenses: () =>
+    routeOnly({
+      key: "finance-expenses",
+      route: "/finance/expenses",
+      component: <ExpensesPage />,
+    }),
+
+  financeReports: () =>
+    routeOnly({
+      key: "finance-reports",
+      route: "/finance/reports",
+      component: <ReportsPage />,
+    }),
+
+  financeCatalogs: () =>
+    routeOnly({
+      key: "finance-catalogs",
+      route: "/finance/catalogs",
+      component: <CatalogsPage />,
+    }),
 };
 
 /**
@@ -463,6 +516,13 @@ export const protectedRoutes = [
   title("Pagos", "pagos"),
   items.payments(),
   items.listaAlmuerzos(),
+
+  title("Finanzas", "finanzas"),
+  items.finance(),
+  items.financeSales(),
+  items.financeExpenses(),
+  items.financeReports(),
+  items.financeCatalogs(),
 
   items.attendanceTake(),
   items.attendanceHistory(),
@@ -525,8 +585,15 @@ export const adminRoutes = [
   items.documents(),
   items.newDocument(),
 
-  title("Pagos", "pagos"),
-  items.payments(),
+  // title("Pagos", "pagos"),
+  // items.payments(),
+
+  title("Finanzas", "finanzas"),
+  items.finance(),
+  items.financeSales(),
+  items.financeExpenses(),
+  items.financeReports(),
+  items.financeCatalogs(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -570,8 +637,11 @@ export const staffRoutes = [
   items.members(),
   items.events(),
 
-  title("Pagos", "pagos"),
-  items.payments(),
+  title("Finanzas", "finanzas"),
+  items.financeSales(),
+  items.financeExpenses(),
+  items.financeReports(),
+  items.financeCatalogs(),
 
   items.performanceAttendance(),
 
@@ -595,6 +665,15 @@ export const principalRoutes = [
   items.attendanceTake(),
   items.attendanceHistory(),
   items.performanceAttendance(),
+
+  title("Finanzas", "finanzas"),
+  items.finance(),
+  items.financeSales(),
+  items.financeExpenses(),
+  items.financeReports(),
+  items.financeCatalogs(),
+
+  title("Almuerzos", "almuerzos-pages"),
   items.almuerzos(),
 
   title("Cuenta", "account-pages"),

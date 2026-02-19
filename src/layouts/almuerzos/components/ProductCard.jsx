@@ -51,7 +51,7 @@ const ProductCard = React.memo(({ product, onAddToCart, onDelete, userRole }) =>
               label={closingMessage}
               size="small"
               className={`font-semibold ${
-                isAvailable ? "bg-green-500 text-white" : "bg-red-500 text-white"
+                isAvailable ? "bg-white text-black" : "bg-red-500 text-white"
               }`}
               sx={{
                 maxWidth: "100%",

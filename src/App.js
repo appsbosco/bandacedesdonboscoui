@@ -101,6 +101,7 @@ const PROTECTED_PREFIXES = [
   "/events",
   "/almuer",
   "/Profile",
+  "/finance",
 ];
 
 // Se mantiene tu lista (consolidada) de paths donde NO se muestra Sidenav:
@@ -267,6 +268,9 @@ export default function App() {
 
       // Mantener headers/categorías
       if (r.type === "title") return true;
+
+      if (r.type === "divider") return true; // opcional
+      if (r.type !== "collapse") return false;
 
       // Mantener links externos si algún día los usas
       const hasNavigation = Boolean(r.route || r.href);
