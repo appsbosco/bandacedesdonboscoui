@@ -81,3 +81,40 @@ export const updateCacheAfterDeleteProduct = (cache, { data: { deleteProduct } }
     console.warn("Cache update failed:", e);
   }
 };
+
+export const RECORD_PICKUP_MUTATION = gql`
+  mutation RecordPickup($orderId: ID!, $itemId: ID!, $quantityPickedUp: Int!, $pickedUpAt: String) {
+    recordPickup(
+      orderId: $orderId
+      itemId: $itemId
+      quantityPickedUp: $quantityPickedUp
+      pickedUpAt: $pickedUpAt
+    ) {
+      id
+      isCompleted
+      products {
+        id
+        quantity
+        quantityPickedUp
+        status
+        pickedUpAt
+      }
+    }
+  }
+`;
+
+export const COMPLETE_ORDER_MUTATION = gql`
+  mutation CompleteOrder($orderId: ID!) {
+    completeOrder(orderId: $orderId) {
+      id
+      isCompleted
+      products {
+        id
+        quantity
+        quantityPickedUp
+        status
+        pickedUpAt
+      }
+    }
+  }
+`;
