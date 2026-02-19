@@ -233,7 +233,7 @@ const Almuerzos = () => {
       <div className="overflow-x-hidden">
         <DashboardNavbar />
 
-        <div className="mb-6 mt-3">
+        <div className="mb-6 mt-6">
           <div className="relative overflow-hidden rounded-2xl border border-default-200 bg-white">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-10"

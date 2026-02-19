@@ -38,6 +38,7 @@ export const GET_CASH_SESSION_DETAIL = gql`
         cash
         sinpe
         card
+        transfer
         other
       }
     }
@@ -105,6 +106,7 @@ export const GET_DAILY_SUMMARY = gql`
           cash
           sinpe
           card
+          transfer
           other
         }
       }

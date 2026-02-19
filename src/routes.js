@@ -638,10 +638,13 @@ export const staffRoutes = [
   items.events(),
 
   title("Finanzas", "finanzas"),
+  items.finance(),
   items.financeSales(),
   items.financeExpenses(),
   items.financeReports(),
   items.financeCatalogs(),
+
+  title("Asistencia", "attendance-pages"),
 
   items.performanceAttendance(),
 

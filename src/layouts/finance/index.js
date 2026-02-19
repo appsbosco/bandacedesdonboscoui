@@ -438,7 +438,7 @@ const FinanceDashboard = () => {
       )}
 
       <div className="page-content space-y-6">
-        <div>
+        <div className="p-4 mt-1">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Caja del día</h1>
           <p className="text-sm text-slate-500 mt-1">{fmtBusinessDate(today)}</p>
         </div>

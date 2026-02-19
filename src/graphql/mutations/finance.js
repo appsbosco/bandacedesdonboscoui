@@ -26,6 +26,7 @@ export const CLOSE_CASH_SESSION = gql`
         cash
         sinpe
         card
+        transfer
         other
       }
     }

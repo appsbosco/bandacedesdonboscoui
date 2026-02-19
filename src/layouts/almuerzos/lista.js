@@ -812,8 +812,8 @@ const ListaAlmuerzos = () => {
 
       <div className="page-content space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 ">
+          <div className="p-4 mt-1">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Pedidos</h1>
             <p className="text-sm text-slate-500 mt-1">
               Gestioná retiros parciales y consultá reportes de preparación.
