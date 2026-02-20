@@ -1,6 +1,7 @@
 /**
  * FinanceDashboard — /finance
  * Dashboard de caja del día.
+ * Soporta movimientos SESSION (en caja) y EXTERNAL (fuera de caja).
  */
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -126,7 +127,7 @@ const OpenSessionModal = ({ onClose, onSuccess }) => {
 
 // ─── CloseSessionModal ────────────────────────────────────────────────────────
 
-const CloseSessionModal = ({ session, onClose, onSuccess }) => {
+const CloseSessionModal = ({ session, expectedCashNow, onClose, onSuccess }) => {
   const [countedCash, setCountedCash] = useState("");
   const [notes, setNotes] = useState("");
   const [notice, showNotice] = useNotice();
@@ -153,9 +154,11 @@ const CloseSessionModal = ({ session, onClose, onSuccess }) => {
     }
   };
 
-  const expected = session?.expectedTotalsByMethod?.cash || 0;
+  // ✅ Esperado físico = openingCash + net cash SESSION (CASH)
+  const expectedPhysical = expectedCashNow ?? 0;
+
   const counted = parseCRC(countedCash);
-  const diff = countedCash ? counted - expected : null;
+  const diff = countedCash ? counted - expectedPhysical : null;
 
   return (
     <div
@@ -167,7 +170,9 @@ const CloseSessionModal = ({ session, onClose, onSuccess }) => {
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-900">Cerrar caja</h3>
-            <p className="text-xs text-slate-500">Efectivo esperado: {formatCRC(expected)}</p>
+            <p className="text-xs text-slate-500">
+              Efectivo esperado (incluye vuelto): {formatCRC(expectedPhysical)}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -235,6 +240,10 @@ const MovementItem = ({ item, type, onVoid }) => {
   const isActive = item.status === "ACTIVE";
   const pmCfg = PAYMENT_LABELS[item.paymentMethod] || {};
 
+  // ✅ Compat: si no trae scope (registros viejos), inferimos con cashSessionId
+  const inferredScope = item.scope || (item.cashSessionId ? "SESSION" : "EXTERNAL");
+  const isExternal = inferredScope === "EXTERNAL";
+
   return (
     <div
       className={`border rounded-2xl p-4 transition-all ${
@@ -251,13 +260,22 @@ const MovementItem = ({ item, type, onVoid }) => {
             >
               {isExpense ? "Gasto" : "Venta"}
             </span>
+
+            {isExternal && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                Externo
+              </span>
+            )}
+
             {isExpense && item.categorySnapshot && (
               <span className="text-xs text-slate-500">{item.categorySnapshot}</span>
             )}
+
             <span className="text-xs text-slate-400">
               {pmCfg.emoji} {pmCfg.label}
             </span>
           </div>
+
           <p className="text-sm font-semibold text-slate-800 truncate">
             {isExpense
               ? item.concept
@@ -267,6 +285,7 @@ const MovementItem = ({ item, type, onVoid }) => {
           </p>
           <p className="text-xs text-slate-400 mt-0.5">{fmtDatetime(item.createdAt)}</p>
         </div>
+
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <p
             className={`text-base font-extrabold ${
@@ -279,9 +298,11 @@ const MovementItem = ({ item, type, onVoid }) => {
           <SaleStatusPill status={item.status} />
         </div>
       </div>
+
       {item.voidReason && (
         <p className="text-xs text-red-500 mt-1.5 italic">Motivo: {item.voidReason}</p>
       )}
+
       {isActive && (
         <button
           onClick={() => onVoid(item)}
@@ -303,7 +324,11 @@ const FinanceDashboard = () => {
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
-  const [movFilter, setMovFilter] = useState("all");
+
+  // ✅ Ahora tenemos 2 filtros: por tipo y por alcance (caja/externo)
+  const [movTypeFilter, setMovTypeFilter] = useState("all"); // all | sales | expenses
+  const [movScopeFilter, setMovScopeFilter] = useState("all"); // all | session | external
+
   const [notice, showNotice] = useNotice();
 
   const {
@@ -314,6 +339,7 @@ const FinanceDashboard = () => {
     variables: { businessDate: today },
     fetchPolicy: "cache-and-network",
   });
+
   const {
     data: salesData,
     loading: salesLoading,
@@ -322,6 +348,7 @@ const FinanceDashboard = () => {
     variables: { businessDate: today },
     fetchPolicy: "cache-and-network",
   });
+
   const {
     data: expensesData,
     loading: expensesLoading,
@@ -339,6 +366,7 @@ const FinanceDashboard = () => {
     },
     onError: (e) => showNotice("error", e.message),
   });
+
   const [voidExpense, { loading: veL }] = useMutation(VOID_EXPENSE, {
     onCompleted: () => {
       showNotice("success", "Gasto anulado.");
@@ -348,24 +376,72 @@ const FinanceDashboard = () => {
     onError: (e) => showNotice("error", e.message),
   });
 
-  const session = sessionData?.cashSessionDetail;
+  const session = sessionData?.cashSessionDetail || null;
   const sales = salesData?.salesByDate || [];
   const expenses = expensesData?.expensesByDate || [];
 
-  const totalSales = sales.filter((s) => s.status === "ACTIVE").reduce((a, s) => a + s.total, 0);
-  const totalExpenses = expenses
+  // ✅ Helpers de scope (compat con data vieja sin scope)
+  const scopeOf = (m) => m.scope || (m.cashSessionId ? "SESSION" : "EXTERNAL");
+  const isSessionMov = (m) => scopeOf(m) === "SESSION";
+  const isExternalMov = (m) => scopeOf(m) === "EXTERNAL";
+
+  // ── Totales (día completo: sesión + externos) ─────────────────────────────
+  const totalSalesAll = sales.filter((s) => s.status === "ACTIVE").reduce((a, s) => a + s.total, 0);
+
+  const totalExpensesAll = expenses
     .filter((e) => e.status === "ACTIVE")
     .reduce((a, e) => a + e.amount, 0);
-  const net = totalSales - totalExpenses;
 
+  const netAll = totalSalesAll - totalExpensesAll;
+
+  // ── Totales SESSION (solo lo que afecta el cierre) ────────────────────────
+  const totalSalesSession = sales
+    .filter((s) => s.status === "ACTIVE" && isSessionMov(s))
+    .reduce((a, s) => a + s.total, 0);
+
+  const totalExpensesSession = expenses
+    .filter((e) => e.status === "ACTIVE" && isSessionMov(e))
+    .reduce((a, e) => a + e.amount, 0);
+
+  const netSession = totalSalesSession - totalExpensesSession;
+
+  // ── Totales EXTERNAL (fuera de caja) ──────────────────────────────────────
+  const totalSalesExternal = sales
+    .filter((s) => s.status === "ACTIVE" && isExternalMov(s))
+    .reduce((a, s) => a + s.total, 0);
+
+  const totalExpensesExternal = expenses
+    .filter((e) => e.status === "ACTIVE" && isExternalMov(e))
+    .reduce((a, e) => a + e.amount, 0);
+
+  const netExternal = totalSalesExternal - totalExpensesExternal;
+
+  // ✅ Esperado físico para el cierre (solo CASH de SESSION + openingCash)
+  const cashSalesSession = sales
+    .filter((s) => s.status === "ACTIVE" && isSessionMov(s) && s.paymentMethod === "CASH")
+    .reduce((a, s) => a + s.total, 0);
+
+  const cashExpensesSession = expenses
+    .filter((e) => e.status === "ACTIVE" && isSessionMov(e) && e.paymentMethod === "CASH")
+    .reduce((a, e) => a + e.amount, 0);
+
+  const expectedCashNow = (session?.openingCash || 0) + (cashSalesSession - cashExpensesSession);
+
+  // ── Movimientos combinados ────────────────────────────────────────────────
   const allMovements = [
     ...sales.map((s) => ({ ...s, _type: "sale" })),
     ...expenses.map((e) => ({ ...e, _type: "expense" })),
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const filtered = allMovements.filter((m) => {
-    if (movFilter === "sales") return m._type === "sale";
-    if (movFilter === "expenses") return m._type === "expense";
+    // tipo
+    if (movTypeFilter === "sales" && m._type !== "sale") return false;
+    if (movTypeFilter === "expenses" && m._type !== "expense") return false;
+
+    // scope
+    if (movScopeFilter === "session" && !isSessionMov(m)) return false;
+    if (movScopeFilter === "external" && !isExternalMov(m)) return false;
+
     return true;
   });
 
@@ -409,6 +485,7 @@ const FinanceDashboard = () => {
   return (
     <DashboardLayout>
       <DashboardNavbar />
+
       {showOpenModal && (
         <OpenSessionModal
           onClose={() => setShowOpenModal(false)}
@@ -418,9 +495,11 @@ const FinanceDashboard = () => {
           }}
         />
       )}
+
       {showCloseModal && session && (
         <CloseSessionModal
           session={session}
+          expectedCashNow={expectedCashNow}
           onClose={() => setShowCloseModal(false)}
           onSuccess={() => {
             showNotice("success", "Caja cerrada.");
@@ -428,6 +507,7 @@ const FinanceDashboard = () => {
           }}
         />
       )}
+
       {voidTarget && (
         <VoidReasonModal
           title={`Anular ${voidTarget._type === "sale" ? "venta" : "gasto"}`}
@@ -439,7 +519,7 @@ const FinanceDashboard = () => {
 
       <div className="page-content space-y-6">
         <div className="p-4 mt-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Caja del día</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Caja y movimientos</h1>
           <p className="text-sm text-slate-500 mt-1">{fmtBusinessDate(today)}</p>
         </div>
 
@@ -454,7 +534,8 @@ const FinanceDashboard = () => {
             <div>
               <p className="text-lg font-bold text-slate-900">Caja no abierta</p>
               <p className="text-sm text-slate-500 mt-1">
-                Abrí la caja para registrar movimientos del día.
+                Podés registrar <b>movimientos externos</b> sin abrir caja. Abrí la caja solo si vas
+                a manejar <b>efectivo físico</b> y necesitás cierre/arqueo.
               </p>
             </div>
             <button
@@ -490,6 +571,7 @@ const FinanceDashboard = () => {
                   Abrió: {fmtDatetime(session.openedAt)}
                 </p>
               </div>
+
               {session.status === "OPEN" && (
                 <button
                   onClick={() => setShowCloseModal(true)}
@@ -499,26 +581,93 @@ const FinanceDashboard = () => {
                 </button>
               )}
             </div>
+
+            {/* Totales del día (todos) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatCard
-                label="Ingresos"
-                value={formatCRC(totalSales)}
+                label="Ingresos (día)"
+                value={formatCRC(totalSalesAll)}
                 valueClass="text-emerald-700"
               />
               <StatCard
-                label="Egresos"
-                value={formatCRC(totalExpenses)}
+                label="Egresos (día)"
+                value={formatCRC(totalExpensesAll)}
                 valueClass="text-red-600"
               />
-
               <div className="col-span-2 sm:col-span-1">
                 <StatCard
-                  label="Neto"
-                  value={formatCRC(net)}
-                  valueClass={net >= 0 ? "text-slate-900" : "text-red-600"}
+                  label="Neto (día)"
+                  value={formatCRC(netAll)}
+                  valueClass={netAll >= 0 ? "text-slate-900" : "text-red-600"}
                 />
               </div>
             </div>
+
+            {/* Breakdown: Caja vs Externos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-widest">
+                  En caja (SESSION)
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[11px] text-emerald-800/70 font-bold">Ing</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(totalSalesSession)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-emerald-800/70 font-bold">Egr</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(totalExpensesSession)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-emerald-800/70 font-bold">Neto</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(netSession)}
+                    </p>
+                  </div>
+                </div>
+
+                {session.status === "OPEN" && (
+                  <p className="text-xs text-emerald-900/70 mt-2">
+                    Efectivo esperado para cierre: <b>{formatCRC(expectedCashNow)}</b>
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                <p className="text-[11px] font-extrabold text-indigo-800 uppercase tracking-widest">
+                  Externos (EXTERNAL)
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[11px] text-indigo-800/70 font-bold">Ing</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(totalSalesExternal)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-indigo-800/70 font-bold">Egr</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(totalExpensesExternal)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-indigo-800/70 font-bold">Neto</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(netExternal)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-indigo-900/70 mt-2">
+                  No afectan el arqueo/cierre de caja.
+                </p>
+              </div>
+            </div>
+
+            {/* Resultado de cierre (si ya cerró) */}
             {session.status === "CLOSED" && session.difference !== null && (
               <div
                 className={`rounded-xl px-4 py-2 text-sm font-semibold text-center ${
@@ -559,23 +708,47 @@ const FinanceDashboard = () => {
             <h2 className="text-base font-bold text-slate-900">Movimientos de hoy</h2>
             <span className="text-xs text-slate-400">{filtered.length} registros</span>
           </div>
+
+          {/* Filters */}
           <div className="px-5 py-3 border-b border-slate-100 flex gap-2 overflow-x-auto">
             {[
               ["all", "Todos"],
               ["sales", "Ventas"],
               ["expenses", "Gastos"],
             ].map(([id, label]) => (
-              <FilterPill key={id} active={movFilter === id} onClick={() => setMovFilter(id)}>
+              <FilterPill
+                key={id}
+                active={movTypeFilter === id}
+                onClick={() => setMovTypeFilter(id)}
+              >
+                {label}
+              </FilterPill>
+            ))}
+
+            <div className="w-px bg-slate-200 mx-1" />
+
+            {[
+              ["all", "Todo (scope)"],
+              ["session", "Caja"],
+              ["external", "Externos"],
+            ].map(([id, label]) => (
+              <FilterPill
+                key={id}
+                active={movScopeFilter === id}
+                onClick={() => setMovScopeFilter(id)}
+              >
                 {label}
               </FilterPill>
             ))}
           </div>
+
           {(salesLoading || expensesLoading) && (
             <div className="p-5 space-y-3">
               <Skeleton />
               <Skeleton />
             </div>
           )}
+
           {!salesLoading && !expensesLoading && filtered.length === 0 && (
             <div className="py-12 text-center">
               <p className="text-3xl mb-2">📭</p>
@@ -583,6 +756,7 @@ const FinanceDashboard = () => {
               <p className="text-xs text-slate-400 mt-1">Registrá una venta o gasto.</p>
             </div>
           )}
+
           {!salesLoading && !expensesLoading && filtered.length > 0 && (
             <div className="p-4 space-y-3">
               {filtered.map((item) => (
@@ -592,16 +766,21 @@ const FinanceDashboard = () => {
           )}
         </div>
       </div>
+
       <Footer />
     </DashboardLayout>
   );
 };
 
 export default FinanceDashboard;
+
 OpenSessionModal.propTypes = { onClose: PropTypes.func, onSuccess: PropTypes.func };
+
 CloseSessionModal.propTypes = {
   session: PropTypes.object,
+  expectedCashNow: PropTypes.number,
   onClose: PropTypes.func,
   onSuccess: PropTypes.func,
 };
+
 MovementItem.propTypes = { item: PropTypes.object, type: PropTypes.string, onVoid: PropTypes.func };

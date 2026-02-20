@@ -84,7 +84,8 @@ export function monthName(month) {
 export const PAYMENT_LABELS = {
   CASH: { label: "Efectivo", emoji: "💵", color: "bg-emerald-100 text-emerald-700" },
   SINPE: { label: "SINPE", emoji: "📱", color: "bg-blue-100 text-blue-700" },
-  // CARD: { label: "Tarjeta", emoji: "💳", color: "bg-purple-100 text-purple-700" },
+  CARD: { emoji: "💳", label: "Tarjeta", color: "violet" },
+  TRANSFER: { emoji: "🏦", label: "Transferencia", color: "indigo" },
   // OTHER: { label: "Otro", emoji: "🔁", color: "bg-slate-100 text-slate-600" },
 };
 

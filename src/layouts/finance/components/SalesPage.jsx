@@ -1,6 +1,7 @@
 /**
  * SalesPage — /finance/sales
  * Registro de ventas ultra-rápido. Dos modos: Venta rápida / Por productos.
+ *
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
@@ -34,6 +35,7 @@ import {
   SaleStatusPill,
 } from "../components/FinanceAtoms";
 import { FinancePageHeader } from "./FinancePageHeader";
+
 /**
  * UI helpers (ligeros, para estructura y consistencia visual)
  */
@@ -100,6 +102,7 @@ const RecentSalesPanel = ({ sales, loading }) => {
       {sales.slice(0, 10).map((s) => {
         const pmCfg = PAYMENT_LABELS[s.paymentMethod] || {};
         const isActive = s.status === "ACTIVE";
+        const isExternal = s.scope === "EXTERNAL";
 
         return (
           <div
@@ -110,11 +113,20 @@ const RecentSalesPanel = ({ sales, loading }) => {
             ].join(" ")}
           >
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">
-                {s.lineItems?.length
-                  ? s.lineItems.map((l) => `${l.nameSnapshot} ×${l.quantity}`).join(", ")
-                  : "Venta rápida"}
-              </p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-sm font-semibold text-slate-900 truncate">
+                  {s.lineItems?.length
+                    ? s.lineItems.map((l) => `${l.nameSnapshot} ×${l.quantity}`).join(", ")
+                    : "Venta rápida"}
+                </p>
+
+                {isExternal && (
+                  <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Externo
+                  </span>
+                )}
+              </div>
+
               <p className="text-xs font-semibold text-slate-500 mt-0.5">
                 {pmCfg.emoji} {pmCfg.label} · {fmtDatetime(s.createdAt)}
               </p>
@@ -251,6 +263,10 @@ ItemizedLineEditor.propTypes = { lines: PropTypes.array, onChange: PropTypes.fun
 const SalesPage = () => {
   const today = todayStr();
 
+  // ✅ Un solo selector: Externo = true/false
+  // OFF = SESSION (afecta caja) / ON = EXTERNAL (no afecta caja)
+  const [isExternal, setIsExternal] = useState(false);
+
   const [mode, setMode] = useState("quick"); // quick | itemized
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -259,13 +275,16 @@ const SalesPage = () => {
   const [notice, showNotice] = useNotice();
 
   const amountRef = useRef(null);
+  const scopeInitRef = useRef(false);
 
   const { data: activitiesData, loading: activitiesLoading } = useQuery(GET_ACTIVITIES, {
     variables: { onlyActive: true },
   });
+
   const { data: sessionData } = useQuery(GET_CASH_SESSION_DETAIL, {
     variables: { businessDate: today },
   });
+
   const {
     data: salesData,
     loading: salesLoading,
@@ -275,26 +294,55 @@ const SalesPage = () => {
     fetchPolicy: "cache-and-network",
   });
 
-  const session = sessionData?.cashSessionDetail;
+  const session = sessionData?.cashSessionDetail || null;
+  const canUseSession = session?.status === "OPEN";
+
   const activities = activitiesData?.activities || [];
   const sales = salesData?.salesByDate || [];
 
   const [recordSale, { loading }] = useMutation(RECORD_SALE);
 
+  // Total calculado
   const computedTotal =
     mode === "itemized"
       ? lines.reduce((a, l) => a + parseCRC(l.unitPriceSnapshot) * (l.quantity || 1), 0)
       : parseCRC(amount);
 
+  const userTouchedScopeRef = useRef(false);
+
+  useEffect(() => {
+    if (sessionData === undefined) return;
+
+    if (!userTouchedScopeRef.current) {
+      setIsExternal(!canUseSession);
+      return;
+    }
+
+    // Si el usuario lo tocó, pero la caja ya no está abierta, forzar EXTERNAL
+    if (!canUseSession) setIsExternal(true);
+  }, [sessionData, canUseSession]);
+
   const handleSubmit = useCallback(async () => {
     if (computedTotal <= 0) return showNotice("error", "El monto debe ser mayor a ₡0.");
     if (!paymentMethod) return showNotice("error", "Seleccioná un método de pago.");
 
+    const scope = isExternal ? "EXTERNAL" : "SESSION";
+
+    // ✅ UX: SESSION requiere caja abierta
+    if (scope === "SESSION" && !canUseSession) {
+      return showNotice("error", "No hay caja abierta para registrar esta venta como de caja.");
+    }
+
     const input = {
       businessDate: today,
       paymentMethod,
+      scope, // ✅ NUEVO
+
       activityId: activityId || undefined,
-      cashSessionId: session?.id || undefined,
+
+      // ✅ Solo se envía cashSessionId cuando es SESSION
+      cashSessionId: scope === "SESSION" ? session?.id || undefined : undefined,
+
       total: computedTotal,
     };
 
@@ -302,6 +350,7 @@ const SalesPage = () => {
       const validLines = lines.filter((l) => l.nameSnapshot && parseCRC(l.unitPriceSnapshot) > 0);
       if (validLines.length === 0)
         return showNotice("error", "Agregá al menos un producto con nombre y precio.");
+
       input.lineItems = validLines.map((l) => ({
         nameSnapshot: l.nameSnapshot,
         unitPriceSnapshot: parseCRC(l.unitPriceSnapshot),
@@ -330,6 +379,8 @@ const SalesPage = () => {
     recordSale,
     refetch,
     showNotice,
+    isExternal,
+    canUseSession,
   ]);
 
   useEffect(() => {
@@ -345,7 +396,7 @@ const SalesPage = () => {
           title="Registrar venta"
           backTo="/finance"
           right={
-            session?.status === "OPEN" ? (
+            canUseSession ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Caja abierta
@@ -398,6 +449,53 @@ const SalesPage = () => {
                   />
                 </div>
               )}
+
+              {/* ✅ External toggle (single selector) */}
+              <div className="mt-5 border border-slate-200 rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">
+                      Externo
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      No afecta la caja (aunque esté abierta)
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {isExternal
+                        ? "Se registrará como EXTERNO."
+                        : "Se registrará como CAJA y entra en el cierre."}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isExternal && !canUseSession) return;
+                      userTouchedScopeRef.current = true;
+                      setIsExternal((v) => !v);
+                    }}
+                    disabled={!canUseSession && isExternal}
+                    className={`shrink-0 px-3 py-2 rounded-xl border text-sm font-bold transition-all ${
+                      isExternal
+                        ? " bg-green-400 border-indigo-200 text-white"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                    } ${!canUseSession && isExternal ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={
+                      !canUseSession && isExternal
+                        ? "No hay caja abierta. Solo se permiten movimientos externos."
+                        : ""
+                    }
+                  >
+                    {isExternal ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                {!canUseSession && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-3">
+                    ⚠️ No hay caja abierta: las ventas se registran como <b>EXTERNOS</b>.
+                  </p>
+                )}
+              </div>
 
               {/* Amount or line items */}
               <div className="mt-5">

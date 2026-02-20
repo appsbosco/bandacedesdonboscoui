@@ -42,6 +42,7 @@ export const RECORD_SALE = gql`
       source
       total
       status
+      scope
       createdAt
       lineItems {
         id
@@ -75,6 +76,7 @@ export const RECORD_EXPENSE = gql`
       amount
       paymentMethod
       categorySnapshot
+      scope
       categoryId
       isAssetPurchase
       purpose

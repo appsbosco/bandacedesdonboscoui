@@ -23,17 +23,15 @@ export const GET_ACTIVITIES = gql`
 `;
 
 export const GET_CASH_SESSION_DETAIL = gql`
-  query CashSessionDetail($businessDate: String, $cashSessionId: ID) {
-    cashSessionDetail(businessDate: $businessDate, cashSessionId: $cashSessionId) {
+  query GetCashSessionDetail($businessDate: String!) {
+    cashSessionDetail(businessDate: $businessDate) {
       id
       businessDate
       status
       openedAt
       closedAt
       openingCash
-      countedCash
       difference
-      notes
       expectedTotalsByMethod {
         cash
         sinpe
@@ -54,6 +52,8 @@ export const GET_SALES_BY_DATE = gql`
       source
       total
       status
+      scope
+      cashSessionId
       activityId
       voidReason
       createdAt
