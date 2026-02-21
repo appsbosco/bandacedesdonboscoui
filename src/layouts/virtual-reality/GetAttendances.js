@@ -71,7 +71,55 @@ const parseToDate = (value) => {
 const formatDateString = (dateValue) => {
   const date = parseToDate(dateValue);
   if (!date) return "";
-  return date.toLocaleDateString("es-CR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("es-CR", {
+    timeZone: "America/Costa_Rica",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const CR_TIMEZONE = "America/Costa_Rica";
+
+const getYmdInCR = (dateValue) => {
+  const date = parseToDate(dateValue);
+  if (!date) return null;
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CR_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+
+  if (!year || !month || !day) return null;
+  return `${year}-${month}-${day}`;
+};
+
+// Fecha "base" del record (la misma lógica que usás para mostrar)
+const getRecordRawDate = (attendance) => {
+  return (
+    attendance?.legacyDate ||
+    attendance?.createdAt ||
+    attendance?.session?.dateNormalized ||
+    attendance?.session?.date ||
+    null
+  );
+};
+
+// Convierte la fecha del DatePicker a YYYY-MM-DD (sin timezone; solo la fecha elegida)
+const getPickerYmd = (pickerDate) => {
+  if (!(pickerDate instanceof Date)) return null;
+
+  const y = pickerDate.getFullYear();
+  const m = String(pickerDate.getMonth() + 1).padStart(2, "0");
+  const d = String(pickerDate.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${d}`;
 };
 
 const getAttendanceConfig = (status) => {
@@ -95,14 +143,12 @@ const getMoodConfig = (percentage) => {
 };
 
 const getDisplayDateFromRecord = (attendance) => {
-  const rawDate =
-    attendance?.session?.date || attendance?.legacyDate || attendance?.createdAt || null;
+  const rawDate = getRecordRawDate(attendance);
   return rawDate ? formatDateString(rawDate) : "";
 };
 
 const getSortDateValue = (attendance) => {
-  const rawDate =
-    attendance?.session?.date || attendance?.legacyDate || attendance?.createdAt || null;
+  const rawDate = getRecordRawDate(attendance);
   const d = parseToDate(rawDate);
   return d ? d.getTime() : 0;
 };
@@ -629,18 +675,24 @@ const AttendanceHistoryTable = () => {
   const isAdmin = String(currentUser?.role || "").toUpperCase() === "ADMIN";
   const userInstrument = currentUser?.instrument;
 
-  const dateFilter = useMemo(() => {
-    if (!selectedDate) return {};
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    return { startDate: startOfDay.toISOString(), endDate: endOfDay.toISOString() };
-  }, [selectedDate]);
+  // const dateFilter = useMemo(() => {
+  //   if (!selectedDate) return {};
+  //   const startOfDay = new Date(selectedDate);
+  //   startOfDay.setHours(0, 0, 0, 0);
+  //   const endOfDay = new Date(selectedDate);
+  //   endOfDay.setHours(23, 59, 59, 999);
+  //   return { startDate: startOfDay.toISOString(), endDate: endOfDay.toISOString() };
+  // }, [selectedDate]);
+
+  // const { loading, error, data } = useQuery(GET_ALL_ATTENDANCES_REHEARSAL, {
+  //   variables: { limit: 1000, offset: 0, filter: dateFilter },
+  //   fetchPolicy: "network-only",
+  //   notifyOnNetworkStatusChange: true,
+  // });
 
   const { loading, error, data } = useQuery(GET_ALL_ATTENDANCES_REHEARSAL, {
-    variables: { limit: 1000, offset: 0, filter: dateFilter },
-    fetchPolicy: "cache-and-network",
+    variables: { limit: 1000, offset: 0 },
+    fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
   });
 
@@ -704,8 +756,29 @@ const AttendanceHistoryTable = () => {
     return records;
   }, [accessibleRecords, statsByUserId]);
 
+  // const filteredRecords = useMemo(() => {
+  //   const term = searchTerm ? searchTerm.toLowerCase() : "";
+  //   return processedRecords.filter((record) => {
+  //     const searchMatch =
+  //       !searchTerm ||
+  //       record.userName.toLowerCase().includes(term) ||
+  //       String(record.user?.instrument || "")
+  //         .toLowerCase()
+  //         .includes(term);
+
+  //     const statusMatch = filters.status === "all" || record.status === filters.status;
+  //     const instrumentMatch =
+  //       filters.instrument === "all" || record.user?.instrument === filters.instrument;
+  //     const sectionMatch = filters.section === "all" || record.session?.section === filters.section;
+
+  //     return searchMatch && statusMatch && instrumentMatch && sectionMatch;
+  //   });
+  // }, [processedRecords, searchTerm, filters.status, filters.instrument, filters.section]);
+
   const filteredRecords = useMemo(() => {
     const term = searchTerm ? searchTerm.toLowerCase() : "";
+    const selectedYmd = selectedDate ? getPickerYmd(selectedDate) : null;
+
     return processedRecords.filter((record) => {
       const searchMatch =
         !searchTerm ||
@@ -719,9 +792,19 @@ const AttendanceHistoryTable = () => {
         filters.instrument === "all" || record.user?.instrument === filters.instrument;
       const sectionMatch = filters.section === "all" || record.session?.section === filters.section;
 
-      return searchMatch && statusMatch && instrumentMatch && sectionMatch;
+      const recordYmdCR = getYmdInCR(getRecordRawDate(record));
+      const dateMatch = !selectedYmd || recordYmdCR === selectedYmd;
+
+      return searchMatch && statusMatch && instrumentMatch && sectionMatch && dateMatch;
     });
-  }, [processedRecords, searchTerm, filters.status, filters.instrument, filters.section]);
+  }, [
+    processedRecords,
+    searchTerm,
+    filters.status,
+    filters.instrument,
+    filters.section,
+    selectedDate,
+  ]);
 
   const stats = useMemo(() => {
     return {

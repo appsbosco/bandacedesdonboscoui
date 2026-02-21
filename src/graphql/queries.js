@@ -630,6 +630,7 @@ export const GET_ALL_ATTENDANCES_REHEARSAL = gql`
         id
         date
         section
+        dateNormalized
         takenBy {
           id
           name
