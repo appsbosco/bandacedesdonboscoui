@@ -1,9 +1,9 @@
 /**
- * ReportsPage — /finance/reports
+ * ReportsPage.jsx — /finance/reports
+ * Tabs: Diario / Rango / Mensual
  */
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-
 import { useLazyQuery } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -21,35 +21,30 @@ import {
 } from "utils/finance";
 import { Skeleton, StatCard } from "./FinanceAtoms";
 import { FinancePageHeader } from "./FinancePageHeader";
-/**
- * UI helpers
- */
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+
 const SectionCard = ({ title, children }) => (
   <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5">
-    {title ? (
+    {title && (
       <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-3">
         {title}
       </p>
-    ) : null}
+    )}
     {children}
   </div>
 );
-
-SectionCard.propTypes = {
-  title: PropTypes.string,
-  children: PropTypes.node.isRequired,
-};
+SectionCard.propTypes = { title: PropTypes.string, children: PropTypes.node.isRequired };
 
 const RowItem = ({ left, right, subLeft }) => (
   <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:border-slate-300 transition-colors">
     <div className="min-w-0">
       <p className="text-sm font-semibold text-slate-800 truncate">{left}</p>
-      {subLeft ? <p className="text-xs text-slate-500 mt-0.5 truncate">{subLeft}</p> : null}
+      {subLeft && <p className="text-xs text-slate-500 mt-0.5 truncate">{subLeft}</p>}
     </div>
     <div className="text-right shrink-0">{right}</div>
   </div>
 );
-
 RowItem.propTypes = {
   left: PropTypes.string.isRequired,
   right: PropTypes.node.isRequired,
@@ -58,7 +53,6 @@ RowItem.propTypes = {
 
 const MethodBreakdown = ({ items, label }) => {
   if (!items?.length) return null;
-
   return (
     <SectionCard title={label}>
       <div className="space-y-2">
@@ -82,10 +76,19 @@ const MethodBreakdown = ({ items, label }) => {
     </SectionCard>
   );
 };
+MethodBreakdown.propTypes = {
+  label: PropTypes.string.isRequired,
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      method: PropTypes.string.isRequired,
+      total: PropTypes.number.isRequired,
+      count: PropTypes.number.isRequired,
+    })
+  ),
+};
 
 const CategoryBreakdown = ({ items }) => {
   if (!items?.length) return null;
-
   return (
     <SectionCard title="Egresos por categoría">
       <div className="space-y-2">
@@ -109,10 +112,18 @@ const CategoryBreakdown = ({ items }) => {
     </SectionCard>
   );
 };
+CategoryBreakdown.propTypes = {
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      categorySnapshot: PropTypes.string.isRequired,
+      totalAmount: PropTypes.number.isRequired,
+      count: PropTypes.number.isRequired,
+    })
+  ),
+};
 
 const ProductBreakdown = ({ items }) => {
   if (!items?.length) return null;
-
   return (
     <SectionCard title="Ventas por producto">
       <div className="space-y-2">
@@ -132,8 +143,75 @@ const ProductBreakdown = ({ items }) => {
     </SectionCard>
   );
 };
+ProductBreakdown.propTypes = {
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      totalUnits: PropTypes.number.isRequired,
+      totalRevenue: PropTypes.number.isRequired,
+    })
+  ),
+};
 
-// ─── Tabs ─────────────────────────────────────────────────────────────────────
+const DateInput = ({ label, value, onChange }) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-semibold text-slate-600">{label}</label>
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
+    />
+  </div>
+);
+DateInput.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+};
+
+const QuickDateBtn = ({ label, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="px-3 py-1.5 rounded-full border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
+  >
+    {label}
+  </button>
+);
+QuickDateBtn.propTypes = { label: PropTypes.string, onClick: PropTypes.func };
+
+const FetchButton = ({ onClick, loading, label = "Ver resumen" }) => (
+  <button
+    onClick={onClick}
+    disabled={loading}
+    className="w-full sm:w-auto inline-flex justify-center items-center px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-extrabold disabled:opacity-50 active:scale-95 transition-all"
+  >
+    {loading ? "Cargando…" : label}
+  </button>
+);
+FetchButton.propTypes = {
+  onClick: PropTypes.func,
+  loading: PropTypes.bool,
+  label: PropTypes.string,
+};
+
+const EmptyState = ({ icon, title, subtitle }) => (
+  <SectionCard>
+    <div className="py-8 text-center">
+      <p className="text-4xl mb-2">{icon}</p>
+      <p className="text-sm font-semibold text-slate-800">{title}</p>
+      {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+    </div>
+  </SectionCard>
+);
+EmptyState.propTypes = {
+  icon: PropTypes.string,
+  title: PropTypes.string,
+  subtitle: PropTypes.string,
+};
+
+// ─── DailySummaryTab ──────────────────────────────────────────────────────────
 
 const DailySummaryTab = () => {
   const [date, setDate] = useState(todayStr());
@@ -142,53 +220,30 @@ const DailySummaryTab = () => {
   });
   const summary = data?.dailySummary;
 
+  const yesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <SectionCard title="Filtro">
         <div className="grid grid-cols-1 sm:grid-cols-[260px_auto] gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600">Fecha</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
-            />
-
+          <div>
+            <DateInput label="Fecha" value={date} onChange={setDate} />
             <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDate(todayStr())}
-                className="px-3 py-1.5 rounded-full border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-              >
-                Hoy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const d = new Date();
-                  d.setDate(d.getDate() - 1);
-                  setDate(d.toISOString().slice(0, 10));
-                }}
-                className="px-3 py-1.5 rounded-full border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-              >
-                Ayer
-              </button>
+              <QuickDateBtn label="Hoy" onClick={() => setDate(todayStr())} />
+              <QuickDateBtn label="Ayer" onClick={() => setDate(yesterday())} />
             </div>
           </div>
-
-          <button
+          <FetchButton
             onClick={() => fetch({ variables: { businessDate: date } })}
-            disabled={loading}
-            className="w-full sm:w-auto inline-flex justify-center items-center px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-extrabold disabled:opacity-50 active:scale-95 transition-all"
-          >
-            {loading ? "Cargando…" : "Ver resumen"}
-          </button>
+            loading={loading}
+          />
         </div>
       </SectionCard>
 
-      {/* States */}
       {loading && (
         <div className="space-y-3">
           <Skeleton />
@@ -201,19 +256,11 @@ const DailySummaryTab = () => {
         </SectionCard>
       )}
       {!loading && !called && (
-        <SectionCard>
-          <div className="py-8 text-center">
-            <p className="text-4xl mb-2">📊</p>
-            <p className="text-sm font-semibold text-slate-800">Seleccioná una fecha</p>
-            <p className="text-sm text-slate-500 mt-1">Luego pulsá “Ver resumen”.</p>
-          </div>
-        </SectionCard>
+        <EmptyState icon="📊" title="Seleccioná una fecha" subtitle='Luego pulsá "Ver resumen".' />
       )}
 
-      {/* Results */}
       {!loading && summary && (
         <div className="space-y-6">
-          {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
               label="Ingresos"
@@ -233,7 +280,6 @@ const DailySummaryTab = () => {
             />
           </div>
 
-          {/* Caja */}
           {summary.session && (
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
@@ -245,14 +291,11 @@ const DailySummaryTab = () => {
                     {fmtBusinessDate(summary.businessDate)}
                   </p>
                 </div>
-
                 {summary.session.difference != null && (
                   <span
-                    className={
-                      Math.abs(summary.session.difference) < 1
-                        ? "inline-flex items-center rounded-full bg-emerald-600 px-3 py-1 text-xs font-extrabold text-white"
-                        : "inline-flex items-center rounded-full bg-red-600 px-3 py-1 text-xs font-extrabold text-white"
-                    }
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-extrabold text-white ${
+                      Math.abs(summary.session.difference) < 1 ? "bg-emerald-600" : "bg-red-600"
+                    }`}
                   >
                     {Math.abs(summary.session.difference) < 1
                       ? "✓ Cuadra"
@@ -260,7 +303,6 @@ const DailySummaryTab = () => {
                   </span>
                 )}
               </div>
-
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-slate-200 p-3">
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
@@ -270,7 +312,6 @@ const DailySummaryTab = () => {
                     {formatCRC(summary.session.openingCash)}
                   </p>
                 </div>
-
                 {summary.session.countedCash != null && (
                   <div className="rounded-xl border border-slate-200 p-3">
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
@@ -281,19 +322,17 @@ const DailySummaryTab = () => {
                     </p>
                   </div>
                 )}
-
                 {summary.session.difference != null && (
                   <div className="rounded-xl border border-slate-200 p-3">
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                       Diferencia
                     </p>
                     <p
-                      className={
-                        "mt-1 text-base font-extrabold tabular-nums " +
-                        (Math.abs(summary.session.difference) < 1
+                      className={`mt-1 text-base font-extrabold tabular-nums ${
+                        Math.abs(summary.session.difference) < 1
                           ? "text-emerald-700"
-                          : "text-red-600")
-                      }
+                          : "text-red-600"
+                      }`}
                     >
                       {formatCRC(summary.session.difference)}
                     </p>
@@ -303,12 +342,10 @@ const DailySummaryTab = () => {
             </div>
           )}
 
-          {/* Desgloses */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <MethodBreakdown items={summary.salesByMethod} label="Ingresos por método" />
             <MethodBreakdown items={summary.expensesByMethod} label="Egresos por método" />
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <CategoryBreakdown items={summary.expensesByCategory} />
             <ProductBreakdown items={summary.productSales} />
@@ -319,6 +356,8 @@ const DailySummaryTab = () => {
   );
 };
 
+// ─── RangeSummaryTab ──────────────────────────────────────────────────────────
+
 const RangeSummaryTab = () => {
   const [dateFrom, setDateFrom] = useState(weekAgoStr());
   const [dateTo, setDateTo] = useState(todayStr());
@@ -327,6 +366,13 @@ const RangeSummaryTab = () => {
     fetchPolicy: "network-only",
   });
   const summary = data?.rangeSummary;
+
+  const setThisMonth = () => {
+    const now = new Date();
+    setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10));
+    setDateTo(todayStr());
+    setRangeError(null);
+  };
 
   const run = () => {
     if (dateFrom > dateTo) {
@@ -339,70 +385,28 @@ const RangeSummaryTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <SectionCard title="Filtro">
         <div className="grid grid-cols-1 sm:grid-cols-[260px_260px_auto] gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600">Desde</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-600">Hasta</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
-            />
+          <DateInput label="Desde" value={dateFrom} onChange={setDateFrom} />
+          <div>
+            <DateInput label="Hasta" value={dateTo} onChange={setDateTo} />
             <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
+              <QuickDateBtn
+                label="Últimos 7 días"
                 onClick={() => {
                   setDateFrom(weekAgoStr());
                   setDateTo(todayStr());
                   setRangeError(null);
                 }}
-                className="px-3 py-1.5 rounded-full border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-              >
-                Últimos 7 días
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const first = new Date(now.getFullYear(), now.getMonth(), 1)
-                    .toISOString()
-                    .slice(0, 10);
-                  setDateFrom(first);
-                  setDateTo(todayStr());
-                  setRangeError(null);
-                }}
-                className="px-3 py-1.5 rounded-full border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
-              >
-                Mes actual
-              </button>
+              />
+              <QuickDateBtn label="Mes actual" onClick={setThisMonth} />
             </div>
           </div>
-
-          <button
-            onClick={run}
-            disabled={loading}
-            className="w-full sm:w-auto inline-flex justify-center items-center px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-extrabold disabled:opacity-50 active:scale-95 transition-all"
-          >
-            {loading ? "Cargando…" : "Generar reporte"}
-          </button>
+          <FetchButton onClick={run} loading={loading} label="Generar reporte" />
         </div>
-
         {rangeError && <p className="text-xs text-red-600 font-semibold mt-3">{rangeError}</p>}
       </SectionCard>
 
-      {/* States */}
       {loading && (
         <div className="space-y-3">
           <Skeleton />
@@ -415,16 +419,13 @@ const RangeSummaryTab = () => {
         </SectionCard>
       )}
       {!loading && !called && (
-        <SectionCard>
-          <div className="py-8 text-center">
-            <p className="text-4xl mb-2">📈</p>
-            <p className="text-sm font-semibold text-slate-800">Seleccioná un rango</p>
-            <p className="text-sm text-slate-500 mt-1">Luego pulsá “Generar reporte”.</p>
-          </div>
-        </SectionCard>
+        <EmptyState
+          icon="📈"
+          title="Seleccioná un rango"
+          subtitle='Luego pulsá "Generar reporte".'
+        />
       )}
 
-      {/* Results */}
       {!loading && summary && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -450,7 +451,6 @@ const RangeSummaryTab = () => {
             <MethodBreakdown items={summary.salesByMethod} label="Ingresos por método" />
             <MethodBreakdown items={summary.expensesByMethod} label="Egresos por método" />
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <CategoryBreakdown items={summary.expensesByCategory} />
             <ProductBreakdown items={summary.productSales} />
@@ -491,6 +491,8 @@ const RangeSummaryTab = () => {
   );
 };
 
+// ─── MonthlyPDFTab ────────────────────────────────────────────────────────────
+
 const MonthlyPDFTab = () => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -511,7 +513,6 @@ const MonthlyPDFTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <SectionCard title="Filtro">
         <div className="grid grid-cols-1 sm:grid-cols-[260px_200px_auto] gap-3 items-end">
           <div className="flex flex-col gap-1">
@@ -528,7 +529,6 @@ const MonthlyPDFTab = () => {
               ))}
             </select>
           </div>
-
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-600">Año</label>
             <select
@@ -543,14 +543,11 @@ const MonthlyPDFTab = () => {
               ))}
             </select>
           </div>
-
-          <button
+          <FetchButton
             onClick={() => fetch({ variables: { month: Number(month), year: Number(year) } })}
-            disabled={loading}
-            className="w-full sm:w-auto inline-flex justify-center items-center px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-sm font-extrabold disabled:opacity-50 active:scale-95 transition-all"
-          >
-            {loading ? "Cargando…" : "Preparar informe"}
-          </button>
+            loading={loading}
+            label="Preparar informe"
+          />
         </div>
       </SectionCard>
 
@@ -572,7 +569,7 @@ const MonthlyPDFTab = () => {
             <p className="text-5xl mb-3">📄</p>
             <p className="text-base font-semibold text-slate-800">Informe mensual</p>
             <p className="text-sm text-slate-500 mt-1">
-              Elegí mes y año, luego pulsá <strong>Preparar informe</strong> para descargar el PDF.
+              Elegí mes y año, luego pulsá <strong>Preparar informe</strong>.
             </p>
           </div>
         </SectionCard>
@@ -580,7 +577,6 @@ const MonthlyPDFTab = () => {
 
       {!loading && dataset && (
         <div className="space-y-6">
-          {/* Download CTA — premium solid */}
           <div className="bg-slate-900 rounded-3xl p-6 text-white text-center space-y-3 shadow-lg">
             <p className="text-lg font-extrabold">
               Informe {monthName(dataset.month)} {dataset.year} 📥
@@ -595,7 +591,6 @@ const MonthlyPDFTab = () => {
             </button>
           </div>
 
-          {/* Preview KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
               label="Ingresos"
@@ -618,10 +613,8 @@ const MonthlyPDFTab = () => {
             <MethodBreakdown items={dataset.summary.salesByMethod} label="Ingresos por método" />
             <CategoryBreakdown items={dataset.summary.expensesByCategory} />
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <ProductBreakdown items={dataset.summary.productSales} />
-            {/* espacio por si luego agregás otra tarjeta */}
             <div className="hidden lg:block" />
           </div>
 
@@ -678,9 +671,9 @@ const MonthlyPDFTab = () => {
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900 truncate">{a.concept}</p>
-                      {a.purpose ? (
+                      {a.purpose && (
                         <p className="text-xs text-slate-700 mt-0.5 truncate">{a.purpose}</p>
-                      ) : null}
+                      )}
                       <p className="text-xs font-semibold text-slate-600 mt-1 truncate">
                         {fmtBusinessDate(a.businessDate)}
                         {a.vendor ? ` · ${a.vendor}` : ""}
@@ -700,7 +693,7 @@ const MonthlyPDFTab = () => {
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── ReportsPage ──────────────────────────────────────────────────────────────
 
 const ReportsPage = () => {
   const [tab, setTab] = useState("daily");
@@ -716,13 +709,12 @@ const ReportsPage = () => {
       <div className="page-content space-y-5">
         <FinancePageHeader
           title="Informes"
-          description="Revisá el desempeño de tu negocio con nuestros informes detallados. Analizá ventas, gastos y más para tomar decisiones informadas."
+          description="Revisá el desempeño de tu organización con reportes detallados."
           backTo="/finance"
           backLabel="Volver a la caja"
         />
 
         <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
-          {/* Tabs — premium pills + scroll on mobile */}
           <div className="p-2 border-b border-slate-200">
             <div className="flex gap-2 overflow-x-auto">
               {TABS.map((t) => (
@@ -730,19 +722,17 @@ const ReportsPage = () => {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={
-                    "flex-none whitespace-nowrap px-4 py-2.5 text-sm font-extrabold rounded-xl transition-colors " +
-                    (tab === t.id
+                  className={`flex-none whitespace-nowrap px-4 py-2.5 text-sm font-extrabold rounded-xl transition-colors ${
+                    tab === t.id
                       ? "bg-slate-900 text-white"
-                      : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")
-                  }
+                      : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                  }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
           </div>
-
           <div className="p-4 sm:p-5">
             {tab === "daily" && <DailySummaryTab />}
             {tab === "range" && <RangeSummaryTab />}
@@ -756,34 +746,3 @@ const ReportsPage = () => {
 };
 
 export default ReportsPage;
-
-MethodBreakdown.propTypes = {
-  label: PropTypes.string.isRequired,
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      method: PropTypes.string.isRequired,
-      total: PropTypes.number.isRequired,
-      count: PropTypes.number.isRequired,
-    })
-  ),
-};
-
-CategoryBreakdown.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      categorySnapshot: PropTypes.string.isRequired,
-      totalAmount: PropTypes.number.isRequired,
-      count: PropTypes.number.isRequired,
-    })
-  ),
-};
-
-ProductBreakdown.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      name: PropTypes.string.isRequired,
-      totalUnits: PropTypes.number.isRequired,
-      totalRevenue: PropTypes.number.isRequired,
-    })
-  ),
-};

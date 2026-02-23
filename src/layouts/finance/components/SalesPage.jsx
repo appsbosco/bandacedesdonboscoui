@@ -1,7 +1,11 @@
 /**
- * SalesPage — /finance/sales
- * Registro de ventas ultra-rápido. Dos modos: Venta rápida / Por productos.
+ * SalesPage.jsx — /finance/sales
  *
+ * Cambios v2:
+ * - Lógica de scope simplificada: un solo useEffect + userTouchedScope ref (eliminado ref duplicado)
+ * - ExternalToggle usa el átomo reutilizable
+ * - scopeOf() helper para panel de ventas recientes (compat legacy)
+ * - ScopeBadge en RecentSalesPanel
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
@@ -16,7 +20,7 @@ import {
   GET_SALES_BY_DATE,
 } from "graphql/queries/finance";
 import { RECORD_SALE } from "graphql/mutations/finance";
-import { useNotice } from "../../../hooks/useFinance";
+import { useNotice } from "hooks/useFinance";
 import {
   formatCRC,
   todayStr,
@@ -32,27 +36,28 @@ import {
   MoneyInput,
   AmountPresets,
   ActivityPills,
-  SaleStatusPill,
-} from "../components/FinanceAtoms";
+  StatusPill,
+  ScopeBadge,
+  ExternalToggle,
+} from "./FinanceAtoms";
 import { FinancePageHeader } from "./FinancePageHeader";
 
-/**
- * UI helpers (ligeros, para estructura y consistencia visual)
- */
+// ─── Helper ───────────────────────────────────────────────────────────────────
+const scopeOf = (m) => m.scope || (m.cashSessionId ? "SESSION" : "EXTERNAL");
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
 const Card = ({ title, children, right }) => (
   <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5">
     {(title || right) && (
       <div className="flex items-start justify-between gap-3 mb-4">
         {title ? (
-          <div>
-            <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">
-              {title}
-            </p>
-          </div>
+          <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">
+            {title}
+          </p>
         ) : (
           <div />
         )}
-        {right ? <div className="shrink-0">{right}</div> : null}
+        {right && <div className="shrink-0">{right}</div>}
       </div>
     )}
     {children}
@@ -102,15 +107,12 @@ const RecentSalesPanel = ({ sales, loading }) => {
       {sales.slice(0, 10).map((s) => {
         const pmCfg = PAYMENT_LABELS[s.paymentMethod] || {};
         const isActive = s.status === "ACTIVE";
-        const isExternal = s.scope === "EXTERNAL";
-
         return (
           <div
             key={s.id}
-            className={[
-              "rounded-2xl border px-3 py-3 flex items-center justify-between gap-3 transition-colors",
-              isActive ? "border-slate-200 hover:border-slate-300" : "border-slate-100 opacity-60",
-            ].join(" ")}
+            className={`rounded-2xl border px-3 py-3 flex items-center justify-between gap-3 transition-colors ${
+              isActive ? "border-slate-200 hover:border-slate-300" : "border-slate-100 opacity-60"
+            }`}
           >
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -119,25 +121,18 @@ const RecentSalesPanel = ({ sales, loading }) => {
                     ? s.lineItems.map((l) => `${l.nameSnapshot} ×${l.quantity}`).join(", ")
                     : "Venta rápida"}
                 </p>
-
-                {isExternal && (
-                  <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                    Externo
-                  </span>
-                )}
+                <ScopeBadge scope={scopeOf(s)} />
               </div>
-
               <p className="text-xs font-semibold text-slate-500 mt-0.5">
                 {pmCfg.emoji} {pmCfg.label} · {fmtDatetime(s.createdAt)}
               </p>
             </div>
-
             <div className="text-right shrink-0">
               <p className="text-sm font-extrabold text-emerald-700 tabular-nums">
                 {formatCRC(s.total)}
               </p>
               <div className="mt-1 flex justify-end">
-                <SaleStatusPill status={s.status} />
+                <StatusPill status={s.status} />
               </div>
             </div>
           </div>
@@ -155,10 +150,8 @@ const ItemizedLineEditor = ({ lines, onChange }) => {
   const addLine = () =>
     onChange([...lines, { nameSnapshot: "", unitPriceSnapshot: "", quantity: 1 }]);
   const removeLine = (i) => onChange(lines.filter((_, idx) => idx !== i));
-  const updateLine = (i, field, value) => {
-    const next = lines.map((l, idx) => (idx === i ? { ...l, [field]: value } : l));
-    onChange(next);
-  };
+  const updateLine = (i, field, value) =>
+    onChange(lines.map((l, idx) => (idx === i ? { ...l, [field]: value } : l)));
 
   return (
     <div className="space-y-3">
@@ -178,14 +171,12 @@ const ItemizedLineEditor = ({ lines, onChange }) => {
               </button>
             )}
           </div>
-
           <input
             value={line.nameSnapshot}
             onChange={(e) => updateLine(i, "nameSnapshot", e.target.value)}
             placeholder="Nombre del producto"
             className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
           />
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-600 mb-1 block">
@@ -203,37 +194,33 @@ const ItemizedLineEditor = ({ lines, onChange }) => {
                     updateLine(i, "unitPriceSnapshot", e.target.value.replace(/[^\d]/g, ""))
                   }
                   placeholder="0"
-                  className="w-full border border-slate-300 rounded-xl pl-7 pr-3 py-2.5 text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
+                  className="w-full border border-slate-300 rounded-xl pl-7 pr-3 py-2.5 text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-slate-300"
                 />
               </div>
             </div>
-
             <div>
               <label className="text-xs font-semibold text-slate-600 mb-1 block">Cantidad</label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => updateLine(i, "quantity", Math.max(1, line.quantity - 1))}
-                  className="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 font-extrabold flex items-center justify-center active:scale-95 transition-all"
+                  className="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-extrabold flex items-center justify-center active:scale-95 transition-all"
                 >
                   −
                 </button>
-
                 <span className="min-w-10 text-center text-sm font-extrabold text-slate-900 tabular-nums">
                   {line.quantity}
                 </span>
-
                 <button
                   type="button"
                   onClick={() => updateLine(i, "quantity", line.quantity + 1)}
-                  className="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 font-extrabold flex items-center justify-center active:scale-95 transition-all"
+                  className="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-extrabold flex items-center justify-center active:scale-95 transition-all"
                 >
                   +
                 </button>
               </div>
             </div>
           </div>
-
           {line.nameSnapshot && line.unitPriceSnapshot && (
             <div className="flex items-center justify-between pt-1">
               <p className="text-xs font-semibold text-slate-500">Subtotal</p>
@@ -244,7 +231,6 @@ const ItemizedLineEditor = ({ lines, onChange }) => {
           )}
         </div>
       ))}
-
       <button
         type="button"
         onClick={addLine}
@@ -258,16 +244,13 @@ const ItemizedLineEditor = ({ lines, onChange }) => {
 
 ItemizedLineEditor.propTypes = { lines: PropTypes.array, onChange: PropTypes.func };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── SalesPage ────────────────────────────────────────────────────────────────
 
 const SalesPage = () => {
   const today = todayStr();
 
-  // ✅ Un solo selector: Externo = true/false
-  // OFF = SESSION (afecta caja) / ON = EXTERNAL (no afecta caja)
   const [isExternal, setIsExternal] = useState(false);
-
-  const [mode, setMode] = useState("quick"); // quick | itemized
+  const [mode, setMode] = useState("quick");
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [activityId, setActivityId] = useState(null);
@@ -275,7 +258,8 @@ const SalesPage = () => {
   const [notice, showNotice] = useNotice();
 
   const amountRef = useRef(null);
-  const scopeInitRef = useRef(false);
+  // Un único ref para saber si el usuario ya tocó el toggle manualmente
+  const userTouchedRef = useRef(false);
 
   const { data: activitiesData, loading: activitiesLoading } = useQuery(GET_ACTIVITIES, {
     variables: { onlyActive: true },
@@ -296,39 +280,38 @@ const SalesPage = () => {
 
   const session = sessionData?.cashSessionDetail || null;
   const canUseSession = session?.status === "OPEN";
-
   const activities = activitiesData?.activities || [];
   const sales = salesData?.salesByDate || [];
 
   const [recordSale, { loading }] = useMutation(RECORD_SALE);
 
-  // Total calculado
+  // ── Inicializar scope automáticamente ─────────────────────────────────────
+  // Regla: si el usuario nunca tocó el toggle, seguir al estado de la caja.
+  // Si la caja se cierra, forzar EXTERNAL (no se puede SESSION sin caja).
+  useEffect(() => {
+    if (sessionData === undefined) return;
+    if (!userTouchedRef.current) {
+      setIsExternal(!canUseSession);
+      return;
+    }
+    if (!canUseSession) setIsExternal(true);
+  }, [sessionData, canUseSession]);
+
+  const handleExternalChange = useCallback((val) => {
+    userTouchedRef.current = true;
+    setIsExternal(val);
+  }, []);
+
   const computedTotal =
     mode === "itemized"
       ? lines.reduce((a, l) => a + parseCRC(l.unitPriceSnapshot) * (l.quantity || 1), 0)
       : parseCRC(amount);
-
-  const userTouchedScopeRef = useRef(false);
-
-  useEffect(() => {
-    if (sessionData === undefined) return;
-
-    if (!userTouchedScopeRef.current) {
-      setIsExternal(!canUseSession);
-      return;
-    }
-
-    // Si el usuario lo tocó, pero la caja ya no está abierta, forzar EXTERNAL
-    if (!canUseSession) setIsExternal(true);
-  }, [sessionData, canUseSession]);
 
   const handleSubmit = useCallback(async () => {
     if (computedTotal <= 0) return showNotice("error", "El monto debe ser mayor a ₡0.");
     if (!paymentMethod) return showNotice("error", "Seleccioná un método de pago.");
 
     const scope = isExternal ? "EXTERNAL" : "SESSION";
-
-    // ✅ UX: SESSION requiere caja abierta
     if (scope === "SESSION" && !canUseSession) {
       return showNotice("error", "No hay caja abierta para registrar esta venta como de caja.");
     }
@@ -336,21 +319,16 @@ const SalesPage = () => {
     const input = {
       businessDate: today,
       paymentMethod,
-      scope, // ✅ NUEVO
-
+      scope,
       activityId: activityId || undefined,
-
-      // ✅ Solo se envía cashSessionId cuando es SESSION
-      cashSessionId: scope === "SESSION" ? session?.id || undefined : undefined,
-
+      cashSessionId: scope === "SESSION" ? session?.id : undefined,
       total: computedTotal,
     };
 
     if (mode === "itemized") {
       const validLines = lines.filter((l) => l.nameSnapshot && parseCRC(l.unitPriceSnapshot) > 0);
-      if (validLines.length === 0)
+      if (!validLines.length)
         return showNotice("error", "Agregá al menos un producto con nombre y precio.");
-
       input.lineItems = validLines.map((l) => ({
         nameSnapshot: l.nameSnapshot,
         unitPriceSnapshot: parseCRC(l.unitPriceSnapshot),
@@ -391,7 +369,6 @@ const SalesPage = () => {
     <DashboardLayout>
       <DashboardNavbar />
       <div className="page-content space-y-5">
-        {/* Header */}
         <FinancePageHeader
           title="Registrar venta"
           backTo="/finance"
@@ -405,37 +382,32 @@ const SalesPage = () => {
           }
         />
 
-        {/* Mode switcher — responsive */}
-        <div className="w-full sm:w-auto">
-          <div className="grid grid-cols-2 gap-2 p-2 bg-slate-100 rounded-2xl">
-            {[
-              ["quick", "⚡ Venta rápida"],
-              ["itemized", "📋 Por productos"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setMode(id)}
-                className={[
-                  "px-3 py-2.5 rounded-xl text-sm font-extrabold transition-all",
-                  mode === id
-                    ? "bg-white shadow-sm text-slate-900"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60",
-                ].join(" ")}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        {/* Mode switcher */}
+        <div className="grid grid-cols-2 gap-2 p-2 bg-slate-100 rounded-2xl">
+          {[
+            ["quick", "⚡ Venta rápida"],
+            ["itemized", "📋 Por productos"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setMode(id)}
+              className={`px-3 py-2.5 rounded-xl text-sm font-extrabold transition-all ${
+                mode === id
+                  ? "bg-white shadow-sm text-slate-900"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-5">
-          {/* Form */}
           <div className="space-y-5">
             <Card title="Registro">
               <Notice notice={notice} />
 
-              {/* Activity (optional) */}
               {activities.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">
@@ -450,54 +422,14 @@ const SalesPage = () => {
                 </div>
               )}
 
-              {/* ✅ External toggle (single selector) */}
-              <div className="mt-5 border border-slate-200 rounded-2xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">
-                      Externo
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800">
-                      No afecta la caja (aunque esté abierta)
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {isExternal
-                        ? "Se registrará como EXTERNO."
-                        : "Se registrará como CAJA y entra en el cierre."}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isExternal && !canUseSession) return;
-                      userTouchedScopeRef.current = true;
-                      setIsExternal((v) => !v);
-                    }}
-                    disabled={!canUseSession && isExternal}
-                    className={`shrink-0 px-3 py-2 rounded-xl border text-sm font-bold transition-all ${
-                      isExternal
-                        ? " bg-green-400 border-indigo-200 text-white"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    } ${!canUseSession && isExternal ? "opacity-50 cursor-not-allowed" : ""}`}
-                    title={
-                      !canUseSession && isExternal
-                        ? "No hay caja abierta. Solo se permiten movimientos externos."
-                        : ""
-                    }
-                  >
-                    {isExternal ? "ON" : "OFF"}
-                  </button>
-                </div>
-
-                {!canUseSession && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-3">
-                    ⚠️ No hay caja abierta: las ventas se registran como <b>EXTERNOS</b>.
-                  </p>
-                )}
+              <div className="mt-5">
+                <ExternalToggle
+                  isExternal={isExternal}
+                  onChange={handleExternalChange}
+                  canUseSession={canUseSession}
+                />
               </div>
 
-              {/* Amount or line items */}
               <div className="mt-5">
                 {mode === "quick" ? (
                   <div>
@@ -527,7 +459,6 @@ const SalesPage = () => {
                 )}
               </div>
 
-              {/* Payment method */}
               <div className="mt-6">
                 <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">
                   Método de pago
@@ -535,7 +466,6 @@ const SalesPage = () => {
                 <PaymentMethodPills value={paymentMethod} onChange={setPaymentMethod} />
               </div>
 
-              {/* CTA — premium solid */}
               <button
                 type="button"
                 onClick={handleSubmit}
@@ -549,7 +479,6 @@ const SalesPage = () => {
             </Card>
           </div>
 
-          {/* Recent sales */}
           <Card title="Ventas de hoy">
             <RecentSalesPanel sales={sales} loading={salesLoading} />
           </Card>

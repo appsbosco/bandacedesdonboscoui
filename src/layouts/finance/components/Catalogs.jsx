@@ -1,5 +1,5 @@
 /**
- * CatalogsPage — /finance/catalogs
+ * Catalogs.jsx — /finance/catalogs
  * CRUD de categorías de egreso y actividades/campañas.
  */
 import React, { useState, useRef } from "react";
@@ -16,11 +16,11 @@ import {
   TOGGLE_CATEGORY_ACTIVE,
   TOGGLE_ACTIVITY_ACTIVE,
 } from "graphql/mutations/finance";
-import { useNotice } from "../../../hooks/useFinance";
-import { Notice, Skeleton } from "../components/FinanceAtoms";
+import { useNotice } from "hooks/useFinance";
+import { Notice, Skeleton } from "./FinanceAtoms";
 import { FinancePageHeader } from "./FinancePageHeader";
 
-// ─── AddForm ─────────────────────────────────────────────────────────────────
+// ─── AddForm ──────────────────────────────────────────────────────────────────
 
 const AddForm = ({ onSubmit, loading, placeholder }) => {
   const [name, setName] = useState("");
@@ -63,6 +63,12 @@ const AddForm = ({ onSubmit, loading, placeholder }) => {
   );
 };
 
+AddForm.propTypes = {
+  onSubmit: PropTypes.func,
+  loading: PropTypes.bool,
+  placeholder: PropTypes.string,
+};
+
 // ─── CatalogItem ──────────────────────────────────────────────────────────────
 
 const CatalogItem = ({ item, onToggle, loading }) => (
@@ -94,6 +100,12 @@ const CatalogItem = ({ item, onToggle, loading }) => (
   </div>
 );
 
+CatalogItem.propTypes = {
+  item: PropTypes.object,
+  onToggle: PropTypes.func,
+  loading: PropTypes.bool,
+};
+
 // ─── CategoriesSection ────────────────────────────────────────────────────────
 
 const CategoriesSection = () => {
@@ -121,7 +133,7 @@ const CategoriesSection = () => {
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div>
           <h2 className="text-sm font-bold text-slate-900">Categorías de egreso</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Clasificá los gastos de la banda</p>
+          <p className="text-xs text-slate-400 mt-0.5">Clasificá los gastos de la organización</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold text-slate-400">{categories.length} total</span>
@@ -148,9 +160,7 @@ const CategoriesSection = () => {
             <div className="py-8 text-center">
               <p className="text-2xl mb-1">🗂️</p>
               <p className="text-sm font-semibold text-slate-600">Sin categorías</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Agregá una categoría para clasificar gastos.
-              </p>
+              <p className="text-xs text-slate-400 mt-1">Agregá una para clasificar gastos.</p>
             </div>
           )}
           {!loading &&
@@ -165,7 +175,6 @@ const CategoriesSection = () => {
         </div>
       </div>
 
-      {/* Tip */}
       <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
         <p className="text-xs text-slate-400">
           💡 La categoría se guarda en cada egreso. Desactivarla no afecta registros anteriores.
@@ -232,7 +241,7 @@ const ActivitiesSection = () => {
               <p className="text-2xl mb-1">🎪</p>
               <p className="text-sm font-semibold text-slate-600">Sin actividades</p>
               <p className="text-xs text-slate-400 mt-1">
-                Agregá actividades para ver reportes por evento.
+                Agregá actividades para reportes por evento.
               </p>
             </div>
           )}
@@ -257,7 +266,7 @@ const ActivitiesSection = () => {
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── CatalogsPage ─────────────────────────────────────────────────────────────
 
 const CatalogsPage = () => {
   const [tab, setTab] = useState("categories");
@@ -278,7 +287,6 @@ const CatalogsPage = () => {
           backLabel="Volver a la caja"
         />
 
-        {/* Tab switcher */}
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start">
           {TABS.map((t) => (
             <button
@@ -305,14 +313,3 @@ const CatalogsPage = () => {
 };
 
 export default CatalogsPage;
-
-AddForm.propTypes = {
-  onSubmit: PropTypes.func,
-  loading: PropTypes.bool,
-  placeholder: PropTypes.string,
-};
-CatalogItem.propTypes = {
-  item: PropTypes.object,
-  onToggle: PropTypes.func,
-  loading: PropTypes.bool,
-};

@@ -950,7 +950,7 @@ const AttendancePage = () => {
 
       await takeAttendance({
         variables: {
-          date: queryDate, // importantísimo: misma fecha que la sesión consultada
+          date: queryDate,
           section: userSection,
           attendances: attendancesInput,
         },
