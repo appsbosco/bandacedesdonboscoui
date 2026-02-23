@@ -645,19 +645,26 @@ export const GET_ALL_ATTENDANCES_REHEARSAL = gql`
     }
   }
 `;
+
 export const GET_USER_ATTENDANCE_STATS = gql`
   query GetUserAttendanceStats($userId: ID!, $startDate: String, $endDate: String) {
     getUserAttendanceStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
       userId
       totalSessions
       present
+      late
       absentUnjustified
       absentJustified
-      late
-      excusedBefore
-      excusedAfter
+      unjustifiedWithdrawals
+      justifiedWithdrawals
+      missingAsUnjustified
+      unjustifiedCount
+      justifiedCount
       equivalentAbsences
+      attendanceCredits
       attendancePercentage
+      strictAttendancePercentage
+      hasThreeUnjustified
       exceedsLimit
     }
   }

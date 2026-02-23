@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { TAKE_ATTENDANCE_REHEARSAL, CLOSE_SESSION } from "graphql/mutations";
 import { GET_USERS, GET_ACTIVE_SESSION, GET_USERS_BY_ID } from "graphql/queries";
 import { useEffect, useState, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { mapInstrumentToSection } from "utils/sectionMapper";
@@ -55,6 +56,46 @@ const PRIMARY_STATUSES = ["PRESENT", "ABSENT_UNJUSTIFIED", "ABSENT_JUSTIFIED"];
 const SECONDARY_STATUSES = ["LATE", "JUSTIFIED_WITHDRAWAL", "UNJUSTIFIED_WITHDRAWAL"];
 
 const DEFAULT_STATUS = "PRESENT";
+
+// Posicionamiento del menú móvil (portal + fixed)
+const MOBILE_SELECTOR_WIDTH = 280; // coincide con min-w-[280px]
+const MOBILE_SELECTOR_GAP = 8;
+const MOBILE_SELECTOR_ESTIMATED_HEIGHT = 260;
+
+const getMobileSelectorPosition = (buttonEl) => {
+  if (!buttonEl) {
+    return { top: 0, left: 0, placement: "bottom" };
+  }
+
+  const rect = buttonEl.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Centrado horizontal y limitado dentro del viewport
+  const half = MOBILE_SELECTOR_WIDTH / 2;
+  let left = rect.left + rect.width / 2;
+  left = Math.max(half + 8, Math.min(vw - half - 8, left));
+
+  const spaceBelow = vh - rect.bottom;
+  const spaceAbove = rect.top;
+
+  const shouldOpenUp =
+    spaceBelow < MOBILE_SELECTOR_ESTIMATED_HEIGHT && spaceAbove > MOBILE_SELECTOR_ESTIMATED_HEIGHT;
+
+  if (shouldOpenUp) {
+    return {
+      top: rect.top - MOBILE_SELECTOR_GAP,
+      left,
+      placement: "top",
+    };
+  }
+
+  return {
+    top: rect.bottom + MOBILE_SELECTOR_GAP,
+    left,
+    placement: "bottom",
+  };
+};
 
 const normalizeFullName = (u) =>
   `${u?.name || ""} ${u?.firstSurName || ""} ${u?.secondSurName || ""}`.trim();
@@ -131,6 +172,7 @@ const MobileStatusSelector = ({
     const handleClickOutside = (e) => {
       if (ref.current && !ref.current.contains(e.target)) onClose();
     };
+
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -144,11 +186,15 @@ const MobileStatusSelector = ({
     };
   }, [onClose]);
 
-  return (
+  const menu = (
     <div
       ref={ref}
-      className="absolute z-50 bg-white rounded-lg shadow-2xl border border-gray-200 py-3 px-4 min-w-[280px]"
-      style={{ top: position.top, left: position.left }}
+      className="fixed z-[80] bg-white rounded-lg shadow-2xl border border-gray-200 py-3 px-4 min-w-[280px]"
+      style={{
+        top: position.top,
+        left: position.left,
+        transform: position.placement === "top" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
+      }}
     >
       <p className="text-xs font-semibold text-gray-600 mb-3 uppercase">Más opciones</p>
 
@@ -213,11 +259,17 @@ const MobileStatusSelector = ({
       </div>
     </div>
   );
+
+  return createPortal(menu, document.body);
 };
 
 const StudentRow = ({ student, attendance, onStatusChange, onEditNotes, searchTerm, canEdit }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [moreOptionsPosition, setMoreOptionsPosition] = useState({ top: 0, left: 0 });
+  const [moreOptionsPosition, setMoreOptionsPosition] = useState({
+    top: 0,
+    left: 0,
+    placement: "bottom",
+  });
   const moreButtonRef = useRef(null);
 
   const currentStatus = attendance?.status || DEFAULT_STATUS;
@@ -230,13 +282,29 @@ const StudentRow = ({ student, attendance, onStatusChange, onEditNotes, searchTe
     return String(text).replace(regex, '<mark class="bg-yellow-200 font-semibold">$1</mark>');
   };
 
-  const handleMoreClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const top = rect.bottom + 8;
-    const anchorX = rect.left + rect.width / 2;
-    setMoreOptionsPosition({ top, left: anchorX });
+  const handleMoreClick = () => {
+    setMoreOptionsPosition(getMobileSelectorPosition(moreButtonRef.current));
     setShowMoreOptions(true);
   };
+
+  useEffect(() => {
+    if (!showMoreOptions) return;
+
+    const updatePosition = () => {
+      setMoreOptionsPosition(getMobileSelectorPosition(moreButtonRef.current));
+    };
+
+    updatePosition();
+
+    // true para capturar scroll en contenedores internos
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [showMoreOptions]);
 
   const initials = `${(student?.name || " ")[0] || ""}${(student?.firstSurName || " ")[0] || ""}`;
 
@@ -356,7 +424,7 @@ const AttendanceHeader = ({
     <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Toma de Asistencia</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Toma de asistencia</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString("es-CR", {
               weekday: "long",
@@ -1087,6 +1155,7 @@ MobileStatusSelector.propTypes = {
   position: PropTypes.shape({
     top: PropTypes.number.isRequired,
     left: PropTypes.number.isRequired,
+    placement: PropTypes.oneOf(["top", "bottom"]).isRequired,
   }).isRequired,
   onEditNotes: PropTypes.func,
   canEdit: PropTypes.bool.isRequired,
