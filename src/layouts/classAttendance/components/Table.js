@@ -1,574 +1,435 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { MARK_ATTENDANCE_AND_PAYMENT } from "graphql/mutations";
 import { GET_INSTRUCTOR_STUDENTS_ATTENDANCE } from "graphql/queries";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// ============================================================================
-// CONSTANTS & UTILS
-// ============================================================================
-
-const ATTENDANCE_STATUS = {
-  PRESENT: { value: "Presente", label: "Presente", shortLabel: "P", color: "bg-emerald-500" },
-  JUSTIFIED_ABSENCE: {
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+const ATTENDANCE_OPTIONS = [
+  {
+    value: "Presente",
+    label: "Presente",
+    short: "P",
+    active: "bg-emerald-500 border-emerald-500 text-white",
+    dot: "bg-emerald-500",
+  },
+  {
     value: "Ausencia Justificada",
-    label: "Ausencia Justificada",
-    shortLabel: "AJ",
-    color: "bg-amber-500",
+    label: "Aus. Justificada",
+    short: "AJ",
+    active: "bg-amber-500 border-amber-500 text-white",
+    dot: "bg-amber-500",
   },
-  UNJUSTIFIED_ABSENCE: {
+  {
     value: "Ausencia No Justificada",
-    label: "Ausencia No Justificada",
-    shortLabel: "AI",
-    color: "bg-orange-600",
+    label: "Aus. No Justificada",
+    short: "ANJ",
+    active: "bg-red-500 border-red-500 text-white",
+    dot: "bg-red-500",
   },
-};
+];
 
-const PAYMENT_STATUS = {
-  PENDING: { value: "Pendiente", label: "Pendiente", shortLabel: "Pend", color: "bg-gray-400" },
-  PAID: { value: "Pagado", label: "Pagado", shortLabel: "Pag", color: "bg-green-500" },
-  SCHOLARSHIP: { value: "Becado", label: "Becado", shortLabel: "Bec", color: "bg-blue-500" },
-};
+const PAYMENT_OPTIONS = [
+  {
+    value: "Pendiente",
+    label: "Pendiente",
+    short: "Pend",
+    active: "bg-gray-500 border-gray-500 text-white",
+    dot: "bg-gray-400",
+  },
+  {
+    value: "Pagado",
+    label: "Pagado",
+    short: "Pag",
+    active: "bg-blue-500 border-blue-500 text-white",
+    dot: "bg-blue-500",
+  },
+  {
+    value: "Becado",
+    label: "Becado",
+    short: "Bec",
+    active: "bg-violet-500 border-violet-500 text-white",
+    dot: "bg-violet-500",
+  },
+];
 
-const ATTENDANCE_OPTIONS = Object.values(ATTENDANCE_STATUS);
-const PAYMENT_OPTIONS = Object.values(PAYMENT_STATUS);
-
-// ============================================================================
-// SUBCOMPONENTS
-// ============================================================================
-
-const StatusButton = ({
-  status,
-  isActive,
-  onClick,
-  compact = false,
-  statusType = "attendance",
-}) => {
-  const statusList = statusType === "attendance" ? ATTENDANCE_OPTIONS : PAYMENT_OPTIONS;
-  const statusConfig = statusList.find((s) => s.value === status);
-
-  if (!statusConfig) return null;
-
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={isActive}
-      aria-label={`Marcar como ${statusConfig.label}`}
-      className={`
-        ${compact ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"}
-        font-medium rounded-lg transition-all duration-200 whitespace-nowrap
-        ${
-          isActive
-            ? `${statusConfig.color} text-white shadow-md scale-105`
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-        }
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-      `}
-    >
-      {compact ? statusConfig.shortLabel : statusConfig.label}
-    </button>
-  );
-};
-
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 const safeStr = (v) => (typeof v === "string" ? v : "");
-const initial = (v) => safeStr(v).trim().charAt(0).toUpperCase() || "?";
+const getFullName = (u) =>
+  [safeStr(u?.name), safeStr(u?.firstSurName), safeStr(u?.secondSurName)]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || "Sin nombre";
 
+const AVATAR_PAIRS = [
+  ["bg-slate-800", "text-red-300"],
+  ["bg-blue-900", "text-blue-300"],
+  ["bg-indigo-900", "text-violet-300"],
+  ["bg-emerald-900", "text-emerald-300"],
+  ["bg-rose-900", "text-rose-300"],
+  ["bg-violet-900", "text-yellow-300"],
+  ["bg-amber-900", "text-amber-300"],
+];
+const avatarColors = (str = "") => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_PAIRS[Math.abs(h) % AVATAR_PAIRS.length];
+};
+const getInitials = (u) =>
+  (safeStr(u?.name).charAt(0) + safeStr(u?.firstSurName).charAt(0)).toUpperCase() || "?";
+
+// ─────────────────────────────────────────────
+// StatusChip
+// ─────────────────────────────────────────────
+const StatusChip = ({ option, isActive, onClick, compact }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={isActive}
+    title={option.label}
+    className={`
+      ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs sm:text-sm"}
+      font-semibold rounded-full border transition-all duration-150 whitespace-nowrap
+      ${
+        isActive
+          ? `${option.active} shadow-sm scale-105`
+          : "bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700"
+      }
+      focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400
+    `}
+  >
+    <span className="sm:hidden">{option.short}</span>
+    <span className="hidden sm:inline">{compact ? option.short : option.label}</span>
+  </button>
+);
+
+// ─────────────────────────────────────────────
+// StudentRow
+// ─────────────────────────────────────────────
 const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => {
   if (!student) return null;
+  const name = getFullName(student);
+  const [bg, text] = avatarColors(name);
+  const curAttendance = attendance?.attendanceStatus || "Presente";
+  const curPayment = attendance?.paymentStatus || "Pendiente";
+  const curJust = attendance?.justification || "";
+  const isSaved = attendance?.isSaved !== false;
+  const needsJust = curAttendance === "Ausencia Justificada";
 
-  // const studentId = student.id ?? student._id;
-  const name = safeStr(student.name);
-  const first = safeStr(student.firstSurName);
-  const second = safeStr(student.secondSurName);
-
-  const fullName = [name, first, second].filter(Boolean).join(" ").trim() || "Sin nombre";
-
-  const currentAttendance = attendance?.attendanceStatus || "Presente";
-  const currentPayment = attendance?.paymentStatus || "Pendiente";
-  const currentJustification = attendance?.justification || "";
-  const isSaved = attendance?.isSaved !== false; // Default true si no existe
-
-  const needsJustification = currentAttendance === "Ausencia Justificada";
-
-  const highlightText = (text) => {
-    if (!searchTerm) return text;
-    const regex = new RegExp(`(${searchTerm})`, "gi");
-    return text.replace(regex, '<mark class="bg-yellow-200 font-semibold">$1</mark>');
+  const highlight = (str) => {
+    if (!searchTerm) return str;
+    const rx = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    const parts = str.split(rx);
+    return parts.map((p, i) =>
+      rx.test(p) ? (
+        <mark key={i} className="bg-yellow-200 font-bold rounded-sm px-0.5">
+          {p}
+        </mark>
+      ) : (
+        p
+      )
+    );
   };
 
   return (
-    <div className="group border-b border-gray-100 hover:bg-gray-50 transition-colors">
-      {/* Mobile Layout */}
+    <div
+      className={`relative border-b border-gray-100 last:border-b-0 transition-colors
+      ${!isSaved ? "bg-amber-50/40" : "hover:bg-gray-50/60"}`}
+    >
+      {/* Unsaved indicator */}
+      {!isSaved && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400 rounded-r" />}
 
-      <div className="block lg:hidden px-4 py-4 space-y-4">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            {initial(name)}
-            {initial(first)}
+      {/* ── Mobile layout ── */}
+      <div className="lg:hidden px-4 py-4 space-y-3">
+        {/* Student */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 ${bg} ${text} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0`}
+          >
+            {getInitials(student)}
           </div>
           <div className="flex-1 min-w-0">
-            <p
-              className="text-sm font-semibold text-gray-900 truncate"
-              dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
-            />
+            <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
+            {student.instrument && <p className="text-xs text-gray-400">{student.instrument}</p>}
+          </div>
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-medium ${
+              isSaved ? "text-emerald-600" : "text-amber-600"
+            }`}
+          >
             {isSaved ? (
-              <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-0.5">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Guardado
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                Sin guardar
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-gray-700 mb-2">Asistencia</p>
-          <div className="grid grid-cols-3 gap-2">
-            {ATTENDANCE_OPTIONS.map((status) => (
-              <StatusButton
-                key={status.value}
-                status={status.value}
-                isActive={currentAttendance === status.value}
-                onClick={() => onAttendanceChange(student.id, "attendanceStatus", status.value)}
-                compact
-                statusType="attendance"
-              />
-            ))}
-          </div>
-        </div>
-
-        {needsJustification && (
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Justificación</label>
-            <input
-              type="text"
-              value={currentJustification}
-              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
-              placeholder="Escribe la justificación..."
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                needsJustification && !currentJustification
-                  ? "border-red-300 bg-red-50"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
-        )}
-
-        <div>
-          <p className="text-xs font-semibold text-gray-700 mb-2">Estado de Pago</p>
-          <div className="grid grid-cols-3 gap-2">
-            {PAYMENT_OPTIONS.map((status) => (
-              <StatusButton
-                key={status.value}
-                status={status.value}
-                isActive={currentPayment === status.value}
-                onClick={() => onAttendanceChange(student.id, "paymentStatus", status.value)}
-                compact
-                statusType="payment"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* Desktop Layout */}
-      <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 items-center">
-        {" "}
-        {/* Student Info - 3 cols */}
-        <div className="col-span-3 flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            {initial(name)}
-            {initial(first)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p
-              className="text-sm font-semibold text-gray-900 truncate"
-              dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
-            />
-            {isSaved ? (
-              <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Guardado
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-amber-600">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                Sin guardar
-              </span>
-            )}
-          </div>
-        </div>
-        {/* Attendance - 4 cols */}
-        <div className="col-span-4 flex gap-2">
-          {ATTENDANCE_OPTIONS.map((status) => (
-            <StatusButton
-              key={status.value}
-              status={status.value}
-              isActive={currentAttendance === status.value}
-              onClick={() => onAttendanceChange(student.id, "attendanceStatus", status.value)}
-              statusType="attendance"
-            />
-          ))}
-        </div>
-        {/* Justification - 2 cols */}
-        <div className="col-span-2">
-          {needsJustification && (
-            <input
-              type="text"
-              value={currentJustification}
-              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
-              placeholder="Justificación..."
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                needsJustification && !currentJustification
-                  ? "border-red-300 bg-red-50"
-                  : "border-gray-300"
-              }`}
-            />
-          )}
-        </div>
-        {/* Payment - 3 cols */}
-        <div className="col-span-3 flex gap-2">
-          {PAYMENT_OPTIONS.map((status) => (
-            <StatusButton
-              key={status.value}
-              status={status.value}
-              isActive={currentPayment === status.value}
-              onClick={() => onAttendanceChange(student.id, "paymentStatus", status.value)}
-              statusType="payment"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AttendanceHeader = ({ stats, selectedDate, onDateChange, hasUnsavedChanges }) => {
-  return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Asistencia de mis estudiantes
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Registra la asistencia y estado de pago por fecha
-          </p>
-        </div>
-
-        {hasUnsavedChanges && (
-          <div className="flex items-center gap-2 text-amber-600 text-sm font-medium">
-            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-            Cambios sin guardar
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Fecha:</label>
-          <DatePicker
-            selected={selectedDate}
-            onChange={onDateChange}
-            dateFormat="dd/MM/yyyy"
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-50 rounded-lg">
-          <span className="text-xs font-medium text-gray-600">Total:</span>
-          <span className="text-base sm:text-lg font-bold text-gray-900">{stats.total}</span>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-50 rounded-lg">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-          <span className="text-xs font-medium text-emerald-700">Presentes:</span>
-          <span className="text-base sm:text-lg font-bold text-emerald-900">{stats.present}</span>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 rounded-lg">
-          <div className="w-2 h-2 bg-amber-500 rounded-full" />
-          <span className="text-xs font-medium text-amber-700">Ausencias:</span>
-          <span className="text-base sm:text-lg font-bold text-amber-900">{stats.absent}</span>
-        </div>
-      </div>
-
-      {/* Desktop Column Headers */}
-      <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-xs font-semibold text-gray-600 uppercase tracking-wide">
-        <div className="col-span-3">Estudiante</div>
-        <div className="col-span-4">Asistencia</div>
-        <div className="col-span-2">Justificación</div>
-        <div className="col-span-3">Estado de Pago</div>
-      </div>
-    </div>
-  );
-};
-
-const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar estudiante..."
-          className="block w-full pl-10 pr-10 py-2.5 sm:py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-          aria-label="Buscar estudiante"
-        />
-        {searchTerm && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <button
-              onClick={() => onSearchChange("")}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none"
-              aria-label="Limpiar búsqueda"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
                 />
               </svg>
-            </button>
+            ) : (
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+            )}
+            {isSaved ? "Guardado" : "Sin guardar"}
+          </span>
+        </div>
+
+        {/* Attendance */}
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+            Asistencia
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {ATTENDANCE_OPTIONS.map((opt) => (
+              <StatusChip
+                key={opt.value}
+                option={opt}
+                isActive={curAttendance === opt.value}
+                onClick={() => onAttendanceChange(student.id, "attendanceStatus", opt.value)}
+                compact
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Justification */}
+        {needsJust && (
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+              Justificación
+            </p>
+            <input
+              type="text"
+              value={curJust}
+              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
+              placeholder="Describe el motivo..."
+              className={`w-full px-3 py-2 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-gray-800/10 transition-all
+                ${
+                  needsJust && !curJust
+                    ? "border-red-300 bg-red-50 focus:border-red-400"
+                    : "border-gray-200 focus:border-gray-400"
+                }`}
+            />
           </div>
         )}
-      </div>
-      {searchTerm && (
-        <p className="mt-2 text-xs sm:text-sm text-gray-600">
-          {totalResults} resultado{totalResults !== 1 ? "s" : ""} encontrado
-          {totalResults !== 1 ? "s" : ""}
-        </p>
-      )}
-    </div>
-  );
-};
 
-const ActionBar = ({ onSaveAll, isSaving, hasUnsavedChanges, unsavedCount }) => {
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shadow-lg z-40">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
-        <div className="text-sm text-gray-600">
-          {hasUnsavedChanges && (
-            <span className="font-medium text-amber-600">
-              {unsavedCount} estudiante{unsavedCount !== 1 ? "s" : ""} sin guardar
-            </span>
+        {/* Payment */}
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+            Estado de Pago
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {PAYMENT_OPTIONS.map((opt) => (
+              <StatusChip
+                key={opt.value}
+                option={opt}
+                isActive={curPayment === opt.value}
+                onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
+                compact
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Desktop layout ── */}
+      <div className="hidden lg:grid lg:grid-cols-[220px_1fr_200px_1fr] gap-3 px-5 py-3 items-center">
+        {/* Student info */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className={`w-9 h-9 ${bg} ${text} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0`}
+          >
+            {getInitials(student)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {student.instrument && (
+                <span className="text-xs text-gray-400">{student.instrument}</span>
+              )}
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-medium ${
+                  isSaved ? "text-emerald-600" : "text-amber-600"
+                }`}
+              >
+                {isSaved ? (
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ) : (
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
+                )}
+                {isSaved ? "Guardado" : "Sin guardar"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {ATTENDANCE_OPTIONS.map((opt) => (
+            <StatusChip
+              key={opt.value}
+              option={opt}
+              isActive={curAttendance === opt.value}
+              onClick={() => onAttendanceChange(student.id, "attendanceStatus", opt.value)}
+            />
+          ))}
+        </div>
+
+        {/* Justification */}
+        <div>
+          {needsJust && (
+            <input
+              type="text"
+              value={curJust}
+              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
+              placeholder="Justificación..."
+              className={`w-full px-3 py-2 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-gray-800/10 transition-all
+                ${
+                  needsJust && !curJust
+                    ? "border-red-300 bg-red-50 focus:border-red-400"
+                    : "border-gray-200 focus:border-gray-400"
+                }`}
+            />
           )}
         </div>
 
-        <button
-          onClick={onSaveAll}
-          disabled={isSaving || !hasUnsavedChanges}
-          className="px-5 sm:px-8 py-2 sm:py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {isSaving ? (
-            <>
-              <svg
-                className="animate-spin h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span className="hidden sm:inline">Guardando...</span>
-            </>
-          ) : (
-            "Guardar todos los cambios"
-          )}
-        </button>
+        {/* Payment chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {PAYMENT_OPTIONS.map((opt) => (
+            <StatusChip
+              key={opt.value}
+              option={opt}
+              isActive={curPayment === opt.value}
+              onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
-const Toast = ({ message, type = "success", onClose }) => {
+// ─────────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────────
+const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
   }, [onClose]);
 
-  const bgColor =
-    type === "success" ? "bg-emerald-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
-
   return (
-    <div
-      className={`fixed top-4 right-4 ${bgColor} text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-lg z-50 animate-slide-in-right flex items-center gap-3 max-w-sm`}
-    >
-      {type === "success" && (
-        <svg
-          className="w-5 h-5 sm:w-6 sm:h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
-      )}
-      <span className="font-medium text-sm sm:text-base">{message}</span>
-      <button onClick={onClose} className="ml-auto hover:opacity-75">
-        <svg
-          className="w-4 h-4 sm:w-5 sm:h-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
+    <>
+      <style>{`@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
+      <div
+        style={{ animation: "toastIn 0.25s ease-out" }}
+        className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs
+          ${type === "success" ? "bg-gray-900" : "bg-red-600"}`}
+      >
+        {type === "success" ? (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+          </svg>
+        )}
+        <span className="flex-1">{message}</span>
+        <button onClick={onClose} className="opacity-60 hover:opacity-100 text-lg leading-none">
+          ×
+        </button>
+      </div>
+    </>
   );
 };
 
-const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center py-16 px-4">
-    <svg
-      className="w-20 h-20 sm:w-24 sm:h-24 text-gray-300 mb-4"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-      />
-    </svg>
-    <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-      No tienes estudiantes asignados
-    </h3>
-    <p className="text-xs sm:text-sm text-gray-500">Asigna estudiantes desde la página principal</p>
-  </div>
-);
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
+// ─────────────────────────────────────────────
+// Main Table Component
+// ─────────────────────────────────────────────
 const InstructorAttendanceTable = ({ students }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [attendanceData, setAttendanceData] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const searchRef = useRef(null);
 
-  // GraphQL
   const { loading, error, data, refetch } = useQuery(GET_INSTRUCTOR_STUDENTS_ATTENDANCE, {
     variables: { date: selectedDate.toISOString() },
+    fetchPolicy: "network-only",
   });
 
-  const [markAttendanceAndPayment] = useMutation(MARK_ATTENDANCE_AND_PAYMENT, {
-    onError: (error) => {
-      console.error("Error al guardar:", error);
-      setToast({ message: "Error al guardar asistencia", type: "error" });
-    },
-  });
+  const [markAttendanceAndPayment] = useMutation(MARK_ATTENDANCE_AND_PAYMENT);
 
-  // Initialize attendance data - CRITICAL FIX: Initialize for ALL students
+  // Init state
   useEffect(() => {
-    if (students && students.length > 0) {
-      const initialData = {};
-
-      // First, initialize all students with defaults
-      students.forEach((student) => {
-        initialData[student.id] = {
-          attendanceStatus: "Presente",
-          paymentStatus: "Pendiente",
-          justification: "",
+    if (!students?.length) return;
+    const init = {};
+    students.forEach((s) => {
+      init[s.id] = {
+        attendanceStatus: "Presente",
+        paymentStatus: "Pendiente",
+        justification: "",
+        isSaved: true,
+      };
+    });
+    if (data?.getInstructorStudentsAttendance) {
+      data.getInstructorStudentsAttendance.forEach((rec) => {
+        init[rec.student.id] = {
+          attendanceStatus: rec.attendanceStatus,
+          paymentStatus: rec.paymentStatus,
+          justification: rec.justification || "",
           isSaved: true,
         };
       });
-
-      // Then, override with actual data if it exists
-      if (data?.getInstructorStudentsAttendance) {
-        data.getInstructorStudentsAttendance.forEach((record) => {
-          initialData[record.student.id] = {
-            attendanceStatus: record.attendanceStatus,
-            paymentStatus: record.paymentStatus,
-            justification: record.justification || "",
-            isSaved: true,
-          };
-        });
-      }
-
-      setAttendanceData(initialData);
     }
+    setAttendanceData(init);
   }, [data, students]);
 
-  // Refetch when date changes
   useEffect(() => {
-    if (selectedDate) {
-      refetch({ date: selectedDate.toISOString() });
-    }
+    if (selectedDate) refetch({ date: selectedDate.toISOString() });
   }, [selectedDate, refetch]);
 
-  // Filter students by search
-  const filteredStudents = students.filter((student) => {
-    if (!searchTerm) return true;
-    const fullName =
-      `${student.name} ${student.firstSurName} ${student.secondSurName}`.toLowerCase();
-    const search = searchTerm.toLowerCase();
-    return fullName.includes(search);
-  });
+  const filteredStudents = students.filter(
+    (s) => !searchTerm || getFullName(s).toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Calculate stats - FIXED: Check students array directly
   const stats = {
     total: students.length,
-    present:
-      Object.values(attendanceData).filter((r) => r?.attendanceStatus === "Presente").length || 0,
-    absent:
-      Object.values(attendanceData).filter((r) => r?.attendanceStatus?.includes("Ausencia"))
-        .length || 0,
+    present: Object.values(attendanceData).filter((r) => r?.attendanceStatus === "Presente").length,
+    absent: Object.values(attendanceData).filter((r) => r?.attendanceStatus?.includes("Ausencia"))
+      .length,
+    paid: Object.values(attendanceData).filter((r) => r?.paymentStatus === "Pagado").length,
   };
+  const unsavedCount = Object.values(attendanceData).filter((r) => !r?.isSaved).length;
 
-  const unsavedCount = Object.values(attendanceData).filter((r) => r?.isSaved === false).length;
-  const hasUnsavedChanges = unsavedCount > 0;
-
-  // Handlers
-  const handleAttendanceChange = (studentId, field, value) => {
+  const handleChange = useCallback((studentId, field, value) => {
     setAttendanceData((prev) => ({
       ...prev,
       [studentId]: {
@@ -581,263 +442,290 @@ const InstructorAttendanceTable = ({ students }) => {
         isSaved: false,
       },
     }));
-  };
+  }, []);
 
   const handleSaveAll = async () => {
     setIsSaving(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    const unsavedStudents = Object.entries(attendanceData).filter(
-      ([_, data]) => data?.isSaved === false
-    );
-
-    for (const [studentId, studentData] of unsavedStudents) {
-      const attendanceStatus = studentData.attendanceStatus || "Presente";
-      const paymentStatus = studentData.paymentStatus || "Pendiente";
-      const justification = studentData.justification || "";
-
+    let ok = 0,
+      fail = 0;
+    const unsaved = Object.entries(attendanceData).filter(([, d]) => !d?.isSaved);
+    for (const [studentId, d] of unsaved) {
       try {
         await markAttendanceAndPayment({
           variables: {
             input: {
               studentId,
-              attendanceStatus,
-              justification,
-              paymentStatus,
+              attendanceStatus: d.attendanceStatus || "Presente",
+              paymentStatus: d.paymentStatus || "Pendiente",
+              justification: d.justification || "",
               date: selectedDate.toISOString(),
             },
           },
         });
-
         setAttendanceData((prev) => ({
           ...prev,
-          [studentId]: {
-            ...prev[studentId],
-            isSaved: true,
-          },
+          [studentId]: { ...prev[studentId], isSaved: true },
         }));
-
-        successCount++;
-      } catch (error) {
-        console.error(`Error al guardar estudiante ${studentId}:`, error);
-        errorCount++;
+        ok++;
+      } catch (e) {
+        console.error(e);
+        fail++;
       }
     }
-
     setIsSaving(false);
-
-    if (errorCount === 0) {
-      setToast({ message: `¡${successCount} registros guardados correctamente!`, type: "success" });
+    if (fail === 0) {
+      setToast({
+        message: `${ok} registro${ok !== 1 ? "s" : ""} guardado${ok !== 1 ? "s" : ""} ✓`,
+        type: "success",
+      });
       await refetch();
     } else {
-      setToast({
-        message: `${successCount} guardados, ${errorCount} errores`,
-        type: "error",
-      });
+      setToast({ message: `${ok} guardados, ${fail} con error`, type: "error" });
     }
   };
 
-  // Loading state
-  if (loading) {
+  if (!students?.length) {
     return (
-      <div className="flex items-center justify-center py-16 bg-gray-50">
-        <div className="text-center">
-          <svg
-            className="animate-spin h-10 w-10 sm:h-12 sm:w-12 text-blue-600 mx-auto mb-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          <p className="text-gray-600 font-medium text-sm sm:text-base">Cargando asistencia...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="py-16 px-4 text-center">
-        <p className="text-red-600 font-medium">Error al cargar la asistencia: {error.message}</p>
-        <button
-          onClick={() => refetch()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      <div className="flex flex-col items-center gap-3 py-16 text-gray-400 px-4">
+        <svg
+          width="52"
+          height="52"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          className="opacity-30"
         >
-          Reintentar
-        </button>
-      </div>
-    );
-  }
-
-  // Empty state
-  if (!students || students.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <EmptyState />
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        <p className="text-sm font-semibold text-gray-500">Sin estudiantes asignados</p>
+        <span className="text-xs">Asígnalos desde el panel superior</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-24">
-      <AttendanceHeader
-        stats={stats}
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-        hasUnsavedChanges={hasUnsavedChanges}
-      />
+    <div className="flex flex-col">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-5 sm:px-6 py-5 border-b border-gray-100">
+        <div>
+          <h2 className="text-base font-bold text-gray-900 tracking-tight">
+            Registro de asistencia
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Marca asistencia y estado de pago por fecha
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-gray-500">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <DatePicker
+            selected={selectedDate}
+            onChange={setSelectedDate}
+            dateFormat="dd/MM/yyyy"
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-800/8 cursor-pointer font-medium text-gray-700 transition-all bg-white"
+          />
+        </div>
+      </div>
 
-      <SearchAndFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        totalResults={filteredStudents.length}
-      />
+      {/* ── Stats ── */}
+      <div className="flex flex-wrap items-center gap-2 px-5 sm:px-6 py-3 bg-gray-50 border-b border-gray-100">
+        {[
+          { label: "Total", value: stats.total, color: "text-gray-700" },
+          { label: "Presentes", value: stats.present, color: "text-emerald-600" },
+          { label: "Ausentes", value: stats.absent, color: "text-amber-600" },
+          { label: "Pagados", value: stats.paid, color: "text-blue-600" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-gray-200"
+          >
+            <span className={`text-base font-bold ${s.color}`}>{s.value}</span>
+            <span className="text-xs text-gray-400 font-medium">{s.label}</span>
+          </div>
+        ))}
 
-      <div className="px-0 sm:px-4 py-4 sm:py-6">
-        <div className="bg-white rounded-none sm:rounded-lg shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
-          {filteredStudents.length === 0 ? (
-            <div className="py-12 text-center text-gray-500 text-sm">
-              No se encontraron resultados para &quot;{searchTerm}&quot;
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {filteredStudents.map((student) => {
-                const attendance = attendanceData[student.id] || {
+        {unsavedCount > 0 && (
+          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+            <span className="text-xs font-semibold text-amber-700">{unsavedCount} sin guardar</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Search ── */}
+      <div className="flex items-center gap-2.5 px-5 sm:px-6 py-3 border-b border-gray-100 bg-white">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-gray-400 flex-shrink-0"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          ref={searchRef}
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar estudiante..."
+          className="flex-1 text-sm outline-none placeholder-gray-400 text-gray-700 bg-transparent"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            className="text-gray-400 hover:text-gray-600 text-base leading-none w-5 h-5 flex items-center justify-center"
+          >
+            ×
+          </button>
+        )}
+        {searchTerm && (
+          <span className="text-xs text-gray-400">
+            {filteredStudents.length} resultado{filteredStudents.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* ── Column headers (desktop) ── */}
+      <div className="hidden lg:grid lg:grid-cols-[220px_1fr_200px_1fr] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-100">
+        {["Estudiante", "Asistencia", "Justificación", "Estado de Pago"].map((h) => (
+          <span key={h} className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {h}
+          </span>
+        ))}
+      </div>
+
+      {/* ── Rows ── */}
+      <div className="divide-y divide-gray-100">
+        {loading ? (
+          <div className="flex flex-col items-center gap-3 py-14">
+            <div className="w-7 h-7 border-2 border-gray-200 border-t-gray-700 rounded-full animate-spin" />
+            <span className="text-sm text-gray-400">Cargando registros...</span>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-14 px-4 text-center">
+            <p className="text-sm text-red-500">{error.message}</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="py-12 text-center text-sm text-gray-400">
+            Sin resultados para &ldquo;{searchTerm}&rdquo;
+          </div>
+        ) : (
+          filteredStudents.map((student) => (
+            <StudentRow
+              key={student.id}
+              student={student}
+              attendance={
+                attendanceData[student.id] || {
                   attendanceStatus: "Presente",
                   paymentStatus: "Pendiente",
                   justification: "",
                   isSaved: true,
-                };
-                return (
-                  <StudentRow
-                    key={student.id}
-                    student={student}
-                    attendance={attendance}
-                    onAttendanceChange={handleAttendanceChange}
-                    searchTerm={searchTerm}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
+                }
+              }
+              onAttendanceChange={handleChange}
+              searchTerm={searchTerm}
+            />
+          ))
+        )}
       </div>
 
-      <ActionBar
-        onSaveAll={handleSaveAll}
-        isSaving={isSaving}
-        hasUnsavedChanges={hasUnsavedChanges}
-        unsavedCount={unsavedCount}
-      />
+      {/* ── Save bar ── */}
+      {unsavedCount > 0 && (
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            {unsavedCount} estudiante{unsavedCount !== 1 ? "s" : ""} sin guardar
+          </div>
+          <button
+            onClick={handleSaveAll}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+                Guardar cambios
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-      <style>{`
-        @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out;
-        }
-        mark {
-          background-color: #fef08a;
-          font-weight: 600;
-        }
-      `}</style>
     </div>
   );
 };
 
 export default InstructorAttendanceTable;
 
-// =========================
-// PROPTYPES
-// =========================
-
-StatusButton.propTypes = {
-  status: PropTypes.string.isRequired,
-  isActive: PropTypes.bool.isRequired,
-  onClick: PropTypes.func.isRequired,
-  compact: PropTypes.bool,
-  statusType: PropTypes.oneOf(["attendance", "payment"]),
-};
-
-StudentRow.propTypes = {
-  student: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    firstSurName: PropTypes.string.isRequired,
-    secondSurName: PropTypes.string.isRequired,
-  }).isRequired,
-  attendance: PropTypes.shape({
-    attendanceStatus: PropTypes.string,
-    paymentStatus: PropTypes.string,
-    justification: PropTypes.string,
-    isSaved: PropTypes.bool,
-  }),
-  onAttendanceChange: PropTypes.func.isRequired,
-  searchTerm: PropTypes.string,
-};
-
-AttendanceHeader.propTypes = {
-  stats: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    present: PropTypes.number.isRequired,
-    absent: PropTypes.number.isRequired,
-  }).isRequired,
-  selectedDate: PropTypes.instanceOf(Date).isRequired,
-  onDateChange: PropTypes.func.isRequired,
-  hasUnsavedChanges: PropTypes.bool.isRequired,
-};
-
-SearchAndFilters.propTypes = {
-  searchTerm: PropTypes.string.isRequired,
-  onSearchChange: PropTypes.func.isRequired,
-  totalResults: PropTypes.number.isRequired,
-};
-
-ActionBar.propTypes = {
-  onSaveAll: PropTypes.func.isRequired,
-  isSaving: PropTypes.bool.isRequired,
-  hasUnsavedChanges: PropTypes.bool.isRequired,
-  unsavedCount: PropTypes.number.isRequired,
-};
-
-Toast.propTypes = {
-  message: PropTypes.string.isRequired,
-  type: PropTypes.oneOf(["success", "error", "info"]),
-  onClose: PropTypes.func.isRequired,
-};
-
+// PropTypes
 InstructorAttendanceTable.propTypes = {
   students: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired,
       firstSurName: PropTypes.string.isRequired,
-      secondSurName: PropTypes.string.isRequired,
     })
   ).isRequired,
+};
+
+StudentRow.propTypes = {
+  student: PropTypes.object.isRequired,
+  attendance: PropTypes.object,
+  onAttendanceChange: PropTypes.func.isRequired,
+  searchTerm: PropTypes.string,
+};
+
+StatusChip.propTypes = {
+  option: PropTypes.object.isRequired,
+  isActive: PropTypes.bool.isRequired,
+  onClick: PropTypes.func.isRequired,
+  compact: PropTypes.bool,
+};
+
+Toast.propTypes = {
+  message: PropTypes.string.isRequired,
+  type: PropTypes.string,
+  onClose: PropTypes.func.isRequired,
 };

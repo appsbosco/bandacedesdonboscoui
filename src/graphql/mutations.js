@@ -580,3 +580,9 @@ export const UPDATE_SINGLE_ATTENDANCE = gql`
     }
   }
 `;
+
+export const REMOVE_STUDENT_FROM_INSTRUCTOR = gql`
+  mutation RemoveStudentFromInstructor($studentId: ID!) {
+    removeStudentFromInstructor(studentId: $studentId)
+  }
+`;
