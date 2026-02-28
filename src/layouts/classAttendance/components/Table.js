@@ -14,22 +14,19 @@ const ATTENDANCE_OPTIONS = [
     value: "Presente",
     label: "Presente",
     short: "P",
-    active: "bg-emerald-500 border-emerald-500 text-white",
-    dot: "bg-emerald-500",
+    activeCls: "bg-emerald-500 border-emerald-500 text-white",
   },
   {
     value: "Ausencia Justificada",
     label: "Aus. Justificada",
     short: "AJ",
-    active: "bg-amber-500 border-amber-500 text-white",
-    dot: "bg-amber-500",
+    activeCls: "bg-amber-500 border-amber-500 text-white",
   },
   {
     value: "Ausencia No Justificada",
     label: "Aus. No Justificada",
     short: "ANJ",
-    active: "bg-red-500 border-red-500 text-white",
-    dot: "bg-red-500",
+    activeCls: "bg-red-500 border-red-500 text-white",
   },
 ];
 
@@ -38,74 +35,67 @@ const PAYMENT_OPTIONS = [
     value: "Pendiente",
     label: "Pendiente",
     short: "Pend",
-    active: "bg-gray-500 border-gray-500 text-white",
-    dot: "bg-gray-400",
+    activeCls: "bg-slate-500 border-slate-500 text-white",
   },
   {
     value: "Pagado",
     label: "Pagado",
     short: "Pag",
-    active: "bg-blue-500 border-blue-500 text-white",
-    dot: "bg-blue-500",
+    activeCls: "bg-blue-500 border-blue-500 text-white",
   },
   {
     value: "Becado",
     label: "Becado",
     short: "Bec",
-    active: "bg-violet-500 border-violet-500 text-white",
-    dot: "bg-violet-500",
+    activeCls: "bg-violet-500 border-violet-500 text-white",
   },
 ];
 
 // ─────────────────────────────────────────────
-// Helpers
+// Avatar colors — use inline style to avoid Tailwind purge
 // ─────────────────────────────────────────────
+const AVATAR_COLORS = [
+  { bg: "#1e293b", color: "#fca5a5" },
+  { bg: "#1e3a5f", color: "#93c5fd" },
+  { bg: "#312e81", color: "#c4b5fd" },
+  { bg: "#064e3b", color: "#6ee7b7" },
+  { bg: "#4c0519", color: "#fda4af" },
+  { bg: "#2e1065", color: "#fde047" },
+  { bg: "#451a03", color: "#fcd34d" },
+];
+const getAvatarStyle = (str = "") => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+
 const safeStr = (v) => (typeof v === "string" ? v : "");
 const getFullName = (u) =>
   [safeStr(u?.name), safeStr(u?.firstSurName), safeStr(u?.secondSurName)]
     .filter(Boolean)
     .join(" ")
     .trim() || "Sin nombre";
-
-const AVATAR_PAIRS = [
-  ["bg-slate-800", "text-red-300"],
-  ["bg-blue-900", "text-blue-300"],
-  ["bg-indigo-900", "text-violet-300"],
-  ["bg-emerald-900", "text-emerald-300"],
-  ["bg-rose-900", "text-rose-300"],
-  ["bg-violet-900", "text-yellow-300"],
-  ["bg-amber-900", "text-amber-300"],
-];
-const avatarColors = (str = "") => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_PAIRS[Math.abs(h) % AVATAR_PAIRS.length];
-};
 const getInitials = (u) =>
   (safeStr(u?.name).charAt(0) + safeStr(u?.firstSurName).charAt(0)).toUpperCase() || "?";
 
 // ─────────────────────────────────────────────
-// StatusChip
+// StatusChip — no dynamic class construction
 // ─────────────────────────────────────────────
-const StatusChip = ({ option, isActive, onClick, compact }) => (
+const StatusChip = ({ option, isActive, onClick }) => (
   <button
     type="button"
     onClick={onClick}
     aria-pressed={isActive}
     title={option.label}
-    className={`
-      ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs sm:text-sm"}
-      font-semibold rounded-full border transition-all duration-150 whitespace-nowrap
-      ${
-        isActive
-          ? `${option.active} shadow-sm scale-105`
-          : "bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700"
-      }
-      focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400
-    `}
+    className={[
+      "px-3 py-1.5 text-xs font-semibold rounded-full border transition-all duration-150 whitespace-nowrap",
+      "focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400",
+      isActive
+        ? `${option.activeCls} shadow-sm scale-105`
+        : "bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700",
+    ].join(" ")}
   >
-    <span className="sm:hidden">{option.short}</span>
-    <span className="hidden sm:inline">{compact ? option.short : option.label}</span>
+    {option.label}
   </button>
 );
 
@@ -114,8 +104,9 @@ const StatusChip = ({ option, isActive, onClick, compact }) => (
 // ─────────────────────────────────────────────
 const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => {
   if (!student) return null;
+
   const name = getFullName(student);
-  const [bg, text] = avatarColors(name);
+  const avatarStyle = getAvatarStyle(name);
   const curAttendance = attendance?.attendanceStatus || "Presente";
   const curPayment = attendance?.paymentStatus || "Pendiente";
   const curJust = attendance?.justification || "";
@@ -125,8 +116,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
   const highlight = (str) => {
     if (!searchTerm) return str;
     const rx = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    const parts = str.split(rx);
-    return parts.map((p, i) =>
+    return str.split(rx).map((p, i) =>
       rx.test(p) ? (
         <mark key={i} className="bg-yellow-200 font-bold rounded-sm px-0.5">
           {p}
@@ -137,48 +127,71 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
     );
   };
 
+  const AvatarCircle = ({ size = 36 }) => (
+    <div
+      className="rounded-full flex items-center justify-center font-bold flex-shrink-0 text-xs"
+      style={{ width: size, height: size, background: avatarStyle.bg, color: avatarStyle.color }}
+    >
+      {getInitials(student)}
+    </div>
+  );
+
+  const SavedBadge = () => (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-medium ${
+        isSaved ? "text-emerald-600" : "text-amber-600"
+      }`}
+    >
+      {isSaved ? (
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ) : (
+        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
+      )}
+      {isSaved ? "Guardado" : "Sin guardar"}
+    </span>
+  );
+
+  const JustInput = ({ placeholder = "Justificación..." }) => (
+    <input
+      type="text"
+      value={curJust}
+      onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
+      placeholder={placeholder}
+      className={[
+        "w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all",
+        "focus:ring-2 focus:ring-gray-800/10",
+        needsJust && !curJust
+          ? "border-red-300 bg-red-50 focus:border-red-400"
+          : "border-gray-200 focus:border-gray-400",
+      ].join(" ")}
+    />
+  );
+
   return (
     <div
-      className={`relative border-b border-gray-100 last:border-b-0 transition-colors
-      ${!isSaved ? "bg-amber-50/40" : "hover:bg-gray-50/60"}`}
+      className={`relative border-b border-gray-100 last:border-b-0 transition-colors ${
+        !isSaved ? "bg-amber-50" : "hover:bg-gray-50"
+      }`}
     >
-      {/* Unsaved indicator */}
       {!isSaved && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400 rounded-r" />}
 
-      {/* ── Mobile layout ── */}
-      <div className="lg:hidden px-4 py-4 space-y-3">
-        {/* Student */}
+      {/* ─── MOBILE (< 768px) ─── */}
+      <div className="md:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-9 h-9 ${bg} ${text} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0`}
-          >
-            {getInitials(student)}
-          </div>
+          <AvatarCircle />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
             {student.instrument && <p className="text-xs text-gray-400">{student.instrument}</p>}
           </div>
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-medium ${
-              isSaved ? "text-emerald-600" : "text-amber-600"
-            }`}
-          >
-            {isSaved ? (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ) : (
-              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-            )}
-            {isSaved ? "Guardado" : "Sin guardar"}
-          </span>
+          <SavedBadge />
         </div>
 
-        {/* Attendance */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
             Asistencia
@@ -190,34 +203,20 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
                 option={opt}
                 isActive={curAttendance === opt.value}
                 onClick={() => onAttendanceChange(student.id, "attendanceStatus", opt.value)}
-                compact
               />
             ))}
           </div>
         </div>
 
-        {/* Justification */}
         {needsJust && (
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Justificación
             </p>
-            <input
-              type="text"
-              value={curJust}
-              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
-              placeholder="Describe el motivo..."
-              className={`w-full px-3 py-2 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-gray-800/10 transition-all
-                ${
-                  needsJust && !curJust
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-gray-200 focus:border-gray-400"
-                }`}
-            />
+            <JustInput placeholder="Describe el motivo..." />
           </div>
         )}
 
-        {/* Payment */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
             Estado de Pago
@@ -229,52 +228,30 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
                 option={opt}
                 isActive={curPayment === opt.value}
                 onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
-                compact
               />
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Desktop layout ── */}
-      <div className="hidden lg:grid lg:grid-cols-[220px_1fr_200px_1fr] gap-3 px-5 py-3 items-center">
-        {/* Student info */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className={`w-9 h-9 ${bg} ${text} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0`}
-          >
-            {getInitials(student)}
-          </div>
+      {/* ─── TABLET / DESKTOP (>= 768px) ─── */}
+      <div className="hidden md:flex md:flex-row md:items-center md:gap-4 px-5 py-3">
+        {/* Student — fixed width */}
+        <div className="flex items-center gap-2.5 min-w-0" style={{ width: 200, flexShrink: 0 }}>
+          <AvatarCircle />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
               {student.instrument && (
                 <span className="text-xs text-gray-400">{student.instrument}</span>
               )}
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-medium ${
-                  isSaved ? "text-emerald-600" : "text-amber-600"
-                }`}
-              >
-                {isSaved ? (
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : (
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
-                )}
-                {isSaved ? "Guardado" : "Sin guardar"}
-              </span>
+              <SavedBadge />
             </div>
           </div>
         </div>
 
-        {/* Attendance chips */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Attendance — flex grow */}
+        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {ATTENDANCE_OPTIONS.map((opt) => (
             <StatusChip
               key={opt.value}
@@ -285,26 +262,11 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
           ))}
         </div>
 
-        {/* Justification */}
-        <div>
-          {needsJust && (
-            <input
-              type="text"
-              value={curJust}
-              onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
-              placeholder="Justificación..."
-              className={`w-full px-3 py-2 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-gray-800/10 transition-all
-                ${
-                  needsJust && !curJust
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-gray-200 focus:border-gray-400"
-                }`}
-            />
-          )}
-        </div>
+        {/* Justification — fixed width */}
+        <div style={{ width: 180, flexShrink: 0 }}>{needsJust && <JustInput />}</div>
 
-        {/* Payment chips */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Payment — flex grow */}
+        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {PAYMENT_OPTIONS.map((opt) => (
             <StatusChip
               key={opt.value}
@@ -333,8 +295,9 @@ const Toast = ({ message, type, onClose }) => {
       <style>{`@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
       <div
         style={{ animation: "toastIn 0.25s ease-out" }}
-        className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs
-          ${type === "success" ? "bg-gray-900" : "bg-red-600"}`}
+        className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs ${
+          type === "success" ? "bg-gray-900" : "bg-red-600"
+        }`}
       >
         {type === "success" ? (
           <svg
@@ -387,7 +350,6 @@ const InstructorAttendanceTable = ({ students }) => {
 
   const [markAttendanceAndPayment] = useMutation(MARK_ATTENDANCE_AND_PAYMENT);
 
-  // Init state
   useEffect(() => {
     if (!students?.length) return;
     const init = {};
@@ -537,7 +499,7 @@ const InstructorAttendanceTable = ({ students }) => {
             selected={selectedDate}
             onChange={setSelectedDate}
             dateFormat="dd/MM/yyyy"
-            className="px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-800/8 cursor-pointer font-medium text-gray-700 transition-all bg-white"
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none cursor-pointer font-medium text-gray-700 bg-white"
           />
         </div>
       </div>
@@ -558,7 +520,6 @@ const InstructorAttendanceTable = ({ students }) => {
             <span className="text-xs text-gray-400 font-medium">{s.label}</span>
           </div>
         ))}
-
         {unsavedCount > 0 && (
           <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
@@ -590,27 +551,42 @@ const InstructorAttendanceTable = ({ students }) => {
           className="flex-1 text-sm outline-none placeholder-gray-400 text-gray-700 bg-transparent"
         />
         {searchTerm && (
-          <button
-            onClick={() => setSearchTerm("")}
-            className="text-gray-400 hover:text-gray-600 text-base leading-none w-5 h-5 flex items-center justify-center"
-          >
-            ×
-          </button>
-        )}
-        {searchTerm && (
-          <span className="text-xs text-gray-400">
-            {filteredStudents.length} resultado{filteredStudents.length !== 1 ? "s" : ""}
-          </span>
+          <>
+            <button
+              onClick={() => setSearchTerm("")}
+              className="text-gray-400 hover:text-gray-600 text-base w-5 h-5 flex items-center justify-center"
+            >
+              ×
+            </button>
+            <span className="text-xs text-gray-400">
+              {filteredStudents.length} resultado{filteredStudents.length !== 1 ? "s" : ""}
+            </span>
+          </>
         )}
       </div>
 
-      {/* ── Column headers (desktop) ── */}
-      <div className="hidden lg:grid lg:grid-cols-[220px_1fr_200px_1fr] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-100">
-        {["Estudiante", "Asistencia", "Justificación", "Estado de Pago"].map((h) => (
-          <span key={h} className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {h}
+      {/* ── Column headers — tablet/desktop only ── */}
+      <div className="hidden md:flex md:flex-row md:gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-100">
+        <div style={{ width: 200, flexShrink: 0 }}>
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Estudiante
           </span>
-        ))}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Asistencia
+          </span>
+        </div>
+        <div style={{ width: 180, flexShrink: 0 }}>
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Justificación
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Estado de Pago
+          </span>
+        </div>
       </div>
 
       {/* ── Rows ── */}
@@ -656,7 +632,7 @@ const InstructorAttendanceTable = ({ students }) => {
 
       {/* ── Save bar ── */}
       {unsavedCount > 0 && (
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-white border-t border-gray-200 shadow-lg">
           <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
             <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
             {unsavedCount} estudiante{unsavedCount !== 1 ? "s" : ""} sin guardar
@@ -699,7 +675,7 @@ const InstructorAttendanceTable = ({ students }) => {
 
 export default InstructorAttendanceTable;
 
-// PropTypes
+// ─── PropTypes ───────────────────────────────
 InstructorAttendanceTable.propTypes = {
   students: PropTypes.arrayOf(
     PropTypes.shape({
@@ -709,21 +685,19 @@ InstructorAttendanceTable.propTypes = {
     })
   ).isRequired,
 };
-
 StudentRow.propTypes = {
   student: PropTypes.object.isRequired,
   attendance: PropTypes.object,
   onAttendanceChange: PropTypes.func.isRequired,
   searchTerm: PropTypes.string,
+  size: PropTypes.number,
+  placeholder: PropTypes.string,
 };
-
 StatusChip.propTypes = {
   option: PropTypes.object.isRequired,
   isActive: PropTypes.bool.isRequired,
   onClick: PropTypes.func.isRequired,
-  compact: PropTypes.bool,
 };
-
 Toast.propTypes = {
   message: PropTypes.string.isRequired,
   type: PropTypes.string,

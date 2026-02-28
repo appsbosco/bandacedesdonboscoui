@@ -442,7 +442,7 @@ const ClassAttendance = () => {
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-16 space-y-5">
+      <div className="max-w-5xl mx-auto  py-6 pb-16 space-y-5">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mis estudiantes</h1>
