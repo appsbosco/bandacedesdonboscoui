@@ -129,6 +129,69 @@ function NewDocumentPage() {
     [documentType, createDocument, getSignedUpload, addDocumentImage, enqueueDocumentOcr]
   );
 
+  // Nuevo handler para cuando viene un File (no canvas)
+  const handleStep2File = useCallback(
+    async (file) => {
+      setStep(3);
+      setUploadState("uploading");
+      setUploadError(null);
+
+      try {
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = URL.createObjectURL(file);
+      } catch {
+        // non-critical
+      }
+
+      try {
+        const { data: docData } = await createDocument({
+          variables: { input: { type: documentType } },
+        });
+        const documentId = docData?.createDocument?._id || docData?.createDocument?.id;
+        if (!documentId) throw new Error("No se pudo crear el documento");
+
+        const { data: signData } = await getSignedUpload({
+          variables: { input: { documentId, kind: "RAW" } },
+        });
+        const signed = signData?.getSignedUpload;
+        if (!signed) throw new Error("No se pudo obtener firma de subida");
+
+        const result = await uploadSignedToCloudinary({
+          cloudName: signed.cloudName,
+          apiKey: signed.apiKey,
+          timestamp: signed.timestamp,
+          signature: signed.signature,
+          folder: signed.folder,
+          publicId: signed.publicId,
+          fileBlob: file,
+        });
+
+        await addDocumentImage({
+          variables: {
+            input: {
+              documentId,
+              kind: "RAW",
+              url: result.secure_url,
+              publicId: result.public_id,
+              width: result.width,
+              height: result.height,
+              bytes: result.bytes,
+              mimeType: `image/${result.format}`,
+            },
+          },
+        });
+
+        setCreatedDocId(documentId);
+        setUploadState("success");
+      } catch (err) {
+        console.error("[NewDocumentPage] file upload error:", err);
+        setUploadError(err.message || "Error al subir el documento");
+        setUploadState("error");
+      }
+    },
+    [documentType, createDocument, getSignedUpload, addDocumentImage]
+  );
+
   const handleRetryUpload = useCallback(() => {
     if (canvasRef.current) {
       handleStep2Capture(canvasRef.current, {});
@@ -213,6 +276,7 @@ function NewDocumentPage() {
         <WizardStep2
           documentType={documentType}
           onCapture={handleStep2Capture}
+          onFileUpload={handleStep2File}
           onCancel={handleCancel}
         />
       )}
