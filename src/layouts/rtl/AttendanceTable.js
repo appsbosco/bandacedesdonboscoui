@@ -771,17 +771,33 @@ const AttendancePage = () => {
   const canCloseSession = Boolean(activeSession?.id && !isClosed && (isAdmin || isOwner));
 
   // Filtrar estudiantes de la sección
+  const normalizeInstrument = (value) =>
+    String(value || "")
+      .trim()
+      .toUpperCase();
+
   const students = useMemo(() => {
     if (!userSection || userSection === "NO_APLICA") return [];
+
+    const authInstrument = normalizeInstrument(currentUser?.instrument);
+    const isTrombonesUser = authInstrument === "TROMBÓN";
+
     return users.filter((user) => {
       const studentSection = mapInstrumentToSection(user.instrument);
+      const studentInstrument = normalizeInstrument(user.instrument);
+
+      const sameSection = studentSection === userSection;
+      const includeEuphoniums = isTrombonesUser && studentInstrument === "EUFONIO";
+
+      console.log(studentInstrument);
+
       return (
-        studentSection === userSection &&
+        (sameSection || includeEuphoniums) &&
         user.role !== "Instructor de instrumento" &&
         user.role !== "ADMIN"
       );
     });
-  }, [users, userSection]);
+  }, [users, userSection, currentUser?.instrument]);
 
   // Inicializar/precargar registros según sesión (sin pisar cambios del usuario)
   const initializedSessionRef = useRef(null);
