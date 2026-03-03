@@ -121,14 +121,14 @@ function AdminDocumentsView() {
   const [pagination, setPagination] = useState({ limit: 20, skip: 0 });
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [ownerInput, setOwnerInput] = useState("");
 
   const buildFilters = () => {
     const f = {};
     if (statusFilter) f.status = statusFilter;
     if (typeFilter) f.type = typeFilter;
-    if (ownerFilter) f.owner = ownerFilter;
+    if (ownerName) f.ownerName = ownerName;
     return Object.keys(f).length > 0 ? f : undefined;
   };
 
@@ -145,7 +145,7 @@ function AdminDocumentsView() {
   const applyFilters = useCallback(() => {
     setPagination({ limit: 20, skip: 0 });
     refetch({ filters: buildFilters(), pagination: { limit: 20, skip: 0 } });
-  }, [statusFilter, typeFilter, ownerFilter]); // eslint-disable-line
+  }, [statusFilter, typeFilter, ownerName]); // eslint-disable-line
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore) return;
@@ -154,20 +154,20 @@ function AdminDocumentsView() {
 
   const handleOwnerSearch = (e) => {
     e.preventDefault();
-    setOwnerFilter(ownerInput.trim());
+    setOwnerName(ownerInput.trim());
     applyFilters();
   };
 
   const clearFilters = () => {
     setStatusFilter("");
     setTypeFilter("");
-    setOwnerFilter("");
+    setOwnerName("");
     setOwnerInput("");
     setPagination({ limit: 20, skip: 0 });
     refetch({ filters: undefined, pagination: { limit: 20, skip: 0 } });
   };
 
-  const hasActiveFilters = statusFilter || typeFilter || ownerFilter;
+  const hasActiveFilters = statusFilter || typeFilter || ownerName;
 
   return (
     <div className="space-y-4">
@@ -228,7 +228,7 @@ function AdminDocumentsView() {
         {/* Owner ID search */}
         <div>
           <label className="block text-xs text-slate-500 mb-1 font-medium">
-            Filtrar por ID de usuario
+            Filtrar por nombre de usuario
           </label>
           <div className="flex gap-2">
             <input
@@ -236,7 +236,7 @@ function AdminDocumentsView() {
               value={ownerInput}
               onChange={(e) => setOwnerInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleOwnerSearch(e)}
-              placeholder="ObjectId del usuario..."
+              placeholder="Nombre o apellido.."
               className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700 font-mono"
             />
             <button
@@ -246,15 +246,15 @@ function AdminDocumentsView() {
               Buscar
             </button>
           </div>
-          {ownerFilter && (
+          {ownerName && (
             <div className="mt-1.5 flex items-center gap-1.5">
               <span className="text-xs text-slate-400">Filtrando por:</span>
               <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded-lg text-slate-600">
-                {ownerFilter}
+                {ownerName}
               </span>
               <button
                 onClick={() => {
-                  setOwnerFilter("");
+                  setOwnerName("");
                   setOwnerInput("");
                   applyFilters();
                 }}

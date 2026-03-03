@@ -1,24 +1,139 @@
-// DocumentCard.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getDocumentTypeInfo, getStatusInfo, getExpirationStatus } from "../../utils/constants";
 import PropTypes from "prop-types";
 
-export function DocumentCard({ document }) {
-  const { id, type, status, images, extracted, isExpired, daysUntilExpiration, createdAt } =
-    document;
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  try {
+    return new Intl.DateTimeFormat("es-CR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(dateStr));
+  } catch {
+    return null;
+  }
+}
+
+function getOwnerFullName(owner) {
+  if (!owner) return null;
+  if (typeof owner === "string") return null; // no populado
+  return (
+    [owner.name, owner.firstSurName, owner.secondSurName].filter(Boolean).join(" ").trim() ||
+    owner.email ||
+    null
+  );
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+const STATUS_STYLES = {
+  UPLOADED: {
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+    border: "border-slate-200",
+    label: "Subido",
+  },
+  DATA_CAPTURED: {
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-200",
+    label: "Datos capturados",
+  },
+  CAPTURE_ACCEPTED: {
+    bg: "bg-sky-50",
+    text: "text-sky-700",
+    border: "border-sky-200",
+    label: "Captura aceptada",
+  },
+  OCR_PENDING: {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
+    label: "OCR pendiente",
+  },
+  OCR_PROCESSING: {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
+    label: "OCR procesando",
+  },
+  OCR_SUCCESS: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+    label: "OCR exitoso",
+  },
+  OCR_FAILED: {
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+    label: "OCR fallido",
+  },
+  VERIFIED: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+    label: "Verificado",
+  },
+  REJECTED: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "Rechazado" },
+};
+
+function StatusBadge({ status }) {
+  const s = STATUS_STYLES[status] || {
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+    border: "border-slate-200",
+    label: status,
+  };
+  return (
+    <span
+      className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-md border ${s.bg} ${s.text} ${s.border} whitespace-nowrap`}
+    >
+      {s.label}
+    </span>
+  );
+}
+
+// ── Main card ─────────────────────────────────────────────────────────────────
+
+export function DocumentCard({ document, showOwner }) {
+  const navigate = useNavigate();
+
+  const {
+    _id,
+    id,
+    type,
+    status,
+    images,
+    extracted,
+    isExpired,
+    daysUntilExpiration,
+    createdAt,
+    owner,
+  } = document;
+
+  // _id preferred (Mongoose), fallback to id (Apollo cache alias)
+  const docId = _id || id;
 
   const typeInfo = getDocumentTypeInfo(type);
-  const statusInfo = getStatusInfo(status);
   const expirationStatus = getExpirationStatus(daysUntilExpiration);
 
   const thumbnailUrl = images?.[0]?.url;
+
   const displayName =
     extracted?.fullName ||
     (extracted?.givenNames && extracted?.surname
       ? `${extracted.givenNames} ${extracted.surname}`
       : null);
+
   const documentNumber = extracted?.passportNumber || extracted?.documentNumber;
+
+  const ownerName = showOwner ? getOwnerFullName(owner) : null;
+  const ownerEmail = showOwner && owner && typeof owner === "object" ? owner.email : null;
 
   const isUrgent = !!extracted?.expirationDate && !isExpired && !!expirationStatus?.urgent;
   const isVigente =
@@ -27,15 +142,44 @@ export function DocumentCard({ document }) {
     !expirationStatus?.urgent &&
     expirationStatus?.label === "Vigente";
 
+  const expirationColor = isExpired
+    ? "text-red-600"
+    : isUrgent
+    ? "text-amber-600"
+    : isVigente
+    ? "text-emerald-600"
+    : "text-slate-600";
+  const expirationIconColor = isExpired
+    ? "text-red-500"
+    : isUrgent
+    ? "text-amber-500"
+    : isVigente
+    ? "text-emerald-500"
+    : "text-slate-400";
+
+  const handleClick = () => {
+    if (docId) navigate(`/documents/${docId}`);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
-    <Link
-      to={`/documents/${id}`}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className="
-        block
-        rounded-2xl
-        bg-white
+        block w-full text-left cursor-pointer
+        rounded-2xl bg-white
         border border-slate-200
-        hover:border-slate-300
+        hover:border-slate-300 hover:shadow-sm
+        active:scale-[0.99]
         transition-all duration-200
         p-3 sm:p-4
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
@@ -46,103 +190,86 @@ export function DocumentCard({ document }) {
         {/* Thumbnail */}
         <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
           {thumbnailUrl ? (
-            <img src={thumbnailUrl} alt={typeInfo.label} className="w-full h-full object-cover" />
+            <img
+              src={thumbnailUrl}
+              alt={typeInfo?.label ?? type}
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-3xl text-slate-400">
-              {typeInfo.icon}
+            <div className="w-full h-full flex items-center justify-center text-3xl text-slate-300">
+              {typeInfo?.icon ?? "📄"}
             </div>
           )}
         </div>
 
         {/* Content */}
         <div className="min-w-0 flex-1 flex flex-col pt-0.5">
-          {/* Top row: type + badge | chevron */}
-          <div className="flex items-start justify-between gap-3 min-w-0">
-            <div className="min-w-0 flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 shrink-0">{typeInfo.label}</span>
-
-              <span
-                className="
-                  min-w-0
-                  max-w-[11.5rem]
-                  text-xs font-medium
-                  px-2.5 py-1
-                  rounded-md
-                  bg-amber-50 text-amber-700
-                  border border-amber-200
-                  whitespace-nowrap
-                  overflow-hidden text-ellipsis
-                "
-                title="Datos Capturados"
-              >
-                Datos Capturados
+          {/* Top row: type label + status badge + chevron */}
+          <div className="flex items-start justify-between gap-2 min-w-0">
+            <div className="min-w-0 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-slate-500 shrink-0">
+                {typeInfo?.label ?? type}
               </span>
+              <StatusBadge status={status} />
             </div>
-
-            <div className="flex-shrink-0 pt-0.5">
-              <svg
-                className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </div>
+            <svg
+              className="w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
 
-          {/* ID (document number) */}
-          <h3
-            className="
-              mt-2
-              text-base sm:text-lg
-              font-semibold
-              text-slate-900
-              group-hover:text-blue-600
-              transition-colors
-              min-w-0
-              truncate
-            "
-            title={documentNumber || "Documento sin datos"}
-          >
-            {documentNumber || "Documento sin datos"}
-          </h3>
+          {/* Document number */}
+          {showOwner && (ownerName || ownerEmail) && (
+            <h3 className="mt-2 text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+              {ownerName}
+            </h3>
+          )}
 
-          {/* Name (max 2 lines) */}
+          {/* Holder name (from extracted data) */}
           {displayName && (
-            <p
-              className="mt-1.5 text-sm text-slate-600 min-w-0 break-words"
-              title={displayName}
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
+            <p className="mt-0.5 text-sm text-slate-600 truncate" title={displayName}>
               {displayName}
             </p>
           )}
 
-          {/* Status row */}
-          <div className="mt-3 flex items-center gap-1.5 min-w-0">
-            {extracted?.expirationDate ? (
-              <>
+          {/* Owner (admin view) */}
+          {/* {showOwner && (ownerName || ownerEmail) && (
+            <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
+              <div className="w-4 h-4 flex-shrink-0 rounded-full bg-violet-100 flex items-center justify-center">
                 <svg
-                  className={`w-4 h-4 flex-shrink-0 ${
-                    isExpired
-                      ? "text-red-500"
-                      : isUrgent
-                      ? "text-amber-500"
-                      : isVigente
-                      ? "text-emerald-500"
-                      : "text-slate-400"
-                  }`}
+                  className="w-2.5 h-2.5 text-violet-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <span
+                className="text-xs text-violet-700 font-medium truncate"
+                title={ownerName ?? ownerEmail}
+              >
+                {ownerName ?? ownerEmail}
+              </span>
+            </div>
+          )} */}
+
+          {/* Bottom row: expiration + created date */}
+          <div className="mt-2.5 flex items-center justify-between gap-2 min-w-0">
+            {/* Expiration */}
+            {extracted?.expirationDate ? (
+              <div className="flex items-center gap-1 min-w-0">
+                <svg
+                  className={`w-3.5 h-3.5 flex-shrink-0 ${expirationIconColor}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -151,41 +278,44 @@ export function DocumentCard({ document }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-
-                <span
-                  className={`text-sm font-medium min-w-0 truncate ${
-                    isExpired
-                      ? "text-red-600"
-                      : isUrgent
-                      ? "text-amber-600"
-                      : isVigente
-                      ? "text-emerald-600"
-                      : "text-slate-600"
-                  }`}
-                  title={isExpired ? "Expirado" : `Expira en ${expirationStatus.label}`}
-                >
-                  {isExpired ? "Expirado" : `Expira en ${expirationStatus.label}`}
+                <span className={`text-xs font-medium truncate ${expirationColor}`}>
+                  {isExpired
+                    ? `Expirado · ${formatDate(extracted.expirationDate)}`
+                    : `Vence ${formatDate(extracted.expirationDate)}`}
                 </span>
-              </>
+              </div>
             ) : (
-              <span
-                className="text-sm text-slate-500 min-w-0 truncate"
-                title="Sin fecha de expiración"
-              >
-                Sin fecha de expiración
-              </span>
+              <span className="text-xs text-slate-400">Sin fecha de vencimiento</span>
+            )}
+
+            {/* Created at */}
+            {createdAt && (
+              <span className="text-xs text-slate-400 flex-shrink-0">{formatDate(createdAt)}</span>
             )}
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
 export default DocumentCard;
+
+// ── PropTypes ─────────────────────────────────────────────────────────────────
+
+const OwnerShape = PropTypes.oneOfType([
+  PropTypes.string,
+  PropTypes.shape({
+    _id: PropTypes.string,
+    name: PropTypes.string,
+    firstSurName: PropTypes.string,
+    secondSurName: PropTypes.string,
+    email: PropTypes.string,
+  }),
+]);
 
 const ExtractedShape = PropTypes.shape({
   fullName: PropTypes.string,
@@ -196,13 +326,16 @@ const ExtractedShape = PropTypes.shape({
   expirationDate: PropTypes.string,
 });
 
-const ImageShape = PropTypes.shape({
-  url: PropTypes.string,
-});
+const ImageShape = PropTypes.shape({ url: PropTypes.string });
+
+StatusBadge.propTypes = {
+  status: PropTypes.string.isRequired,
+};
 
 DocumentCard.propTypes = {
   document: PropTypes.shape({
-    id: PropTypes.string.isRequired,
+    _id: PropTypes.string,
+    id: PropTypes.string,
     type: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
     images: PropTypes.arrayOf(ImageShape),
@@ -210,5 +343,11 @@ DocumentCard.propTypes = {
     isExpired: PropTypes.bool,
     daysUntilExpiration: PropTypes.number,
     createdAt: PropTypes.string,
+    owner: OwnerShape,
   }).isRequired,
+  showOwner: PropTypes.bool,
+};
+
+DocumentCard.defaultProps = {
+  showOwner: false,
 };

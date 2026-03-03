@@ -64,6 +64,12 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
       passportNumber
       expirationDate
     }
+    owner {
+      name
+      firstSurName
+      secondSurName
+      email
+    }
     isExpired
     daysUntilExpiration
     createdAt

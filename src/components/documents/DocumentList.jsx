@@ -78,7 +78,7 @@ export function DocumentList({
     <div className="space-y-3">
       {/* Lista */}
       {documents.map((doc) => (
-        <DocumentCard key={doc.id} document={doc} />
+        <DocumentCard key={doc.id} document={doc} showOwner={true} />
       ))}
 
       {/* Load more */}
