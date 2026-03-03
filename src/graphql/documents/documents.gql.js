@@ -108,3 +108,18 @@ export const ENQUEUE_DOCUMENT_OCR = gql`
     }
   }
 `;
+
+export const ALL_DOCUMENTS = gql`
+  ${DOCUMENT_CARD_FRAGMENT}
+  ${PAGINATION_FRAGMENT}
+  query AllDocuments($filters: AllDocumentsFiltersInput, $pagination: PaginationInput) {
+    allDocuments(filters: $filters, pagination: $pagination) {
+      documents {
+        ...DocumentCardFragment
+      }
+      pagination {
+        ...PaginationFragment
+      }
+    }
+  }
+`;
