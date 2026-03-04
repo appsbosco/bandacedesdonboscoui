@@ -1,12 +1,12 @@
 /**
- * ExpensesPage.jsx — /finance/expenses
+ * Expenses.jsx — /finance/expenses
  *
- * Cambios v2:
- * - ExternalToggle usa el átomo reutilizable
- * - scopeOf() helper en RecentExpensesPanel (compat legacy)
- * - ScopeBadge reutilizado
- * - StatusPill (genérico) en lugar de SaleStatusPill
- * - Simplificado: un solo useEffect para gestión de scope
+ * FIXES v2:
+ * - ❌ recordCommitteeExpense llamado con { committeeId, expenseId } planos
+ * - ✅ Ahora llamado con { input: { committeeId, businessDate, amount, concept, expenseId } }
+ *   que coincide con RecordCommitteeExpenseInput del backend
+ * - budgets accesado correctamente desde allCommitteeBudgets.committees
+ * - CommitteePicker recibe budgets en formato correcto
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
@@ -21,8 +21,10 @@ import {
   GET_ACTIVITIES,
   GET_CASH_SESSION_DETAIL,
   GET_EXPENSES_BY_DATE,
+  GET_COMMITTEES,
+  GET_ALL_COMMITTEE_BUDGETS,
 } from "graphql/queries/finance";
-import { RECORD_EXPENSE, VOID_EXPENSE } from "graphql/mutations/finance";
+import { RECORD_EXPENSE, VOID_EXPENSE, RECORD_COMMITTEE_EXPENSE } from "graphql/mutations/finance";
 import { useNotice } from "hooks/useFinance";
 import {
   formatCRC,
@@ -44,10 +46,12 @@ import {
   VoidReasonModal,
   ScopeBadge,
   ExternalToggle,
+  CommitteePicker,
 } from "./FinanceAtoms";
 import { FinancePageHeader } from "./FinancePageHeader";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
+
 const scopeOf = (m) => m.scope || (m.cashSessionId ? "SESSION" : "EXTERNAL");
 
 // ─── RecentExpensesPanel ──────────────────────────────────────────────────────
@@ -155,6 +159,7 @@ const ExpensesPage = () => {
   const [detail, setDetail] = useState("");
   const [categoryId, setCategoryId] = useState(null);
   const [activityId, setActivityId] = useState(null);
+  const [committeeId, setCommitteeId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [isAsset, setIsAsset] = useState(false);
   const [purpose, setPurpose] = useState("");
@@ -187,6 +192,17 @@ const ExpensesPage = () => {
     fetchPolicy: "cache-and-network",
   });
 
+  const { data: committeesData, loading: committeesLoading } = useQuery(GET_COMMITTEES, {
+    variables: { onlyActive: true },
+  });
+
+  // ✅ FIX: acceso correcto a allCommitteeBudgets.committees
+  const { data: budgetsData } = useQuery(GET_ALL_COMMITTEE_BUDGETS);
+
+  const committees = (committeesData?.committees || []).filter((c) => c.isActive !== false);
+  // allCommitteeBudgets devuelve { committees: [CommitteeBudgetSummary], ... }
+  const budgetSummaries = budgetsData?.allCommitteeBudgets?.committees || [];
+
   const session = sessionData?.cashSessionDetail || null;
   const canUseSession = session?.status === "OPEN";
   const categories = categoriesData?.categories || [];
@@ -194,6 +210,16 @@ const ExpensesPage = () => {
   const expenses = expensesData?.expensesByDate || [];
 
   const [recordExpense, { loading }] = useMutation(RECORD_EXPENSE);
+
+  // ✅ FIX: onError con mensaje mejorado para no perder el ID del gasto ya registrado
+  const [recordCommitteeExpense] = useMutation(RECORD_COMMITTEE_EXPENSE, {
+    onError: (e) =>
+      showNotice(
+        "error",
+        `⚠️ El gasto se registró pero no se pudo vincular al comité: ${e.message}. Podés vincularlo manualmente.`
+      ),
+  });
+
   const [voidExpense, { loading: voidLoading }] = useMutation(VOID_EXPENSE, {
     onCompleted: () => {
       showNotice("success", "Gasto anulado.");
@@ -228,11 +254,11 @@ const ExpensesPage = () => {
 
     const scope = isExternal ? "EXTERNAL" : "SESSION";
     if (scope === "SESSION" && !canUseSession) {
-      return showNotice("error", "No hay caja abierta para registrar este gasto como de caja.");
+      return showNotice("error", "No hay caja abierta. Usá modo externo.");
     }
 
     try {
-      await recordExpense({
+      const result = await recordExpense({
         variables: {
           input: {
             businessDate: today,
@@ -250,12 +276,35 @@ const ExpensesPage = () => {
           },
         },
       });
-      showNotice("success", `Gasto de ${formatCRC(total)} registrado ✓`);
+
+      // ✅ FIX: TODOS los campos requeridos de RecordCommitteeExpenseInput
+      const newExpenseId = result?.data?.recordExpense?.id;
+      if (committeeId && newExpenseId) {
+        await recordCommitteeExpense({
+          variables: {
+            input: {
+              committeeId,
+              businessDate: today, // ← REQUERIDO
+              amount: total, // ← REQUERIDO
+              concept: concept.trim(), // ← REQUERIDO
+              expenseId: newExpenseId, // ← Flujo A: vincular Expense existente
+              activityId: activityId || undefined,
+            },
+          },
+        });
+      }
+
+      const committeeMsg = committeeId ? " · vinculado al presupuesto del comité" : "";
+      showNotice("success", `Gasto de ${formatCRC(total)} registrado ✓${committeeMsg}`);
+
+      // Reset form
       setAmount("");
       setConcept("");
       setDetail("");
       setPurpose("");
       setVendor("");
+      setCommitteeId(null);
+      setCategoryId(null);
       refetch();
       setTimeout(() => amountRef.current?.focus(), 100);
     } catch (e) {
@@ -267,6 +316,7 @@ const ExpensesPage = () => {
     detail,
     categoryId,
     activityId,
+    committeeId,
     paymentMethod,
     isAsset,
     purpose,
@@ -274,6 +324,7 @@ const ExpensesPage = () => {
     session,
     today,
     recordExpense,
+    recordCommitteeExpense,
     refetch,
     showNotice,
     isExternal,
@@ -281,6 +332,9 @@ const ExpensesPage = () => {
   ]);
 
   const amountVal = parseCRC(amount);
+
+  // Buscar saldo del comité seleccionado para el aviso
+  const selectedCommitteeBudget = budgetSummaries.find((b) => b.committee?.id === committeeId);
 
   return (
     <DashboardLayout>
@@ -310,9 +364,9 @@ const ExpensesPage = () => {
         />
 
         <div className="grid lg:grid-cols-2 gap-5">
-          {/* Form */}
+          {/* ── Formulario ── */}
           <div className="space-y-4">
-            {/* Step 1: Category */}
+            {/* Step 1: Categoría */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -343,7 +397,7 @@ const ExpensesPage = () => {
               )}
             </div>
 
-            {/* Step 2: Amount + details */}
+            {/* Step 2: Monto y detalles */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-4">
               <Notice notice={notice} />
 
@@ -393,7 +447,7 @@ const ExpensesPage = () => {
                 />
               </div>
 
-              {/* Asset toggle */}
+              {/* Activo toggle */}
               <div>
                 <button
                   type="button"
@@ -423,7 +477,7 @@ const ExpensesPage = () => {
                 )}
               </div>
 
-              {/* Activity */}
+              {/* Actividad */}
               {activities.length > 0 && (
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
@@ -435,6 +489,54 @@ const ExpensesPage = () => {
                     onSelect={setActivityId}
                     loading={actLoading}
                   />
+                </div>
+              )}
+
+              {/* Comité — solo visible si hay comités activos */}
+              {committees.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                    Comité afectado{" "}
+                    <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+                  </p>
+                  <CommitteePicker
+                    committees={committees}
+                    selected={committeeId}
+                    onSelect={setCommitteeId}
+                    loading={committeesLoading}
+                    budgets={budgetSummaries}
+                  />
+
+                  {/* Info del comité seleccionado */}
+                  {committeeId && (
+                    <div className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl bg-violet-50 border border-violet-200">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-semibold text-violet-800">
+                          Este gasto descontará del presupuesto del comité.
+                        </span>
+                        {selectedCommitteeBudget && amountVal > 0 && (
+                          <p className="text-xs text-violet-700 mt-0.5">
+                            Saldo disponible:{" "}
+                            <strong>
+                              {formatCRC(selectedCommitteeBudget.currentBalance || 0)}
+                            </strong>
+                            {amountVal > (selectedCommitteeBudget.currentBalance || 0) && (
+                              <span className="text-amber-700 ml-1">
+                                ⚠️ El gasto excede el saldo del comité.
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCommitteeId(null)}
+                        className="text-xs text-violet-500 hover:text-violet-700 font-bold shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -464,7 +566,7 @@ const ExpensesPage = () => {
             </div>
           </div>
 
-          {/* Recent expenses */}
+          {/* ── Gastos recientes ── */}
           <div className="bg-white border border-slate-200 rounded-3xl p-5">
             <h2 className="text-sm font-bold text-slate-700 mb-4">Gastos de hoy</h2>
             <RecentExpensesPanel

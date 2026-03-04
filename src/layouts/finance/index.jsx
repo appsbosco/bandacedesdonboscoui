@@ -2,10 +2,9 @@
  * FinanceDashboard.jsx — /finance
  * Dashboard de caja del día.
  *
- * Cambios v2:
- * - scopeOf() helper centralizado (infiere scope de registros legacy por cashSessionId)
- * - ExternalToggle reutilizado (viene de FinanceAtoms)
- * - VoidReasonModal con texto corregido
+ * Cambios v3:
+ * - Agrega quick action "Presupuestos STAFF" → /finance/budgets
+ * - Grid de quick actions cambia a grid-cols-2 sm:grid-cols-3 para acomodar 5 acciones
  */
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -435,6 +434,7 @@ const FinanceDashboard = () => {
     [voidTarget, voidSale, voidExpense]
   );
 
+  // ── 5 acciones rápidas — grid-cols-2 sm:grid-cols-3 ──────────────────────
   const QUICK_ACTIONS = [
     {
       label: "Registrar venta",
@@ -459,6 +459,12 @@ const FinanceDashboard = () => {
       emoji: "🗂️",
       path: "/finance/catalogs",
       color: "bg-slate-700 hover:bg-slate-800",
+    },
+    {
+      label: "Presupuestos STAFF",
+      emoji: "🏛️",
+      path: "/finance/budgets",
+      color: "bg-violet-700 hover:bg-violet-800",
     },
   ];
 
@@ -664,8 +670,8 @@ const FinanceDashboard = () => {
           </div>
         )}
 
-        {/* Quick actions */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Quick actions — 5 acciones, 2 col mobile / 3 col sm+ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.path}

@@ -467,3 +467,72 @@ ExternalToggle.propTypes = {
   onChange: PropTypes.func.isRequired,
   canUseSession: PropTypes.bool.isRequired,
 };
+
+export const CommitteePicker = ({ committees, selected, onSelect, loading, budgets = [] }) => {
+  // Mapa rápido committeeId → saldo
+  const balanceMap = {};
+  budgets.forEach((b) => {
+    balanceMap[b.committee.id] = b.currentBalance;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-9 w-28 bg-slate-200 rounded-full animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!committees?.length) {
+    return <p className="text-sm text-slate-500 italic">Sin comités. Contactá al administrador.</p>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {committees.map((c) => {
+        const balance = balanceMap[c.id];
+        const isSelected = selected === c.id;
+        const isLow = balance != null && balance < 10000;
+
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelect(c.id === selected ? null : c.id)}
+            className={`px-3 py-2 rounded-xl text-sm font-semibold border transition-all active:scale-95 flex flex-col items-start ${
+              isSelected
+                ? "bg-black border-black text-white shadow-sm"
+                : "bg-white border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+            }`}
+          >
+            <span>{c.name}</span>
+            {balance != null && (
+              <span
+                className={`text-xs font-bold mt-0.5 ${
+                  isSelected ? "text-violet-200" : isLow ? "text-amber-600" : "text-slate-500"
+                }`}
+              >
+                {isLow ? "⚠️ " : ""}
+                {new Intl.NumberFormat("es-CR", {
+                  style: "currency",
+                  currency: "CRC",
+                  minimumFractionDigits: 0,
+                }).format(balance)}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+CommitteePicker.propTypes = {
+  committees: PropTypes.array,
+  selected: PropTypes.string,
+  onSelect: PropTypes.func,
+  loading: PropTypes.bool,
+  budgets: PropTypes.array,
+};

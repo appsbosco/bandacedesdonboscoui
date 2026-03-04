@@ -20,7 +20,6 @@ import routes, {
   adminRoutes,
   staffRoutes,
   membersRoutes,
-  principalRoutes,
   parentsRoutes,
   cedesRoutes,
   colorGuardCampRoutes,
@@ -45,8 +44,6 @@ import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import Jacks from "layouts/sponsors/Jacks";
 import INS from "layouts/sponsors/INS";
 
-import DocumentsPage from "components/documents/DocumentsPage";
-import NewDocumentPage from "components/documents/NewDocumentPage";
 import { DocumentDetail } from "components/documents/DocumentDetail";
 
 import SignUp from "layouts/authentication/sign-up";
@@ -57,12 +54,14 @@ import SignIn from "layouts/authentication/sign-in";
 ========================= */
 
 const ADMIN_ROLES = new Set(["Admin", "Director", "Dirección Logística"]);
+
+const SECTION_ROLES = new Set(["Principal de sección", "Asistente de sección"]);
+
 const ATTENDANCE_ROLES = new Set([
   "Principal de sección",
   "Asistente de sección",
   "Líder de sección",
 ]);
-const PRINCIPAL_NAV_ROLES = new Set(["Principal de sección", "Asistente de sección"]);
 
 const MEMBERS_EXCLUDED_FOR_PARENTS_ROUTES = new Set([
   "Integrante BCDB",
@@ -87,10 +86,8 @@ const AUTH_ROUTE_BLACKLIST = new Set([
 ]);
 
 const HIDE_SIDENAV_FOR_LANG_RE = /^\/(es|en|fr)(\/.*)?$/;
-
 const LANDING_LANG_RE = /^\/(es|en)(\/.*)?$/;
 
-// Se mantiene EXACTAMENTE el set de prefijos protegidos que ya estabas usando:
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/members",
@@ -102,12 +99,13 @@ const PROTECTED_PREFIXES = [
   "/almuer",
   "/Profile",
   "/finance",
+  "/documents",
+  "/new-document",
 ];
 
-// Se mantiene tu lista (consolidada) de paths donde NO se muestra Sidenav:
 const NO_SIDENAV_EXACT_PATHS = new Set([
   "/",
-  "/:lang", // (esto nunca matchea un pathname real, pero lo mantengo como intención)
+  "/:lang",
   "/autenticacion/iniciar-sesion",
   "/autenticacion/registrarse-privado",
   "/autenticacion/registro-privado",
@@ -159,10 +157,38 @@ function shouldShowSidenavForPath(pathname) {
   return true;
 }
 
+function findRouteByKey(routeDefs, key) {
+  return routeDefs.find((r) => r?.key === key);
+}
+
+/**
+ * Rutas especiales para:
+ * - Principal de sección
+ * - Asistente de sección
+ *
+ * Basadas en membersRoutes + attendanceRoutes, pero SIN finanzas
+ * y con Documentos visibles.
+ */
+const sectionRoutes = [
+  findRouteByKey(membersRoutes, "dashboard"),
+  findRouteByKey(membersRoutes, "events"),
+
+  findRouteByKey(membersRoutes, "documents-pages"),
+  findRouteByKey(membersRoutes, "documents"),
+
+  { type: "title", title: "Asistencia", key: "section-attendance-pages" },
+  ...attendanceRoutes,
+
+  findRouteByKey(membersRoutes, "almuerzos-pages"),
+  findRouteByKey(membersRoutes, "almuerzos"),
+
+  findRouteByKey(membersRoutes, "account-pages"),
+  findRouteByKey(membersRoutes, "Profile"),
+].filter(Boolean);
+
 function resolveRenderedRouteDefs(userRole) {
-  // OJO: para NO cambiar comportamiento actual,
-  // cuando userRole aún no existe (undefined/null), cae a "parentsRoutes" como antes.
   if (ADMIN_ROLES.has(userRole)) return [...routes, ...protectedRoutes];
+  if (SECTION_ROLES.has(userRole)) return [...routes, ...sectionRoutes];
   if (ATTENDANCE_ROLES.has(userRole)) return [...routes, ...attendanceRoutes];
   if (userRole === "Instructura Color Guard") return [...routes, ...colorGuardCampRoutes];
   if (userRole === "Staff") return [...routes, ...staffRoutes];
@@ -178,7 +204,7 @@ function resolveRenderedRouteDefs(userRole) {
 
 function resolveNavRouteDefs(userRole) {
   if (ADMIN_ROLES.has(userRole)) return adminRoutes;
-  if (PRINCIPAL_NAV_ROLES.has(userRole)) return principalRoutes;
+  if (SECTION_ROLES.has(userRole)) return sectionRoutes;
   if (userRole === "Staff") return staffRoutes;
   if (userRole === "Instructura Color Guard") return colorGuardCampRoutes;
   if (userRole === "CEDES") return cedesRoutes;
@@ -202,11 +228,9 @@ export default function App() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  // Auth (se mantiene igual: lectura directa de localStorage)
   const token = localStorage.getItem("token");
   const isAuthenticated = Boolean(token && !isTokenExpired(token));
 
-  // UI handlers (memoizados)
   const handleOnMouseEnter = useCallback(() => {
     if (miniSidenav && !isSidenavHover) {
       setMiniSidenav(dispatch, false);
@@ -225,12 +249,10 @@ export default function App() {
     setOpenConfigurator(dispatch, !openConfigurator);
   }, [dispatch, openConfigurator]);
 
-  // Direction (RTL/LTR)
   useEffect(() => {
     document.body.setAttribute("dir", direction);
   }, [direction]);
 
-  // Scroll to top on route change
   useEffect(() => {
     document.documentElement.scrollTop = 0;
     if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
@@ -241,7 +263,6 @@ export default function App() {
     const isLandingPath = pathname === "/" || isLangPath;
 
     const isProtectedPath = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
-
     const shouldRedirectToLogin = !isAuthenticated && !isLandingPath && isProtectedPath;
 
     if (shouldRedirectToLogin) {
@@ -249,12 +270,11 @@ export default function App() {
     }
   }, [pathname, isAuthenticated, navigate]);
 
-  // User role
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const userRole = userData?.getUser?.role;
 
-  // Route defs por rol (centralizado)
   const renderedRouteDefs = useMemo(() => resolveRenderedRouteDefs(userRole), [userRole]);
+
   const renderedRouteElements = useMemo(
     () => buildRouteElements(renderedRouteDefs),
     [renderedRouteDefs]
@@ -262,29 +282,29 @@ export default function App() {
 
   const navRouteDefs = useMemo(() => resolveNavRouteDefs(userRole), [userRole]);
 
+  const canAccessDocuments = useMemo(() => {
+    return renderedRouteDefs.some((r) => r?.route === "/documents");
+  }, [renderedRouteDefs]);
+
   const filteredNavRoutes = useMemo(() => {
     return navRouteDefs.filter((r) => {
       if (!r) return false;
 
-      // Mantener headers/categorías
       if (r.type === "title") return true;
-
-      if (r.type === "divider") return true; // opcional
+      if (r.type === "divider") return true;
       if (r.type !== "collapse") return false;
 
-      // Mantener links externos si algún día los usas
       const hasNavigation = Boolean(r.route || r.href);
       if (!hasNavigation) return false;
 
-      // Quitar auth del sidenav
       if (r.route && AUTH_ROUTE_BLACKLIST.has(r.route)) return false;
 
       return true;
     });
   }, [navRouteDefs]);
 
-  // Sidenav visibility
   const hideSidenavForLang = useMemo(() => HIDE_SIDENAV_FOR_LANG_RE.test(pathname), [pathname]);
+
   const canRenderSidenav = useMemo(() => {
     if (layout !== "dashboard") return false;
     if (hideSidenavForLang) return false;
@@ -323,6 +343,9 @@ export default function App() {
         {/* Rutas por rol */}
         {renderedRouteElements}
 
+        {/* Detalle de documentos solo para roles con acceso */}
+        {canAccessDocuments && <Route path="/documents/:id" element={<DocumentDetail />} />}
+
         {/* Rutas públicas adicionales */}
         <Route path="/calendario" element={<CalendarListing />} />
         <Route path="/proyecto-exalumnos" element={<Alumni />} />
@@ -330,17 +353,12 @@ export default function App() {
         <Route path="/:lang/patrocinadores/alimentos-jacks" element={<Jacks />} />
         <Route path="/:lang/patrocinadores/ins" element={<INS />} />
 
-        {/* Documentos */}
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/new-document" element={<NewDocumentPage />} />
-        <Route path="/documents/:id" element={<DocumentDetail />} />
-
         {/* Eventos */}
         <Route path="/60-aniversario" element={<VeladaTickets />} />
         <Route path="/grupo-apoyo" element={<Apoyo />} />
         <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
 
-        {/* Auth (React Router v6) */}
+        {/* Auth */}
         <Route path="/autenticacion/registrarse-privado" element={<SignUp />} />
         <Route path="/autenticacion/iniciar-sesion" element={<SignIn />} />
       </Routes>

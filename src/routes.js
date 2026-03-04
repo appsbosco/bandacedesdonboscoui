@@ -68,6 +68,8 @@ import CatalogsPage from "layouts/finance/components/Catalogs";
 
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 
+import BudgetsPage from "layouts/finance/components/BudgetsPage";
+import CommitteeDetailPage from "layouts/finance/components/CommitteeDetailPage";
 /**
  * Helpers
  * - Evitan duplicación
@@ -487,6 +489,20 @@ const items = {
       route: "/finance/catalogs",
       component: <CatalogsPage />,
     }),
+
+  financeBudgets: () =>
+    routeOnly({
+      key: "finance-budgets",
+      route: "/finance/budgets",
+      component: <BudgetsPage />,
+    }),
+
+  financeCommitteeDetail: () =>
+    routeOnly({
+      key: "finance-committee-detail",
+      route: "/finance/budgets/:committeeId",
+      component: <CommitteeDetailPage />,
+    }),
 };
 
 /**
@@ -523,6 +539,8 @@ export const protectedRoutes = [
   items.financeExpenses(),
   items.financeReports(),
   items.financeCatalogs(),
+  items.financeBudgets(),
+  items.financeCommitteeDetail(),
 
   items.attendanceTake(),
   items.attendanceHistory(),
@@ -594,6 +612,8 @@ export const adminRoutes = [
   items.financeExpenses(),
   items.financeReports(),
   items.financeCatalogs(),
+  items.financeBudgets(),
+  items.financeCommitteeDetail(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -643,6 +663,8 @@ export const staffRoutes = [
   items.financeExpenses(),
   items.financeReports(),
   items.financeCatalogs(),
+  items.financeBudgets(),
+  items.financeCommitteeDetail(),
 
   title("Asistencia", "attendance-pages"),
 
@@ -675,6 +697,8 @@ export const principalRoutes = [
   items.financeExpenses(),
   items.financeReports(),
   items.financeCatalogs(),
+  items.financeBudgets(),
+  items.financeCommitteeDetail(),
 
   title("Almuerzos", "almuerzos-pages"),
   items.almuerzos(),
@@ -699,6 +723,26 @@ export const membersRoutes = [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
+
+  title("Cuenta", "account-pages"),
+  items.profile(),
+];
+
+export const sectionRoutes = [
+  items.dashboard(),
+  items.events(),
+
+  title("Documentos", "documents-pages"),
+  items.documents(),
+  items.newDocument(),
+
+  title("Asistencia", "attendance-pages"),
+  items.attendanceTake(),
+  items.attendanceHistory(),
+  items.performanceAttendance(),
+
+  title("Almuerzos", "almuerzos-pages"),
+  items.almuerzos(),
 
   title("Cuenta", "account-pages"),
   items.profile(),

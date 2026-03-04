@@ -1,6 +1,10 @@
 /**
  * ReportsPage.jsx — /finance/reports
- * Tabs: Diario / Rango / Mensual
+ *
+ * FIXES v2:
+ * - ❌ summary.session no existe en el backend (campo del schema viejo)
+ * - ✅ Ahora usa summary.cashBoxBreakdown para mostrar info de sesiones de caja
+ * - La sección de sesión muestra breakdown por caja si existe
  */
 import React, { useState } from "react";
 import PropTypes from "prop-types";
@@ -76,16 +80,6 @@ const MethodBreakdown = ({ items, label }) => {
     </SectionCard>
   );
 };
-MethodBreakdown.propTypes = {
-  label: PropTypes.string.isRequired,
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      method: PropTypes.string.isRequired,
-      total: PropTypes.number.isRequired,
-      count: PropTypes.number.isRequired,
-    })
-  ),
-};
 
 const CategoryBreakdown = ({ items }) => {
   if (!items?.length) return null;
@@ -112,15 +106,6 @@ const CategoryBreakdown = ({ items }) => {
     </SectionCard>
   );
 };
-CategoryBreakdown.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      categorySnapshot: PropTypes.string.isRequired,
-      totalAmount: PropTypes.number.isRequired,
-      count: PropTypes.number.isRequired,
-    })
-  ),
-};
 
 const ProductBreakdown = ({ items }) => {
   if (!items?.length) return null;
@@ -143,15 +128,6 @@ const ProductBreakdown = ({ items }) => {
     </SectionCard>
   );
 };
-ProductBreakdown.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      name: PropTypes.string.isRequired,
-      totalUnits: PropTypes.number.isRequired,
-      totalRevenue: PropTypes.number.isRequired,
-    })
-  ),
-};
 
 const DateInput = ({ label, value, onChange }) => (
   <div className="flex flex-col gap-1">
@@ -164,11 +140,6 @@ const DateInput = ({ label, value, onChange }) => (
     />
   </div>
 );
-DateInput.propTypes = {
-  label: PropTypes.string,
-  value: PropTypes.string,
-  onChange: PropTypes.func,
-};
 
 const QuickDateBtn = ({ label, onClick }) => (
   <button
@@ -179,7 +150,6 @@ const QuickDateBtn = ({ label, onClick }) => (
     {label}
   </button>
 );
-QuickDateBtn.propTypes = { label: PropTypes.string, onClick: PropTypes.func };
 
 const FetchButton = ({ onClick, loading, label = "Ver resumen" }) => (
   <button
@@ -190,11 +160,6 @@ const FetchButton = ({ onClick, loading, label = "Ver resumen" }) => (
     {loading ? "Cargando…" : label}
   </button>
 );
-FetchButton.propTypes = {
-  onClick: PropTypes.func,
-  loading: PropTypes.bool,
-  label: PropTypes.string,
-};
 
 const EmptyState = ({ icon, title, subtitle }) => (
   <SectionCard>
@@ -205,10 +170,121 @@ const EmptyState = ({ icon, title, subtitle }) => (
     </div>
   </SectionCard>
 );
-EmptyState.propTypes = {
-  icon: PropTypes.string,
-  title: PropTypes.string,
-  subtitle: PropTypes.string,
+
+// ─── CashBoxBreakdownSection ──────────────────────────────────────────────────
+// ✅ FIX: Reemplaza el bloque que usaba summary.session (no existe).
+// Ahora usa cashBoxBreakdown del backend.
+
+const CashBoxBreakdownSection = ({ cashBoxBreakdown, businessDate }) => {
+  if (!cashBoxBreakdown?.length) return null;
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5">
+      <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-4">
+        Cajas · {fmtBusinessDate(businessDate)}
+      </p>
+      <div className="space-y-3">
+        {cashBoxBreakdown.map((box) => {
+          const sess = box.session;
+          const diff = sess?.difference;
+          const cuadra = diff != null && Math.abs(diff) < 1;
+
+          return (
+            <div key={box.cashBoxId} className="rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-sm font-bold text-slate-900">{box.cashBoxName}</p>
+                {sess && diff != null && (
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-extrabold text-white ${
+                      cuadra ? "bg-emerald-600" : "bg-red-600"
+                    }`}
+                  >
+                    {cuadra ? "✓ Cuadra" : `Dif. ${formatCRC(diff)}`}
+                  </span>
+                )}
+                {sess?.status && (
+                  <span
+                    className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                      sess.status === "OPEN"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {sess.status === "OPEN" ? "Abierta" : "Cerrada"}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Ventas</p>
+                  <p className="text-sm font-extrabold text-emerald-700 tabular-nums mt-0.5">
+                    {formatCRC(box.sessionSales || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Egresos</p>
+                  <p className="text-sm font-extrabold text-red-600 tabular-nums mt-0.5">
+                    {formatCRC(box.sessionExpenses || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Neto</p>
+                  <p
+                    className={`text-sm font-extrabold tabular-nums mt-0.5 ${
+                      (box.sessionNet || 0) >= 0 ? "text-slate-900" : "text-red-600"
+                    }`}
+                  >
+                    {formatCRC(box.sessionNet || 0)}
+                  </p>
+                </div>
+              </div>
+
+              {sess && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Apertura</p>
+                    <p className="text-xs font-bold text-slate-700 tabular-nums mt-0.5">
+                      {formatCRC(sess.openingCash || 0)}
+                    </p>
+                  </div>
+                  {sess.countedCash != null && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Contado</p>
+                      <p className="text-xs font-bold text-slate-700 tabular-nums mt-0.5">
+                        {formatCRC(sess.countedCash)}
+                      </p>
+                    </div>
+                  )}
+                  {sess.expectedTotalsByMethod && (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Efec. esp.</p>
+                        <p className="text-xs font-bold text-slate-700 tabular-nums mt-0.5">
+                          {formatCRC(sess.expectedTotalsByMethod.cash || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">SINPE esp.</p>
+                        <p className="text-xs font-bold text-slate-700 tabular-nums mt-0.5">
+                          {formatCRC(sess.expectedTotalsByMethod.sinpe || 0)}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+CashBoxBreakdownSection.propTypes = {
+  cashBoxBreakdown: PropTypes.array,
+  businessDate: PropTypes.string,
 };
 
 // ─── DailySummaryTab ──────────────────────────────────────────────────────────
@@ -261,6 +337,7 @@ const DailySummaryTab = () => {
 
       {!loading && summary && (
         <div className="space-y-6">
+          {/* KPIs principales */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
               label="Ingresos"
@@ -280,64 +357,64 @@ const DailySummaryTab = () => {
             />
           </div>
 
-          {summary.session && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">
-                    Sesión de caja
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900 mt-1">
-                    {fmtBusinessDate(summary.businessDate)}
-                  </p>
+          {/* ✅ FIX: cashBoxBreakdown reemplaza el bloque summary.session que no existe */}
+          <CashBoxBreakdownSection
+            cashBoxBreakdown={summary.cashBoxBreakdown}
+            businessDate={summary.businessDate}
+          />
+
+          {/* Breakdown global SESSION vs EXTERNAL */}
+          {summary.breakdown && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-widest mb-2">
+                  En caja (SESSION)
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] text-emerald-700 font-bold">Ingresos</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(summary.breakdown.sessionSales || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-emerald-700 font-bold">Egresos</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(summary.breakdown.sessionExpenses || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-emerald-700 font-bold">Neto</p>
+                    <p className="text-sm font-extrabold text-emerald-900 tabular-nums">
+                      {formatCRC(summary.breakdown.sessionNet || 0)}
+                    </p>
+                  </div>
                 </div>
-                {summary.session.difference != null && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-extrabold text-white ${
-                      Math.abs(summary.session.difference) < 1 ? "bg-emerald-600" : "bg-red-600"
-                    }`}
-                  >
-                    {Math.abs(summary.session.difference) < 1
-                      ? "✓ Cuadra"
-                      : `Diferencia ${formatCRC(summary.session.difference)}`}
-                  </span>
-                )}
               </div>
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                    Apertura
-                  </p>
-                  <p className="mt-1 text-base font-extrabold text-slate-900 tabular-nums">
-                    {formatCRC(summary.session.openingCash)}
-                  </p>
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                <p className="text-[10px] font-extrabold text-indigo-800 uppercase tracking-widest mb-2">
+                  Externos (EXTERNAL)
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] text-indigo-700 font-bold">Ingresos</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(summary.breakdown.externalSales || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-indigo-700 font-bold">Egresos</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(summary.breakdown.externalExpenses || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-indigo-700 font-bold">Neto</p>
+                    <p className="text-sm font-extrabold text-indigo-900 tabular-nums">
+                      {formatCRC(summary.breakdown.externalNet || 0)}
+                    </p>
+                  </div>
                 </div>
-                {summary.session.countedCash != null && (
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                      Contado
-                    </p>
-                    <p className="mt-1 text-base font-extrabold text-slate-900 tabular-nums">
-                      {formatCRC(summary.session.countedCash)}
-                    </p>
-                  </div>
-                )}
-                {summary.session.difference != null && (
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                      Diferencia
-                    </p>
-                    <p
-                      className={`mt-1 text-base font-extrabold tabular-nums ${
-                        Math.abs(summary.session.difference) < 1
-                          ? "text-emerald-700"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {formatCRC(summary.session.difference)}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -350,6 +427,32 @@ const DailySummaryTab = () => {
             <CategoryBreakdown items={summary.expensesByCategory} />
             <ProductBreakdown items={summary.productSales} />
           </div>
+
+          {/* Donaciones */}
+          {summary.donations && (
+            <SectionCard title="Donaciones del día">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Monetarias</p>
+                  <p className="text-sm font-extrabold text-slate-900 tabular-nums mt-0.5">
+                    {formatCRC(summary.donations.monetary || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">En especie</p>
+                  <p className="text-sm font-extrabold text-slate-900 tabular-nums mt-0.5">
+                    {formatCRC(summary.donations.inKindEstimated || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Cantidad</p>
+                  <p className="text-sm font-extrabold text-slate-900 tabular-nums mt-0.5">
+                    {summary.donations.count || 0}
+                  </p>
+                </div>
+              </div>
+            </SectionCard>
+          )}
         </div>
       )}
     </div>
@@ -462,7 +565,7 @@ const RangeSummaryTab = () => {
                 {summary.activitiesSummary.map((a) => (
                   <div
                     key={a.activityId}
-                    className="rounded-xl border border-slate-200 px-3 py-2.5 hover:border-slate-300 transition-colors"
+                    className="rounded-xl border border-slate-200 px-3 py-2.5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-semibold text-slate-800 min-w-0 truncate">
@@ -476,9 +579,12 @@ const RangeSummaryTab = () => {
                         {formatCRC(a.net)}
                       </p>
                     </div>
-                    <div className="mt-1 flex flex-col sm:flex-row sm:gap-6 gap-1 text-xs font-semibold text-slate-500">
-                      <span className="tabular-nums">Ingresos: {formatCRC(a.totalSales)}</span>
-                      <span className="tabular-nums">Egresos: {formatCRC(a.totalExpenses)}</span>
+                    <div className="mt-1 flex flex-wrap gap-4 text-xs font-semibold text-slate-500">
+                      <span>Ingresos: {formatCRC(a.totalSales)}</span>
+                      <span>Egresos: {formatCRC(a.totalExpenses)}</span>
+                      {(a.inventoryCostConsumed || 0) > 0 && (
+                        <span>Inventario: {formatCRC(a.inventoryCostConsumed)}</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -520,7 +626,7 @@ const MonthlyPDFTab = () => {
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
+              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
             >
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i + 1} value={i + 1}>
@@ -534,7 +640,7 @@ const MonthlyPDFTab = () => {
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-900"
+              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -613,10 +719,7 @@ const MonthlyPDFTab = () => {
             <MethodBreakdown items={dataset.summary.salesByMethod} label="Ingresos por método" />
             <CategoryBreakdown items={dataset.summary.expensesByCategory} />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <ProductBreakdown items={dataset.summary.productSales} />
-            <div className="hidden lg:block" />
-          </div>
+          <ProductBreakdown items={dataset.summary.productSales} />
 
           {dataset.dailyBreakdown?.length > 0 && (
             <SectionCard title="Desglose diario">
@@ -636,7 +739,7 @@ const MonthlyPDFTab = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {dataset.dailyBreakdown.map((d) => (
-                      <tr key={d.businessDate} className="hover:bg-slate-50 transition-colors">
+                      <tr key={d.businessDate} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-sm font-semibold text-slate-800 whitespace-nowrap">
                           {fmtBusinessDate(d.businessDate)}
                         </td>
@@ -674,7 +777,7 @@ const MonthlyPDFTab = () => {
                       {a.purpose && (
                         <p className="text-xs text-slate-700 mt-0.5 truncate">{a.purpose}</p>
                       )}
-                      <p className="text-xs font-semibold text-slate-600 mt-1 truncate">
+                      <p className="text-xs font-semibold text-slate-600 mt-1">
                         {fmtBusinessDate(a.businessDate)}
                         {a.vendor ? ` · ${a.vendor}` : ""}
                       </p>
@@ -746,3 +849,57 @@ const ReportsPage = () => {
 };
 
 export default ReportsPage;
+
+MethodBreakdown.propTypes = {
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      method: PropTypes.string.isRequired,
+      total: PropTypes.number,
+      count: PropTypes.number,
+    })
+  ),
+  label: PropTypes.string,
+};
+
+CategoryBreakdown.propTypes = {
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      categorySnapshot: PropTypes.string.isRequired,
+      totalAmount: PropTypes.number,
+      count: PropTypes.number,
+    })
+  ),
+};
+
+ProductBreakdown.propTypes = {
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      totalUnits: PropTypes.number,
+      totalRevenue: PropTypes.number,
+    })
+  ),
+};
+
+DateInput.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+};
+
+QuickDateBtn.propTypes = {
+  label: PropTypes.string.isRequired,
+  onClick: PropTypes.func.isRequired,
+};
+
+FetchButton.propTypes = {
+  onClick: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
+  label: PropTypes.string,
+};
+
+EmptyState.propTypes = {
+  icon: PropTypes.node.isRequired,
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+};
