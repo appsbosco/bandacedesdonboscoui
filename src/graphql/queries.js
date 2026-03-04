@@ -162,6 +162,7 @@ export const GET_EVENTS = gql`
       time
       arrival
       departure
+      category
       description
       type
     }

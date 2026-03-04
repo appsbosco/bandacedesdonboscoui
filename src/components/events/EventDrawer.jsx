@@ -1,17 +1,7 @@
 /**
- * EventDrawer.jsx
- * Panel de detalles de un evento — slide-over desde la derecha.
- *
- * PROBLEMA DEL ORIGINAL:
- * Cada campo se renderizaba como una fila full-width (border-bottom),
- * creando un layout de "tabla de Excel" que ocupaba toda la pantalla.
- *
- * REDISEÑO:
- * - Portal para escapar transforms del DashboardLayout
- * - Imagen compacta con overlay de datos encima
- * - Info en grid 2 columnas (no filas full-width)
- * - Sección de acciones admin limpia en el footer
- * - Máx. 480px de ancho, nunca más
+ * EventDrawer.jsx — DEFINITIVO v3
+ * Diseño premium: fondo oscuro para header, tipografía contrastada,
+ * info grid limpio. Bottom sheet en mobile, slide-over en desktop.
  */
 
 import { useEffect, useState } from "react";
@@ -21,15 +11,15 @@ import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
 import { getEventImage } from "utils/eventHelpers";
 
 const CATEGORY_META = {
-  presentation: { label: "Presentación", icon: "🎵", color: "#3b82f6" },
-  rehearsal: { label: "Ensayo", icon: "🎼", color: "#8b5cf6" },
-  meeting: { label: "Reunión", icon: "📋", color: "#f59e0b" },
-  activity: { label: "Actividad", icon: "🎉", color: "#10b981" },
-  logistics: { label: "Logística", icon: "🚌", color: "#f97316" },
-  other: { label: "Otro", icon: "📌", color: "#94a3b8" },
+  presentation: { label: "Presentación", icon: "🎵", accent: "#3b82f6" },
+  rehearsal: { label: "Ensayo", icon: "🎼", accent: "#8b5cf6" },
+  meeting: { label: "Reunión", icon: "📋", accent: "#f59e0b" },
+  activity: { label: "Actividad", icon: "🎉", accent: "#10b981" },
+  logistics: { label: "Logística", icon: "🚌", accent: "#f97316" },
+  other: { label: "Otro", icon: "📌", accent: "#94a3b8" },
 };
 
-const NOTIFICATION_LABELS = {
+const NOTIF_META = {
   NONE: { label: "Sin notificación", bg: "#f1f5f9", color: "#64748b" },
   DRY_RUN: { label: "Modo prueba", bg: "#fef3c7", color: "#92400e" },
   LIVE: { label: "Envío real", bg: "#d1fae5", color: "#065f46" },
@@ -37,13 +27,26 @@ const NOTIFICATION_LABELS = {
 
 export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onDelete }) {
   const [mounted, setMounted] = useState(false);
-  const [closing, setClosing] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Lock body scroll
+  // Animación de entrada/salida
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => setVisible(true));
+    } else {
+      setVisible(false);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!mounted) return;
     document.body.style.overflow = open ? "hidden" : "";
@@ -53,60 +56,85 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   }, [open, mounted]);
 
   const handleClose = () => {
-    setClosing(true);
-    setTimeout(() => {
-      setClosing(false);
-      onClose();
-    }, 200);
+    setVisible(false);
+    setTimeout(onClose, 240);
   };
 
   if (!mounted || !open || !event) return null;
 
-  const cat = CATEGORY_META[event.category] ?? CATEGORY_META.other;
+  const catKey = (event.category ?? "other").toLowerCase();
+  const cat = CATEGORY_META[catKey] ?? CATEGORY_META.other;
+  const notif = NOTIF_META[event.notificationMode] ?? NOTIF_META.NONE;
   const imgSrc = getEventImage(event.type);
-  const notifMeta = NOTIFICATION_LABELS[event.notificationMode] ?? NOTIFICATION_LABELS.NONE;
+
+  const panelStyle = isMobile
+    ? {
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        maxHeight: "92dvh",
+        background: "#ffffff",
+        borderRadius: "22px 22px 0 0",
+        boxShadow: "0 -20px 60px rgba(0,0,0,0.2)",
+        display: "flex",
+        flexDirection: "column",
+        transform: visible ? "translateY(0)" : "translateY(100%)",
+        transition: "transform 0.28s cubic-bezier(0.32,0.72,0,1)",
+        overflowY: "auto",
+      }
+    : {
+        position: "fixed",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        width: "min(480px, 100vw)",
+        background: "#ffffff",
+        boxShadow: "-16px 0 60px rgba(0,0,0,0.12)",
+        display: "flex",
+        flexDirection: "column",
+        transform: visible ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 0.28s cubic-bezier(0.32,0.72,0,1)",
+        overflowY: "auto",
+      };
 
   return createPortal(
     <>
       {/* Backdrop */}
       <div
         onClick={handleClose}
+        aria-hidden="true"
         style={{
           position: "fixed",
           inset: 0,
           zIndex: 9998,
-          background: "rgba(15,23,42,0.4)",
-          backdropFilter: "blur(3px)",
-          opacity: closing ? 0 : 1,
-          transition: "opacity 0.2s ease",
+          background: "rgba(2,8,23,0.55)",
+          backdropFilter: "blur(4px)",
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.24s ease",
         }}
-        aria-hidden="true"
       />
 
-      {/* Drawer panel — slides in from right */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={event.title}
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9999,
-          width: "100%",
-          maxWidth: 480,
-          background: "#ffffff",
-          boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
-          display: "flex",
-          flexDirection: "column",
-          transform: closing ? "translateX(100%)" : "translateX(0)",
-          transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
-          overflowY: "auto",
-        }}
-      >
-        {/* ── Header: imagen + close + título encima ───────────────────── */}
-        <div style={{ position: "relative", height: 200, flexShrink: 0 }}>
+      <div role="dialog" aria-modal="true" aria-label={event.title} style={panelStyle}>
+        {/* Mobile drag handle */}
+        {isMobile && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "12px 0 8px",
+              flexShrink: 0,
+              background: "#ffffff",
+            }}
+          >
+            <div style={{ width: 38, height: 4, borderRadius: 99, background: "#e2e8f0" }} />
+          </div>
+        )}
+
+        {/* ── Hero imagen con overlay oscuro ───────────────────────────── */}
+        <div style={{ position: "relative", height: isMobile ? 180 : 220, flexShrink: 0 }}>
           <img
             src={imgSrc}
             alt={event.type ?? "Evento"}
@@ -114,46 +142,49 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              objectPosition: "center",
+              objectPosition: "center top",
               display: "block",
             }}
           />
-          {/* Dark overlay */}
+
+          {/* Gradient overlay */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.1) 100%)",
+                "linear-gradient(180deg, rgba(2,8,23,0.25) 0%, rgba(2,8,23,0.7) 60%, rgba(2,8,23,0.88) 100%)",
             }}
           />
 
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            aria-label="Cerrar"
-            style={{
-              position: "absolute",
-              top: 14,
-              right: 14,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "rgba(0,0,0,0.5)",
-              backdropFilter: "blur(4px)",
-              border: "none",
-              color: "#ffffff",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <CloseIcon />
-          </button>
+          {/* Botón cerrar */}
+          {!isMobile && (
+            <button
+              onClick={handleClose}
+              aria-label="Cerrar"
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.15)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                color: "#ffffff",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CloseIcon />
+            </button>
+          )}
 
-          {/* Category badge */}
-          <div style={{ position: "absolute", top: 14, left: 14 }}>
+          {/* Pill de categoría */}
+          <div style={{ position: "absolute", top: 16, left: 16 }}>
             <span
               style={{
                 display: "inline-flex",
@@ -163,25 +194,19 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
                 fontWeight: 700,
                 padding: "4px 10px",
                 borderRadius: 99,
-                background: "rgba(0,0,0,0.5)",
-                backdropFilter: "blur(4px)",
+                background: "rgba(255,255,255,0.15)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.25)",
                 color: "#ffffff",
               }}
             >
-              <span>{cat.icon}</span>
-              {cat.label}
+              {cat.icon} {cat.label}
             </span>
           </div>
 
-          {/* Title + type over image */}
+          {/* Título + agrupación sobre imagen */}
           <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: "16px 20px",
-            }}
+            style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 20px 20px" }}
           >
             {event.type && (
               <p
@@ -189,7 +214,9 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
                   margin: "0 0 4px",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "rgba(255,255,255,0.7)",
+                  color: "rgba(255,255,255,0.6)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
                 }}
               >
                 {event.type}
@@ -198,11 +225,12 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
             <h2
               style={{
                 margin: 0,
-                fontSize: 18,
+                fontSize: isMobile ? 20 : 22,
                 fontWeight: 800,
                 color: "#ffffff",
-                lineHeight: 1.3,
-                textShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                lineHeight: 1.25,
+                textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                fontFamily: "Georgia, serif",
               }}
             >
               {event.title}
@@ -210,61 +238,79 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
           </div>
         </div>
 
+        {/* ── Acento de color de categoría ─────────────────────────────── */}
+        <div style={{ height: 3, background: cat.accent, flexShrink: 0 }} />
+
         {/* ── Body ─────────────────────────────────────────────────────── */}
         <div
-          style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: 20 }}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "20px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
         >
-          {/* Description */}
+          {/* Descripción */}
           {event.description && (
-            <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.7 }}>
               {event.description}
             </p>
           )}
 
-          {/* Info grid — 2 columnas */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 10,
-            }}
-          >
-            <InfoCell icon={<CalIcon />} label="Fecha" value={formatDateEs(event.date)} wide />
+          {/* Info grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <Chip
+              icon={<CalIcon />}
+              label="Fecha"
+              value={formatDateEs(event.date)}
+              wide
+              accent={cat.accent}
+            />
             {event.time && (
-              <InfoCell icon={<ClockIcon />} label="Hora" value={normalizeTimeTo12h(event.time)} />
+              <Chip
+                icon={<ClockIcon />}
+                label="Hora"
+                value={normalizeTimeTo12h(event.time)}
+                accent={cat.accent}
+              />
             )}
-            {event.place && <InfoCell icon={<PinIcon />} label="Lugar" value={event.place} wide />}
+            {event.place && (
+              <Chip icon={<PinIcon />} label="Lugar" value={event.place} wide accent={cat.accent} />
+            )}
             {event.departure && (
-              <InfoCell
+              <Chip
                 icon={<BusIcon />}
-                label="Salida de CEDES"
+                label="Salida"
                 value={normalizeTimeTo12h(event.departure)}
+                accent={cat.accent}
               />
             )}
             {event.arrival && (
-              <InfoCell
+              <Chip
                 icon={<HomeIcon />}
                 label="Llegada aprox."
                 value={normalizeTimeTo12h(event.arrival)}
+                accent={cat.accent}
               />
             )}
           </div>
 
-          {/* Notification badge */}
+          {/* Notif badge */}
           {event.notificationMode && event.notificationMode !== "NONE" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <BellIcon />
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <span
                 style={{
                   fontSize: 11,
-                  fontWeight: 600,
-                  padding: "3px 10px",
+                  fontWeight: 700,
+                  padding: "4px 12px",
                   borderRadius: 99,
-                  background: notifMeta.bg,
-                  color: notifMeta.color,
+                  background: notif.bg,
+                  color: notif.color,
                 }}
               >
-                {notifMeta.label}
+                {notif.label}
               </span>
               {event.audience?.length > 0 && (
                 <span style={{ fontSize: 11, color: "#94a3b8" }}>
@@ -274,47 +320,46 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
             </div>
           )}
 
-          {/* Divider */}
-          <div style={{ height: 1, background: "#f1f5f9" }} />
-
-          {/* Timestamps */}
-          <div style={{ display: "flex", gap: 16 }}>
-            {event.createdAt && (
-              <div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "#cbd5e1",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Creado
-                </p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>
-                  {new Date(Number(event.createdAt) || event.createdAt).toLocaleDateString("es-CR")}
-                </p>
-              </div>
-            )}
-          </div>
+          {event.createdAt && (
+            <p style={{ margin: 0, fontSize: 11, color: "#cbd5e1" }}>
+              Creado el{" "}
+              {new Date(Number(event.createdAt) || event.createdAt).toLocaleDateString("es-CR")}
+            </p>
+          )}
         </div>
 
-        {/* ── Footer: admin actions ─────────────────────────────────────── */}
-        {isAdmin && (
+        {/* ── Footer ───────────────────────────────────────────────────── */}
+        {isAdmin ? (
           <div
             style={{
               flexShrink: 0,
-              padding: "14px 20px",
-              borderTop: "1px solid #f1f5f9",
+              padding: "12px 20px",
+              borderTop: "1px solid #f8fafc",
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
-              gap: 10,
               background: "#ffffff",
+              gap: 10,
             }}
           >
+            {isMobile && (
+              <button
+                onClick={handleClose}
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#64748b",
+                  padding: "10px",
+                  borderRadius: 12,
+                  border: "1.5px solid #f1f5f9",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cerrar
+              </button>
+            )}
             <button
               onClick={() => {
                 onDelete(event);
@@ -326,18 +371,16 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
                 gap: 6,
                 fontSize: 12,
                 fontWeight: 600,
-                padding: "8px 16px",
-                borderRadius: 10,
+                padding: "10px 16px",
+                borderRadius: 12,
                 border: "1.5px solid #fecaca",
                 background: "#fff1f2",
                 color: "#ef4444",
                 cursor: "pointer",
                 fontFamily: "inherit",
-                transition: "all 0.12s",
               }}
             >
-              <TrashIcon />
-              Eliminar
+              <TrashIcon /> Eliminar
             </button>
             <button
               onClick={() => {
@@ -345,25 +388,47 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
                 handleClose();
               }}
               style={{
+                flex: isMobile ? 1 : "none",
                 display: "inline-flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 6,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 700,
-                padding: "8px 18px",
-                borderRadius: 10,
+                padding: "10px 20px",
+                borderRadius: 12,
                 border: "none",
                 background: "#0f172a",
                 color: "#ffffff",
                 cursor: "pointer",
                 fontFamily: "inherit",
-                transition: "all 0.12s",
               }}
             >
-              <EditIcon />
-              Editar
+              <EditIcon /> Editar
             </button>
           </div>
+        ) : (
+          isMobile && (
+            <div style={{ flexShrink: 0, padding: "12px 20px", borderTop: "1px solid #f8fafc" }}>
+              <button
+                onClick={handleClose}
+                style={{
+                  width: "100%",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#64748b",
+                  padding: "11px",
+                  borderRadius: 12,
+                  border: "1.5px solid #f1f5f9",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          )
         )}
       </div>
     </>,
@@ -371,28 +436,28 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   );
 }
 
-// ─── InfoCell ─────────────────────────────────────────────────────────────────
-function InfoCell({ icon, label, value, wide = false }) {
+// ─── Chip (info cell) ─────────────────────────────────────────────────────────
+function Chip({ icon, label, value, wide, accent }) {
   return (
     <div
       style={{
         gridColumn: wide ? "span 2" : "span 1",
-        padding: "12px 14px",
+        padding: "10px 12px",
         borderRadius: 12,
         background: "#f8fafc",
         border: "1px solid #f1f5f9",
         minWidth: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
-        <span style={{ color: "#94a3b8", display: "flex" }}>{icon}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
+        <span style={{ color: accent, display: "flex", opacity: 0.7 }}>{icon}</span>
         <span
           style={{
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 700,
             color: "#94a3b8",
             textTransform: "uppercase",
-            letterSpacing: "0.08em",
+            letterSpacing: "0.1em",
           }}
         >
           {label}
@@ -414,8 +479,15 @@ function InfoCell({ icon, label, value, wide = false }) {
     </div>
   );
 }
+Chip.propTypes = {
+  icon: PropTypes.node.isRequired,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  wide: PropTypes.bool,
+  accent: PropTypes.string,
+};
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+// Icons
 const CloseIcon = () => (
   <svg
     width="16"
@@ -429,7 +501,14 @@ const CloseIcon = () => (
   </svg>
 );
 const CalIcon = () => (
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    width="11"
+    height="11"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -438,7 +517,14 @@ const CalIcon = () => (
   </svg>
 );
 const ClockIcon = () => (
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    width="11"
+    height="11"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -447,7 +533,14 @@ const ClockIcon = () => (
   </svg>
 );
 const PinIcon = () => (
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    width="11"
+    height="11"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
     <path
       strokeLinecap="round"
@@ -457,7 +550,14 @@ const PinIcon = () => (
   </svg>
 );
 const BusIcon = () => (
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    width="11"
+    height="11"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -466,20 +566,18 @@ const BusIcon = () => (
   </svg>
 );
 const HomeIcon = () => (
-  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    width="11"
+    height="11"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
       d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-    />
-  </svg>
-);
-const BellIcon = () => (
-  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="#94a3b8">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
     />
   </svg>
 );
@@ -502,7 +600,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-// ─── PropTypes ────────────────────────────────────────────────────────────────
 EventDrawer.propTypes = {
   open: PropTypes.bool.isRequired,
   event: PropTypes.object,
@@ -510,11 +607,4 @@ EventDrawer.propTypes = {
   onClose: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-};
-
-InfoCell.propTypes = {
-  icon: PropTypes.node.isRequired,
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-  wide: PropTypes.bool,
 };

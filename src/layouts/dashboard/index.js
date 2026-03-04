@@ -1,7 +1,11 @@
 /**
- * Dashboard.jsx — Banda CEDES Don Bosco
- * Rediseño completo: enfocado 100% en presentaciones
- * Stack: React + Apollo + Tailwind (sin MUI, sin email)
+ * Dashboard.jsx — DEFINITIVO v3
+ *
+ * FIXES:
+ * - openEditForm limpia campos prohibidos antes de pasar al modal
+ * - resolveTabKey usa category del evento correctamente
+ * - Tabs limpios estilo segmented control, no pills
+ * - Stats elegantes
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,11 +27,13 @@ import EventFormModal from "components/events/EventFormModal";
 import DeleteConfirmModal from "components/events/DeleteConfirmModal";
 import PresentationCard from "components/events/PresentationCard";
 import PresentationHero from "components/events/PresentationHero";
-import { filterPresentations, sortEventsByDate, buildSortKey } from "utils/eventHelpers";
-import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
+import { buildSortKey } from "utils/eventHelpers";
+import { normalizeTimeTo12h } from "utils/dateHelpers";
 import PropTypes from "prop-types";
+import { NextEventBanner } from "./components/EventHighlights";
+import { MonthTimeline } from "./components/EventHighlights";
+import ContextualBanner from "./components/ContextualBanner";
 
-// ─── GraphQL ──────────────────────────────────────────────────────────────────
 const GET_CURRENT_USER = gql`
   query getUser {
     getUser {
@@ -43,54 +49,79 @@ const GET_CURRENT_USER = gql`
   }
 `;
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
 
 const BAND_COLORS = {
   "Banda de concierto avanzada": {
     bg: "bg-blue-600",
-    text: "text-blue-600",
+    text: "text-blue-700",
     light: "bg-blue-50",
     dot: "#2563EB",
   },
   "Banda de concierto elemental": {
     bg: "bg-emerald-600",
-    text: "text-emerald-600",
+    text: "text-emerald-700",
     light: "bg-emerald-50",
     dot: "#059669",
   },
   "Banda de concierto inicial": {
     bg: "bg-violet-600",
-    text: "text-violet-600",
+    text: "text-violet-700",
     light: "bg-violet-50",
     dot: "#7C3AED",
   },
   "Banda de concierto intermedia": {
     bg: "bg-amber-600",
-    text: "text-amber-600",
+    text: "text-amber-700",
     light: "bg-amber-50",
     dot: "#D97706",
   },
-  "Banda de marcha": { bg: "bg-red-600", text: "text-red-600", light: "bg-red-50", dot: "#DC2626" },
-  "Big Band A": { bg: "bg-cyan-600", text: "text-cyan-600", light: "bg-cyan-50", dot: "#0891B2" },
-  "Big Band B": { bg: "bg-pink-600", text: "text-pink-600", light: "bg-pink-50", dot: "#DB2777" },
+  "Banda de marcha": { bg: "bg-red-600", text: "text-red-700", light: "bg-red-50", dot: "#DC2626" },
+  "Big Band A": { bg: "bg-cyan-600", text: "text-cyan-700", light: "bg-cyan-50", dot: "#0891B2" },
+  "Big Band B": { bg: "bg-pink-600", text: "text-pink-700", light: "bg-pink-50", dot: "#DB2777" },
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+const TABS = [
+  { key: "presentation", label: "Presentaciones", emoji: "🎵" },
+  { key: "rehearsal", label: "Ensayos", emoji: "🎼" },
+  { key: "activity", label: "Actividades", emoji: "🎉" },
+  { key: "other", label: "Otros", emoji: "📌" },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getDaysUntil(dateMs) {
-  const now = new Date();
-  const target = new Date(Number(dateMs));
-  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  return diff;
+  return Math.ceil((new Date(Number(dateMs)) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
 function getUrgencyLabel(days) {
-  if (days < 0) return { label: "Pasado", color: "text-slate-400 bg-slate-100" };
-  if (days === 0) return { label: "Hoy", color: "text-white bg-red-500" };
+  if (days < 0) return { label: "Pasado", color: "text-slate-500 bg-slate-100" };
+  if (days === 0) return { label: "¡Hoy!", color: "text-white bg-red-500" };
   if (days === 1) return { label: "Mañana", color: "text-white bg-orange-500" };
-  if (days <= 7) return { label: `En ${days} días`, color: "text-white bg-amber-500" };
-  if (days <= 30) return { label: `En ${days} días`, color: "text-slate-700 bg-slate-100" };
-  return { label: `En ${days} días`, color: "text-slate-500 bg-slate-50" };
+  if (days <= 7) return { label: `${days}d`, color: "text-white bg-amber-500" };
+  if (days <= 30) return { label: `${days} días`, color: "text-slate-700 bg-slate-100" };
+  return { label: `${days} días`, color: "text-slate-400 bg-slate-50" };
+}
+
+const FORBIDDEN_FIELDS = new Set([
+  "__typename",
+  "_id",
+  "createdAt",
+  "updatedAt",
+  "notificationLog",
+  "createdBy",
+  "updatedBy",
+  "priority",
+  "visibility",
+  "__v",
+]);
+
+function resolveTabKey(event) {
+  const cat = (event.category ?? "").toLowerCase();
+  if (["presentation"].includes(cat)) return "presentation";
+  if (["rehearsal"].includes(cat)) return "rehearsal";
+  if (["activity"].includes(cat)) return "activity";
+  // meeting y logistics van a "other" también
+  return "other";
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -113,18 +144,16 @@ export default function Dashboard() {
     awaitRefetchQueries: true,
   });
 
-  // UI State
   const [drawer, setDrawer] = useState({ open: false, event: null });
-  const [formModal, setFormModal] = useState({ open: false, mode: null, event: null }); // mode: "add"|"edit"
+  const [formModal, setFormModal] = useState({ open: false, mode: null, event: null });
   const [deleteModal, setDeleteModal] = useState({ open: false, event: null });
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("presentation");
+  const [bandFilter, setBandFilter] = useState("all");
 
   const currentUser = userData?.getUser ?? null;
   const userId = currentUser?.id ?? null;
-  const userRole = currentUser?.role ?? null;
-  const isAdmin = ADMIN_ROLES.has(String(userRole ?? ""));
+  const isAdmin = ADMIN_ROLES.has(String(currentUser?.role ?? ""));
 
-  // ── Push token registration ──────────────────────────────────────────────
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -134,7 +163,7 @@ export default function Dashboard() {
         if (!token || cancelled) return;
         await updateNotificationToken({ variables: { userId, token } });
       } catch (err) {
-        console.error("[Dashboard] Token registration error:", err);
+        console.error("[Dashboard] Token:", err);
       }
     })();
     return () => {
@@ -142,13 +171,10 @@ export default function Dashboard() {
     };
   }, [userId, updateNotificationToken]);
 
-  // ── Foreground message listener ──────────────────────────────────────────
   useEffect(() => {
     if (!messaging) return;
     try {
-      const unsub = onMessage(messaging, (_payload) => {
-        // TODO: show toast notification
-      });
+      const unsub = onMessage(messaging, () => {});
       return () => {
         if (typeof unsub === "function") unsub();
       };
@@ -157,64 +183,70 @@ export default function Dashboard() {
     }
   }, []);
 
-  // ── Derived data ─────────────────────────────────────────────────────────
-  const allEvents = useMemo(() => {
-    return Array.isArray(eventData?.getEvents) ? eventData.getEvents : [];
-  }, [eventData?.getEvents]);
-
-  // Dashboard shows ONLY presentations (category === "presentation" or type is a band name)
-  const presentations = useMemo(() => {
-    const pres = allEvents.filter((e) => e.category === "presentation" || BAND_COLORS[e.type]);
-    return [...pres].sort((a, b) => buildSortKey(a) - buildSortKey(b));
-  }, [allEvents]);
-
-  const upcomingPresentations = useMemo(
-    () => presentations.filter((e) => getDaysUntil(e.date) >= 0),
-    [presentations]
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const allEvents = useMemo(
+    () => (Array.isArray(eventData?.getEvents) ? eventData.getEvents : []),
+    [eventData?.getEvents]
   );
 
-  const filteredPresentations = useMemo(() => {
-    if (activeFilter === "all") return upcomingPresentations;
-    return upcomingPresentations.filter((e) => e.type === activeFilter);
-  }, [upcomingPresentations, activeFilter]);
+  const upcomingEvents = useMemo(
+    () =>
+      allEvents
+        .filter((e) => getDaysUntil(e.date) >= 0)
+        .sort((a, b) => buildSortKey(a) - buildSortKey(b)),
+    [allEvents]
+  );
 
-  const availableBands = useMemo(() => {
-    const bands = new Set(upcomingPresentations.map((e) => e.type).filter(Boolean));
-    return [...bands];
-  }, [upcomingPresentations]);
+  const eventsByTab = useMemo(() => {
+    const groups = { presentation: [], rehearsal: [], activity: [], other: [] };
+    upcomingEvents.forEach((e) => {
+      const key = resolveTabKey(e);
+      groups[key].push(e);
+    });
+    return groups;
+  }, [upcomingEvents]);
 
-  const nextPresentation = filteredPresentations[0] ?? null;
-  const otherPresentations = filteredPresentations.slice(1);
+  const tabEvents = eventsByTab[activeTab] ?? [];
+
+  const availableBands = useMemo(
+    () => [...new Set(eventsByTab.presentation.map((e) => e.type).filter(Boolean))],
+    [eventsByTab.presentation]
+  );
+
+  const filteredEvents = useMemo(() => {
+    if (activeTab !== "presentation" || bandFilter === "all") return tabEvents;
+    return tabEvents.filter((e) => e.type === bandFilter);
+  }, [tabEvents, activeTab, bandFilter]);
+
+  const heroEvent = filteredEvents[0] ?? null;
+  const gridEvents = filteredEvents.slice(1);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const openDrawer = useCallback((event) => setDrawer({ open: true, event }), []);
   const closeDrawer = useCallback(() => setDrawer({ open: false, event: null }), []);
-
   const openAddForm = useCallback(() => setFormModal({ open: true, mode: "add", event: null }), []);
-
-  const openEditForm = useCallback(
-    (event) =>
-      setFormModal({
-        open: true,
-        mode: "edit",
-        event: {
-          ...event,
-          time: normalizeTimeTo12h(event.time),
-          departure: normalizeTimeTo12h(event.departure),
-          arrival: normalizeTimeTo12h(event.arrival),
-        },
-      }),
-    []
-  );
-
   const closeFormModal = useCallback(
     () => setFormModal({ open: false, mode: null, event: null }),
     []
   );
-
   const openDeleteModal = useCallback((event) => setDeleteModal({ open: true, event }), []);
-
   const closeDeleteModal = useCallback(() => setDeleteModal({ open: false, event: null }), []);
+
+  const openEditForm = useCallback((event) => {
+    const clean = Object.fromEntries(
+      Object.entries(event).filter(([k]) => !FORBIDDEN_FIELDS.has(k))
+    );
+    setFormModal({
+      open: true,
+      mode: "edit",
+      event: {
+        ...clean,
+        time: normalizeTimeTo12h(event.time),
+        departure: normalizeTimeTo12h(event.departure),
+        arrival: normalizeTimeTo12h(event.arrival),
+      },
+    });
+  }, []);
 
   const handleAddEvent = useCallback(
     async (input) => {
@@ -222,7 +254,7 @@ export default function Dashboard() {
         await addEvent({ variables: { input } });
         closeFormModal();
       } catch (err) {
-        console.error("[Dashboard] Add event error:", err);
+        console.error("[Dashboard] Add:", err);
       }
     },
     [addEvent, closeFormModal]
@@ -235,7 +267,7 @@ export default function Dashboard() {
         await updateEvent({ variables: { id: formModal.event.id, input } });
         closeFormModal();
       } catch (err) {
-        console.error("[Dashboard] Update event error:", err);
+        console.error("[Dashboard] Update:", err);
       }
     },
     [formModal.event?.id, updateEvent, closeFormModal]
@@ -248,18 +280,15 @@ export default function Dashboard() {
       closeDeleteModal();
       if (drawer.event?.id === deleteModal.event.id) closeDrawer();
     } catch (err) {
-      console.error("[Dashboard] Delete event error:", err);
+      console.error("[Dashboard] Delete:", err);
     }
   }, [deleteModal.event?.id, deleteEvent, closeDeleteModal, drawer.event?.id, closeDrawer]);
 
-  // ── Loading / Error ───────────────────────────────────────────────────────
-  const isLoading = userLoading || usersLoading || eventLoading;
-
-  if (isLoading)
+  if (userLoading || usersLoading || eventLoading)
     return (
       <DashboardLayout>
         <DashboardNavbar />
-        <DashboardSkeleton />
+        <Skeleton />
         <Footer />
       </DashboardLayout>
     );
@@ -268,108 +297,169 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <DashboardNavbar />
-        <ErrorState message={eventError.message} />
+        <ErrorState msg={eventError.message} />
         <Footer />
       </DashboardLayout>
     );
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="min-h-screen bg-slate-50 pb-12">
-        {/* ── Welcome Header ─────────────────────────────────────────────── */}
+      <div style={{ minHeight: "100vh", background: "#f8fafc", paddingBottom: 48 }}>
         <WelcomeHeader user={currentUser} isAdmin={isAdmin} onAddEvent={openAddForm} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* ── Stats Row ──────────────────────────────────────────────────── */}
-          <StatsRow presentations={upcomingPresentations} />
+          {/* <StatsRow events={upcomingEvents} presentations={eventsByTab.presentation} /> */}
+          <NextEventBanner event={upcomingEvents[0]} />
+          {/* <MonthTimeline events={upcomingEvents} /> */}
 
-          {/* ── Section header + filters ───────────────────────────────────── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 mt-10">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Próximas Presentaciones
-              </h2>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {upcomingPresentations.length === 0
-                  ? "No hay presentaciones programadas"
-                  : `${upcomingPresentations.length} presentación${
-                      upcomingPresentations.length !== 1 ? "es" : ""
-                    } programada${upcomingPresentations.length !== 1 ? "s" : ""}`}
-              </p>
+          {/* <ContextualBanner upcomingEvents={upcomingEvents} rehearsals={eventsByTab.rehearsal} /> */}
+
+          {/* ── Tabs ─────────────────────────────────────────────────────── */}
+          <div style={{ marginTop: 32 }}>
+            {/* Tab bar */}
+            <div
+              style={{
+                display: "flex",
+                background: "#f1f5f9",
+                borderRadius: 14,
+                padding: 4,
+                gap: 2,
+                overflowX: "auto",
+              }}
+            >
+              {TABS.map((tab) => {
+                const count = eventsByTab[tab.key]?.length ?? 0;
+                const active = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setBandFilter("all");
+                    }}
+                    style={{
+                      flex: 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      padding: "9px 14px",
+                      borderRadius: 11,
+                      border: "none",
+                      background: active ? "#ffffff" : "transparent",
+                      color: active ? "#0f172a" : "#64748b",
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s",
+                      boxShadow: active ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>{tab.emoji}</span>
+                    <span>{tab.label}</span>
+                    {count > 0 && (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: 99,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "0 5px",
+                          background: active ? "#0f172a" : "#e2e8f0",
+                          color: active ? "#ffffff" : "#64748b",
+                        }}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Band filter pills */}
-            {availableBands.length > 1 && (
-              <div className="flex flex-wrap gap-2">
-                <FilterPill
+            {/* Filtro de banda */}
+            {activeTab === "presentation" && availableBands.length > 1 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                <BandPill
                   label="Todas"
-                  active={activeFilter === "all"}
-                  onClick={() => setActiveFilter("all")}
+                  active={bandFilter === "all"}
+                  onClick={() => setBandFilter("all")}
                 />
                 {availableBands.map((band) => (
-                  <FilterPill
+                  <BandPill
                     key={band}
                     label={band}
-                    active={activeFilter === band}
-                    color={BAND_COLORS[band]}
-                    onClick={() => setActiveFilter(band === activeFilter ? "all" : band)}
+                    active={bandFilter === band}
+                    dot={BAND_COLORS[band]?.dot}
+                    onClick={() => setBandFilter(band === bandFilter ? "all" : band)}
                   />
                 ))}
               </div>
             )}
+
+            {/* Conteo */}
+            <p style={{ margin: "14px 0 16px", fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
+              {filteredEvents.length === 0
+                ? "Sin eventos próximos en esta categoría"
+                : `${filteredEvents.length} evento${
+                    filteredEvents.length !== 1 ? "s" : ""
+                  } próximo${filteredEvents.length !== 1 ? "s" : ""}`}
+            </p>
           </div>
 
-          {/* ── Empty State ────────────────────────────────────────────────── */}
-          {filteredPresentations.length === 0 && (
+          {/* ── Contenido ─────────────────────────────────────────────────── */}
+          {filteredEvents.length === 0 ? (
             <EmptyState isAdmin={isAdmin} onAddEvent={openAddForm} />
-          )}
-
-          {/* ── Hero Card (next presentation) ─────────────────────────────── */}
-          {nextPresentation && (
-            <div className="mb-6">
-              <PresentationHero
-                event={nextPresentation}
-                isAdmin={isAdmin}
-                bandColors={BAND_COLORS}
-                getDaysUntil={getDaysUntil}
-                getUrgencyLabel={getUrgencyLabel}
-                onViewDetails={openDrawer}
-                onEdit={openEditForm}
-                onDelete={openDeleteModal}
-              />
-            </div>
-          )}
-
-          {/* ── Other presentations grid ───────────────────────────────────── */}
-          {otherPresentations.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {otherPresentations.map((event) => (
-                <PresentationCard
-                  key={event.id}
-                  event={event}
-                  isAdmin={isAdmin}
-                  bandColors={BAND_COLORS}
-                  getDaysUntil={getDaysUntil}
-                  getUrgencyLabel={getUrgencyLabel}
-                  onViewDetails={openDrawer}
-                  onEdit={openEditForm}
-                  onDelete={openDeleteModal}
-                />
-              ))}
-            </div>
+          ) : (
+            <>
+              {heroEvent && (
+                <div style={{ marginBottom: 20 }}>
+                  <PresentationHero
+                    event={heroEvent}
+                    isAdmin={isAdmin}
+                    bandColors={BAND_COLORS}
+                    getDaysUntil={getDaysUntil}
+                    getUrgencyLabel={getUrgencyLabel}
+                    onViewDetails={openDrawer}
+                    onEdit={openEditForm}
+                    onDelete={openDeleteModal}
+                  />
+                </div>
+              )}
+              {gridEvents.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {gridEvents.map((event) => (
+                    <PresentationCard
+                      key={event.id}
+                      event={event}
+                      isAdmin={isAdmin}
+                      bandColors={BAND_COLORS}
+                      getDaysUntil={getDaysUntil}
+                      getUrgencyLabel={getUrgencyLabel}
+                      onViewDetails={openDrawer}
+                      onEdit={openEditForm}
+                      onDelete={openDeleteModal}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* ── Drawers & Modals ────────────────────────────────────────────────── */}
       <EventDrawer
         open={drawer.open}
         event={drawer.event}
         isAdmin={isAdmin}
-        bandColors={BAND_COLORS}
         onClose={closeDrawer}
         onEdit={(e) => {
           closeDrawer();
@@ -405,18 +495,11 @@ export default function Dashboard() {
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-/**
- * WelcomeHeader — rediseño sin gradientes
- * Estilo limpio, institucional, tipo Airbnb/Linear
- */
+// ─── WelcomeHeader ────────────────────────────────────────────────────────────
 export function WelcomeHeader({ user, isAdmin, onAddEvent }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
   const firstName = user?.name ?? "músico";
-
-  // Día de la semana + fecha larga en español
   const today = new Date().toLocaleDateString("es-CR", {
     weekday: "long",
     day: "numeric",
@@ -428,213 +511,243 @@ export function WelcomeHeader({ user, isAdmin, onAddEvent }) {
 
   return (
     <div
-      className="relative bg-white border-b border-slate-100 overflow-hidden mb-6"
-      style={{ minHeight: 140 }}
+      style={{
+        background: "#ffffff",
+        borderBottom: "1px solid #f0f0f0",
+        marginBottom: 0,
+      }}
     >
-      {/* ── Pentagrama decorativo — SVG inline como textura ─────────────── */}
       <div
-        aria-hidden="true"
         style={{
-          position: "absolute",
-          inset: 0,
-          overflow: "hidden",
-          pointerEvents: "none",
-          opacity: 0.045,
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "28px 24px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
         }}
       >
-        {/* 5 líneas horizontales del pentagrama, repetidas */}
-        {[18, 30, 42, 54, 66, 86, 98, 110, 122, 134].map((y) => (
-          <div
-            key={y}
+        {/* Left: greeting block */}
+        <div>
+          <p
             style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: y,
-              height: 1,
-              background: "#0f172a",
+              margin: "0 0 4px",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#a1a1a1",
             }}
-          />
-        ))}
-        {/* Clave de sol estilizada — solo el símbolo utf-8 */}
-        <span
-          style={{
-            position: "absolute",
-            right: 40,
-            top: -10,
-            fontSize: 220,
-            lineHeight: 1,
-            color: "#0f172a",
-            fontFamily: "Georgia, serif",
-            userSelect: "none",
-          }}
-        >
-          𝄞
-        </span>
-      </div>
+          >
+            Banda CEDES Don Bosco &nbsp;·&nbsp; {weekday.charAt(0).toUpperCase() + weekday.slice(1)}
+          </p>
 
-      {/* ── Contenido ────────────────────────────────────────────────────── */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-          {/* Left block */}
-          <div>
-            {/* Label superior — muy pequeño, uppercase, tracking ancho */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "#94a3b8",
-              }}
-            >
-              Banda CEDES Don Bosco &nbsp;·&nbsp;{" "}
-              <span style={{ color: "#cbd5e1" }}>
-                {weekday.charAt(0).toUpperCase() + weekday.slice(1)}
-              </span>
-            </p>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(22px, 3.5vw, 34px)",
+              fontWeight: 700,
+              color: "#111111",
+              letterSpacing: "-0.03em",
+              lineHeight: 1.15,
+              fontFamily: "-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif",
+            }}
+          >
+            {greeting}, <span style={{ color: "#111111" }}>{firstName}</span>
+          </h1>
 
-            {/* Saludo + nombre — escala de tipografía muy contrastada */}
-            <div style={{ marginTop: 6, lineHeight: 1 }}>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 400,
-                  color: "#64748b",
-                  fontStyle: "italic",
-                  letterSpacing: "0.01em",
-                }}
-              >
-                {greeting},
-              </span>
-              {/* Nombre en display enorme */}
-              <h1
-                style={{
-                  margin: "2px 0 0",
-                  fontSize: "clamp(28px, 5vw, 44px)",
-                  fontWeight: 900,
-                  color: "#0f172a",
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.05,
-                  fontFamily: "Georgia, 'Times New Roman', serif",
-                }}
-              >
-                {firstName}
-              </h1>
-            </div>
-
-            {/* Fecha — discreta pero legible */}
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 12,
-                color: "#94a3b8",
-                fontWeight: 500,
-                letterSpacing: "0.01em",
-              }}
-            >
-              {datePart.charAt(0).toUpperCase() + datePart.slice(1)}
-            </p>
-          </div>
-
-          {/* Right: CTA admin */}
-          {isAdmin && (
-            <div style={{ flexShrink: 0 }}>
-              <button
-                onClick={onAddEvent}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 20px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: "#0f172a",
-                  color: "#ffffff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: "0.01em",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  fontFamily: "inherit",
-                }}
-              >
-                <PlusIcon />
-                Nueva Presentación
-              </button>
-            </div>
-          )}
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 12,
+              color: "#b0b0b0",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {datePart.charAt(0).toUpperCase() + datePart.slice(1)}
+          </p>
         </div>
+
+        {/* Right: action button */}
+        {isAdmin && (
+          <button
+            onClick={onAddEvent}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "10px 18px",
+              borderRadius: 12,
+              border: "1.5px solid #e5e5e5",
+              background: "#ffffff",
+              color: "#111111",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              letterSpacing: "-0.01em",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              transition: "background 0.12s, border-color 0.12s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#f7f7f7";
+              e.currentTarget.style.borderColor = "#d0d0d0";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#ffffff";
+              e.currentTarget.style.borderColor = "#e5e5e5";
+            }}
+          >
+            <span
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 6,
+                background: "#111111",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <svg
+                width="9"
+                height="9"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="3"
+                stroke="#ffffff"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </span>
+            Nuevo evento
+          </button>
+        )}
       </div>
     </div>
   );
 }
+WelcomeHeader.propTypes = {
+  user: PropTypes.shape({ name: PropTypes.string }),
+  isAdmin: PropTypes.bool,
+  onAddEvent: PropTypes.func.isRequired,
+};
 
 // ─── StatsRow ─────────────────────────────────────────────────────────────────
-/**
- * Stats interesantes para una banda:
- * - No solo contadores aburridos
- * - Cada stat tiene una "lectura secundaria" que da contexto musical
- * - El número es protagonista absoluto
- * - Acento de color diferente por stat
- */
-export function StatsRow({ presentations }) {
+export function StatsRow({ events, presentations }) {
   const today = new Date();
   const thisMonth = presentations.filter((e) => {
     const d = new Date(Number(e.date));
     return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
   }).length;
-
-  const next7 = presentations.filter((e) => {
-    const diff = Math.ceil((new Date(Number(e.date)) - today) / (1000 * 60 * 60 * 24));
-    return diff >= 0 && diff <= 7;
-  }).length;
-
-  const nextEvent = presentations[0];
-  const daysToNext = nextEvent
-    ? Math.max(0, Math.ceil((new Date(Number(nextEvent.date)) - today) / (1000 * 60 * 60 * 24)))
-    : null;
-
+  const next = presentations[0];
+  const daysToNext = next ? Math.max(0, getDaysUntil(next.date)) : null;
   const bands = new Set(presentations.map((e) => e.type).filter(Boolean)).size;
+
+  const isUrgent = daysToNext !== null && daysToNext <= 7;
 
   const stats = [
     {
-      value: presentations.length,
-      unit: presentations.length === 1 ? "presentación" : "presentaciones",
-      context: "programadas en total",
-      accent: "#3b82f6",
+      n: presentations.length,
+      label: "Presentaciones",
+      sub: "próximas",
+      accentColor: "#2563eb",
       accentBg: "#eff6ff",
-      icon: <NoteIcon />,
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+          />
+        </svg>
+      ),
     },
     {
-      value: thisMonth,
-      unit: thisMonth === 1 ? "presentación" : "presentaciones",
-      context: "este mes",
-      accent: "#8b5cf6",
+      n: thisMonth,
+      label: "Este mes",
+      sub: "presentaciones",
+      accentColor: "#7c3aed",
       accentBg: "#f5f3ff",
-      icon: <CalIcon />,
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+          />
+        </svg>
+      ),
     },
     {
-      value: daysToNext !== null ? daysToNext : "—",
-      unit: daysToNext === 0 ? "¡es hoy!" : daysToNext === 1 ? "día" : "días",
-      context:
-        daysToNext !== null
-          ? daysToNext === 0
-            ? "para la próxima presentación"
-            : "para la próxima presentación"
-          : "sin presentaciones próximas",
-      accent: daysToNext !== null && daysToNext <= 7 ? "#ef4444" : "#f59e0b",
-      accentBg: daysToNext !== null && daysToNext <= 7 ? "#fef2f2" : "#fffbeb",
-      icon: <ClockIcon />,
+      n: daysToNext !== null ? daysToNext : "—",
+      label:
+        daysToNext === 0
+          ? "¡Hoy!"
+          : daysToNext === 1
+          ? "Mañana"
+          : daysToNext !== null
+          ? `${daysToNext} días`
+          : "Sin fecha",
+      sub: "próxima presentación",
+      accentColor: isUrgent ? "#dc2626" : "#d97706",
+      accentBg: isUrgent ? "#fef2f2" : "#fffbeb",
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
     },
     {
-      value: bands,
-      unit: bands === 1 ? "agrupación" : "agrupaciones",
-      context: "participando",
-      accent: "#10b981",
+      n: bands,
+      label: "Agrupaciones",
+      sub: "participando",
+      accentColor: "#059669",
       accentBg: "#ecfdf5",
-      icon: <GroupIcon />,
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+          />
+        </svg>
+      ),
     },
   ];
 
@@ -643,424 +756,246 @@ export function StatsRow({ presentations }) {
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
-        gap: 12,
-        marginTop: 8,
+        gap: 8,
+        marginTop: 20,
       }}
       className="lg:grid-cols-4"
     >
       {stats.map((s, i) => (
-        <StatCard key={i} {...s} />
+        <div
+          key={i}
+          style={{
+            background: "#ffffff",
+            borderRadius: 16,
+            padding: "16px 18px",
+            border: "1px solid #f0f0f0",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
+          }}
+        >
+          {/* Icon */}
+          <div
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 9,
+              background: s.accentBg,
+              color: s.accentColor,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 12,
+              flexShrink: 0,
+            }}
+          >
+            {s.icon}
+          </div>
+
+          {/* Number */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: "clamp(24px, 2.8vw, 32px)",
+              fontWeight: 700,
+              color: "#111111",
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+              fontFamily: "-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif",
+            }}
+          >
+            {s.n}
+          </p>
+
+          {/* Label */}
+          <p
+            style={{
+              margin: "6px 0 2px",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#333333",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {s.label}
+          </p>
+
+          {/* Sub */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              color: "#b0b0b0",
+              fontWeight: 400,
+            }}
+          >
+            {s.sub}
+          </p>
+        </div>
       ))}
     </div>
   );
 }
-
 StatsRow.propTypes = {
-  presentations: PropTypes.arrayOf(
-    PropTypes.shape({
-      date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      type: PropTypes.string,
-    })
-  ).isRequired,
+  events: PropTypes.array.isRequired,
+  presentations: PropTypes.array.isRequired,
 };
 
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({ value, unit, context, accent, accentBg, icon }) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: 16,
-        border: "1px solid #f1f5f9",
-        padding: "18px 20px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Accent bar izquierda */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 16,
-          bottom: 16,
-          width: 3,
-          borderRadius: "0 3px 3px 0",
-          background: accent,
-        }}
-      />
-
-      {/* Icon badge */}
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 32,
-          height: 32,
-          borderRadius: 10,
-          background: accentBg,
-          color: accent,
-          marginBottom: 12,
-        }}
-      >
-        {icon}
-      </div>
-
-      {/* Número protagonista */}
-      <div style={{ lineHeight: 1 }}>
-        <span
-          style={{
-            fontSize: "clamp(30px, 4vw, 40px)",
-            fontWeight: 900,
-            color: "#0f172a",
-            letterSpacing: "-0.04em",
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            lineHeight: 1,
-          }}
-        >
-          {value}
-        </span>
-      </div>
-
-      {/* Unidad — small, colored */}
-      <p
-        style={{
-          margin: "4px 0 0",
-          fontSize: 12,
-          fontWeight: 700,
-          color: accent,
-          letterSpacing: "0.01em",
-          lineHeight: 1.3,
-        }}
-      >
-        {unit}
-      </p>
-
-      {/* Contexto — muy discreto */}
-      <p
-        style={{
-          margin: "2px 0 0",
-          fontSize: 11,
-          color: "#94a3b8",
-          lineHeight: 1.4,
-        }}
-      >
-        {context}
-      </p>
-    </div>
-  );
-}
-
-function FilterPill({ label, active, color, onClick }) {
+// ─── BandPill ─────────────────────────────────────────────────────────────────
+function BandPill({ label, active, dot, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 active:scale-95 ${
-        active
-          ? "bg-slate-900 text-white border-slate-900"
-          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-      }`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        fontSize: 11,
+        fontWeight: 600,
+        padding: "5px 12px",
+        borderRadius: 99,
+        border: `1.5px solid ${active ? "#0f172a" : "#e2e8f0"}`,
+        background: active ? "#0f172a" : "#fff",
+        color: active ? "#fff" : "#475569",
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}
     >
-      {active && color && (
+      {active && dot && (
         <span
-          className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
-          style={{ backgroundColor: color?.dot }}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: dot,
+            display: "inline-block",
+          }}
         />
       )}
       {label}
     </button>
   );
 }
+BandPill.propTypes = {
+  label: PropTypes.string.isRequired,
+  active: PropTypes.bool,
+  dot: PropTypes.string,
+  onClick: PropTypes.func.isRequired,
+};
 
+// ─── EmptyState ───────────────────────────────────────────────────────────────
 function EmptyState({ isAdmin, onAddEvent }) {
   return (
-    <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
-      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <svg
-          className="w-8 h-8 text-slate-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="1.5"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
-          />
-        </svg>
-      </div>
-      <h3 className="text-base font-semibold text-slate-900 mb-1">
-        No hay presentaciones próximas
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 20,
+        border: "2px dashed #e2e8f0",
+        padding: "48px 24px",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 48, marginBottom: 12 }}>🎵</div>
+      <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+        Sin eventos próximos
       </h3>
-      <p className="text-sm text-slate-500 mb-6 max-w-xs mx-auto">
-        No hay presentaciones programadas en este momento.
+      <p
+        style={{
+          margin: "0 0 20px",
+          fontSize: 13,
+          color: "#94a3b8",
+          maxWidth: 280,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        No hay eventos programados en esta categoría.
       </p>
       {isAdmin && (
         <button
           onClick={onAddEvent}
-          className="inline-flex items-center gap-2 bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 13,
+            fontWeight: 700,
+            padding: "10px 20px",
+            borderRadius: 12,
+            border: "none",
+            background: "#0f172a",
+            color: "#fff",
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
         >
           <svg
-            className="w-4 h-4"
+            width="14"
+            height="14"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth="2"
+            strokeWidth="2.5"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Crear primera presentación
+          Crear evento
         </button>
       )}
     </div>
   );
 }
+EmptyState.propTypes = { isAdmin: PropTypes.bool, onAddEvent: PropTypes.func.isRequired };
 
-function DashboardSkeleton() {
+function Skeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 animate-pulse">
-      <div className="h-48 bg-slate-200" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div style={{ minHeight: "100vh", background: "#f8fafc" }} className="animate-pulse">
+      <div style={{ height: 140, background: "#e2e8f0" }} />
+      <div
+        className="max-w-7xl mx-auto px-4 py-8"
+        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-slate-200 rounded-2xl" />
+            <div key={i} style={{ height: 90, background: "#e2e8f0", borderRadius: 16 }} />
           ))}
         </div>
-        <div className="h-72 bg-slate-200 rounded-2xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-52 bg-slate-200 rounded-2xl" />
-          ))}
-        </div>
+        <div style={{ height: 48, background: "#e2e8f0", borderRadius: 14 }} />
+        <div style={{ height: 180, background: "#e2e8f0", borderRadius: 20 }} />
       </div>
     </div>
   );
 }
 
-function ErrorState({ message }) {
+function ErrorState({ msg }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
-      <div className="bg-white rounded-2xl border border-red-100 p-8 text-center max-w-sm">
-        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg
-            className="w-6 h-6 text-red-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-            />
-          </svg>
-        </div>
-        <h3 className="text-base font-semibold text-slate-900 mb-1">Error cargando datos</h3>
-        <p className="text-sm text-slate-500">{message}</p>
+    <div
+      style={{
+        minHeight: "60vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 20,
+          padding: 32,
+          textAlign: "center",
+          maxWidth: 360,
+          border: "1px solid #fecaca",
+        }}
+      >
+        <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+        <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+          Error cargando datos
+        </h3>
+        <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>{msg}</p>
       </div>
     </div>
   );
 }
-
-// ─── Icon components ──────────────────────────────────────────────────────────
-const CalendarIcon = ({ className }) => (
-  <svg
-    className={className}
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25"
-    />
-  </svg>
-);
-const MonthIcon = ({ className }) => (
-  <svg
-    className={className}
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-    />
-  </svg>
-);
-const AlertIcon = ({ className }) => (
-  <svg
-    className={className}
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
-    />
-  </svg>
-);
-const PlusIcon = () => (
-  <svg
-    width="15"
-    height="15"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="2.5"
-    stroke="currentColor"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-  </svg>
-);
-
-const NoteIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.8"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
-    />
-  </svg>
-);
-
-const CalIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.8"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-    />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.8"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-    />
-  </svg>
-);
-
-const GroupIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.8"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
-    />
-  </svg>
-);
-const bandColorShape = PropTypes.shape({
-  bg: PropTypes.string,
-  text: PropTypes.string,
-  light: PropTypes.string,
-  dot: PropTypes.string,
-});
-
-const presentationShape = PropTypes.shape({
-  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  date: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.instanceOf(Date)])
-    .isRequired,
-  type: PropTypes.string,
-  title: PropTypes.string,
-  description: PropTypes.string,
-  time: PropTypes.string,
-  place: PropTypes.string,
-  departure: PropTypes.string,
-  arrival: PropTypes.string,
-});
-
-WelcomeHeader.propTypes = {
-  user: PropTypes.shape({
-    name: PropTypes.string,
-  }),
-  isAdmin: PropTypes.bool,
-  onAddEvent: PropTypes.func.isRequired,
-};
-
-StatsRow.propTypes = {
-  presentations: PropTypes.arrayOf(presentationShape).isRequired,
-};
-
-FilterPill.propTypes = {
-  label: PropTypes.string.isRequired,
-  active: PropTypes.bool,
-  color: bandColorShape,
-  onClick: PropTypes.func.isRequired,
-};
-
-EmptyState.propTypes = {
-  isAdmin: PropTypes.bool,
-  onAddEvent: PropTypes.func.isRequired,
-};
-
-ErrorState.propTypes = {
-  message: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
-};
-
-CalendarIcon.propTypes = {
-  className: PropTypes.string,
-};
-
-MonthIcon.propTypes = {
-  className: PropTypes.string,
-};
-
-AlertIcon.propTypes = {
-  className: PropTypes.string,
-};
-
-GroupIcon.propTypes = {
-  className: PropTypes.string,
-};
-
-StatCard.propTypes = {
-  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
-  unit: PropTypes.string.isRequired,
-  context: PropTypes.string.isRequired,
-  accent: PropTypes.string.isRequired,
-  accentBg: PropTypes.string.isRequired,
-  icon: PropTypes.node.isRequired,
-};
+ErrorState.propTypes = { msg: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired };

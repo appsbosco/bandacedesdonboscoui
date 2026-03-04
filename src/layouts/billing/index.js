@@ -29,8 +29,6 @@ import EventsCalendar from "./components/Calendar";
 function Billing() {
   return (
     <>
-      <DashboardNavbar />
-
       <EventsCalendar />
 
       <Footer />
