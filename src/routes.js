@@ -505,6 +505,11 @@ const items = {
     }),
 };
 
+const documentsMenu = () => [
+  title("Documentos", "documents-pages"),
+  items.documents(),
+  items.newDocument(),
+];
 /**
  * Exports: protectedRoutes + attendanceRoutes
  */
@@ -514,6 +519,8 @@ export const protectedRoutes = [
   items.alumniDashboard(),
   items.guatemalaDashboard(),
   items.apoyoDashboard(),
+
+  ...documentsMenu(),
 
   title("Entradas", "entradas-eventos"),
   // En este menú “protegido”, el nombre original era "Entradas"
@@ -657,6 +664,8 @@ export const staffRoutes = [
   items.members(),
   items.events(),
 
+  ...documentsMenu(),
+
   title("Finanzas", "finanzas"),
   items.finance(),
   items.financeSales(),
@@ -690,6 +699,8 @@ export const principalRoutes = [
   items.attendanceTake(),
   items.attendanceHistory(),
   items.performanceAttendance(),
+
+  ...documentsMenu(),
 
   title("Finanzas", "finanzas"),
   items.finance(),

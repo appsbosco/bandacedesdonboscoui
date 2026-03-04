@@ -175,6 +175,7 @@ const sectionRoutes = [
 
   findRouteByKey(membersRoutes, "documents-pages"),
   findRouteByKey(membersRoutes, "documents"),
+  findRouteByKey(membersRoutes, "new-document"),
 
   { type: "title", title: "Asistencia", key: "section-attendance-pages" },
   ...attendanceRoutes,
@@ -186,33 +187,52 @@ const sectionRoutes = [
   findRouteByKey(membersRoutes, "Profile"),
 ].filter(Boolean);
 
+const attendanceNavRoutes = [
+  findRouteByKey(membersRoutes, "dashboard"),
+  findRouteByKey(membersRoutes, "events"),
+
+  findRouteByKey(membersRoutes, "documents-pages"),
+  findRouteByKey(membersRoutes, "documents"),
+  findRouteByKey(membersRoutes, "new-document"),
+
+  { type: "title", title: "Asistencia", key: "attendance-only-pages" },
+  ...attendanceRoutes,
+
+  findRouteByKey(membersRoutes, "almuerzos-pages"),
+  findRouteByKey(membersRoutes, "almuerzos"),
+
+  findRouteByKey(membersRoutes, "account-pages"),
+  findRouteByKey(membersRoutes, "Profile"),
+].filter(Boolean);
+
 function resolveRenderedRouteDefs(userRole) {
-  if (ADMIN_ROLES.has(userRole)) return [...routes, ...protectedRoutes];
+  if (ADMIN_ROLES.has(userRole)) return [...routes, ...adminRoutes];
   if (SECTION_ROLES.has(userRole)) return [...routes, ...sectionRoutes];
-  if (ATTENDANCE_ROLES.has(userRole)) return [...routes, ...attendanceRoutes];
+  if (ATTENDANCE_ROLES.has(userRole)) return [...routes, ...attendanceNavRoutes];
   if (userRole === "Instructura Color Guard") return [...routes, ...colorGuardCampRoutes];
   if (userRole === "Staff") return [...routes, ...staffRoutes];
   if (userRole === "CEDES") return [...routes, ...cedesRoutes];
   if (userRole === "Instructor de instrumento") return [...routes, ...instructorsRoutes];
 
-  if (!MEMBERS_EXCLUDED_FOR_PARENTS_ROUTES.has(userRole)) {
-    return [...routes, ...parentsRoutes];
+  if (MEMBERS_EXCLUDED_FOR_PARENTS_ROUTES.has(userRole)) {
+    return [...routes, ...membersRoutes];
   }
 
-  return routes;
+  return [...routes, ...parentsRoutes];
 }
 
 function resolveNavRouteDefs(userRole) {
   if (ADMIN_ROLES.has(userRole)) return adminRoutes;
   if (SECTION_ROLES.has(userRole)) return sectionRoutes;
+  if (ATTENDANCE_ROLES.has(userRole)) return attendanceNavRoutes;
   if (userRole === "Staff") return staffRoutes;
   if (userRole === "Instructura Color Guard") return colorGuardCampRoutes;
   if (userRole === "CEDES") return cedesRoutes;
   if (userRole === "Instructor de instrumento") return instructorsRoutes;
 
-  if (!MEMBERS_EXCLUDED_FOR_PARENTS_NAV.has(userRole)) return parentsRoutes;
+  if (MEMBERS_EXCLUDED_FOR_PARENTS_NAV.has(userRole)) return membersRoutes;
 
-  return membersRoutes;
+  return parentsRoutes;
 }
 
 /* =========================
