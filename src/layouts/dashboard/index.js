@@ -90,7 +90,7 @@ function getUrgencyLabel(days) {
   if (days === 1) return { label: "Mañana", color: "text-white bg-orange-500" };
   if (days <= 7) return { label: `En ${days} días`, color: "text-white bg-amber-500" };
   if (days <= 30) return { label: `En ${days} días`, color: "text-slate-700 bg-slate-100" };
-  return { label: formatDateEs(dateMs, "short"), color: "text-slate-600 bg-slate-100" };
+  return { label: `En ${days} días`, color: "text-slate-500 bg-slate-50" };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
