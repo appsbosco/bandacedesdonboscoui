@@ -28,13 +28,13 @@ import EventsCalendar from "./components/Calendar";
 
 function Billing() {
   return (
-    <DashboardLayout>
+    <>
       <DashboardNavbar />
 
       <EventsCalendar />
 
       <Footer />
-    </DashboardLayout>
+    </>
   );
 }
 

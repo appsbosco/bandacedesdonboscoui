@@ -1,35 +1,13 @@
-import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
-import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
-import CloseIcon from "@mui/icons-material/Close";
+/**
+ * Dashboard.jsx — Banda CEDES Don Bosco
+ * Rediseño completo: enfocado 100% en presentaciones
+ * Stack: React + Apollo + Tailwind (sin MUI, sin email)
+ */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, IconButton, Modal } from "@mui/material";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Grid from "@mui/material/Grid";
-import Icon from "@mui/material/Icon";
-import Tooltip from "@mui/material/Tooltip";
-
-import { LazyLoadImage } from "react-lazy-load-image-component";
-
-import SoftBox from "components/SoftBox";
-import SoftTypography from "components/SoftTypography";
-import Footer from "examples/Footer";
-import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
-import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import BuildByDevelopers from "layouts/dashboard/components/BuildByDevelopers";
-import WorkWithTheRockets from "layouts/dashboard/components/WorkWithTheRockets";
-
-import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
-import EventFormModal from "components/EventFormModal";
-
 import { gql, useMutation, useQuery } from "@apollo/client";
-import moment from "moment";
-
+import { generateToken, messaging } from "config/firebase";
+import { onMessage } from "firebase/messaging";
 import {
   ADD_EVENT,
   UPDATE_EVENT,
@@ -37,21 +15,20 @@ import {
   UPDATE_NOTIFICATION_TOKEN,
 } from "graphql/mutations";
 import { GET_EVENTS, GET_USERS_AND_BANDS } from "graphql/queries";
+import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
+import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import Footer from "examples/Footer";
+import EventDrawer from "components/events/EventDrawer";
+import EventFormModal from "components/events/EventFormModal";
+import DeleteConfirmModal from "components/events/DeleteConfirmModal";
+import PresentationCard from "components/events/PresentationCard";
+import PresentationHero from "components/events/PresentationHero";
+import { filterPresentations, sortEventsByDate, buildSortKey } from "utils/eventHelpers";
+import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
+import PropTypes from "prop-types";
 
-import fallbackCover from "assets/images/about.webp";
-import bandaAvanzadaImg from "assets/images/Banda Avanzada.webp";
-import bandaInicialImg from "assets/images/Banda Inicial.webp";
-import bandaIntermediaImg from "assets/images/BandaIntermedia.webp";
-import bigBandAImg from "assets/images/BigBandA.webp";
-import bigBandBImg from "assets/images/BigBandB.webp";
-
-import { generateToken, messaging } from "config/firebase";
-import { onMessage } from "firebase/messaging";
-
-// -------------------------------
-// GraphQL
-// -------------------------------
-const GET_USERS_BY_ID = gql`
+// ─── GraphQL ──────────────────────────────────────────────────────────────────
+const GET_CURRENT_USER = gql`
   query getUser {
     getUser {
       id
@@ -59,11 +36,6 @@ const GET_USERS_BY_ID = gql`
       firstSurName
       secondSurName
       email
-      birthday
-      carnet
-      state
-      grade
-      phone
       role
       instrument
       avatar
@@ -71,251 +43,113 @@ const GET_USERS_BY_ID = gql`
   }
 `;
 
-const SEND_EMAIL = gql`
-  mutation SendEmail($input: EmailInput!) {
-    sendEmail(input: $input)
-  }
-`;
-
-// -------------------------------
-// Constantes
-// -------------------------------
+// ─── Constants ───────────────────────────────────────────────────────────────
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
 
-const bandEmailMap = {
-  "Banda de concierto avanzada": "bandaca@cedesdonbosco.ed.cr",
-  "Banda de concierto elemental": "bandace@cedesdonbosco.ed.cr",
-  "Banda de concierto inicial": "bandacin@cedesdonbosco.ed.cr",
-  "Banda de concierto intermedia": "bandacint@cedesdonbosco.ed.cr",
-  "Banda de marcha": "bandamarcha@cedesdonbosco.ed.cr",
-  Staff: "bandastaff@cedesdonbosco.ed.cr",
-  "Padres de familia": "bandapadresdefamilia@cedesdonbosco.ed.cr",
-  "Big Band A": "bandabigbanda@cedesdonbosco.ed.cr",
-  "Big Band B": "bandabigbandb@cedesdonbosco.ed.cr",
+const BAND_COLORS = {
+  "Banda de concierto avanzada": {
+    bg: "bg-blue-600",
+    text: "text-blue-600",
+    light: "bg-blue-50",
+    dot: "#2563EB",
+  },
+  "Banda de concierto elemental": {
+    bg: "bg-emerald-600",
+    text: "text-emerald-600",
+    light: "bg-emerald-50",
+    dot: "#059669",
+  },
+  "Banda de concierto inicial": {
+    bg: "bg-violet-600",
+    text: "text-violet-600",
+    light: "bg-violet-50",
+    dot: "#7C3AED",
+  },
+  "Banda de concierto intermedia": {
+    bg: "bg-amber-600",
+    text: "text-amber-600",
+    light: "bg-amber-50",
+    dot: "#D97706",
+  },
+  "Banda de marcha": { bg: "bg-red-600", text: "text-red-600", light: "bg-red-50", dot: "#DC2626" },
+  "Big Band A": { bg: "bg-cyan-600", text: "text-cyan-600", light: "bg-cyan-50", dot: "#0891B2" },
+  "Big Band B": { bg: "bg-pink-600", text: "text-pink-600", light: "bg-pink-50", dot: "#DB2777" },
 };
 
-// -------------------------------
-// Helpers
-// -------------------------------
-function escapeHtml(input) {
-  const s = String(input ?? "");
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getDaysUntil(dateMs) {
+  const now = new Date();
+  const target = new Date(Number(dateMs));
+  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  return diff;
 }
 
-function normalizeTimeTo12h(time) {
-  // Acepta "HH:mm", "h:mma", "h:mm a", etc.
-  const raw = String(time ?? "").trim();
-  if (!raw) return "";
-  const m = moment(raw, ["HH:mm", "H:mm", "h:mma", "h:mmA", "h:mm a", "h:mm A"], true);
-  return m.isValid() ? m.format("h:mma") : raw; // fallback a lo que venga
+function getUrgencyLabel(days) {
+  if (days < 0) return { label: "Pasado", color: "text-slate-400 bg-slate-100" };
+  if (days === 0) return { label: "Hoy", color: "text-white bg-red-500" };
+  if (days === 1) return { label: "Mañana", color: "text-white bg-orange-500" };
+  if (days <= 7) return { label: `En ${days} días`, color: "text-white bg-amber-500" };
+  if (days <= 30) return { label: `En ${days} días`, color: "text-slate-700 bg-slate-100" };
+  return { label: formatDateEs(dateMs, "short"), color: "text-slate-600 bg-slate-100" };
 }
 
-function formatDateEsUTC(dateMs) {
-  const n = Number(dateMs);
-  if (!Number.isFinite(n)) return "";
-  // Formato tipo: 14 de febrero del 2026
-  return moment.utc(n).format("D [de] MMMM [del] YYYY");
-}
-
-function buildEventSortKeyMs(event) {
-  // Construye un timestamp comparable: date (ms) + hora (minutos)
-  const dateMs = Number(event?.date);
-  const timeStr = String(event?.time ?? "").trim();
-
-  const base = Number.isFinite(dateMs) ? moment.utc(dateMs).startOf("day") : null;
-
-  if (!base) return Number.POSITIVE_INFINITY;
-
-  if (!timeStr) return base.valueOf();
-
-  // parse hora robusto
-  const t = moment(timeStr, ["HH:mm", "H:mm", "h:mma", "h:mmA", "h:mm a", "h:mm A"], true);
-  if (!t.isValid()) return base.valueOf();
-
-  const hours = t.hours();
-  const minutes = t.minutes();
-  return base.clone().add(hours, "hours").add(minutes, "minutes").valueOf();
-}
-
-function getEventImage(type) {
-  const t = String(type ?? "");
-
-  if (t.includes("Big Band B")) return bigBandBImg;
-  if (t.includes("Big Band A")) return bigBandAImg;
-  if (t.includes("Banda de concierto intermedia")) return bandaIntermediaImg;
-  if (t.includes("Banda de concierto inicial")) return bandaInicialImg;
-  if (t.includes("Banda de concierto avanzada")) return bandaAvanzadaImg;
-
-  return fallbackCover;
-}
-
-function buildEventEmailHtml(eventData) {
-  const title = escapeHtml(eventData?.title);
-  const description = escapeHtml(eventData?.description);
-  const place = escapeHtml(eventData?.place);
-  const type = escapeHtml(eventData?.type);
-
-  const formattedDate = formatDateEsUTC(eventData?.date);
-  const formattedTime = normalizeTimeTo12h(eventData?.time); // "2:00pm"
-
-  return `
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
-<html lang="es">
-  <head></head>
-  <body style="background-color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif;">
-    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">
-      <tbody>
-        <tr>
-          <td>
-            <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:37.5em;margin:0 auto;padding:20px 0 48px;width:580px">
-              <tr style="width:100%">
-                <td>
-                  <img
-                    alt="BCDB"
-                    src="https://res.cloudinary.com/dnv9akklf/image/upload/q_auto,f_auto/v1686511395/LOGO_BCDB_qvjabt.png"
-                    style="display:block;outline:none;border:none;text-decoration:none;margin:0;padding:0;max-width:30%;height:auto;"
-                  />
-                  <p style="font-size:26px;line-height:1.3;margin:16px 0;font-weight:700;color:#484848;">
-                    ${title} 🙌🏻 🎶
-                  </p>
-
-                  <p style="font-size:32px;line-height:1.3;margin:16px 0;font-weight:700;color:#484848;">
-                    ¡Hola! Tienes una nueva presentación con la BCDB.
-                  </p>
-
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;padding:24px;background-color:#f2f3f3;border-radius:4px;">
-                    Esperamos que este correo le encuentre lleno/a de entusiasmo. Nos complace anunciarle que se avecina una nueva presentación y queremos contar con cada uno de ustedes para hacer de este evento un verdadero éxito.
-                  </p>
-
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;">
-                    Formato: ${type}
-                  </p>
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;">
-                    Fecha: ${escapeHtml(formattedDate)}
-                  </p>
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;">
-                    Hora: ${escapeHtml(formattedTime)}
-                  </p>
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;">
-                    Lugar: ${place}
-                  </p>
-                  <p style="font-size:18px;line-height:1.4;margin:16px 0;color:#484848;padding-bottom:16px;">
-                    Descripción del evento: ${description}
-                  </p>
-
-                  <a
-                    href="https://bandacedesdonbosco.com/"
-                    target="_blank"
-                    style="background-color:#293964;border-radius:3px;color:#fff;font-size:18px;text-decoration:none;text-align:center;display:inline-block;width:100%;padding:19px 0px;line-height:120%;"
-                  >
-                    Ver más
-                  </a>
-
-                  <hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#cccccc;margin:20px 0;" />
-
-                  <p style="font-size:14px;line-height:24px;margin:16px 0;color:#9ca299;margin-bottom:10px;">
-                    Copyright © 2026 Banda CEDES Don Bosco. Todos los derechos reservados.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </body>
-</html>
-  `.trim();
-}
-
-// -------------------------------
-// Component
-// -------------------------------
-const Dashboard = () => {
-  // Queries
-  const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);
-
-  const {
-    data: usersData,
-    loading: usersLoading,
-    error: usersError,
-  } = useQuery(GET_USERS_AND_BANDS);
-
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const { data: userData, loading: userLoading } = useQuery(GET_CURRENT_USER);
+  const { data: usersData, loading: usersLoading } = useQuery(GET_USERS_AND_BANDS);
   const { data: eventData, loading: eventLoading, error: eventError } = useQuery(GET_EVENTS);
 
-  const userRole = userData?.getUser?.role ?? null;
-  const userId = userData?.getUser?.id ?? null;
-  const canManageEvents = ADMIN_ROLES.has(String(userRole ?? ""));
-
-  // Mutations
   const [updateNotificationToken] = useMutation(UPDATE_NOTIFICATION_TOKEN);
-  const [sendEmail] = useMutation(SEND_EMAIL);
-
   const [addEvent] = useMutation(ADD_EVENT, {
     refetchQueries: [{ query: GET_EVENTS }],
     awaitRefetchQueries: true,
   });
-
   const [updateEvent] = useMutation(UPDATE_EVENT, {
     refetchQueries: [{ query: GET_EVENTS }],
     awaitRefetchQueries: true,
   });
-
   const [deleteEvent] = useMutation(DELETE_EVENT, {
     refetchQueries: [{ query: GET_EVENTS }],
     awaitRefetchQueries: true,
   });
 
-  // UI state
-  const [openModal, setOpenModal] = useState(false);
-  const [modalType, setModalType] = useState(null); // "add" | "edit" | "remove" | "details"
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  // UI State
+  const [drawer, setDrawer] = useState({ open: false, event: null });
+  const [formModal, setFormModal] = useState({ open: false, mode: null, event: null }); // mode: "add"|"edit"
+  const [deleteModal, setDeleteModal] = useState({ open: false, event: null });
+  const [activeFilter, setActiveFilter] = useState("all");
 
-  // -------------------------------
-  // Effects
-  // -------------------------------
+  const currentUser = userData?.getUser ?? null;
+  const userId = currentUser?.id ?? null;
+  const userRole = currentUser?.role ?? null;
+  const isAdmin = ADMIN_ROLES.has(String(userRole ?? ""));
 
-  // 1) Registrar/actualizar token push (solo cuando exista userId)
+  // ── Push token registration ──────────────────────────────────────────────
   useEffect(() => {
     if (!userId) return;
-
     let cancelled = false;
-
     (async () => {
       try {
         const token = await generateToken();
         if (!token || cancelled) return;
-
         await updateNotificationToken({ variables: { userId, token } });
       } catch (err) {
-        // evita reventar UI
-        console.error("Error actualizando token de notificación:", err);
+        console.error("[Dashboard] Token registration error:", err);
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [userId, updateNotificationToken]);
 
-  // 2) Listener opcional para notificaciones en foreground (si está configurado)
+  // ── Foreground message listener ──────────────────────────────────────────
   useEffect(() => {
     if (!messaging) return;
-
     try {
-      const unsub = onMessage(messaging, (payload) => {
-        // aquí podés disparar toast/snackbar si querés
-        // console.log("Foreground message:", payload);
+      const unsub = onMessage(messaging, (_payload) => {
+        // TODO: show toast notification
       });
       return () => {
-        // firebase onMessage retorna función de unsubscribe en algunas versiones,
-        // en otras no; por eso el try/catch y guard.
         if (typeof unsub === "function") unsub();
       };
     } catch {
@@ -323,493 +157,910 @@ const Dashboard = () => {
     }
   }, []);
 
-  // -------------------------------
-  // Derived data (memo)
-  // -------------------------------
-  const sortedEvents = useMemo(() => {
-    const events = Array.isArray(eventData?.getEvents) ? [...eventData.getEvents] : [];
-    events.sort((a, b) => buildEventSortKeyMs(a) - buildEventSortKeyMs(b));
-    return events;
+  // ── Derived data ─────────────────────────────────────────────────────────
+  const allEvents = useMemo(() => {
+    return Array.isArray(eventData?.getEvents) ? eventData.getEvents : [];
   }, [eventData?.getEvents]);
 
-  // -------------------------------
-  // Handlers (callbacks estables)
-  // -------------------------------
-  const handleCloseModal = useCallback(() => {
-    setOpenModal(false);
-    setModalType(null);
-    setSelectedEvent(null);
-  }, []);
+  // Dashboard shows ONLY presentations (category === "presentation" or type is a band name)
+  const presentations = useMemo(() => {
+    const pres = allEvents.filter((e) => e.category === "presentation" || BAND_COLORS[e.type]);
+    return [...pres].sort((a, b) => buildSortKey(a) - buildSortKey(b));
+  }, [allEvents]);
 
-  const handleOpenModal = useCallback((type, event = null) => {
-    setModalType(type);
-
-    if (event) {
-      // Pre-formateo seguro (sin doble setState)
-      setSelectedEvent({
-        ...event,
-        time: normalizeTimeTo12h(event.time),
-        departure: normalizeTimeTo12h(event.departure),
-        arrival: normalizeTimeTo12h(event.arrival),
-      });
-    } else {
-      setSelectedEvent(null);
-    }
-
-    setOpenModal(true);
-  }, []);
-
-  const handleSendEmail = useCallback(
-    async (newEventData) => {
-      const bandEmail = bandEmailMap[newEventData?.type];
-      if (!bandEmail) {
-        console.error("No se encontró correo para tipo:", newEventData?.type);
-        return;
-      }
-
-      const html = buildEventEmailHtml(newEventData);
-
-      try {
-        const res = await sendEmail({
-          variables: {
-            input: {
-              to: bandEmail,
-              subject: "Tienes una nueva presentación con la BCDB",
-              text: "",
-              html,
-            },
-          },
-        });
-
-        if (!res?.data?.sendEmail) {
-          console.error("sendEmail retornó false/empty");
-        }
-      } catch (err) {
-        console.error("Error enviando email:", err);
-      }
-    },
-    [sendEmail]
+  const upcomingPresentations = useMemo(
+    () => presentations.filter((e) => getDaysUntil(e.date) >= 0),
+    [presentations]
   );
 
+  const filteredPresentations = useMemo(() => {
+    if (activeFilter === "all") return upcomingPresentations;
+    return upcomingPresentations.filter((e) => e.type === activeFilter);
+  }, [upcomingPresentations, activeFilter]);
+
+  const availableBands = useMemo(() => {
+    const bands = new Set(upcomingPresentations.map((e) => e.type).filter(Boolean));
+    return [...bands];
+  }, [upcomingPresentations]);
+
+  const nextPresentation = filteredPresentations[0] ?? null;
+  const otherPresentations = filteredPresentations.slice(1);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const openDrawer = useCallback((event) => setDrawer({ open: true, event }), []);
+  const closeDrawer = useCallback(() => setDrawer({ open: false, event: null }), []);
+
+  const openAddForm = useCallback(() => setFormModal({ open: true, mode: "add", event: null }), []);
+
+  const openEditForm = useCallback(
+    (event) =>
+      setFormModal({
+        open: true,
+        mode: "edit",
+        event: {
+          ...event,
+          time: normalizeTimeTo12h(event.time),
+          departure: normalizeTimeTo12h(event.departure),
+          arrival: normalizeTimeTo12h(event.arrival),
+        },
+      }),
+    []
+  );
+
+  const closeFormModal = useCallback(
+    () => setFormModal({ open: false, mode: null, event: null }),
+    []
+  );
+
+  const openDeleteModal = useCallback((event) => setDeleteModal({ open: true, event }), []);
+
+  const closeDeleteModal = useCallback(() => setDeleteModal({ open: false, event: null }), []);
+
   const handleAddEvent = useCallback(
-    async (newEvent) => {
+    async (input) => {
       try {
-        await addEvent({ variables: { input: newEvent } });
-        await handleSendEmail(newEvent);
-        handleCloseModal();
+        await addEvent({ variables: { input } });
+        closeFormModal();
       } catch (err) {
-        console.error("Error creando evento:", err);
+        console.error("[Dashboard] Add event error:", err);
       }
     },
-    [addEvent, handleCloseModal, handleSendEmail]
+    [addEvent, closeFormModal]
   );
 
   const handleUpdateEvent = useCallback(
-    async (updatedEvent) => {
-      if (!selectedEvent?.id) return;
+    async (input) => {
+      if (!formModal.event?.id) return;
       try {
-        await updateEvent({
-          variables: { id: selectedEvent.id, input: updatedEvent },
-        });
-        handleCloseModal();
+        await updateEvent({ variables: { id: formModal.event.id, input } });
+        closeFormModal();
       } catch (err) {
-        console.error("Error actualizando evento:", err);
+        console.error("[Dashboard] Update event error:", err);
       }
     },
-    [selectedEvent?.id, updateEvent, handleCloseModal]
+    [formModal.event?.id, updateEvent, closeFormModal]
   );
 
   const handleDeleteEvent = useCallback(async () => {
-    if (!selectedEvent?.id) return;
+    if (!deleteModal.event?.id) return;
     try {
-      await deleteEvent({ variables: { id: selectedEvent.id } });
-      handleCloseModal();
+      await deleteEvent({ variables: { id: deleteModal.event.id } });
+      closeDeleteModal();
+      if (drawer.event?.id === deleteModal.event.id) closeDrawer();
     } catch (err) {
-      console.error("Error eliminando evento:", err);
+      console.error("[Dashboard] Delete event error:", err);
     }
-  }, [selectedEvent?.id, deleteEvent, handleCloseModal]);
+  }, [deleteModal.event?.id, deleteEvent, closeDeleteModal, drawer.event?.id, closeDrawer]);
 
-  // -------------------------------
-  // Render states
-  // -------------------------------
-  if (userLoading || usersLoading || eventLoading) {
+  // ── Loading / Error ───────────────────────────────────────────────────────
+  const isLoading = userLoading || usersLoading || eventLoading;
+
+  if (isLoading)
     return (
       <DashboardLayout>
         <DashboardNavbar />
-        <SoftBox py={3} px={2}>
-          <SoftTypography variant="h6" fontWeight="medium">
-            Cargando...
-          </SoftTypography>
-        </SoftBox>
+        <DashboardSkeleton />
         <Footer />
       </DashboardLayout>
     );
-  }
 
-  if (userError || usersError || eventError) {
+  if (eventError)
     return (
       <DashboardLayout>
         <DashboardNavbar />
-        <SoftBox py={3} px={2}>
-          <SoftTypography variant="h6" fontWeight="medium" color="error">
-            Ocurrió un error cargando datos.
-          </SoftTypography>
-          <SoftTypography variant="button" color="text">
-            {String(userError?.message || usersError?.message || eventError?.message || "")}
-          </SoftTypography>
-        </SoftBox>
+        <ErrorState message={eventError.message} />
         <Footer />
       </DashboardLayout>
     );
-  }
 
-  // Si por alguna razón la API devuelve algo raro
-  const users = Array.isArray(usersData?.getUsers) ? usersData.getUsers : [];
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
-      <SoftBox py={3}>
-        <SoftBox mb={3}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} lg={7}>
-              <BuildByDevelopers />
-            </Grid>
-            <Grid item xs={12} lg={5}>
-              <WorkWithTheRockets />
-            </Grid>
-          </Grid>
-        </SoftBox>
+      <div className="min-h-screen bg-slate-50 pb-12">
+        {/* ── Welcome Header ─────────────────────────────────────────────── */}
+        <WelcomeHeader user={currentUser} isAdmin={isAdmin} onAddEvent={openAddForm} />
 
-        <SoftBox mb={3}>
-          <SoftBox mb={3} style={{ overflowX: "auto" }}>
-            <Card>
-              <SoftBox pt={2} px={2} style={{ display: "flex", justifyContent: "space-between" }}>
-                <div>
-                  <SoftBox mb={0.5}>
-                    <SoftTypography variant="h6" fontWeight="medium">
-                      Próximos Eventos
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox mb={1}>
-                    <SoftTypography variant="button" fontWeight="regular" color="text">
-                      Resumen de los próximos eventos de la BCDB
-                    </SoftTypography>
-                  </SoftBox>
-                </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* ── Stats Row ──────────────────────────────────────────────────── */}
+          <StatsRow presentations={upcomingPresentations} />
 
-                {canManageEvents ? (
-                  <SoftTypography variant="body2" color="secondary">
-                    <Tooltip placement="top" title="Agregar evento">
-                      <Icon sx={{ cursor: "pointer" }} onClick={() => handleOpenModal("add")}>
-                        add
-                      </Icon>
-                    </Tooltip>
-                  </SoftTypography>
-                ) : null}
-              </SoftBox>
+          {/* ── Section header + filters ───────────────────────────────────── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 mt-10">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                Próximas Presentaciones
+              </h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {upcomingPresentations.length === 0
+                  ? "No hay presentaciones programadas"
+                  : `${upcomingPresentations.length} presentación${
+                      upcomingPresentations.length !== 1 ? "es" : ""
+                    } programada${upcomingPresentations.length !== 1 ? "s" : ""}`}
+              </p>
+            </div>
 
-              <SoftBox p={2} style={{ minWidth: "100%", height: "100%" }}>
-                {sortedEvents.length === 0 ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "100%",
-                    }}
-                  >
-                    <p>No tienes eventos próximos</p>
-                  </div>
-                ) : (
-                  <Grid
-                    container
-                    spacing={3}
-                    style={{
-                      display: "flex",
-                      flexWrap: "nowrap",
-                      overflowX: "auto",
-                      height: "100%",
-                    }}
-                  >
-                    {sortedEvents.map((event) => {
-                      const eventImage = getEventImage(event?.type);
-
-                      const actions = [
-                        {
-                          type: "internal",
-                          route: "",
-                          color: "info",
-                          label: "Ver más",
-                          onClick: () => handleOpenModal("details", event),
-                        },
-                        canManageEvents && {
-                          type: "internal",
-                          route: "",
-                          color: "info",
-                          label: "Editar",
-                          onClick: () => handleOpenModal("edit", event),
-                        },
-                        canManageEvents && {
-                          type: "internal",
-                          route: "",
-                          color: "error",
-                          label: "Eliminar",
-                          icon: "delete",
-                          onClick: () => handleOpenModal("remove", event),
-                        },
-                      ].filter(Boolean);
-
-                      return (
-                        <Grid
-                          item
-                          xs={12}
-                          md={6}
-                          xl={3}
-                          key={event?.id || `${event?.title}-${event?.date}-${event?.time}`}
-                          style={{
-                            minWidth: "350px",
-                            flexShrink: 0,
-                            maxWidth: "100%",
-                            minHeight: "100%",
-                          }}
-                        >
-                          <DefaultProjectCard
-                            style={{
-                              minWidth: "100%",
-                              maxWidth: "100%",
-                              minHeight: "100%",
-                            }}
-                            image={eventImage}
-                            label={`Lugar: ${event?.place ?? ""}`}
-                            title={`${event?.title ?? ""}`}
-                            description={`${event?.description ?? ""}`}
-                            actions={actions}
-                            handleVerMasClick={() => handleOpenModal("details", event)}
-                            handleEditarClick={() => handleOpenModal("edit", event)}
-                            handleRemoveClick={() => handleOpenModal("remove", event)}
-                          />
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                )}
-              </SoftBox>
-
-              {/* Add Event Modal */}
-              {modalType === "add" && (
-                <EventFormModal
-                  open={openModal}
-                  onClose={handleCloseModal}
-                  title="Agregar evento"
-                  onSubmit={handleAddEvent}
+            {/* Band filter pills */}
+            {availableBands.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <FilterPill
+                  label="Todas"
+                  active={activeFilter === "all"}
+                  onClick={() => setActiveFilter("all")}
                 />
-              )}
+                {availableBands.map((band) => (
+                  <FilterPill
+                    key={band}
+                    label={band}
+                    active={activeFilter === band}
+                    color={BAND_COLORS[band]}
+                    onClick={() => setActiveFilter(band === activeFilter ? "all" : band)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
-              {/* Edit Event Modal */}
-              {modalType === "edit" && selectedEvent && (
-                <EventFormModal
-                  open={openModal}
-                  onClose={handleCloseModal}
-                  title="Editar evento"
-                  initialValues={selectedEvent}
-                  onSubmit={handleUpdateEvent}
+          {/* ── Empty State ────────────────────────────────────────────────── */}
+          {filteredPresentations.length === 0 && (
+            <EmptyState isAdmin={isAdmin} onAddEvent={openAddForm} />
+          )}
+
+          {/* ── Hero Card (next presentation) ─────────────────────────────── */}
+          {nextPresentation && (
+            <div className="mb-6">
+              <PresentationHero
+                event={nextPresentation}
+                isAdmin={isAdmin}
+                bandColors={BAND_COLORS}
+                getDaysUntil={getDaysUntil}
+                getUrgencyLabel={getUrgencyLabel}
+                onViewDetails={openDrawer}
+                onEdit={openEditForm}
+                onDelete={openDeleteModal}
+              />
+            </div>
+          )}
+
+          {/* ── Other presentations grid ───────────────────────────────────── */}
+          {otherPresentations.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {otherPresentations.map((event) => (
+                <PresentationCard
+                  key={event.id}
+                  event={event}
+                  isAdmin={isAdmin}
+                  bandColors={BAND_COLORS}
+                  getDaysUntil={getDaysUntil}
+                  getUrgencyLabel={getUrgencyLabel}
+                  onViewDetails={openDrawer}
+                  onEdit={openEditForm}
+                  onDelete={openDeleteModal}
                 />
-              )}
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-              {/* Remove Event Dialog */}
-              {modalType === "remove" && (
-                <Dialog open={openModal} onClose={handleCloseModal}>
-                  <DialogTitle>Eliminar evento</DialogTitle>
-                  <DialogContent>¿Estás seguro de que quieres eliminar este evento?</DialogContent>
-                  <DialogActions>
-                    <Button onClick={handleCloseModal}>Cancelar</Button>
-                    <Button onClick={handleDeleteEvent} color="secondary">
-                      Eliminar
-                    </Button>
-                  </DialogActions>
-                </Dialog>
-              )}
+      {/* ── Drawers & Modals ────────────────────────────────────────────────── */}
+      <EventDrawer
+        open={drawer.open}
+        event={drawer.event}
+        isAdmin={isAdmin}
+        bandColors={BAND_COLORS}
+        onClose={closeDrawer}
+        onEdit={(e) => {
+          closeDrawer();
+          openEditForm(e);
+        }}
+        onDelete={(e) => {
+          closeDrawer();
+          openDeleteModal(e);
+        }}
+      />
 
-              {/* Details Modal */}
-              {modalType === "details" && selectedEvent && (
-                <Modal
-                  open={openModal}
-                  onClose={handleCloseModal}
-                  sx={{ boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px" }}
-                >
-                  <Box
-                    p={3}
-                    sx={{
-                      backgroundColor: "#FFFFFF",
-                      boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px",
-                      maxWidth: "90%",
-                      width: "50%",
-                      borderRadius: "4px",
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      transform: "translate(-50%, -50%)",
-                      maxHeight: "90%",
-                      overflowY: "auto",
-                      "@media (max-width: 900px)": { width: "90%" },
-                    }}
-                  >
-                    <IconButton onClick={handleCloseModal}>
-                      <CloseIcon />
-                    </IconButton>
+      {formModal.open && (
+        <EventFormModal
+          open={formModal.open}
+          mode={formModal.mode}
+          initialValues={formModal.event}
+          onClose={closeFormModal}
+          onSubmit={formModal.mode === "add" ? handleAddEvent : handleUpdateEvent}
+        />
+      )}
 
-                    <main>
-                      <article>
-                        <header className="relative py-16 bg-white sm:pt-24 lg:pt-28">
-                          <div className="absolute inset-x-0 bottom-0 bg-white h-1/4"></div>
-                          <div className="relative max-w-6xl px-4 mx-auto text-center sm:px-6 lg:px-8">
-                            <a
-                              href="#0"
-                              className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
-                            >
-                              <LibraryMusicIcon />
-                              {selectedEvent?.type ?? ""}
-                            </a>
-
-                            <h1 className="mt-6 text-4xl font-semibold leading-tight text-center font-display text-slate-900 sm:text-5xl sm:leading-tight">
-                              {selectedEvent?.title ?? ""}
-                            </h1>
-
-                            <p className="max-w-2xl mx-auto mt-6 text-lg leading-8 text-center text-slate-700">
-                              {selectedEvent?.description ?? ""}
-                            </p>
-
-                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8 mb-6 text-md text-slate-500">
-                              <span className="flex items-center gap-2">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth="1.75"
-                                  stroke="currentColor"
-                                  className="w-6 h-6 text-slate-400"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"
-                                  />
-                                </svg>
-
-                                <time>
-                                  <strong>Fecha:</strong>{" "}
-                                  {selectedEvent?.date
-                                    ? new Date(Number(selectedEvent.date)).toLocaleDateString(
-                                        "es-ES",
-                                        {
-                                          timeZone: "UTC",
-                                        }
-                                      )
-                                    : ""}
-                                </time>
-                              </span>
-
-                              <span className="flex items-center gap-2">
-                                <PlaceOutlinedIcon
-                                  fontSize="medium"
-                                  className="w-6 h-6 text-slate-400"
-                                />
-                                <strong>Lugar:</strong> {selectedEvent?.place ?? ""}
-                              </span>
-
-                              <span className="flex items-center gap-2">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth="1.75"
-                                  stroke="currentColor"
-                                  className="w-6 h-6 text-slate-400"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                </svg>
-                                <strong>Hora:</strong> {selectedEvent?.time ?? ""}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8 mb-6 text-md text-slate-500">
-                              <span className="flex items-center gap-2">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth="1.75"
-                                  stroke="currentColor"
-                                  className="w-6 h-6 text-slate-400"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-                                  />
-                                </svg>
-                                <strong>Hora de salida de CEDES:</strong>{" "}
-                                {selectedEvent?.departure ?? ""}
-                              </span>
-
-                              <span className="flex items-center gap-2">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth="1.75"
-                                  stroke="currentColor"
-                                  className="w-6 h-6 text-slate-400"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                </svg>
-                                <strong>Hora aprox. llegada a CEDES:</strong>{" "}
-                                {selectedEvent?.arrival ?? ""}
-                              </span>
-                            </div>
-
-                            <div className="w-full max-w-4xl mx-auto mt-16">
-                              <div className="relative block w-full overflow-hidden shadow-lg aspect-w-16 aspect-h-9 rounded-3xl shadow-sky-100/50 md:aspect-w-3 md:aspect-h-2">
-                                <LazyLoadImage
-                                  src={getEventImage(selectedEvent?.type)}
-                                  alt=""
-                                  effect="opacity"
-                                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                                />
-                                <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-slate-900/10"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </header>
-
-                        <div className="px-4 bg-white sm:px-6 lg:px-8">
-                          <div className="max-w-2xl mx-auto prose prose-lg">
-                            <p></p>
-                          </div>
-                        </div>
-                      </article>
-                    </main>
-                  </Box>
-                </Modal>
-              )}
-            </Card>
-          </SoftBox>
-        </SoftBox>
-      </SoftBox>
+      {deleteModal.open && (
+        <DeleteConfirmModal
+          open={deleteModal.open}
+          event={deleteModal.event}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteEvent}
+        />
+      )}
 
       <Footer />
     </DashboardLayout>
   );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+/**
+ * WelcomeHeader — rediseño sin gradientes
+ * Estilo limpio, institucional, tipo Airbnb/Linear
+ */
+export function WelcomeHeader({ user, isAdmin, onAddEvent }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
+  const firstName = user?.name ?? "músico";
+
+  // Día de la semana + fecha larga en español
+  const today = new Date().toLocaleDateString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const [weekday, ...rest] = today.split(", ");
+  const datePart = rest.join(", ");
+
+  return (
+    <div
+      className="relative bg-white border-b border-slate-100 overflow-hidden mb-6"
+      style={{ minHeight: 140 }}
+    >
+      {/* ── Pentagrama decorativo — SVG inline como textura ─────────────── */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          overflow: "hidden",
+          pointerEvents: "none",
+          opacity: 0.045,
+        }}
+      >
+        {/* 5 líneas horizontales del pentagrama, repetidas */}
+        {[18, 30, 42, 54, 66, 86, 98, 110, 122, 134].map((y) => (
+          <div
+            key={y}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: y,
+              height: 1,
+              background: "#0f172a",
+            }}
+          />
+        ))}
+        {/* Clave de sol estilizada — solo el símbolo utf-8 */}
+        <span
+          style={{
+            position: "absolute",
+            right: 40,
+            top: -10,
+            fontSize: 220,
+            lineHeight: 1,
+            color: "#0f172a",
+            fontFamily: "Georgia, serif",
+            userSelect: "none",
+          }}
+        >
+          𝄞
+        </span>
+      </div>
+
+      {/* ── Contenido ────────────────────────────────────────────────────── */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          {/* Left block */}
+          <div>
+            {/* Label superior — muy pequeño, uppercase, tracking ancho */}
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "#94a3b8",
+              }}
+            >
+              Banda CEDES Don Bosco &nbsp;·&nbsp;{" "}
+              <span style={{ color: "#cbd5e1" }}>
+                {weekday.charAt(0).toUpperCase() + weekday.slice(1)}
+              </span>
+            </p>
+
+            {/* Saludo + nombre — escala de tipografía muy contrastada */}
+            <div style={{ marginTop: 6, lineHeight: 1 }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 400,
+                  color: "#64748b",
+                  fontStyle: "italic",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {greeting},
+              </span>
+              {/* Nombre en display enorme */}
+              <h1
+                style={{
+                  margin: "2px 0 0",
+                  fontSize: "clamp(28px, 5vw, 44px)",
+                  fontWeight: 900,
+                  color: "#0f172a",
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.05,
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                }}
+              >
+                {firstName}
+              </h1>
+            </div>
+
+            {/* Fecha — discreta pero legible */}
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 12,
+                color: "#94a3b8",
+                fontWeight: 500,
+                letterSpacing: "0.01em",
+              }}
+            >
+              {datePart.charAt(0).toUpperCase() + datePart.slice(1)}
+            </p>
+          </div>
+
+          {/* Right: CTA admin */}
+          {isAdmin && (
+            <div style={{ flexShrink: 0 }}>
+              <button
+                onClick={onAddEvent}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 20px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: "0.01em",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  fontFamily: "inherit",
+                }}
+              >
+                <PlusIcon />
+                Nueva Presentación
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── StatsRow ─────────────────────────────────────────────────────────────────
+/**
+ * Stats interesantes para una banda:
+ * - No solo contadores aburridos
+ * - Cada stat tiene una "lectura secundaria" que da contexto musical
+ * - El número es protagonista absoluto
+ * - Acento de color diferente por stat
+ */
+export function StatsRow({ presentations }) {
+  const today = new Date();
+  const thisMonth = presentations.filter((e) => {
+    const d = new Date(Number(e.date));
+    return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  }).length;
+
+  const next7 = presentations.filter((e) => {
+    const diff = Math.ceil((new Date(Number(e.date)) - today) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 7;
+  }).length;
+
+  const nextEvent = presentations[0];
+  const daysToNext = nextEvent
+    ? Math.max(0, Math.ceil((new Date(Number(nextEvent.date)) - today) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const bands = new Set(presentations.map((e) => e.type).filter(Boolean)).size;
+
+  const stats = [
+    {
+      value: presentations.length,
+      unit: presentations.length === 1 ? "presentación" : "presentaciones",
+      context: "programadas en total",
+      accent: "#3b82f6",
+      accentBg: "#eff6ff",
+      icon: <NoteIcon />,
+    },
+    {
+      value: thisMonth,
+      unit: thisMonth === 1 ? "presentación" : "presentaciones",
+      context: "este mes",
+      accent: "#8b5cf6",
+      accentBg: "#f5f3ff",
+      icon: <CalIcon />,
+    },
+    {
+      value: daysToNext !== null ? daysToNext : "—",
+      unit: daysToNext === 0 ? "¡es hoy!" : daysToNext === 1 ? "día" : "días",
+      context:
+        daysToNext !== null
+          ? daysToNext === 0
+            ? "para la próxima presentación"
+            : "para la próxima presentación"
+          : "sin presentaciones próximas",
+      accent: daysToNext !== null && daysToNext <= 7 ? "#ef4444" : "#f59e0b",
+      accentBg: daysToNext !== null && daysToNext <= 7 ? "#fef2f2" : "#fffbeb",
+      icon: <ClockIcon />,
+    },
+    {
+      value: bands,
+      unit: bands === 1 ? "agrupación" : "agrupaciones",
+      context: "participando",
+      accent: "#10b981",
+      accentBg: "#ecfdf5",
+      icon: <GroupIcon />,
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, 1fr)",
+        gap: 12,
+        marginTop: 8,
+      }}
+      className="lg:grid-cols-4"
+    >
+      {stats.map((s, i) => (
+        <StatCard key={i} {...s} />
+      ))}
+    </div>
+  );
+}
+
+StatsRow.propTypes = {
+  presentations: PropTypes.arrayOf(
+    PropTypes.shape({
+      date: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      type: PropTypes.string,
+    })
+  ).isRequired,
 };
 
-export default Dashboard;
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+function StatCard({ value, unit, context, accent, accentBg, icon }) {
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: 16,
+        border: "1px solid #f1f5f9",
+        padding: "18px 20px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Accent bar izquierda */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 16,
+          bottom: 16,
+          width: 3,
+          borderRadius: "0 3px 3px 0",
+          background: accent,
+        }}
+      />
+
+      {/* Icon badge */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          background: accentBg,
+          color: accent,
+          marginBottom: 12,
+        }}
+      >
+        {icon}
+      </div>
+
+      {/* Número protagonista */}
+      <div style={{ lineHeight: 1 }}>
+        <span
+          style={{
+            fontSize: "clamp(30px, 4vw, 40px)",
+            fontWeight: 900,
+            color: "#0f172a",
+            letterSpacing: "-0.04em",
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            lineHeight: 1,
+          }}
+        >
+          {value}
+        </span>
+      </div>
+
+      {/* Unidad — small, colored */}
+      <p
+        style={{
+          margin: "4px 0 0",
+          fontSize: 12,
+          fontWeight: 700,
+          color: accent,
+          letterSpacing: "0.01em",
+          lineHeight: 1.3,
+        }}
+      >
+        {unit}
+      </p>
+
+      {/* Contexto — muy discreto */}
+      <p
+        style={{
+          margin: "2px 0 0",
+          fontSize: 11,
+          color: "#94a3b8",
+          lineHeight: 1.4,
+        }}
+      >
+        {context}
+      </p>
+    </div>
+  );
+}
+
+function FilterPill({ label, active, color, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 active:scale-95 ${
+        active
+          ? "bg-slate-900 text-white border-slate-900"
+          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+      }`}
+    >
+      {active && color && (
+        <span
+          className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
+          style={{ backgroundColor: color?.dot }}
+        />
+      )}
+      {label}
+    </button>
+  );
+}
+
+function EmptyState({ isAdmin, onAddEvent }) {
+  return (
+    <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg
+          className="w-8 h-8 text-slate-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth="1.5"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
+          />
+        </svg>
+      </div>
+      <h3 className="text-base font-semibold text-slate-900 mb-1">
+        No hay presentaciones próximas
+      </h3>
+      <p className="text-sm text-slate-500 mb-6 max-w-xs mx-auto">
+        No hay presentaciones programadas en este momento.
+      </p>
+      {isAdmin && (
+        <button
+          onClick={onAddEvent}
+          className="inline-flex items-center gap-2 bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="2"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Crear primera presentación
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50 animate-pulse">
+      <div className="h-48 bg-slate-200" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-slate-200 rounded-2xl" />
+          ))}
+        </div>
+        <div className="h-72 bg-slate-200 rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-52 bg-slate-200 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ message }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+      <div className="bg-white rounded-2xl border border-red-100 p-8 text-center max-w-sm">
+        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-6 h-6 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+            />
+          </svg>
+        </div>
+        <h3 className="text-base font-semibold text-slate-900 mb-1">Error cargando datos</h3>
+        <p className="text-sm text-slate-500">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Icon components ──────────────────────────────────────────────────────────
+const CalendarIcon = ({ className }) => (
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25"
+    />
+  </svg>
+);
+const MonthIcon = ({ className }) => (
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+const AlertIcon = ({ className }) => (
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+    />
+  </svg>
+);
+const PlusIcon = () => (
+  <svg
+    width="15"
+    height="15"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.5"
+    stroke="currentColor"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+
+const NoteIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.8"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
+    />
+  </svg>
+);
+
+const CalIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.8"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+    />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.8"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+const GroupIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.8"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+    />
+  </svg>
+);
+const bandColorShape = PropTypes.shape({
+  bg: PropTypes.string,
+  text: PropTypes.string,
+  light: PropTypes.string,
+  dot: PropTypes.string,
+});
+
+const presentationShape = PropTypes.shape({
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  date: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.instanceOf(Date)])
+    .isRequired,
+  type: PropTypes.string,
+  title: PropTypes.string,
+  description: PropTypes.string,
+  time: PropTypes.string,
+  place: PropTypes.string,
+  departure: PropTypes.string,
+  arrival: PropTypes.string,
+});
+
+WelcomeHeader.propTypes = {
+  user: PropTypes.shape({
+    name: PropTypes.string,
+  }),
+  isAdmin: PropTypes.bool,
+  onAddEvent: PropTypes.func.isRequired,
+};
+
+StatsRow.propTypes = {
+  presentations: PropTypes.arrayOf(presentationShape).isRequired,
+};
+
+FilterPill.propTypes = {
+  label: PropTypes.string.isRequired,
+  active: PropTypes.bool,
+  color: bandColorShape,
+  onClick: PropTypes.func.isRequired,
+};
+
+EmptyState.propTypes = {
+  isAdmin: PropTypes.bool,
+  onAddEvent: PropTypes.func.isRequired,
+};
+
+ErrorState.propTypes = {
+  message: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
+};
+
+CalendarIcon.propTypes = {
+  className: PropTypes.string,
+};
+
+MonthIcon.propTypes = {
+  className: PropTypes.string,
+};
+
+AlertIcon.propTypes = {
+  className: PropTypes.string,
+};
+
+GroupIcon.propTypes = {
+  className: PropTypes.string,
+};
+
+StatCard.propTypes = {
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  unit: PropTypes.string.isRequired,
+  context: PropTypes.string.isRequired,
+  accent: PropTypes.string.isRequired,
+  accentBg: PropTypes.string.isRequired,
+  icon: PropTypes.node.isRequired,
+};
