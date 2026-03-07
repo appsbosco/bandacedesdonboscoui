@@ -70,6 +70,12 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 
 import BudgetsPage from "layouts/finance/components/BudgetsPage";
 import CommitteeDetailPage from "layouts/finance/components/CommitteeDetailPage";
+import BudgetConfigPage from "layouts/finance/components/budgets/config/BudgetConfigPage";
+
+import TourListPage from "layouts/tours/TourListPage";
+import TourDetailPage from "layouts/tours/TourDetailPage";
+import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
+
 /**
  * Helpers
  * - Evitan duplicación
@@ -503,6 +509,29 @@ const items = {
       route: "/finance/budgets/:committeeId",
       component: <CommitteeDetailPage />,
     }),
+
+  financeBudgetsConfig: () =>
+    routeOnly({
+      key: "finance-budgets-config",
+      route: "/finance/budgets/config",
+      component: <BudgetConfigPage />,
+    }),
+
+  tours: () =>
+    collapse({
+      name: "Giras",
+      key: "tours",
+      route: "/tours",
+      icon: muiIcon12(FlightTakeoffIcon),
+      component: <TourListPage />,
+    }),
+
+  tourDetail: () =>
+    routeOnly({
+      key: "tour-detail",
+      route: "/tours/:tourId",
+      component: <TourDetailPage />,
+    }),
 };
 
 const documentsMenu = () => [
@@ -547,6 +576,7 @@ export const protectedRoutes = [
   items.financeReports(),
   items.financeCatalogs(),
   items.financeBudgets(),
+  items.financeBudgetsConfig(),
   items.financeCommitteeDetail(),
 
   items.attendanceTake(),
@@ -620,7 +650,13 @@ export const adminRoutes = [
   items.financeReports(),
   items.financeCatalogs(),
   items.financeBudgets(),
+  items.financeBudgetsConfig(),
   items.financeCommitteeDetail(),
+
+  title("Giras", "giras"),
+
+  items.tours(),
+  items.tourDetail(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -673,6 +709,7 @@ export const staffRoutes = [
   items.financeReports(),
   items.financeCatalogs(),
   items.financeBudgets(),
+  items.financeBudgetsConfig(),
   items.financeCommitteeDetail(),
 
   title("Asistencia", "attendance-pages"),
@@ -709,6 +746,7 @@ export const principalRoutes = [
   items.financeReports(),
   items.financeCatalogs(),
   items.financeBudgets(),
+  items.financeBudgetsConfig(),
   items.financeCommitteeDetail(),
 
   title("Almuerzos", "almuerzos-pages"),

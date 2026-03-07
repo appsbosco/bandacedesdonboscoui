@@ -51,8 +51,6 @@ export function NextEventBanner({ event }) {
     ? { bg: "#d97706", text: "#fff", soft: "#fffbeb", label: "#d97706" }
     : { bg: "#0f172a", text: "#fff", soft: "#f8fafc", label: "#0f172a" };
 
-  const countdownLabel = isToday ? "¡Hoy!" : isTomorrow ? "Mañana" : `${days} días`;
-
   return (
     <div
       style={{

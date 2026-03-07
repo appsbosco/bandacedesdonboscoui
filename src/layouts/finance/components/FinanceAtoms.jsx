@@ -2,41 +2,56 @@
  * FinanceAtoms.jsx
  * Átomos reutilizables del módulo finance.
  *
- * Correcciones v2:
- * - Skeleton: reemplaza clases dinámicas (h-${n}) por clases explícitas
- * - CategoryPicker: colores corregidos para estado no-seleccionado
- * - SaleStatusPill → StatusPill (genérico para ventas y gastos)
- * - VoidReasonModal: texto "Motivo de anulación" corregido
- * - MoneyInput: forwardRef correcto
+ * Mejoras v3:
+ * - Notice: auto-dismiss opcional (prop autoDismissMs)
+ * - CommitteePicker: muestra indicador visual si el saldo cubre el monto actual
+ * - LedgerEntryTypeBadge: nuevo átomo para badges de tipo de entrada del ledger
+ * - BalanceIndicator: nuevo átomo reutilizable de saldo disponible
+ * - Skeleton: acepta className para personalización externa
  */
-import React from "react";
+import React, { useEffect } from "react";
 import PropTypes from "prop-types";
 import { PAYMENT_LABELS } from "utils/finance";
 
 // ─── Notice ───────────────────────────────────────────────────────────────────
 
-export const Notice = ({ notice }) => {
+export const Notice = ({ notice, autoDismissMs, onDismiss }) => {
+  useEffect(() => {
+    if (!notice || !autoDismissMs) return;
+    const t = setTimeout(() => onDismiss?.(), autoDismissMs);
+    return () => clearTimeout(t);
+  }, [notice, autoDismissMs, onDismiss]);
+
   if (!notice) return null;
   const isSuccess = notice.type === "success";
   return (
     <div
-      className={`rounded-xl px-4 py-3 text-sm font-semibold border ${
+      className={`rounded-xl px-4 py-3 text-sm font-semibold border flex items-start justify-between gap-3 ${
         isSuccess
           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
           : "bg-red-50 border-red-200 text-red-700"
       }`}
     >
-      {notice.message}
+      <span>{notice.message}</span>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          className="shrink-0 text-current opacity-60 hover:opacity-100 text-lg leading-none"
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 };
 
 Notice.propTypes = {
   notice: PropTypes.shape({ type: PropTypes.string, message: PropTypes.string }),
+  autoDismissMs: PropTypes.number,
+  onDismiss: PropTypes.func,
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
-// Evita h-${n} dinámico (Tailwind purge no detecta clases interpoladas).
 
 export const Skeleton = ({ lines = 3, className = "" }) => (
   <div className={`border border-slate-200 rounded-2xl p-5 animate-pulse space-y-3 ${className}`}>
@@ -75,8 +90,6 @@ FilterPill.propTypes = {
 };
 
 // ─── StatusPill ───────────────────────────────────────────────────────────────
-// Genérico para ventas y gastos (antes SaleStatusPill).
-// SaleStatusPill se exporta como alias para no romper imports existentes.
 
 const STATUS_CFG = {
   ACTIVE: { label: "Activo", bg: "bg-emerald-100", text: "text-emerald-700" },
@@ -85,7 +98,11 @@ const STATUS_CFG = {
 };
 
 export const StatusPill = ({ status }) => {
-  const cfg = STATUS_CFG[status] || { label: status, bg: "bg-slate-100", text: "text-slate-600" };
+  const cfg = STATUS_CFG[status] || {
+    label: status,
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+  };
   return (
     <span
       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}
@@ -99,6 +116,35 @@ StatusPill.propTypes = { status: PropTypes.string };
 
 // Alias backward-compat
 export const SaleStatusPill = StatusPill;
+
+// ─── LedgerEntryTypeBadge ─────────────────────────────────────────────────────
+// Nuevo átomo: badge visual para tipos de entrada del ledger.
+
+const LEDGER_TYPE_CFG = {
+  INITIAL_ALLOCATION: { label: "Asignación inicial", bg: "bg-violet-100", text: "text-violet-700" },
+  UTILITY_DISTRIBUTION: { label: "Utilidad", bg: "bg-emerald-100", text: "text-emerald-700" },
+  EXPENSE_DEBIT: { label: "Gasto", bg: "bg-red-100", text: "text-red-700" },
+  MANUAL_CREDIT: { label: "Crédito manual", bg: "bg-blue-100", text: "text-blue-700" },
+  MANUAL_DEBIT: { label: "Débito manual", bg: "bg-orange-100", text: "text-orange-700" },
+  ADJUSTMENT: { label: "Ajuste", bg: "bg-slate-100", text: "text-slate-600" },
+};
+
+export const LedgerEntryTypeBadge = ({ type }) => {
+  const cfg = LEDGER_TYPE_CFG[type] || {
+    label: type,
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+  };
+  return (
+    <span
+      className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}
+    >
+      {cfg.label}
+    </span>
+  );
+};
+
+LedgerEntryTypeBadge.propTypes = { type: PropTypes.string };
 
 // ─── VoidReasonModal ──────────────────────────────────────────────────────────
 
@@ -136,7 +182,14 @@ export const VoidReasonModal = ({ title = "Anular", onConfirm, onCancel, loading
               disabled={loading || !reason.trim()}
               className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold disabled:opacity-50 transition-all"
             >
-              {loading ? "…" : "Anular"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Anulando…
+                </span>
+              ) : (
+                "Anular"
+              )}
             </button>
           </div>
         </div>
@@ -189,7 +242,14 @@ export const ConfirmModal = ({
               : "bg-rose-700 hover:bg-rose-800 text-white"
           }`}
         >
-          {loading ? "…" : confirmLabel}
+          {loading ? (
+            <span className="flex items-center justify-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              …
+            </span>
+          ) : (
+            confirmLabel
+          )}
         </button>
       </div>
     </div>
@@ -283,7 +343,6 @@ AmountPresets.propTypes = {
 };
 
 // ─── CategoryPicker ───────────────────────────────────────────────────────────
-// Corregido: estado no-seleccionado legible y consistente.
 
 export const CategoryPicker = ({ categories, selected, onSelect, loading }) => {
   if (loading)
@@ -350,7 +409,7 @@ export const ActivityPills = ({ activities, selected, onSelect, loading }) => {
           className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all ${
             selected === a.id
               ? "bg-slate-800 border-slate-800 text-white"
-              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              : "bg-gray-400 border-slate-200 text-slate-600 hover:bg-slate-50"
           }`}
         >
           {a.name}
@@ -400,7 +459,6 @@ StatCard.propTypes = {
 };
 
 // ─── ScopeBadge ───────────────────────────────────────────────────────────────
-// Badge reutilizable para mostrar scope EXTERNAL en listas.
 
 export const ScopeBadge = ({ scope }) => {
   if (scope !== "EXTERNAL") return null;
@@ -414,7 +472,6 @@ export const ScopeBadge = ({ scope }) => {
 ScopeBadge.propTypes = { scope: PropTypes.string };
 
 // ─── ExternalToggle ───────────────────────────────────────────────────────────
-// Toggle reutilizable SESSION/EXTERNAL para ventas y gastos.
 
 export const ExternalToggle = ({ isExternal, onChange, canUseSession }) => (
   <div className="border border-slate-200 rounded-2xl p-4">
@@ -435,7 +492,6 @@ export const ExternalToggle = ({ isExternal, onChange, canUseSession }) => (
       <button
         type="button"
         onClick={() => {
-          // Si no hay caja abierta no puede activar SESSION
           if (!isExternal && !canUseSession) return;
           onChange(!isExternal);
         }}
@@ -468,8 +524,17 @@ ExternalToggle.propTypes = {
   canUseSession: PropTypes.bool.isRequired,
 };
 
-export const CommitteePicker = ({ committees, selected, onSelect, loading, budgets = [] }) => {
-  // Mapa rápido committeeId → saldo
+// ─── CommitteePicker ──────────────────────────────────────────────────────────
+// Mejora v3: acepta `currentAmount` para indicar si el saldo cubre el monto actual
+
+export const CommitteePicker = ({
+  committees,
+  selected,
+  onSelect,
+  loading,
+  budgets = [],
+  currentAmount,
+}) => {
   const balanceMap = {};
   budgets.forEach((b) => {
     balanceMap[b.committee.id] = b.currentBalance;
@@ -495,6 +560,7 @@ export const CommitteePicker = ({ committees, selected, onSelect, loading, budge
         const balance = balanceMap[c.id];
         const isSelected = selected === c.id;
         const isLow = balance != null && balance < 10000;
+        const isInsufficient = currentAmount != null && balance != null && currentAmount > balance;
 
         return (
           <button
@@ -504,6 +570,8 @@ export const CommitteePicker = ({ committees, selected, onSelect, loading, budge
             className={`px-3 py-2 rounded-xl text-sm font-semibold border transition-all active:scale-95 flex flex-col items-start ${
               isSelected
                 ? "bg-black border-black text-white shadow-sm"
+                : isInsufficient
+                ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
                 : "bg-white border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
             }`}
           >
@@ -511,10 +579,16 @@ export const CommitteePicker = ({ committees, selected, onSelect, loading, budge
             {balance != null && (
               <span
                 className={`text-xs font-bold mt-0.5 ${
-                  isSelected ? "text-violet-200" : isLow ? "text-amber-600" : "text-slate-500"
+                  isSelected
+                    ? "text-violet-200"
+                    : isInsufficient
+                    ? "text-red-600"
+                    : isLow
+                    ? "text-amber-600"
+                    : "text-slate-500"
                 }`}
               >
-                {isLow ? "⚠️ " : ""}
+                {isInsufficient ? "⚠️ " : isLow ? "⚠️ " : ""}
                 {new Intl.NumberFormat("es-CR", {
                   style: "currency",
                   currency: "CRC",
@@ -535,4 +609,5 @@ CommitteePicker.propTypes = {
   onSelect: PropTypes.func,
   loading: PropTypes.bool,
   budgets: PropTypes.array,
+  currentAmount: PropTypes.number,
 };

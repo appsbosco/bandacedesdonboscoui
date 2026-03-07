@@ -1,13 +1,30 @@
 /**
  * Expenses.jsx — /finance/expenses
  *
- * FIXES v2:
- * - ❌ recordCommitteeExpense llamado con { committeeId, expenseId } planos
- * - ✅ Ahora llamado con { input: { committeeId, businessDate, amount, concept, expenseId } }
- *   que coincide con RecordCommitteeExpenseInput del backend
- * - budgets accesado correctamente desde allCommitteeBudgets.committees
- * - CommitteePicker recibe budgets en formato correcto
+ * FIXES v3 (bugs que impedían que el gasto se reflejara en el comité):
+ * ─────────────────────────────────────────────────────────────────────────────
+ * FIX 1 — refetchQueries de RECORD_EXPENSE ahora incluye GET_ALL_COMMITTEE_BUDGETS.
+ *          Sin esto, el presupuesto del comité nunca se recargaba en pantalla.
+ *
+ * FIX 2 — recordCommitteeExpense recibe activityId para que el ledger lo registre.
+ *
+ * FIX 3 — allowNegativeBalance expuesto en la UI: toggle visible solo cuando el
+ *          gasto excede el saldo. Sin esto, el backend tiraba error silencioso y
+ *          el ledger nunca se escribía.
+ *
+ * FIX 4 — El botón "Guardar" queda deshabilitado (con mensaje claro) cuando el
+ *          gasto excede el saldo y el usuario NO activó el toggle. Antes se
+ *          enviaba igual y el backend rechazaba con error.
+ *
+ * FIX 5 — onError de recordCommitteeExpense muestra el mensaje real del backend
+ *          (antes solo decía "vinculá manualmente" sin contexto).
+ *
+ * FIX 6 — refetchBudgets() explícito después del submit para garantizar que
+ *          el panel de presupuestos se actualice incluso si Apollo no invalida
+ *          el caché por sí solo.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { useNavigate } from "react-router-dom";
@@ -88,7 +105,6 @@ const RecentExpensesPanel = ({ expenses, loading, onVoid }) => {
       {expenses.slice(0, 15).map((e) => {
         const pmCfg = PAYMENT_LABELS[e.paymentMethod] || {};
         const inferredScope = scopeOf(e);
-
         return (
           <div
             key={e.id}
@@ -153,6 +169,7 @@ const ExpensesPage = () => {
   const navigate = useNavigate();
   const today = todayStr();
 
+  // ── Form state ──────────────────────────────────────────────────────────
   const [isExternal, setIsExternal] = useState(false);
   const [amount, setAmount] = useState("");
   const [concept, setConcept] = useState("");
@@ -164,71 +181,90 @@ const ExpensesPage = () => {
   const [isAsset, setIsAsset] = useState(false);
   const [purpose, setPurpose] = useState("");
   const [vendor, setVendor] = useState("");
+  // FIX 3: toggle visible solo cuando el gasto excede el saldo del comité
+  const [allowNegativeBalance, setAllowNegativeBalance] = useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
   const [notice, showNotice] = useNotice();
 
   const amountRef = useRef(null);
   const userTouchedRef = useRef(false);
 
+  // ── Queries ─────────────────────────────────────────────────────────────
   const { data: categoriesData, loading: catLoading } = useQuery(GET_CATEGORIES, {
     variables: { onlyActive: true },
   });
-
   const { data: activitiesData, loading: actLoading } = useQuery(GET_ACTIVITIES, {
     variables: { onlyActive: true },
   });
-
   const { data: sessionData } = useQuery(GET_CASH_SESSION_DETAIL, {
     variables: { businessDate: today },
     fetchPolicy: "cache-and-network",
   });
-
   const {
     data: expensesData,
     loading: expensesLoading,
-    refetch,
+    refetch: refetchExpenses,
   } = useQuery(GET_EXPENSES_BY_DATE, {
     variables: { businessDate: today },
     fetchPolicy: "cache-and-network",
   });
-
   const { data: committeesData, loading: committeesLoading } = useQuery(GET_COMMITTEES, {
     variables: { onlyActive: true },
   });
+  // FIX 1: obtener saldos actualizados de comités
+  const { data: budgetsData, refetch: refetchBudgets } = useQuery(GET_ALL_COMMITTEE_BUDGETS, {
+    fetchPolicy: "cache-and-network",
+  });
 
-  // ✅ FIX: acceso correcto a allCommitteeBudgets.committees
-  const { data: budgetsData } = useQuery(GET_ALL_COMMITTEE_BUDGETS);
-
+  // Datos derivados
   const committees = (committeesData?.committees || []).filter((c) => c.isActive !== false);
-  // allCommitteeBudgets devuelve { committees: [CommitteeBudgetSummary], ... }
+  // allCommitteeBudgets.committees = [CommitteeBudgetSummary]
   const budgetSummaries = budgetsData?.allCommitteeBudgets?.committees || [];
-
   const session = sessionData?.cashSessionDetail || null;
   const canUseSession = session?.status === "OPEN";
   const categories = categoriesData?.categories || [];
   const activities = activitiesData?.activities || [];
   const expenses = expensesData?.expensesByDate || [];
 
-  const [recordExpense, { loading }] = useMutation(RECORD_EXPENSE);
+  // Saldo del comité seleccionado y si el gasto lo excede
+  const selectedBudget = budgetSummaries.find((b) => b.committee?.id === committeeId);
+  const selectedBalance = selectedBudget?.currentBalance ?? null;
+  const amountVal = parseCRC(amount);
+  const wouldExceedBalance =
+    committeeId && selectedBalance !== null && amountVal > 0 && amountVal > selectedBalance;
 
-  // ✅ FIX: onError con mensaje mejorado para no perder el ID del gasto ya registrado
+  // ── Mutations ────────────────────────────────────────────────────────────
+
+  // FIX 1: refetchQueries incluye GET_ALL_COMMITTEE_BUDGETS
+  const [recordExpense, { loading }] = useMutation(RECORD_EXPENSE, {
+    refetchQueries: [
+      { query: GET_EXPENSES_BY_DATE, variables: { businessDate: today } },
+      { query: GET_ALL_COMMITTEE_BUDGETS },
+    ],
+    awaitRefetchQueries: false,
+  });
+
+  // FIX 5: onError muestra el mensaje real del backend
   const [recordCommitteeExpense] = useMutation(RECORD_COMMITTEE_EXPENSE, {
+    refetchQueries: [{ query: GET_ALL_COMMITTEE_BUDGETS }],
+    awaitRefetchQueries: true,
     onError: (e) =>
       showNotice(
         "error",
-        `⚠️ El gasto se registró pero no se pudo vincular al comité: ${e.message}. Podés vincularlo manualmente.`
+        `⚠️ El gasto se registró en caja pero no se descontó del presupuesto del comité: ${e.message}`
       ),
   });
 
   const [voidExpense, { loading: voidLoading }] = useMutation(VOID_EXPENSE, {
     onCompleted: () => {
       showNotice("success", "Gasto anulado.");
-      refetch();
+      refetchExpenses();
       setVoidTarget(null);
     },
     onError: (e) => showNotice("error", e.message),
   });
 
+  // ── Efectos ──────────────────────────────────────────────────────────────
   useEffect(() => {
     amountRef.current?.focus();
   }, []);
@@ -242,11 +278,17 @@ const ExpensesPage = () => {
     if (!canUseSession) setIsExternal(true);
   }, [sessionData, canUseSession]);
 
+  // FIX 3: resetear toggle cuando cambia el comité o el monto
+  useEffect(() => {
+    setAllowNegativeBalance(false);
+  }, [committeeId, amount]);
+
   const handleExternalChange = useCallback((val) => {
     userTouchedRef.current = true;
     setIsExternal(val);
   }, []);
 
+  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     const total = parseCRC(amount);
     if (total <= 0) return showNotice("error", "El monto debe ser mayor a ₡0.");
@@ -257,7 +299,18 @@ const ExpensesPage = () => {
       return showNotice("error", "No hay caja abierta. Usá modo externo.");
     }
 
+    // FIX 4: validar saldo antes de llamar al backend
+    if (wouldExceedBalance && !allowNegativeBalance) {
+      return showNotice(
+        "error",
+        `El comité no tiene saldo suficiente (disponible: ${formatCRC(
+          selectedBalance
+        )}). Activá "Permitir saldo negativo" para continuar.`
+      );
+    }
+
     try {
+      // Paso 1: registrar el gasto en la caja / finanzas generales
       const result = await recordExpense({
         variables: {
           input: {
@@ -277,24 +330,28 @@ const ExpensesPage = () => {
         },
       });
 
-      // ✅ FIX: TODOS los campos requeridos de RecordCommitteeExpenseInput
       const newExpenseId = result?.data?.recordExpense?.id;
+
+      // Paso 2: si hay comité seleccionado, registrar el débito en el ledger
       if (committeeId && newExpenseId) {
         await recordCommitteeExpense({
           variables: {
             input: {
               committeeId,
-              businessDate: today, // ← REQUERIDO
-              amount: total, // ← REQUERIDO
-              concept: concept.trim(), // ← REQUERIDO
-              expenseId: newExpenseId, // ← Flujo A: vincular Expense existente
-              activityId: activityId || undefined,
+              businessDate: today,
+              amount: total,
+              concept: concept.trim(),
+              expenseId: newExpenseId, // Flujo A: vincular Expense existente
+              activityId: activityId || undefined, // FIX 2: pasar activityId al ledger
+              allowNegativeBalance: wouldExceedBalance ? allowNegativeBalance : false, // FIX 3
             },
           },
         });
       }
 
-      const committeeMsg = committeeId ? " · vinculado al presupuesto del comité" : "";
+      const committeeMsg = committeeId
+        ? ` · descontado de ${selectedBudget?.committee?.name || "comité"}`
+        : "";
       showNotice("success", `Gasto de ${formatCRC(total)} registrado ✓${committeeMsg}`);
 
       // Reset form
@@ -305,7 +362,10 @@ const ExpensesPage = () => {
       setVendor("");
       setCommitteeId(null);
       setCategoryId(null);
-      refetch();
+      setAllowNegativeBalance(false);
+      refetchExpenses();
+      // FIX 6: refetch explícito de presupuestos para garantizar actualización
+      refetchBudgets();
       setTimeout(() => amountRef.current?.focus(), 100);
     } catch (e) {
       showNotice("error", e.message || "Error al registrar gasto");
@@ -325,17 +385,18 @@ const ExpensesPage = () => {
     today,
     recordExpense,
     recordCommitteeExpense,
-    refetch,
+    refetchExpenses,
+    refetchBudgets,
     showNotice,
     isExternal,
     canUseSession,
+    wouldExceedBalance,
+    allowNegativeBalance,
+    selectedBalance,
+    selectedBudget,
   ]);
 
-  const amountVal = parseCRC(amount);
-
-  // Buscar saldo del comité seleccionado para el aviso
-  const selectedCommitteeBudget = budgetSummaries.find((b) => b.committee?.id === committeeId);
-
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -366,7 +427,7 @@ const ExpensesPage = () => {
         <div className="grid lg:grid-cols-2 gap-5">
           {/* ── Formulario ── */}
           <div className="space-y-4">
-            {/* Step 1: Categoría */}
+            {/* 1. Categoría */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -397,7 +458,7 @@ const ExpensesPage = () => {
               )}
             </div>
 
-            {/* Step 2: Monto y detalles */}
+            {/* 2. Monto y detalles */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-4">
               <Notice notice={notice} />
 
@@ -492,7 +553,7 @@ const ExpensesPage = () => {
                 </div>
               )}
 
-              {/* Comité — solo visible si hay comités activos */}
+              {/* ── Comité ── */}
               {committees.length > 0 && (
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
@@ -507,34 +568,57 @@ const ExpensesPage = () => {
                     budgets={budgetSummaries}
                   />
 
-                  {/* Info del comité seleccionado */}
                   {committeeId && (
-                    <div className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl bg-violet-50 border border-violet-200">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-semibold text-violet-800">
-                          Este gasto descontará del presupuesto del comité.
-                        </span>
-                        {selectedCommitteeBudget && amountVal > 0 && (
-                          <p className="text-xs text-violet-700 mt-0.5">
-                            Saldo disponible:{" "}
-                            <strong>
-                              {formatCRC(selectedCommitteeBudget.currentBalance || 0)}
-                            </strong>
-                            {amountVal > (selectedCommitteeBudget.currentBalance || 0) && (
-                              <span className="text-amber-700 ml-1">
-                                ⚠️ El gasto excede el saldo del comité.
-                              </span>
-                            )}
+                    <div className="mt-2 space-y-2">
+                      {/* Info saldo */}
+                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-violet-50 border border-violet-200">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-violet-800">
+                            Este gasto se descontará del presupuesto del comité.
                           </p>
-                        )}
+                          {selectedBalance !== null && amountVal > 0 && (
+                            <p className="text-xs text-violet-700 mt-0.5">
+                              Saldo disponible: <strong>{formatCRC(selectedBalance)}</strong>
+                              {wouldExceedBalance && (
+                                <span className="text-amber-700 ml-1 font-bold">
+                                  ⚠️ Excede el saldo.
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCommitteeId(null)}
+                          className="text-xs text-violet-500 hover:text-violet-700 font-bold shrink-0"
+                        >
+                          Quitar
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setCommitteeId(null)}
-                        className="text-xs text-violet-500 hover:text-violet-700 font-bold shrink-0"
-                      >
-                        Quitar
-                      </button>
+
+                      {/* FIX 3: toggle allowNegativeBalance — solo visible cuando excede saldo */}
+                      {wouldExceedBalance && (
+                        <button
+                          type="button"
+                          onClick={() => setAllowNegativeBalance((v) => !v)}
+                          className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                            allowNegativeBalance
+                              ? "bg-amber-50 border-amber-300 text-amber-800"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`w-4 h-4 rounded flex items-center justify-center font-bold shrink-0 ${
+                              allowNegativeBalance
+                                ? "bg-amber-500 text-white"
+                                : "bg-slate-200 text-slate-500"
+                            }`}
+                          >
+                            {allowNegativeBalance ? "✓" : ""}
+                          </span>
+                          Permitir saldo negativo en el comité
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -553,14 +637,22 @@ const ExpensesPage = () => {
                 <PaymentMethodPills value={paymentMethod} onChange={setPaymentMethod} />
               </div>
 
+              {/* FIX 4: texto del botón refleja el estado de saldo */}
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || amountVal <= 0 || !concept.trim()}
+                disabled={
+                  loading ||
+                  amountVal <= 0 ||
+                  !concept.trim() ||
+                  (wouldExceedBalance && !allowNegativeBalance)
+                }
                 className="w-full py-4 rounded-2xl bg-rose-700 hover:bg-rose-800 text-white font-bold text-base disabled:opacity-40 active:scale-[0.98] transition-all shadow-sm"
               >
                 {loading
                   ? "Guardando…"
+                  : wouldExceedBalance && !allowNegativeBalance
+                  ? "Saldo insuficiente — activá la opción arriba"
                   : `Guardar gasto${amountVal > 0 ? ` · ${formatCRC(amountVal)}` : ""}`}
               </button>
             </div>

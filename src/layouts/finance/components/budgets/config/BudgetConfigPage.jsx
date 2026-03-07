@@ -14,8 +14,8 @@ import {
   GET_ALL_COMMITTEE_BUDGETS,
 } from "graphql/queries/finance";
 import { UPDATE_COMMITTEE_DISTRIBUTION_CONFIG } from "graphql/mutations/finance";
-import { Skeleton, Notice } from "../FinanceAtoms";
-import { FinancePageHeader } from "../FinancePageHeader";
+import { Skeleton, Notice } from "../../FinanceAtoms";
+import { FinancePageHeader } from "../../FinancePageHeader";
 import { useNotice } from "hooks/useFinance";
 
 const COMMITTEE_COLORS_TEXT = [

@@ -464,7 +464,7 @@ const FinanceDashboard = () => {
       label: "Presupuestos STAFF",
       emoji: "🏛️",
       path: "/finance/budgets",
-      color: "bg-violet-700 hover:bg-violet-800",
+      color: "bg-black",
     },
   ];
 

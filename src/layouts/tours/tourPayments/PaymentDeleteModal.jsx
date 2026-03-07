@@ -1,0 +1,43 @@
+/* eslint-disable react/prop-types */
+export default function PaymentDeleteModal({ payment, onConfirm, onCancel, loading }) {
+  if (!payment) return null;
+
+  const fmtAmount = (n) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n ?? 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+          <h3 className="text-base font-bold text-slate-900">Eliminar pago</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Esta acción no se puede deshacer</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-1">
+            <p className="text-sm font-bold text-gray-900">{payment.concept}</p>
+            <p className="text-sm text-gray-600">{fmtAmount(payment.amount)}</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm disabled:opacity-50 transition-all"
+            >
+              {loading ? "Eliminando…" : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

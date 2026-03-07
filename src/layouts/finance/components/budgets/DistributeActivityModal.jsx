@@ -1,14 +1,12 @@
 /**
  * budgets/DistributeActivityModal.jsx
- * Modal de confirmación para distribuir la utilidad de una actividad entre comités.
  *
- * FIXES v2:
- * - Mutación llamada con { input: { ... } } en vez de variables planas
- * - refetchQueries completo: pendientes + liquidadas + presupuestos
- * - Preview calculado correctamente con rounding igual al backend
- * - Manejo de netProfit ≤ 0 con forceIfZero opcional
- * - Campo businessDate editable con date picker
- * - Soporte dateFrom / dateTo opcionales para rango de cálculo
+ * Mejoras v3:
+ * - Soporte completo de dateFrom / dateTo en la UI (el backend lo soporta)
+ * - Toggle para mostrar/ocultar filtro de rango
+ * - Muestra settlementDate en el encabezado si ya fue liquidada
+ * - Feedback visual mejorado durante distribución
+ * - Validación de businessDate más clara
  */
 import React, { useState } from "react";
 import PropTypes from "prop-types";
@@ -22,7 +20,7 @@ import {
   GET_COMMITTEE_DISTRIBUTION_CONFIG,
 } from "graphql/queries/finance";
 import { useNotice } from "hooks/useFinance";
-import { formatCRC, todayStr } from "utils/finance";
+import { formatCRC, fmtBusinessDate } from "utils/finance";
 import { Notice } from "../FinanceAtoms";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,11 +32,9 @@ const getTodayLocal = () => {
   ).padStart(2, "0")}`;
 };
 
-// Calcula la distribución visual igual que el backend:
-// cada comité = round(netProfit * pct / 100), último recibe el resto.
 const buildPreview = (committees, netProfit) => {
   if (!committees?.length || netProfit <= 0) return [];
-  const result = committees.map((c, i) => {
+  return committees.map((c, i) => {
     const pct = c.distributionPercentage / 100;
     let amt;
     if (i === committees.length - 1) {
@@ -54,7 +50,6 @@ const buildPreview = (committees, netProfit) => {
     }
     return { ...c, amount: amt };
   });
-  return result;
 };
 
 // ─── DistributeActivityModal ──────────────────────────────────────────────────
@@ -63,13 +58,16 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
   const [businessDate, setBusinessDate] = useState(getTodayLocal());
   const [notes, setNotes] = useState("");
   const [forceIfZero, setForceIfZero] = useState(false);
+  const [showRangeFilter, setShowRangeFilter] = useState(false);
+  const [dateFrom, setDateFrom] = useState(activity.dateFrom || "");
+  const [dateTo, setDateTo] = useState(activity.dateTo || "");
   const [notice, showNotice] = useNotice();
 
-  // Obtener config de porcentajes para preview
   const { data: configData } = useQuery(GET_COMMITTEE_DISTRIBUTION_CONFIG, {
     fetchPolicy: "cache-first",
   });
   const committees = configData?.committeeDistributionConfig?.committees || [];
+  const isValidConfig = configData?.committeeDistributionConfig?.isValid;
 
   const [distribute, { loading }] = useMutation(DISTRIBUTE_ACTIVITY_PROFIT, {
     refetchQueries: [
@@ -91,12 +89,17 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
       showNotice("error", "Seleccioná una fecha de liquidación.");
       return;
     }
-    // ✅ CORRECTO: variables.input con todos los campos requeridos
+    if (!isValidConfig) {
+      showNotice("error", "Los porcentajes de comités no suman 100%. Ajustalos en configuración.");
+      return;
+    }
     distribute({
       variables: {
         input: {
           activityId: activity.activityId,
           businessDate,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
           notes: notes.trim() || undefined,
           forceIfZero: isZeroProfit ? forceIfZero : undefined,
         },
@@ -118,6 +121,11 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
             <p className="text-sm text-slate-500 mt-0.5 truncate">
               {activity.activityName || activity.activityId}
             </p>
+            {activity.settlementDate && (
+              <p className="text-xs text-amber-600 font-semibold mt-0.5">
+                ⚠ Liquidada: {fmtBusinessDate(activity.settlementDate)}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -130,6 +138,16 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
         {/* Body */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           <Notice notice={notice} />
+
+          {/* Config inválida */}
+          {configData && !isValidConfig && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+              <p className="text-xs font-bold text-red-800">
+                ⚠️ Los porcentajes de los comités no suman 100%. No se puede distribuir hasta
+                corregirlos en Configuración.
+              </p>
+            </div>
+          )}
 
           {/* Resumen financiero */}
           <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
@@ -223,7 +241,7 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
           {/* Fecha de liquidación */}
           <div>
             <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block mb-2">
-              Fecha de liquidación
+              Fecha de liquidación *
             </label>
             <input
               type="date"
@@ -231,6 +249,67 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
               onChange={(e) => setBusinessDate(e.target.value)}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
             />
+          </div>
+
+          {/* Rango de cálculo — opcional */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowRangeFilter((v) => !v)}
+              className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <span
+                className={`w-4 h-4 rounded border flex items-center justify-center text-[9px] font-bold transition-colors ${
+                  showRangeFilter
+                    ? "bg-slate-800 border-slate-800 text-white"
+                    : "border-slate-300 text-transparent"
+                }`}
+              >
+                ✓
+              </span>
+              Filtrar rango de fechas para el cálculo (opcional)
+            </button>
+
+            {showRangeFilter && (
+              <div className="mt-3 space-y-3 pl-6 border-l-2 border-slate-100">
+                <p className="text-xs text-slate-500">
+                  Si querés calcular la utilidad solo de un período, ingresá el rango. Si no, se
+                  consideran todos los registros de la actividad.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">Desde</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">Hasta</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </div>
+                </div>
+                {(dateFrom || dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700"
+                  >
+                    ✕ Limpiar rango
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notas */}
@@ -252,14 +331,19 @@ const DistributeActivityModal = ({ activity, onClose, onSuccess }) => {
         <div className="px-6 pb-6 pt-2 space-y-2 shrink-0 border-t border-slate-100">
           <button
             onClick={handleConfirm}
-            disabled={loading || (isZeroProfit && !forceIfZero)}
+            disabled={loading || (isZeroProfit && !forceIfZero) || (configData && !isValidConfig)}
             className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-all shadow-sm mt-3"
           >
-            {loading
-              ? "Distribuyendo…"
-              : isZeroProfit
-              ? "Registrar liquidación (₡0)"
-              : `Confirmar · ${formatCRC(Math.max(0, netProfit))}`}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Distribuyendo…
+              </span>
+            ) : isZeroProfit ? (
+              "Registrar liquidación (₡0)"
+            ) : (
+              `Confirmar · ${formatCRC(Math.max(0, netProfit))}`
+            )}
           </button>
           <button
             onClick={onClose}
@@ -281,6 +365,9 @@ DistributeActivityModal.propTypes = {
     totalExpenses: PropTypes.number,
     inventoryCostConsumed: PropTypes.number,
     netProfit: PropTypes.number,
+    dateFrom: PropTypes.string,
+    dateTo: PropTypes.string,
+    settlementDate: PropTypes.string,
   }).isRequired,
   onClose: PropTypes.func,
   onSuccess: PropTypes.func,
