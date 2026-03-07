@@ -22,6 +22,8 @@ function navbar(theme, ownerState) {
   const { borderRadius } = borders;
 
   return {
+    zIndex: 1,
+
     boxShadow: transparentNavbar || absolute ? "none" : navbarBoxShadow,
     backdropFilter: transparentNavbar || absolute ? "none" : `saturate(200%) blur(${pxToRem(30)})`,
     backgroundColor:
