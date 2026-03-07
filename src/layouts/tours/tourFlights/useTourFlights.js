@@ -10,10 +10,19 @@ import {
   REMOVE_PASSENGER,
 } from "./tourFlights.gql";
 
+const ROUTE_NONE_KEY = "__sin_ruta__";
+
 export function useTourFlights(tourId) {
   const [formModal, setFormModal] = useState({ open: false, mode: "create", flight: null });
   const [deleteModal, setDeleteModal] = useState({ open: false, flight: null });
   const [passengersModal, setPassengersModal] = useState({ open: false, flight: null });
+  const [routeModal, setRouteModal] = useState({
+    open: false,
+    routeGroup: null,
+    flights: [],
+  });
+  const [routeResult, setRouteResult] = useState(null);
+  const [routeAssigning, setRouteAssigning] = useState(false);
   const [toast, setToast] = useState(null);
 
   // ── Query ───────────────────────────────────────────────────────────────────
@@ -59,6 +68,7 @@ export function useTourFlights(tourId) {
     onError: (e) => showToast(e.message, "error"),
   });
 
+  // Used for per-flight bulk assignment (with onCompleted toast)
   const [assignPassengersBulk, { loading: assigningBulk }] = useMutation(ASSIGN_PASSENGERS, {
     onCompleted: (data) => {
       const { assigned, conflicts } = data.assignPassengers;
@@ -79,6 +89,9 @@ export function useTourFlights(tourId) {
     },
     onError: (e) => showToast(e.message, "error"),
   });
+
+  // Raw mutation for route-level bulk assignment (no per-flight toast; we aggregate)
+  const [assignPassengersRaw] = useMutation(ASSIGN_PASSENGERS);
 
   const [removePassenger, { loading: removing }] = useMutation(REMOVE_PASSENGER, {
     onCompleted: () => {
@@ -114,6 +127,18 @@ export function useTourFlights(tourId) {
     []
   );
 
+  const openRouteModal = useCallback(
+    (routeGroup, flights) => {
+      setRouteResult(null);
+      setRouteModal({ open: true, routeGroup, flights });
+    },
+    []
+  );
+  const closeRouteModal = useCallback(
+    () => setRouteModal({ open: false, routeGroup: null, flights: [] }),
+    []
+  );
+
   // ── Actions ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (input) => {
     if (formModal.mode === "create") {
@@ -142,6 +167,71 @@ export function useTourFlights(tourId) {
     await removePassenger({ variables: { flightId, participantId } });
   };
 
+  /**
+   * Route-level assignment: apply participantIds to ALL flights in the routeGroup.
+   * Uses raw mutation (no individual toasts).
+   * Aggregates results and shows one consolidated toast + returns result for modal.
+   */
+  const handleAssignRoutePassengers = async (participantIds) => {
+    const flightsInRoute = routeModal.flights;
+    if (!flightsInRoute?.length || !participantIds?.length) return null;
+
+    setRouteAssigning(true);
+
+    let totalAssigned = 0;
+    let totalSkipped = 0;
+    const allConflicts = [];
+    const perFlight = [];
+
+    for (const flight of flightsInRoute) {
+      try {
+        const res = await assignPassengersRaw({
+          variables: { flightId: flight.id, participantIds },
+        });
+        const d = res?.data?.assignPassengers;
+        if (d) {
+          totalAssigned += d.assigned || 0;
+          totalSkipped += d.skipped || 0;
+          const flightConflicts = d.conflicts || [];
+          allConflicts.push(...flightConflicts);
+          perFlight.push({
+            flightId: flight.id,
+            label: `${flight.airline} ${flight.flightNumber} (${flight.origin}→${flight.destination})`,
+            assigned: d.assigned || 0,
+            conflicts: flightConflicts.length,
+          });
+        }
+      } catch {
+        // continue with remaining flights
+      }
+    }
+
+    setRouteAssigning(false);
+    await refetch();
+
+    const routeLabel = routeModal.routeGroup || "Sin ruta";
+    if (allConflicts.length > 0) {
+      showToast(
+        `Ruta "${routeLabel}": ${totalAssigned} asignados. ${allConflicts.length} conflictos.`,
+        totalAssigned > 0 ? "success" : "error"
+      );
+    } else {
+      showToast(
+        `${totalAssigned} asignados a todos los vuelos de la ruta "${routeLabel}"`,
+        "success"
+      );
+    }
+
+    const aggregated = {
+      assigned: totalAssigned,
+      skipped: totalSkipped,
+      conflicts: allConflicts,
+      perFlight,
+    };
+    setRouteResult(aggregated);
+    return aggregated;
+  };
+
   // ── Derived data ─────────────────────────────────────────────────────────────
   const flights = data?.getTourFlights || [];
 
@@ -153,13 +243,24 @@ export function useTourFlights(tourId) {
     [flights]
   );
 
-  // Rutas únicas definidas en los vuelos de esta gira (para el selector del form)
+  // Unique routeGroups defined in this tour's flights
   const routeGroups = useMemo(() => {
     const groups = new Set(flights.map((f) => f.routeGroup).filter(Boolean));
     return Array.from(groups).sort();
   }, [flights]);
 
-  // Mapa: participantId → { flightLabel, routeGroup } para saber dónde está asignado
+  // Map routeGroup key → array of flights
+  const flightsByRouteGroup = useMemo(() => {
+    const map = new Map();
+    for (const f of flights) {
+      const key = f.routeGroup || ROUTE_NONE_KEY;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(f);
+    }
+    return map;
+  }, [flights]);
+
+  // Map: participantId → { flightLabel, routeGroup, flightId }
   const participantAssignments = useMemo(() => {
     const map = new Map();
     for (const f of flights) {
@@ -185,6 +286,7 @@ export function useTourFlights(tourId) {
     connecting,
     totalPassengers,
     routeGroups,
+    flightsByRouteGroup,
     participantAssignments,
     loading,
     error,
@@ -192,6 +294,8 @@ export function useTourFlights(tourId) {
     formModal,
     deleteModal,
     passengersModal,
+    routeModal,
+    routeResult,
     openCreateModal,
     openEditModal,
     closeFormModal,
@@ -199,12 +303,15 @@ export function useTourFlights(tourId) {
     closeDeleteModal,
     openPassengersModal,
     closePassengersModal,
+    openRouteModal,
+    closeRouteModal,
     // Actions
     handleSubmit,
     handleDelete,
     handleAssignPassenger,
     handleAssignPassengers,
     handleRemovePassenger,
+    handleAssignRoutePassengers,
     // Loading states
     creating,
     updating,
@@ -212,8 +319,12 @@ export function useTourFlights(tourId) {
     assigning,
     assigningBulk,
     removing,
+    routeAssigning,
     // Toast
     toast,
     setToast,
+    setRouteResult,
+    // Constants
+    ROUTE_NONE_KEY,
   };
 }

@@ -100,13 +100,70 @@ const StatusChip = ({ option, isActive, onClick }) => (
 );
 
 // ─────────────────────────────────────────────
+// AvatarCircle — outside StudentRow to avoid remount on every render
+// ─────────────────────────────────────────────
+const AvatarCircle = ({ student, size = 36 }) => {
+  const avatarStyle = getAvatarStyle(getFullName(student));
+  return (
+    <div
+      className="rounded-full flex items-center justify-center font-bold flex-shrink-0 text-xs"
+      style={{ width: size, height: size, background: avatarStyle.bg, color: avatarStyle.color }}
+    >
+      {getInitials(student)}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// SavedBadge — outside StudentRow to avoid remount on every render
+// ─────────────────────────────────────────────
+const SavedBadge = ({ isSaved }) => (
+  <span
+    className={`inline-flex items-center gap-1 text-xs font-medium ${
+      isSaved ? "text-emerald-600" : "text-amber-600"
+    }`}
+  >
+    {isSaved ? (
+      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ) : (
+      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
+    )}
+    {isSaved ? "Guardado" : "Sin guardar"}
+  </span>
+);
+
+// ─────────────────────────────────────────────
+// JustInput — outside StudentRow to avoid remount on every render
+// ─────────────────────────────────────────────
+const JustInput = ({ studentId, value, onChange, hasError, placeholder = "Justificación..." }) => (
+  <input
+    type="text"
+    value={value}
+    onChange={(e) => onChange(studentId, "justification", e.target.value)}
+    placeholder={placeholder}
+    className={[
+      "w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all",
+      "focus:ring-2 focus:ring-gray-800/10",
+      hasError
+        ? "border-red-300 bg-red-50 focus:border-red-400"
+        : "border-gray-200 focus:border-gray-400",
+    ].join(" ")}
+  />
+);
+
+// ─────────────────────────────────────────────
 // StudentRow
 // ─────────────────────────────────────────────
 const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => {
   if (!student) return null;
 
   const name = getFullName(student);
-  const avatarStyle = getAvatarStyle(name);
   const curAttendance = attendance?.attendanceStatus || "Presente";
   const curPayment = attendance?.paymentStatus || "Pendiente";
   const curJust = attendance?.justification || "";
@@ -127,52 +184,6 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
     );
   };
 
-  const AvatarCircle = ({ size = 36 }) => (
-    <div
-      className="rounded-full flex items-center justify-center font-bold flex-shrink-0 text-xs"
-      style={{ width: size, height: size, background: avatarStyle.bg, color: avatarStyle.color }}
-    >
-      {getInitials(student)}
-    </div>
-  );
-
-  const SavedBadge = () => (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-medium ${
-        isSaved ? "text-emerald-600" : "text-amber-600"
-      }`}
-    >
-      {isSaved ? (
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-            clipRule="evenodd"
-          />
-        </svg>
-      ) : (
-        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
-      )}
-      {isSaved ? "Guardado" : "Sin guardar"}
-    </span>
-  );
-
-  const JustInput = ({ placeholder = "Justificación..." }) => (
-    <input
-      type="text"
-      value={curJust}
-      onChange={(e) => onAttendanceChange(student.id, "justification", e.target.value)}
-      placeholder={placeholder}
-      className={[
-        "w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all",
-        "focus:ring-2 focus:ring-gray-800/10",
-        needsJust && !curJust
-          ? "border-red-300 bg-red-50 focus:border-red-400"
-          : "border-gray-200 focus:border-gray-400",
-      ].join(" ")}
-    />
-  );
-
   return (
     <div
       className={`relative border-b border-gray-100 last:border-b-0 transition-colors ${
@@ -184,12 +195,12 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
       {/* ─── MOBILE (< 768px) ─── */}
       <div className="md:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
-          <AvatarCircle />
+          <AvatarCircle student={student} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
             {student.instrument && <p className="text-xs text-gray-400">{student.instrument}</p>}
           </div>
-          <SavedBadge />
+          <SavedBadge isSaved={isSaved} />
         </div>
 
         <div>
@@ -213,7 +224,13 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Justificación
             </p>
-            <JustInput placeholder="Describe el motivo..." />
+            <JustInput
+              studentId={student.id}
+              value={curJust}
+              onChange={onAttendanceChange}
+              hasError={needsJust && !curJust}
+              placeholder="Describe el motivo..."
+            />
           </div>
         )}
 
@@ -238,14 +255,14 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
       <div className="hidden md:flex md:flex-row md:items-center md:gap-4 px-5 py-3">
         {/* Student — fixed width */}
         <div className="flex items-center gap-2.5 min-w-0" style={{ width: 200, flexShrink: 0 }}>
-          <AvatarCircle />
+          <AvatarCircle student={student} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-800 truncate">{highlight(name)}</p>
             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
               {student.instrument && (
                 <span className="text-xs text-gray-400">{student.instrument}</span>
               )}
-              <SavedBadge />
+              <SavedBadge isSaved={isSaved} />
             </div>
           </div>
         </div>
@@ -263,7 +280,16 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
         </div>
 
         {/* Justification — fixed width */}
-        <div style={{ width: 180, flexShrink: 0 }}>{needsJust && <JustInput />}</div>
+        <div style={{ width: 180, flexShrink: 0 }}>
+          {needsJust && (
+            <JustInput
+              studentId={student.id}
+              value={curJust}
+              onChange={onAttendanceChange}
+              hasError={needsJust && !curJust}
+            />
+          )}
+        </div>
 
         {/* Payment — flex grow */}
         <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
@@ -690,7 +716,19 @@ StudentRow.propTypes = {
   attendance: PropTypes.object,
   onAttendanceChange: PropTypes.func.isRequired,
   searchTerm: PropTypes.string,
+};
+AvatarCircle.propTypes = {
+  student: PropTypes.object.isRequired,
   size: PropTypes.number,
+};
+SavedBadge.propTypes = {
+  isSaved: PropTypes.bool.isRequired,
+};
+JustInput.propTypes = {
+  studentId: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  hasError: PropTypes.bool,
   placeholder: PropTypes.string,
 };
 StatusChip.propTypes = {

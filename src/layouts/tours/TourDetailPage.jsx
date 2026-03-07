@@ -13,6 +13,8 @@ import TourImportsPage from "./tourImports/TourImportsPage";
 import TourFlightsPage from "./tourFlights/TourFlightsPage";
 import { TourStatusBadge, formatTourDateRange, getTourDuration } from "./TourHelpers";
 import TourPaymentsPage from "./tourPayments/TourPaymentsPage";
+import TourRoomsPage from "./tourRooms/TourRoomsPage";
+import TourDocumentsPage from "./tourDocuments/TourDocumentsPage";
 
 const TABS = [
   { id: "imports", label: "Importación", emoji: "📋" },
@@ -21,16 +23,6 @@ const TABS = [
   { id: "payments", label: "Pagos", emoji: "💰" },
   { id: "documents", label: "Documentos", emoji: "📄" },
 ];
-
-function ComingSoonTab({ label, emoji }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <span className="text-5xl mb-4">{emoji}</span>
-      <h3 className="text-base font-bold text-gray-900 mb-1">{label}</h3>
-      <p className="text-sm text-gray-500">Este módulo se integrará próximamente.</p>
-    </div>
-  );
-}
 
 function TourInfoCard({ tour }) {
   const duration = getTourDuration(tour.startDate, tour.endDate);
@@ -92,11 +84,11 @@ function TabContent({ activeTab, tour }) {
     case "flights":
       return <TourFlightsPage tourId={tour.id} tourName={tour.name} />;
     case "rooms":
-      return <ComingSoonTab label="Habitaciones" emoji="🏨" />;
+      return <TourRoomsPage tourId={tour.id} tourName={tour.name} />;
     case "payments":
       return <TourPaymentsPage tourId={tour.id} tourName={tour.name} />;
     case "documents":
-      return <ComingSoonTab label="Documentos" emoji="📄" />;
+      return <TourDocumentsPage tourId={tour.id} tourName={tour.name} tour={tour} />;
     default:
       return null;
   }
