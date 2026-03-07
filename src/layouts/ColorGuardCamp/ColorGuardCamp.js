@@ -12,7 +12,7 @@ const ModalInfo = ({ onClose }) => {
     <div
       id="medium-modal"
       tabIndex="-1"
-      className="fixed shadow top-0 left-0 right-0 z-50  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
+      className="fixed shadow top-0 left-0 right-0 z-[1300]  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
     >
       <div className="relative w-full max-w-lg max-h-full">
         <div className="relative bg-white rounded-lg shadow ">

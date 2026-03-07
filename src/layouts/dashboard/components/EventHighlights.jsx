@@ -155,7 +155,9 @@ export function NextEventBanner({ event }) {
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: 2 }}>
           {event.type && (
-            <span style={{ fontSize: 12, color: "#475569", fontWeight: 500 }}>🎵 {event.type}</span>
+            <span style={{ fontSize: 12, color: "#475569", fontWeight: 500 }}>
+              🎵 {event.title}
+            </span>
           )}
           {event.location && (
             <span style={{ fontSize: 12, color: "#475569", fontWeight: 500 }}>

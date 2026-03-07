@@ -48,6 +48,7 @@ export default styled(Drawer)(({ theme, ownerState }) => {
 
   return {
     "& .MuiDrawer-paper": {
+      zIndex: 1150, // below modals (1300) but above sidenav (1000) and appBar (1100)
       height: "100vh",
       margin: 0,
       padding: `0 ${pxToRem(10)}`,

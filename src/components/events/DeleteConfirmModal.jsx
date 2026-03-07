@@ -5,8 +5,8 @@ export function DeleteConfirmModal({ open, event, onClose, onConfirm }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[1290]" onClick={onClose} />
+      <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
           <div className="p-6">
             <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">

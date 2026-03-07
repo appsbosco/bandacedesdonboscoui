@@ -281,12 +281,9 @@ const SignUp = () => {
                     ...inputValues // Spread the rest of the values into a new object
                   } = values;
 
-                  const dateParts = birthday.split("-");
-                  const day = parseInt(dateParts[2]);
-                  const month = new Date(birthday).toLocaleString("es-ES", { month: "long" });
-                  const year = parseInt(dateParts[0]);
+                  const [year, month, day] = birthday.split("-");
+                  const formattedBirthday = `${day}/${month}/${year}`;
 
-                  const formattedBirthday = `${day} de ${month} del ${year}`;
                   try {
                     const { data } = await newUser({
                       variables: {

@@ -572,7 +572,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults, onQuickMar
 
 const ActionBar = ({ onSave, onCancel, isSaving, hasUnsavedChanges, canEdit }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shadow-lg z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shadow-lg z-[1200]">
       <div className="max-w-7xl mx-auto flex items-center justify-end gap-2 sm:gap-3">
         <button
           onClick={onCancel}
@@ -631,7 +631,7 @@ const Toast = ({ message, type = "success", onClose }) => {
 
   return (
     <div
-      className={`fixed top-4 right-4 ${bgColor} text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-lg z-50 animate-slide-in-right flex items-center gap-3 max-w-sm`}
+      className={`fixed top-4 right-4 ${bgColor} text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-lg z-[1350] animate-slide-in-right flex items-center gap-3 max-w-sm`}
     >
       {type === "success" && (
         <svg

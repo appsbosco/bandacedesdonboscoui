@@ -32,7 +32,7 @@ const CartOpenButton = React.memo(({ onClick, count, totalPrice, ariaLabel }) =>
       onClick={onClick}
       aria-label={ariaLabel}
       className="
-        fixed bottom-6 right-6 z-50
+        fixed bottom-6 right-6 z-[1200]
         flex items-center gap-3
         bg-black text-white
         rounded-full

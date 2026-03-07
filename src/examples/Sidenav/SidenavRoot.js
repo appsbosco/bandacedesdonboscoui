@@ -73,6 +73,7 @@ export default styled(Drawer)(({ theme, ownerState }) => {
 
   return {
     "& .MuiDrawer-paper": {
+      zIndex: theme.zIndex.drawer, // 1000 — below modals (1300)
       boxShadow: xxl,
       border: "none",
 

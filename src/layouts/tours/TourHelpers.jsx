@@ -70,7 +70,7 @@ export function formatTourDateRange(startDate, endDate) {
 export function Toast({ message, type, onClose }) {
   return (
     <div
-      className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs animate-fade-in ${
+      className={`fixed top-5 right-5 z-[1350] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs animate-fade-in ${
         type === "success" ? "bg-gray-900" : "bg-red-600"
       }`}
     >
@@ -111,7 +111,7 @@ export function DeleteConfirmModal({ tour, onConfirm, onCancel, loading }) {
   if (!tour) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onCancel()}
     >

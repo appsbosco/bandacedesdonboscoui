@@ -136,7 +136,7 @@ export default function ItineraryPassengersModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >

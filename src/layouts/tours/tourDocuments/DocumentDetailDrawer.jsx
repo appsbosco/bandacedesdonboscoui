@@ -78,9 +78,9 @@ export default function DocumentDetailDrawer({ participant, refDate, onClose, on
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[1290] bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">

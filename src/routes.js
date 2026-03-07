@@ -76,6 +76,10 @@ import TourListPage from "layouts/tours/TourListPage";
 import TourDetailPage from "layouts/tours/TourDetailPage";
 import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
 
+import EnsemblesDashboardPage from "layouts/ensembles/EnsemblesDashboardPage";
+import EnsembleControlPage from "layouts/ensembles/EnsembleControlPage";
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
+
 /**
  * Helpers
  * - Evitan duplicación
@@ -532,6 +536,22 @@ const items = {
       route: "/tours/:tourId",
       component: <TourDetailPage />,
     }),
+
+  ensembles: () =>
+    collapse({
+      name: "Agrupaciones",
+      key: "ensembles",
+      route: "/ensembles",
+      icon: muiIcon12(LibraryMusicIcon),
+      component: <EnsemblesDashboardPage />,
+    }),
+
+  ensembleMembers: () =>
+    routeOnly({
+      key: "ensemble-members",
+      route: "/ensembles/:key/members",
+      component: <EnsembleControlPage />,
+    }),
 };
 
 const documentsMenu = () => [
@@ -629,8 +649,21 @@ const routes = [
  */
 export const adminRoutes = [
   items.dashboard(),
+
+  title("Integrantes", "integrantes"),
+
   items.members(),
+
+  title("Agrupaciones", "agrupaciones"),
+  items.ensembles(),
+  items.ensembleMembers(),
+
+  title("Calendario", "calendario"),
+
   items.events(),
+
+  title("Inventario", "inventory"),
+
   items.inventory(),
 
   title("Afinador", "tuner-pages"),

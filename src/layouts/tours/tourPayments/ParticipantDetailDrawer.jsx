@@ -49,10 +49,10 @@ export function ParticipantDetailDrawer({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[1290] bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
         style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
@@ -385,7 +385,7 @@ export function PaymentPlanModal({ isOpen, mode, plan, onClose, onSubmit, loadin
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-[1300] flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -621,7 +621,7 @@ export function AccountAdjustModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -796,7 +796,7 @@ export function SetupFinanceModal({ isOpen, tourId, plans, onClose, onSubmit, lo
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -890,7 +890,7 @@ export default function DeletePaymentModal({ payment, onConfirm, onCancel, loadi
   if (!payment) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onCancel()}
     >

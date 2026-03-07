@@ -41,7 +41,7 @@ export default function ParticipantPaymentModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-[1300] flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >

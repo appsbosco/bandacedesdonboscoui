@@ -5,7 +5,7 @@ export function ModalShell({ isOpen, onClose, title, subtitle, children, footer 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full sm:w-[440px] overflow-hidden flex flex-col max-h-[92vh]">

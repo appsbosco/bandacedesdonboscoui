@@ -321,7 +321,7 @@ const Toast = ({ message, type, onClose }) => {
       <style>{`@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
       <div
         style={{ animation: "toastIn 0.25s ease-out" }}
-        className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs ${
+        className={`fixed top-5 right-5 z-[1350] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs ${
           type === "success" ? "bg-gray-900" : "bg-red-600"
         }`}
       >

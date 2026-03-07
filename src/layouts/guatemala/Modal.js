@@ -491,7 +491,7 @@ const Modal = ({ onClose }) => {
       id="authentication-modal"
       tabIndex="-1"
       aria-hidden="true"
-      className="fixed shadow top-0 left-0 right-0 z-50  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
+      className="fixed shadow top-0 left-0 right-0 z-[1300]  w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex items-center justify-center"
     >
       {message && showMessage()}
       <div className="relative w-full max-w-2xl max-h-full">

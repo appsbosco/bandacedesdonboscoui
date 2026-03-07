@@ -351,7 +351,7 @@ function DocumentsPage() {
             <Link
               to="/documents/new"
               className="
-                fixed bottom-6 right-6 z-50
+                fixed bottom-6 right-6 z-[1200]
                 w-14 h-14 rounded-full
                 bg-primary-600 hover:bg-primary-500
                 text-white
