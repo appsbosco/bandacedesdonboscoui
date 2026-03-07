@@ -11,7 +11,8 @@ export const GET_TOUR_FLIGHTS = gql`
       departureAt
       arrivalAt
       direction
-      routeGroup
+      itineraryId
+      itinerary { id name }
       notes
       passengerCount
       passengers {
@@ -25,14 +26,8 @@ export const GET_TOUR_FLIGHTS = gql`
         seatNumber
         confirmedAt
       }
-      createdBy {
-        name
-        firstSurName
-      }
-      updatedBy {
-        name
-        firstSurName
-      }
+      createdBy { name firstSurName }
+      updatedBy { name firstSurName }
       createdAt
       updatedAt
     }
@@ -50,7 +45,8 @@ export const GET_TOUR_FLIGHT = gql`
       departureAt
       arrivalAt
       direction
-      routeGroup
+      itineraryId
+      itinerary { id name }
       notes
       passengerCount
       passengers {
@@ -79,7 +75,8 @@ export const CREATE_TOUR_FLIGHT = gql`
       departureAt
       arrivalAt
       direction
-      routeGroup
+      itineraryId
+      itinerary { id name }
       notes
       passengerCount
     }
@@ -97,7 +94,8 @@ export const UPDATE_TOUR_FLIGHT = gql`
       departureAt
       arrivalAt
       direction
-      routeGroup
+      itineraryId
+      itinerary { id name }
       notes
       passengerCount
     }

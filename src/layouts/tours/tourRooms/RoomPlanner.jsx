@@ -93,7 +93,7 @@ export default function RoomPlanner({
       </div>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <SumStat value={rooms.length} label="Habitaciones" />
         <SumStat value={totalCapacity} label="Capacidad total" color="text-blue-600" />
         <SumStat value={totalAssigned} label="Asignados" color="text-emerald-600" />
@@ -190,9 +190,7 @@ export default function RoomPlanner({
         loading={deleting}
       />
 
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }

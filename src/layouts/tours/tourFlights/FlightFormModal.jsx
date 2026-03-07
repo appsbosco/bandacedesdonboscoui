@@ -24,7 +24,6 @@ const EMPTY = {
   departureAt: "",
   arrivalAt: "",
   direction: "OUTBOUND",
-  routeGroup: "",
   notes: "",
 };
 
@@ -32,34 +31,30 @@ export default function FlightFormModal({
   isOpen,
   mode,
   flight,
-  routeGroups = [], // rutas ya existentes en la gira para sugerencias
   onClose,
   onSubmit,
   loading,
 }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
-  const [showRouteDropdown, setShowRouteDropdown] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     if (mode === "edit" && flight) {
       setForm({
-        airline: flight.airline || "",
+        airline:     flight.airline || "",
         flightNumber: flight.flightNumber || "",
-        origin: flight.origin || "",
+        origin:      flight.origin || "",
         destination: flight.destination || "",
         departureAt: toInputDatetime(flight.departureAt),
-        arrivalAt: toInputDatetime(flight.arrivalAt),
-        direction: flight.direction || "OUTBOUND",
-        routeGroup: flight.routeGroup || "",
-        notes: flight.notes || "",
+        arrivalAt:   toInputDatetime(flight.arrivalAt),
+        direction:   flight.direction || "OUTBOUND",
+        notes:       flight.notes || "",
       });
     } else {
       setForm(EMPTY);
     }
     setErrors({});
-    setShowRouteDropdown(false);
   }, [isOpen, mode, flight]);
 
   if (!isOpen) return null;
@@ -87,32 +82,23 @@ export default function FlightFormModal({
     const e = validate();
     if (Object.keys(e).length > 0) return setErrors(e);
     onSubmit({
-      airline: form.airline.trim(),
+      airline:      form.airline.trim(),
       flightNumber: form.flightNumber.trim(),
-      origin: form.origin.trim().toUpperCase(),
-      destination: form.destination.trim().toUpperCase(),
-      departureAt: new Date(form.departureAt).toISOString(),
-      arrivalAt: new Date(form.arrivalAt).toISOString(),
-      direction: form.direction,
-      routeGroup: form.routeGroup.trim() || null,
-      notes: form.notes.trim() || undefined,
+      origin:       form.origin.trim().toUpperCase(),
+      destination:  form.destination.trim().toUpperCase(),
+      departureAt:  new Date(form.departureAt).toISOString(),
+      arrivalAt:    new Date(form.arrivalAt).toISOString(),
+      direction:    form.direction,
+      notes:        form.notes.trim() || undefined,
     });
   };
-
-  // Sugerencias de routeGroup filtradas por lo que se está escribiendo
-  const routeSuggestions = routeGroups.filter(
-    (g) => g.toLowerCase().includes(form.routeGroup.toLowerCase()) && g !== form.routeGroup
-  );
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-          setShowRouteDropdown(false);
-        }
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -159,50 +145,16 @@ export default function FlightFormModal({
             </div>
           </div>
 
-          {/* Route group — campo clave */}
-          <div className="relative">
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-              Ruta / cotización{" "}
-              <span className="normal-case font-normal text-gray-400">
-                (agrupa vuelos del mismo itinerario)
-              </span>
-            </label>
-            <input
-              type="text"
-              value={form.routeGroup}
-              placeholder="Ej: United Cotización 1, Avianca Cotización 1…"
-              onChange={(e) => {
-                set("routeGroup", e.target.value);
-                setShowRouteDropdown(true);
-              }}
-              onFocus={() => setShowRouteDropdown(true)}
-              onBlur={() => setTimeout(() => setShowRouteDropdown(false), 150)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-            />
-            {/* Dropdown de sugerencias */}
-            {showRouteDropdown && routeSuggestions.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                {routeSuggestions.map((g) => (
-                  <button
-                    key={g}
-                    onMouseDown={() => {
-                      set("routeGroup", g);
-                      setShowRouteDropdown(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2"
-                  >
-                    <span className="text-gray-400">🔗</span>
-                    <span>{g}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {form.routeGroup && (
-              <p className="text-xs text-emerald-600 mt-1">
-                ✓ Este vuelo formará parte de la ruta &quot;{form.routeGroup}&quot;
+          {/* Route info (read-only legacy field — route assignment is done in the Routes tab) */}
+          {mode === "edit" && flight?.route && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
+              <span className="text-blue-500 text-sm">🔗</span>
+              <p className="text-xs text-blue-700">
+                Ruta: <strong>{flight.route.name}</strong>
+                {" — "}la asignación de ruta se gestiona desde la pestaña <strong>Rutas</strong>.
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Airline + Flight Number */}
           <div className="grid grid-cols-2 gap-3">

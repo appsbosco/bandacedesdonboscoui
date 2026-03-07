@@ -133,8 +133,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
         <div>
           <h2 className="text-base font-bold text-gray-900">Habitaciones de la gira</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Gestioná el alojamiento de{" "}
-            <span className="font-semibold">{tourName}</span>
+            Gestioná el alojamiento de <span className="font-semibold">{tourName}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -144,7 +143,12 @@ export default function TourRoomsPage({ tourId, tourName }) {
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             Nueva habitación
           </button>
@@ -152,7 +156,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard value={rooms.length} label="Total" />
         <StatCard value={hotels.length} label="Hoteles" color="text-blue-600" />
         <StatCard value={fullRooms} label="Completas" color="text-emerald-600" />
@@ -163,7 +167,8 @@ export default function TourRoomsPage({ tourId, tourName }) {
       {!loading && unassignedParticipants.length > 0 && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
           <p className="text-xs text-amber-700 font-medium">
-            ⚠️ {unassignedParticipants.length} participante{unassignedParticipants.length !== 1 ? "s" : ""} sin habitación
+            ⚠️ {unassignedParticipants.length} participante
+            {unassignedParticipants.length !== 1 ? "s" : ""} sin habitación
           </p>
           <button
             onClick={() => setMode("planner")}
@@ -210,7 +215,11 @@ export default function TourRoomsPage({ tourId, tourName }) {
       ) : error ? (
         <ErrorState message={error.message} />
       ) : rooms.length === 0 ? (
-        <EmptyState onAdd={openCreateModal} onPlanner={() => setMode("planner")} tourName={tourName} />
+        <EmptyState
+          onAdd={openCreateModal}
+          onPlanner={() => setMode("planner")}
+          tourName={tourName}
+        />
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-sm text-gray-400">
           Sin habitaciones que coincidan con la búsqueda.
@@ -284,9 +293,7 @@ function ViewSwitcher({ mode, onSwitch }) {
           key={v.id}
           onClick={() => onSwitch(v.id)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-            mode === v.id
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+            mode === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
           }`}
         >
           <span>{v.emoji}</span>
@@ -345,8 +352,7 @@ function EmptyState({ onAdd, onPlanner, tourName }) {
       <p className="text-4xl mb-3">🏨</p>
       <h3 className="text-sm font-bold text-gray-900 mb-1">Sin habitaciones registradas</h3>
       <p className="text-xs text-gray-500 mb-5">
-        Todavía no hay habitaciones para{" "}
-        <span className="font-semibold">{tourName}</span>.
+        Todavía no hay habitaciones para <span className="font-semibold">{tourName}</span>.
       </p>
       <div className="flex items-center justify-center gap-3">
         <button

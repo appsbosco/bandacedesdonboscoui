@@ -62,7 +62,7 @@ export default function TourImportsPage({ tourId, tourName }) {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <p className="text-2xl font-bold text-gray-900">{totalImported}</p>
           <p className="text-xs text-gray-500 mt-0.5">Total importados</p>
