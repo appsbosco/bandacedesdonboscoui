@@ -391,7 +391,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
   const riskBadges = getRiskBadges(backendStats ?? {});
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[1300] bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         ref={panelRef}
         className="w-full sm:max-w-3xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"

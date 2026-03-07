@@ -4,22 +4,20 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useInventoryMaintenance } from "./useInventory";
 
-function Toast({ toast, onDismiss }) {
+function Toast({ message, type, onClose }) {
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onDismiss, 3500);
+    const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
-  }, [toast, onDismiss]);
-  if (!toast) return null;
+  }, [message, onClose]);
   return (
     <div
       className={[
         "fixed bottom-5 right-5 z-[1350] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium",
-        toast.type === "error" ? "bg-red-600" : "bg-slate-900",
+        type === "error" ? "bg-red-600" : "bg-slate-900",
       ].join(" ")}
     >
-      <span>{toast.message}</span>
-      <button onClick={onDismiss} className="opacity-70 hover:opacity-100 text-lg leading-none">
+      <span>{message}</span>
+      <button onClick={onClose} className="opacity-70 hover:opacity-100 text-lg leading-none">
         &times;
       </button>
     </div>
@@ -324,7 +322,7 @@ const InventoryDrawer = ({ item, onClose, onMutationDone }) => {
   async function handleSaveMaintenance(input) {
     await handleAdd(input);
     setShowModal(false);
-    onMutationDone();
+    onMutationDone("Mantenimiento registrado");
   }
 
   return (
