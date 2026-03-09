@@ -41,8 +41,8 @@ function buildRows(members) {
   return members.map((u, i) => ({
     "#": i + 1,
     Nombre: userFullName(u),
-    "Correo electrónico": u.email || "—",
-    Rol: u.role || "—",
+    // "Correo electrónico": u.email || "—",
+    // Rol: u.role || "—",
     Instrumento: u.instrument || "—",
     Estado: u.state || "—",
     // Agrupaciones: bandsLabel(u.bands) || "—",
@@ -119,8 +119,8 @@ export async function exportEnsemblePDF({ ensemble, members, tabLabel = "Miembro
     rows[0] || {
       "#": "",
       Nombre: "",
-      "Correo electrónico": "",
-      Rol: "",
+      //   "Correo electrónico": "",
+      //   Rol: "",
       Instrumento: "",
       Estado: "",
       //   Agrupaciones: "",
@@ -151,7 +151,7 @@ export async function exportEnsemblePDF({ ensemble, members, tabLabel = "Miembro
       0: { cellWidth: 8, halign: "center" }, // #
       1: { cellWidth: 48 }, // Nombre
       2: { cellWidth: 52 }, // Email
-      3: { cellWidth: 22 }, // Rol
+      //   3: { cellWidth: 22 }, // Rol
       4: { cellWidth: 28 }, // Instrumento
       5: { cellWidth: 20 }, // Estado
       //   6: { cellWidth: "auto" }, // Agrupaciones
@@ -207,8 +207,8 @@ export async function exportEnsembleXLSX({ ensemble, members, tabLabel = "Miembr
   const headers = [
     "#",
     "Nombre completo",
-    "Correo electrónico",
-    "Rol",
+    // "Correo electrónico",
+    // "Rol",
     "Instrumento",
     "Estado",
     // "Agrupaciones",
@@ -234,8 +234,8 @@ export async function exportEnsembleXLSX({ ensemble, members, tabLabel = "Miembr
   ws["!cols"] = [
     { wch: 5 }, // #
     { wch: 32 }, // Nombre
-    { wch: 34 }, // Email
-    { wch: 16 }, // Rol
+    // { wch: 34 }, // Email
+    // { wch: 16 }, // Rol
     { wch: 20 }, // Instrumento
     { wch: 12 }, // Estado
     // { wch: 30 }, // Agrupaciones
