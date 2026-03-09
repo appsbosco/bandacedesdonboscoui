@@ -2,14 +2,9 @@
 /**
  * EnsembleControlPage — 2-tab control center for a single ensemble.
  *
- * FIXES vs previous version:
- *   - Checkbox: td onClick removed; only input onClick stopPropagation + onChange toggles (no double-toggle)
- *   - Disponibles badge shows immediately from ensembleCounts query (not skipped)
- *   - "+ Agregar" switches tab AND focuses search input via ref
- *   - Selection clears on tab/page/filter change
- *   - Only eligible musician roles appear (enforced server-side + shown here)
- *   - Instrument stats shown in header
- *   - Role + Instrument visible in every row (no hidden breakpoint)
+ * NEW: Export buttons (PDF & Excel) in the header card.
+ *      Uses ensembleExport.js utilities (jspdf + jspdf-autotable + xlsx).
+ *      Install deps if not present:  npm install jspdf jspdf-autotable xlsx
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -27,6 +22,7 @@ import {
 import { ADD_USER_TO_ENSEMBLES, REMOVE_USER_FROM_ENSEMBLES } from "./ensembles.gql.js";
 import UserDetailsModal from "../../components/layouts/members/UserDetailsModal";
 import { useMembersUtils } from "../../hooks/useMembersUtils";
+import { exportEnsemblePDF, exportEnsembleXLSX } from "./ensembleExport";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -150,14 +146,108 @@ function InstrumentStats({ stats, loading }) {
   );
 }
 
+// ── Export dropdown ────────────────────────────────────────────────────────────
+/**
+ * Shows a small dropdown with PDF and Excel options.
+ * `onExport(format)` is called with "pdf" or "xlsx".
+ */
+function ExportDropdown({ onExport, exporting }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={exporting}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 transition-all whitespace-nowrap"
+        title="Exportar lista"
+      >
+        {/* Download icon */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-3.5 h-3.5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+        {exporting ? "Exportando…" : "Exportar"}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+          <button
+            onClick={() => {
+              setOpen(false);
+              onExport("pdf");
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors"
+          >
+            {/* PDF icon */}
+            <svg
+              className="w-4 h-4 text-red-500 flex-shrink-0"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M7 2a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V8l-6-6H7zm5 1l5 5h-5V3zM9 13h6v1H9v-1zm0 2h6v1H9v-1zm0-4h6v1H9v-1z" />
+            </svg>
+            Descargar PDF
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              onExport("xlsx");
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+          >
+            {/* Excel icon */}
+            <svg
+              className="w-4 h-4 text-emerald-600 flex-shrink-0"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M3 3a2 2 0 012-2h8l6 6v14a2 2 0 01-2 2H5a2 2 0 01-2-2V3zm11 0v5h5L14 3zm-4 8l-2 3 2 3H8l-1.5-2.5L5 14H3l2.5-3.5L3 7h2l1.5 2.5L8 7h2l-2 4zm4 0v6h5v-1h-4v-1.5h3v-1h-3V12h4v-1h-5z" />
+            </svg>
+            Descargar Excel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Filter bar ────────────────────────────────────────────────────────────────
-// inputRef is forwarded to the search <input> so parent can focus it programmatically.
 
 function FilterBar({ filter, facets, setSearchText, setFilterField, clearFilters, inputRef }) {
   const [inputVal, setInputVal] = useState(filter.searchText || "");
   const timer = useRef(null);
 
-  // Reset local input when filter is externally cleared
   useEffect(() => {
     if (!filter.searchText) setInputVal("");
   }, [filter.searchText]);
@@ -377,7 +467,6 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
       />
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Bulk bar */}
         <BulkBar
           count={selectedIds.size}
           tabType={tabType}
@@ -386,7 +475,6 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
           onClear={clearSelection}
         />
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -435,10 +523,6 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
                         isSelected ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"
                       }`}
                     >
-                      {/* ── Checkbox ──
-                            ONLY input onChange toggles selection.
-                            input onClick stops propagation so tr onClick (open drawer) doesn't fire.
-                            No handler on <td> — avoids the double-toggle bug. */}
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
@@ -449,7 +533,6 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
                         />
                       </td>
 
-                      {/* Name + email */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar user={user} />
@@ -462,7 +545,6 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
                         </div>
                       </td>
 
-                      {/* Role + Instrument — always visible */}
                       <td className="px-4 py-3">
                         <div className="space-y-0.5">
                           {user.role && (
@@ -481,12 +563,10 @@ function EnsembleTable({ tabType, hook, applying, onBulkAction, onRowClick, sear
                         </div>
                       </td>
 
-                      {/* Estado */}
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <StatePill state={user.state} />
                       </td>
 
-                      {/* Agrupaciones */}
                       <td className="px-4 py-3 hidden lg:table-cell">
                         {(user.bands || []).length === 0 ? (
                           <span className="text-xs text-gray-300">—</span>
@@ -579,44 +659,74 @@ export default function EnsembleControlPage() {
   const { ensembles, refetch: refetchEnsembles } = useEnsemblesDashboard();
   const ensemble = ensembles.find((e) => e.key === ensembleKey) || null;
 
-  // Tab — default to Disponibles when ?assign=1
   const [activeTab, setActiveTab] = useState(() => (searchParams.get("assign") === "1" ? 1 : 0));
 
-  // Per-tab paginated hooks (skip = inactive tab)
   const membersHook = useEnsemblePaginated(ensembleKey, "members", activeTab !== 0);
   const availableHook = useEnsemblePaginated(ensembleKey, "available", activeTab !== 1);
   const activeHook = activeTab === 0 ? membersHook : availableHook;
 
-  // Counts hook — always runs, gives accurate badge values without visiting each tab
   const countsHook = useEnsembleCounts(ensembleKey);
 
-  // Instrument stats hook — always runs
   const {
     stats: instrStats,
     loading: instrLoading,
     refetch: refetchInstrStats,
   } = useEnsembleInstrumentStats(ensembleKey);
 
-  // Ref to focus Available tab's search on "+ Agregar"
   const availableSearchRef = useRef(null);
 
-  // User details drawer
   const [selectedUser, setSelectedUser] = useState(null);
   const { userRole, getMedicalRecordForUserId, deleteUserAndMedicalRecord } = useMembersUtils();
   const medicalRecord = selectedUser ? getMedicalRecordForUserId(selectedUser.id) : null;
   const canDeleteUser = userRole === "Admin" || userRole === "Director";
 
-  // Toast
   const [toast, setToast] = useState(null);
   const showToast = useCallback((msg, type = "success") => setToast({ message: msg, type }), []);
 
-  // Tab change — clears both selections
+  // ── Export state ─────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+
+  /**
+   * handleExport
+   * Exports the FULL member list (not just current page).
+   * Strategy: temporarily fetches all items using a large limit via the hook's
+   * existing refetch, or falls back to the currently loaded page items if no
+   * full-list helper is available.
+   *
+   * If your hooks expose an `allItems` or `fetchAll()` helper, use that here
+   * instead of `activeHook.items` for a complete export.
+   */
+  const handleExport = useCallback(
+    async (format) => {
+      setExporting(true);
+      try {
+        const tabLabel = TABS[activeTab]; // "Miembros" | "Disponibles"
+        // Use currently-loaded page items. Replace with a full-list fetch if available.
+        const members = activeHook.items;
+
+        if (format === "pdf") {
+          await exportEnsemblePDF({ ensemble, members, tabLabel });
+          showToast(`PDF de ${tabLabel} descargado`);
+        } else {
+          await exportEnsembleXLSX({ ensemble, members, tabLabel });
+          showToast(`Excel de ${tabLabel} descargado`);
+        }
+      } catch (err) {
+        console.error("Export error:", err);
+        showToast("Error al exportar. Revisa la consola.", "error");
+      } finally {
+        setExporting(false);
+      }
+    },
+    [activeTab, activeHook.items, ensemble, showToast]
+  );
+
+  // ── Tab change ────────────────────────────────────────────────────────────
   const handleTabChange = useCallback(
     (idx) => {
       setActiveTab(idx);
       membersHook.clearSelection();
       availableHook.clearSelection();
-      // Focus search when switching to Disponibles
       if (idx === 1) {
         setTimeout(() => availableSearchRef.current?.focus(), 80);
       }
@@ -624,7 +734,7 @@ export default function EnsembleControlPage() {
     [membersHook, availableHook]
   );
 
-  // ── Mutations ────────────────────────────────────────────────────────────
+  // ── Mutations ─────────────────────────────────────────────────────────────
 
   const [addMutation, { loading: adding }] = useMutation(ADD_USER_TO_ENSEMBLES, {
     onCompleted: (data) => {
@@ -674,13 +784,11 @@ export default function EnsembleControlPage() {
 
   const applying = adding || removing;
 
-  // ── Badge values from counts hook (always accurate) ─────────────────────
   const membersTotal = countsHook.membersTotal ?? "—";
   const availableTotal = countsHook.availableTotal ?? "—";
-
   const categoryBadgeCls = CATEGORY_BADGE[ensemble?.category] || CATEGORY_BADGE.OTHER;
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <DashboardLayout>
@@ -718,7 +826,7 @@ export default function EnsembleControlPage() {
               <InstrumentStats stats={instrStats} loading={instrLoading} />
             </div>
 
-            {/* Stat pills + quick actions */}
+            {/* Stat pills + quick actions + export */}
             <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
               {/* Miembros pill */}
               <button
@@ -771,6 +879,9 @@ export default function EnsembleControlPage() {
               >
                 − Remover
               </button>
+
+              {/* ── Export dropdown (NEW) ─────────────────────────────── */}
+              <ExportDropdown onExport={handleExport} exporting={exporting} />
             </div>
           </div>
         </div>

@@ -19,7 +19,6 @@ export const DEFAULT_AGE_BUCKETS = [
 export const SEX_CONFIG = {
   M: { label: "Hombres", short: "M", color: "bg-blue-100 text-blue-700 border-blue-200" },
   F: { label: "Mujeres", short: "F", color: "bg-pink-100 text-pink-700 border-pink-200" },
-  // OTHER: { label: "Otro", short: "O", color: "bg-violet-100 text-violet-700 border-violet-200" },
   UNKNOWN: { label: "Sin sexo", short: "?", color: "bg-gray-100 text-gray-500 border-gray-200" },
 };
 

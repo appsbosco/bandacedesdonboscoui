@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   INVENTORIES_PAGINATED,
@@ -6,28 +6,27 @@ import {
   INVENTORY_MAINTENANCE_HISTORY,
   ADD_MAINTENANCE_RECORD,
   DELETE_MAINTENANCE_RECORD,
+  ADMIN_CLEANUP_INVENTORIES,
 } from "./inventory.gql.js";
 
 const DEFAULT_PAGINATION = { page: 1, limit: 25, sortBy: "createdAt", sortDir: "desc" };
 
-// ── Paginated list hook ───────────────────────────────────────────────────────
+// ── Paginated list ────────────────────────────────────────────────────────────
 
 export function useInventoriesPaginated() {
-  const [filter, setFilterState]     = useState({});
+  const [filter, setFilterState]         = useState({});
   const [pagination, setPaginationState] = useState(DEFAULT_PAGINATION);
-  const [toast, setToast]            = useState(null);
+  const [toast, setToast]                = useState(null);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
-  const searchTimer = useRef(null);
+  // No debounce here — FilterBar owns the debounce; this just commits to state
   const setSearchText = useCallback((text) => {
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setFilterState((prev) => ({ ...prev, searchText: text || undefined }));
-      setPaginationState((prev) => ({ ...prev, page: 1 }));
-    }, 300);
+    setFilterState((prev) => ({ ...prev, searchText: text || undefined }));
+    setPaginationState((prev) => ({ ...prev, page: 1 }));
   }, []);
 
+  // condition = tenencia
   const setFilterField = useCallback((field, value) => {
     setFilterState((prev) => ({ ...prev, [field]: value || undefined }));
     setPaginationState((prev) => ({ ...prev, page: 1 }));
@@ -54,7 +53,7 @@ export function useInventoriesPaginated() {
   const pageData   = data?.inventoriesPaginated;
   const items      = pageData?.items  || [];
   const total      = pageData?.total  || 0;
-  const facets     = pageData?.facets || { byStatus: [], byOwnership: [], byInstrument: [] };
+  const facets     = pageData?.facets || { byStatus: [], byCondition: [], byInstrument: [] };
   const totalPages = Math.ceil(total / pagination.limit);
 
   return {
@@ -67,7 +66,7 @@ export function useInventoriesPaginated() {
   };
 }
 
-// ── Stats hook ────────────────────────────────────────────────────────────────
+// ── Stats ─────────────────────────────────────────────────────────────────────
 
 export function useInventoryStats() {
   const { data, loading, refetch } = useQuery(INVENTORY_STATS, {
@@ -81,7 +80,7 @@ export function useInventoryStats() {
   };
 }
 
-// ── Maintenance hook ──────────────────────────────────────────────────────────
+// ── Maintenance ───────────────────────────────────────────────────────────────
 
 export function useInventoryMaintenance(inventoryId) {
   const [toast, setToast] = useState(null);
@@ -96,18 +95,12 @@ export function useInventoryMaintenance(inventoryId) {
   const records = data?.inventoryMaintenanceHistory || [];
 
   const [addRecord, { loading: adding }] = useMutation(ADD_MAINTENANCE_RECORD, {
-    onCompleted: () => {
-      showToast("Mantenimiento registrado correctamente");
-      refetch();
-    },
+    onCompleted: () => { showToast("Mantenimiento registrado"); refetch(); },
     onError: (e) => showToast(e.message, "error"),
   });
 
   const [deleteRecord, { loading: deleting }] = useMutation(DELETE_MAINTENANCE_RECORD, {
-    onCompleted: () => {
-      showToast("Registro eliminado");
-      refetch();
-    },
+    onCompleted: () => { showToast("Registro eliminado"); refetch(); },
     onError: (e) => showToast(e.message, "error"),
   });
 
@@ -120,11 +113,23 @@ export function useInventoryMaintenance(inventoryId) {
     await deleteRecord({ variables: { id } });
   }, [deleteRecord]);
 
-  return {
-    records, loading,
-    adding, deleting,
-    handleAdd, handleDelete,
-    toast, setToast,
-    refetch,
-  };
+  return { records, loading, adding, deleting, handleAdd, handleDelete, toast, setToast, refetch };
+}
+
+// ── Admin cleanup ─────────────────────────────────────────────────────────────
+
+export function useAdminCleanup() {
+  const [cleanup, { loading }] = useMutation(ADMIN_CLEANUP_INVENTORIES);
+
+  const dryRun = useCallback(async () => {
+    const { data } = await cleanup({ variables: { dryRun: true } });
+    return data?.adminCleanupInventories;
+  }, [cleanup]);
+
+  const execute = useCallback(async () => {
+    const { data } = await cleanup({ variables: { dryRun: false } });
+    return data?.adminCleanupInventories;
+  }, [cleanup]);
+
+  return { dryRun, execute, loading };
 }
