@@ -80,6 +80,11 @@ import EnsemblesDashboardPage from "layouts/ensembles/EnsemblesDashboardPage";
 import EnsembleControlPage from "layouts/ensembles/EnsembleControlPage";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
+import FormationsPage from "layouts/formations";
+import FormationBuilderPage from "layouts/formations/FormationBuilderPage";
+import FormationDetailPage from "layouts/formations/FormationDetailPage";
+import ViewModuleIcon from "@mui/icons-material/ViewModule";
+
 /**
  * Helpers
  * - Evitan duplicación
@@ -552,6 +557,29 @@ const items = {
       route: "/ensembles/:key/members",
       component: <EnsembleControlPage />,
     }),
+
+  formations: () =>
+    collapse({
+      name: "Formaciones",
+      key: "formations",
+      route: "/formations",
+      icon: muiIcon12(ViewModuleIcon),
+      component: <FormationsPage />,
+    }),
+
+  formationNew: () =>
+    routeOnly({
+      key: "formation-new",
+      route: "/formations/new",
+      component: <FormationBuilderPage />,
+    }),
+
+  formationDetail: () =>
+    routeOnly({
+      key: "formation-detail",
+      route: "/formations/:formationId",
+      component: <FormationDetailPage />,
+    }),
 };
 
 const documentsMenu = () => [
@@ -690,6 +718,12 @@ export const adminRoutes = [
 
   items.tours(),
   items.tourDetail(),
+
+  title("Desfile", "desfile"),
+
+  items.formations(),
+  items.formationNew(),
+  items.formationDetail(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
