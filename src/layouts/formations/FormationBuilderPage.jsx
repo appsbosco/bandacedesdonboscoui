@@ -852,7 +852,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
     try {
       if (isEdit) {
-        await handleUpdate(existingFormation.id, {
+        const updated = await handleUpdate(existingFormation.id, {
           name: formName.trim(),
           notes: formNotes.trim() || null,
           columns,
@@ -862,7 +862,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
           slots: slotInput,
           zoneMemberCounts,
         });
-        setSaveToast({ message: "Formación actualizada", type: "success" });
+        if (updated) setSaveToast({ message: "Formación actualizada", type: "success" });
       } else {
         const created = await handleCreate({
           name: formName.trim(),

@@ -306,7 +306,6 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
     <h1 style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;
       margin-bottom:6px;">${formName || "Formación"}</h1>
     <div style="display:flex;flex-wrap:wrap;gap:16px;">
-      <span style="font-size:11px;color:#475569;">📅 ${dateLabel}</span>
       <span style="font-size:11px;color:#475569;">📐 ${typeLabel}</span>
       <span style="font-size:11px;color:#475569;">🎵 ${totalMembers} músicos · ${columns} columnas</span>
     </div>

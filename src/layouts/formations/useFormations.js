@@ -157,9 +157,7 @@ export function useFormationBuilder() {
     onError: (e) => showToast(e.message, "error"),
   });
 
-  const [updateFormation, { loading: updating }] = useMutation(UPDATE_FORMATION, {
-    onError: (e) => showToast(e.message, "error"),
-  });
+  const [updateFormation, { loading: updating }] = useMutation(UPDATE_FORMATION);
 
   const handleCreate = useCallback(
     async (input) => {
@@ -171,10 +169,15 @@ export function useFormationBuilder() {
 
   const handleUpdate = useCallback(
     async (id, input) => {
-      const { data } = await updateFormation({ variables: { id, input } });
-      return data?.updateFormation;
+      try {
+        const { data } = await updateFormation({ variables: { id, input } });
+        return data?.updateFormation;
+      } catch (e) {
+        showToast(e.message || "No se pudo actualizar la formación", "error");
+        return null;
+      }
     },
-    [updateFormation]
+    [updateFormation, showToast]
   );
 
   return {
