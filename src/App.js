@@ -180,6 +180,11 @@ const sectionRoutes = [
   { type: "title", title: "Asistencia", key: "section-attendance-pages" },
   ...attendanceRoutes,
 
+  // Formations: Principals can view/save step 4 (read-only config, full grid)
+  { type: "title", title: "Formaciones", key: "section-formations-pages" },
+  findRouteByKey(adminRoutes, "formations"),
+  findRouteByKey(adminRoutes, "formation-detail"),
+
   findRouteByKey(membersRoutes, "almuerzos-pages"),
   findRouteByKey(membersRoutes, "almuerzos"),
 

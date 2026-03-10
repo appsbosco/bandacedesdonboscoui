@@ -25,6 +25,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@apollo/client";
 import FormationGrid from "./FormationGrid.jsx";
 import { useFormationUsers, useFormationBuilder, useFormationTemplates } from "./useFormations.js";
 import {
@@ -32,14 +33,18 @@ import {
   ZONE_POOL_SECTIONS,
   DEFAULT_ZONE_ORDERS,
   DEFAULT_ZONE_COLUMNS,
+  DEFAULT_ZONE_ROWS,
   INDEPENDENT_COLUMN_ZONES,
   SECTION_LABEL,
   buildZones,
   computeFormation,
 } from "./formationEngine.js";
 import { openFormationPrint } from "./formationPrint.js";
+import { GET_USERS_BY_ID } from "graphql/queries";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+
+const FORMATION_ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector", "Dirección Logística"]);
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
@@ -232,42 +237,93 @@ const ZONE_COLUMN_PRESETS = {
   PERCUSION: [4, 5, 6, 7, 8],
   FINAL: [2, 3, 4, 5, 6],
 };
+const ZONE_ROW_PRESETS = {
+  FRENTE_ESPECIAL: [1, 2, 3, 4],
+  PERCUSION: [2, 3, 4, 5, 6],
+  FINAL: [1, 2, 3, 4],
+};
 const ZONE_COLUMNS_LABEL = {
   FRENTE_ESPECIAL: "Danza",
   PERCUSION: "Percusión",
   FINAL: "Color Guard",
 };
 
-function ZoneColumnsRow({ zone, value, onChange }) {
-  const presets = ZONE_COLUMN_PRESETS[zone] || [2, 3, 4, 5, 6];
+function ZoneLayoutRow({ zone, cols, rows, onChangeCols, onChangeRows }) {
+  const colPresets = ZONE_COLUMN_PRESETS[zone] || [2, 3, 4, 5, 6];
+  const rowPresets = ZONE_ROW_PRESETS[zone] || [1, 2, 3, 4];
   const label = ZONE_COLUMNS_LABEL[zone] || zone;
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-b-0">
-      <span className="w-28 text-sm text-slate-600 shrink-0">{label}</span>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {presets.map((n) => (
+    <div className="py-3 border-b border-slate-50 last:border-b-0 space-y-2">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-slate-400 w-14 shrink-0">Columnas</span>
+          {colPresets.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChangeCols(zone, n)}
+              className={[
+                "w-8 h-8 rounded-lg border text-xs font-semibold transition-colors",
+                cols === n
+                  ? "bg-black border-indigo-600 text-white"
+                  : "border-slate-300 text-slate-600 hover:border-indigo-400",
+              ].join(" ")}
+            >
+              {n}
+            </button>
+          ))}
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={cols}
+            onChange={(e) => onChangeCols(zone, Math.max(1, Number(e.target.value)))}
+            className="w-14 border border-slate-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-slate-400 w-14 shrink-0">Filas</span>
           <button
-            key={n}
             type="button"
-            onClick={() => onChange(zone, n)}
+            onClick={() => onChangeRows(zone, null)}
             className={[
-              "w-8 h-8 rounded-lg border text-xs font-semibold transition-colors",
-              value === n
+              "px-2 h-8 rounded-lg border text-xs font-semibold transition-colors",
+              rows == null
                 ? "bg-black border-indigo-600 text-white"
                 : "border-slate-300 text-slate-600 hover:border-indigo-400",
             ].join(" ")}
           >
-            {n}
+            Auto
           </button>
-        ))}
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={value}
-          onChange={(e) => onChange(zone, Math.max(1, Number(e.target.value)))}
-          className="w-14 border border-slate-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
+          {rowPresets.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChangeRows(zone, n)}
+              className={[
+                "w-8 h-8 rounded-lg border text-xs font-semibold transition-colors",
+                rows === n
+                  ? "bg-black border-indigo-600 text-white"
+                  : "border-slate-300 text-slate-600 hover:border-indigo-400",
+              ].join(" ")}
+            >
+              {n}
+            </button>
+          ))}
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={rows ?? ""}
+            placeholder="Auto"
+            onChange={(e) => {
+              const v = e.target.value;
+              onChangeRows(zone, v === "" ? null : Math.max(1, Number(v)));
+            }}
+            className="w-14 border border-slate-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+        </div>
       </div>
     </div>
   );
@@ -284,6 +340,8 @@ function StepConfig({
   setColumns,
   zoneColumns,
   onChangeZoneColumns,
+  zoneRows,
+  onChangeZoneRows,
   templates,
   onLoadTemplate,
   onNext,
@@ -375,30 +433,29 @@ function StepConfig({
         </div>
       </div>
 
-      {/* Independent zone columns */}
+      {/* Independent zone layout (columns + rows) */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-2">
-          Columnas independientes
+          Grilla independiente
           <span className="ml-1 font-normal text-slate-400">
-            — Danza, Percusión y Color Guard tienen su propia grilla
+            — Danza, Percusión y Color Guard tienen columnas y filas propias
           </span>
         </label>
         <div className="border border-slate-200 rounded-xl overflow-hidden">
           <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
             <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
-              Zona
-            </span>
-            <span className="ml-4 text-xs text-slate-400 uppercase tracking-wide font-semibold">
-              Columnas
+              Zona · Columnas · Filas
             </span>
           </div>
           <div className="px-4">
             {INDEPENDENT_COLUMN_ZONES.map((zone) => (
-              <ZoneColumnsRow
+              <ZoneLayoutRow
                 key={zone}
                 zone={zone}
-                value={zoneColumns[zone] ?? DEFAULT_ZONE_COLUMNS[zone]}
-                onChange={onChangeZoneColumns}
+                cols={zoneColumns[zone] ?? DEFAULT_ZONE_COLUMNS[zone]}
+                rows={zoneRows[zone] ?? DEFAULT_ZONE_ROWS[zone]}
+                onChangeCols={onChangeZoneColumns}
+                onChangeRows={onChangeZoneRows}
               />
             ))}
           </div>
@@ -602,6 +659,11 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   const navigate = useNavigate();
   const isEdit = !!existingFormation;
 
+  // Role-based access: only admins can navigate between steps
+  const { data: userData } = useQuery(GET_USERS_BY_ID);
+  const userRole = userData?.getUser?.role;
+  const isAdmin = FORMATION_ADMIN_ROLES.has(userRole);
+
   const { sections, unmapped, loading: loadingUsers, loadUsers } = useFormationUsers();
   const {
     handleCreate,
@@ -615,6 +677,12 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   // ── Global state ──────────────────────────────────────────────────────────
 
   const [step, setStep] = useState(isEdit ? 4 : 1);
+
+  // Once role resolves, restrict non-admins to step 4 only
+  useEffect(() => {
+    if (userRole && !isAdmin) setStep(4);
+  }, [userRole, isAdmin]);
+
   const [formName, setFormName] = useState(existingFormation?.name || "");
   const [formType, setFormType] = useState(existingFormation?.type || "SINGLE");
   const [columns, setColumns] = useState(existingFormation?.columns ?? 8);
@@ -644,6 +712,21 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
   const handleZoneColumnsChange = useCallback((zone, value) => {
     setZoneColumns((prev) => ({ ...prev, [zone]: value }));
+  }, []);
+
+  // Per-zone row overrides for Danza, Percusión, Color Guard (null = auto)
+  const [zoneRows, setZoneRows] = useState(() => {
+    const base = { ...DEFAULT_ZONE_ROWS };
+    if (isEdit && existingFormation?.zoneColumns?.length) {
+      for (const zc of existingFormation.zoneColumns) {
+        if (zc.rows != null) base[zc.zone] = zc.rows;
+      }
+    }
+    return base;
+  });
+
+  const handleZoneRowsChange = useCallback((zone, value) => {
+    setZoneRows((prev) => ({ ...prev, [zone]: value }));
   }, []);
 
   // Excluded user IDs for this formation
@@ -688,6 +771,13 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
           for (const zc of tpl.zoneColumns) next[zc.zone] = zc.columns;
           return next;
         });
+        setZoneRows((prev) => {
+          const next = { ...prev };
+          for (const zc of tpl.zoneColumns) {
+            if (zc.rows != null) next[zc.zone] = zc.rows;
+          }
+          return next;
+        });
       }
     },
     [templates]
@@ -717,11 +807,12 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       zoneData,
       columns,
       zoneColumns,
-      existingSlots: isEdit ? slots : [],
+      zoneRows,
+      existingSlots: slots, // always preserve locks regardless of isEdit
     });
     setSlots(computed);
     setStep(4);
-  }, [zoneOrders, sections, excluded, formType, columns, zoneColumns, isEdit, slots]);
+  }, [zoneOrders, sections, excluded, formType, columns, zoneColumns, zoneRows, slots]);
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -746,6 +837,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     const zoneColumnsInput = Object.entries(zoneColumns).map(([zone, cols]) => ({
       zone,
       columns: cols,
+      ...(zoneRows[zone] != null ? { rows: zoneRows[zone] } : {}),
     }));
 
     const slotInput = slots.map((s) => ({
@@ -847,7 +939,8 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
           )}
         </div>
 
-        {/* Step progress */}
+        {/* Step progress — only admins see the full wizard stepper */}
+        {isAdmin && (
         <div className="max-w-6xl mx-auto mb-8 px-1">
           <div className="flex items-center gap-0">
             {STEPS.map(({ n, label }, idx) => (
@@ -903,10 +996,11 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
             ))}
           </div>
         </div>
+        )}
 
         {/* Step content */}
         <div className="max-w-6xl mx-auto bg-white rounded-2xl border border-slate-200 p-6">
-          {step === 1 && (
+          {step === 1 && isAdmin && (
             <StepConfig
               formName={formName}
               setFormName={setFormName}
@@ -916,13 +1010,15 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
               setColumns={setColumns}
               zoneColumns={zoneColumns}
               onChangeZoneColumns={handleZoneColumnsChange}
+              zoneRows={zoneRows}
+              onChangeZoneRows={handleZoneRowsChange}
               templates={templates}
               onLoadTemplate={handleLoadTemplate}
               onNext={handleGoToStep2}
             />
           )}
 
-          {step === 2 && (
+          {step === 2 && isAdmin && (
             <>
               <div className="flex items-center gap-3 mb-4">
                 <StepBadge n={2} active done={false} />
@@ -940,7 +1036,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
             </>
           )}
 
-          {step === 3 && (
+          {step === 3 && isAdmin && (
             <>
               <div className="flex items-center gap-3 mb-4">
                 <StepBadge n={3} active done={false} />
@@ -1018,7 +1114,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
               </div>
 
               <div className="mt-4 flex items-center gap-2 flex-wrap">
-                {!isEdit && (
+                {isAdmin && !isEdit && (
                   <button
                     onClick={() => setStep(3)}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
@@ -1026,13 +1122,15 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                     ← Exclusiones
                   </button>
                 )}
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
-                >
-                  ← Orden de zonas
-                </button>
-                {sections.length > 0 && (
+                {isAdmin && (
+                  <button
+                    onClick={() => setStep(2)}
+                    className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
+                  >
+                    ← Orden de zonas
+                  </button>
+                )}
+                {isAdmin && sections.length > 0 && (
                   <button
                     onClick={handleComputeGrid}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"

@@ -113,6 +113,16 @@ export const DEFAULT_ZONE_COLUMNS = {
   FINAL:           4,
 };
 
+/**
+ * Default row counts for the independent zones.
+ * null = auto (rows are calculated from member count).
+ */
+export const DEFAULT_ZONE_ROWS = {
+  FRENTE_ESPECIAL: null,
+  PERCUSION:       null,
+  FINAL:           null,
+};
+
 // ── Section catalog ───────────────────────────────────────────────────────────
 
 export const SECTION_LABEL = {
@@ -252,13 +262,17 @@ export function slotKey(slot) {
 /**
  * Fill a grid of `columns` columns with `members` (in order),
  * padding the last row with empty filler slots.
+ * If `explicitRows` is provided, the grid has exactly that many rows regardless
+ * of member count (members that exceed the grid are silently dropped; extra
+ * cells beyond member count are empty fillers).
  * Returns a flat slot array for this zone.
  */
-function fillGrid(zone, members, columns) {
+function fillGrid(zone, members, columns, explicitRows = null) {
   const slots = [];
-  if (!members.length) return slots;
+  if (!members.length && !explicitRows) return slots;
 
-  const rows = Math.ceil(members.length / columns);
+  const autoRows = members.length ? Math.ceil(members.length / columns) : 1;
+  const rows = explicitRows != null ? Math.max(1, explicitRows) : autoRows;
   const totalCells = rows * columns; // may exceed memberCount (last-row padding)
 
   for (let pos = 0; pos < totalCells; pos++) {
@@ -345,7 +359,7 @@ export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
  *
  * @returns {Array} Flat slot list.
  */
-export function computeFormation({ zoneData, columns, zoneColumns = {}, existingSlots = [] }) {
+export function computeFormation({ zoneData, columns, zoneColumns = {}, zoneRows = {}, existingSlots = [] }) {
   // Build lookup of locked positions from existing slots
   const lockedByKey = {};
   const lockedUserIds = new Set();
@@ -359,7 +373,8 @@ export function computeFormation({ zoneData, columns, zoneColumns = {}, existing
   const result = [];
   for (const { zone, members } of zoneData) {
     const effectiveCols = (zoneColumns[zone] != null) ? zoneColumns[zone] : columns;
-    const grid = fillGrid(zone, members, effectiveCols);
+    const effectiveRows = (zoneRows[zone] != null) ? zoneRows[zone] : null;
+    const grid = fillGrid(zone, members, effectiveCols, effectiveRows);
     result.push(...applyLocks(grid, lockedByKey, lockedUserIds));
   }
 

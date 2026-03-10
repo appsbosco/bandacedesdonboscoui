@@ -30,7 +30,7 @@ export const FORMATION_DETAIL = gql`
       columns
       templateId
       zoneOrders { zone sectionOrder }
-      zoneColumns { zone columns }
+      zoneColumns { zone columns rows }
       instrumentMappings { instrument section }
       excludedUserIds
       slots {
@@ -60,7 +60,7 @@ export const FORMATION_TEMPLATES = gql`
       name
       defaultColumns
       zoneOrders { zone sectionOrder }
-      zoneColumns { zone columns }
+      zoneColumns { zone columns rows }
       instrumentMappings { instrument section }
       notes
       createdAt
