@@ -4,57 +4,133 @@
  * Opens a new browser window with a self-contained, print-optimized HTML
  * representation of the formation. No Tailwind dependency — uses inline styles.
  *
+ * Page-break strategy:
+ *   - Slots are grouped by row inside each zone.
+ *   - Each row renders as a flex row with `break-inside: avoid` so the browser
+ *     never cuts a row in half across pages.
+ *   - Zone headers have `break-after: avoid` so they stay attached to the first
+ *     row of their zone and are never left as orphan labels at the bottom of a page.
+ *
  * Usage:
- *   openFormationPrint({ slots, columns, formName, formType })
+ *   openFormationPrint({ slots, columns, zoneColumns, formName, formType })
  */
 
 // ── Color tokens (raw CSS values, mirroring SECTION_COLORS in formationEngine) ─
 
 const PRINT_COLORS = {
-  DRUM_MAJOR: { bg: "#312e81", border: "#1e1b4b", text: "#ffffff" },
-  DANZA: { bg: "#fdf4ff", border: "#d946ef", text: "#4a044e" },
-  TROMBONES: { bg: "#f5f3ff", border: "#a78bfa", text: "#2e1065" },
-  FLAUTAS: { bg: "#eff6ff", border: "#60a5fa", text: "#1e3a8a" },
-  CLARINETES: { bg: "#f0fdfa", border: "#2dd4bf", text: "#134e4a" },
-  SAXOFONES_ALTO: { bg: "#fff7ed", border: "#fb923c", text: "#7c2d12" },
-  SAXOFON_TENOR: { bg: "#fefce8", border: "#facc15", text: "#713f12" },
-  MELOFONOS: { bg: "#f7fee7", border: "#84cc16", text: "#365314" },
+  DRUM_MAJOR:       { bg: "#312e81", border: "#1e1b4b", text: "#ffffff" },
+  DANZA:            { bg: "#fdf4ff", border: "#d946ef", text: "#4a044e" },
+  TROMBONES:        { bg: "#f5f3ff", border: "#a78bfa", text: "#2e1065" },
+  FLAUTAS:          { bg: "#eff6ff", border: "#60a5fa", text: "#1e3a8a" },
+  CLARINETES:       { bg: "#f0fdfa", border: "#2dd4bf", text: "#134e4a" },
+  SAXOFONES_ALTO:   { bg: "#fff7ed", border: "#fb923c", text: "#7c2d12" },
+  SAXOFON_TENOR:    { bg: "#fefce8", border: "#facc15", text: "#713f12" },
+  MELOFONOS:        { bg: "#f7fee7", border: "#84cc16", text: "#365314" },
   SAXOFON_BARITONO: { bg: "#f0fdf4", border: "#4ade80", text: "#14532d" },
-  EUFONIOS: { bg: "#ecfeff", border: "#22d3ee", text: "#164e63" },
-  TROMPETAS: { bg: "#fef2f2", border: "#f87171", text: "#7f1d1d" },
-  TUBAS: { bg: "#f0f9ff", border: "#38bdf8", text: "#0c4a6e" },
-  MALLETS: { bg: "#f5f3ff", border: "#8b5cf6", text: "#2e1065" },
-  PERCUSION: { bg: "#f5f5f4", border: "#a8a29e", text: "#1c1917" },
-  COLOR_GUARD: { bg: "#fff1f2", border: "#fb7185", text: "#881337" },
+  EUFONIOS:         { bg: "#ecfeff", border: "#22d3ee", text: "#164e63" },
+  TROMPETAS:        { bg: "#fef2f2", border: "#f87171", text: "#7f1d1d" },
+  TUBAS:            { bg: "#f0f9ff", border: "#38bdf8", text: "#0c4a6e" },
+  MALLETS:          { bg: "#f5f3ff", border: "#8b5cf6", text: "#2e1065" },
+  PERCUSION:        { bg: "#f5f5f4", border: "#a8a29e", text: "#1c1917" },
+  COLOR_GUARD:      { bg: "#fff1f2", border: "#fb7185", text: "#881337" },
 };
 
 const PRINT_ZONE_LABELS = {
   FRENTE_ESPECIAL: "Frente",
-  BLOQUE_FRENTE: "Bloque del Frente",
-  PERCUSION: "Percusión",
-  BLOQUE_ATRAS: "Bloque de Atrás",
-  FINAL: "Final",
+  BLOQUE_FRENTE:   "Bloque del Frente",
+  PERCUSION:       "Percusión",
+  BLOQUE_ATRAS:    "Bloque de Atrás",
+  FINAL:           "Final",
 };
 
 const PRINT_SECTION_LABELS = {
-  DRUM_MAJOR: "Drum Major",
-  DANZA: "Danza",
-  TROMBONES: "Trombones",
-  FLAUTAS: "Flautas",
-  CLARINETES: "Clarinetes",
-  SAXOFONES_ALTO: "Saxofón Alto",
-  SAXOFON_TENOR: "Saxofón Tenor",
-  MELOFONOS: "Melófonos",
+  DRUM_MAJOR:       "Drum Major",
+  DANZA:            "Danza",
+  TROMBONES:        "Trombones",
+  FLAUTAS:          "Flautas",
+  CLARINETES:       "Clarinetes",
+  SAXOFONES_ALTO:   "Saxofón Alto",
+  SAXOFON_TENOR:    "Saxofón Tenor",
+  MELOFONOS:        "Melófonos",
   SAXOFON_BARITONO: "Saxofón Barítono",
-  EUFONIOS: "Eufonios",
-  TROMPETAS: "Trompetas",
-  TUBAS: "Tubas",
-  MALLETS: "Mallets",
-  PERCUSION: "Percusión",
-  COLOR_GUARD: "Color Guard",
+  EUFONIOS:         "Eufonios",
+  TROMPETAS:        "Trompetas",
+  TUBAS:            "Tubas",
+  MALLETS:          "Mallets",
+  PERCUSION:        "Percusión",
+  COLOR_GUARD:      "Color Guard",
 };
 
-// ── HTML builder ──────────────────────────────────────────────────────────────
+// ── Shared cell HTML ───────────────────────────────────────────────────────────
+
+/**
+ * Render a single slot cell as HTML.
+ * Width is controlled externally by the parent flex row container.
+ */
+function buildCellHTML(slot) {
+  let style, nameColor;
+
+  if (slot.locked) {
+    style = "background:#fffbeb;border-color:#fbbf24;";
+    nameColor = "#92400e";
+  } else if (!slot.userId) {
+    style = "background:#f8fafc;border:1px dashed #e2e8f0;opacity:0.55;";
+    nameColor = "#94a3b8";
+  } else {
+    const c = PRINT_COLORS[slot.section] || { bg: "#f1f5f9", border: "#94a3b8", text: "#1e293b" };
+    style = `background:${c.bg};border-color:${c.border};`;
+    nameColor = c.text;
+  }
+
+  const parts = (slot.displayName || "").trim().split(/\s+/);
+  const line1 = parts[0] || "·";
+  const line2 = parts.length > 1 ? parts.slice(1).join(" ") : null;
+  const lockDot = slot.locked
+    ? `<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f59e0b;"></div>`
+    : "";
+
+  return `<div style="position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;border:1px solid;border-radius:6px;
+  min-height:50px;padding:4px 3px;break-inside:avoid;page-break-inside:avoid;${style}">
+  ${lockDot}
+  <span style="font-size:9px;font-weight:700;line-height:1.3;color:${nameColor};
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line1}</span>
+  ${line2
+    ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
+    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line2}</span>`
+    : ""}
+</div>`;
+}
+
+// ── Row-aware grid HTML ────────────────────────────────────────────────────────
+
+/**
+ * Group slots by their `row` property and render each row as a flex container
+ * with `break-inside: avoid`. This prevents the browser from splitting a row
+ * of cells across a page boundary.
+ *
+ * @param {Array} sortedSlots  Slots pre-sorted by row then col.
+ * @returns {string}           HTML string of stacked flex rows.
+ */
+function buildRowsHTML(sortedSlots) {
+  // Group by row
+  const rowMap = new Map();
+  for (const slot of sortedSlots) {
+    if (!rowMap.has(slot.row)) rowMap.set(slot.row, []);
+    rowMap.get(slot.row).push(slot);
+  }
+
+  return [...rowMap.values()]
+    .map(
+      (rowSlots) =>
+        `<div style="display:flex;gap:3px;margin-bottom:3px;break-inside:avoid;page-break-inside:avoid;">
+  ${rowSlots.map(buildCellHTML).join("")}
+</div>`
+    )
+    .join("");
+}
+
+// ── Zone grid HTML (regular zones) ────────────────────────────────────────────
 
 function buildZoneHTML(zone, slots, columns) {
   const zoneSlots = slots
@@ -63,55 +139,20 @@ function buildZoneHTML(zone, slots, columns) {
 
   if (!zoneSlots.length) return "";
 
-  const cells = zoneSlots
-    .map((slot) => {
-      let style, nameColor;
-
-      if (slot.locked) {
-        style = "background:#fffbeb;border-color:#fbbf24;";
-        nameColor = "#92400e";
-      } else if (!slot.userId) {
-        style = "background:#f8fafc;border:1px dashed #e2e8f0;opacity:0.55;";
-        nameColor = "#94a3b8";
-      } else {
-        const c = PRINT_COLORS[slot.section] || {
-          bg: "#f1f5f9",
-          border: "#94a3b8",
-          text: "#1e293b",
-        };
-        style = `background:${c.bg};border-color:${c.border};`;
-        nameColor = c.text;
-      }
-
-      // Split name into two lines
-      const parts = (slot.displayName || "").trim().split(/\s+/);
-      const line1 = parts[0] || "·";
-      const line2 = parts.length > 1 ? parts.slice(1).join(" ") : null;
-      const lockDot = slot.locked
-        ? `<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f59e0b;"></div>`
-        : "";
-
-      return `
-<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;border:1px solid;border-radius:6px;min-height:50px;padding:4px 3px;${style}">
-  ${lockDot}
-  <span style="font-size:9px;font-weight:700;line-height:1.3;color:${nameColor};
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line1}</span>
-  ${
-    line2
-      ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
-    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line2}</span>`
-      : ""
+  // If slot data has no meaningful row/col (legacy), fall back to chunking by columns
+  const hasRowData = zoneSlots.some((s) => s.row != null);
+  if (!hasRowData) {
+    // Assign virtual rows based on position in sorted array
+    zoneSlots.forEach((s, i) => {
+      s._vrow = Math.floor(i / columns);
+    });
+    zoneSlots.forEach((s) => { s.row = s._vrow; });
   }
-</div>`;
-    })
-    .join("");
 
-  return `
-<div style="display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:3px;">
-  ${cells}
-</div>`;
+  return buildRowsHTML(zoneSlots);
 }
+
+// ── Section legend HTML ────────────────────────────────────────────────────────
 
 function buildSectionLegendHTML(slots) {
   const seen = new Set();
@@ -142,7 +183,7 @@ function buildPercussionZoneHTML(slots, columns) {
 
   if (!zoneSlots.length) return "";
 
-  // Infer section order from first appearance in slot sequence
+  // Infer section order from first appearance
   const seenOrder = [];
   const seenSet = new Set();
   for (const slot of zoneSlots) {
@@ -152,7 +193,7 @@ function buildPercussionZoneHTML(slots, columns) {
     }
   }
 
-  // Group by section; assign null-section fillers to the last section
+  // Group by section; fillers → last section
   const grouped = {};
   for (const sec of seenOrder) grouped[sec] = [];
   const fillers = [];
@@ -177,9 +218,18 @@ function buildPercussionZoneHTML(slots, columns) {
       const c = PRINT_COLORS[sec] || { bg: "#f1f5f9", border: "#94a3b8", text: "#1e293b" };
       const label = PRINT_SECTION_LABELS[sec] || sec;
 
+      // Re-index rows within this sub-group so row numbers are dense (0,1,2,…)
+      // This ensures buildRowsHTML groups them correctly even if rows overlap with
+      // another sub-section's row numbers.
+      const reIndexed = secSlots.map((slot, i) => ({
+        ...slot,
+        row: Math.floor(i / columns),
+        col: i % columns,
+      }));
+
       const subLabel = `<div style="display:flex;align-items:center;gap:8px;margin:${
         idx > 0 ? "10px" : "0"
-      } 0 5px;">
+      } 0 5px;break-after:avoid;page-break-after:avoid;">
   ${idx > 0 ? `<div style="flex:1;height:1px;background:#f1f5f9;"></div>` : ""}
   <span style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
     padding:2px 8px;border-radius:99px;border:1px solid ${c.border};
@@ -187,49 +237,7 @@ function buildPercussionZoneHTML(slots, columns) {
   <div style="flex:1;height:1px;background:#f1f5f9;"></div>
 </div>`;
 
-      const cells = secSlots
-        .map((slot) => {
-          let style, nameColor;
-          if (slot.locked) {
-            style = "background:#fffbeb;border-color:#fbbf24;";
-            nameColor = "#92400e";
-          } else if (!slot.userId) {
-            style = "background:#f8fafc;border:1px dashed #e2e8f0;opacity:0.55;";
-            nameColor = "#94a3b8";
-          } else {
-            const sc = PRINT_COLORS[slot.section] || {
-              bg: "#f1f5f9",
-              border: "#94a3b8",
-              text: "#1e293b",
-            };
-            style = `background:${sc.bg};border-color:${sc.border};`;
-            nameColor = sc.text;
-          }
-          const parts = (slot.displayName || "").trim().split(/\s+/);
-          const line1 = parts[0] || "·";
-          const line2 = parts.length > 1 ? parts.slice(1).join(" ") : null;
-          const lockDot = slot.locked
-            ? `<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f59e0b;"></div>`
-            : "";
-          return `
-<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;border:1px solid;border-radius:6px;min-height:50px;padding:4px 3px;${style}">
-  ${lockDot}
-  <span style="font-size:9px;font-weight:700;line-height:1.3;color:${nameColor};
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line1}</span>
-  ${
-    line2
-      ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
-    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line2}</span>`
-      : ""
-  }
-</div>`;
-        })
-        .join("");
-
-      const grid = `<div style="display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:3px;">${cells}</div>`;
-
-      return subLabel + grid;
+      return subLabel + buildRowsHTML(reIndexed);
     })
     .join("");
 }
@@ -241,10 +249,8 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
   const ZONES_ORDER = ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "BLOQUE_ATRAS", "FINAL"];
   const presentZones = ZONES_ORDER.filter((z) => slots.some((s) => s.zone === z));
   const totalMembers = slots.filter((s) => s.userId).length;
-
   const typeLabel = formType === "DOUBLE" ? "Bloque doble hacia atrás" : "Bloque único";
 
-  // Build zone sections HTML
   const zonesHTML = presentZones
     .map((zone, idx) => {
       const gridHTML =
@@ -253,20 +259,22 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
           : buildZoneHTML(zone, slots, getZoneCols(zone));
       const zoneLabel = PRINT_ZONE_LABELS[zone] || zone;
 
-      const divider =
+      // Zone header — break-after:avoid keeps the label with the first row below it
+      const header =
         idx === 0
-          ? `<div style="text-align:center;margin-bottom:8px;">
+          ? `<div style="text-align:center;margin-bottom:8px;break-after:avoid;page-break-after:avoid;">
            <span style="font-size:9px;font-weight:700;text-transform:uppercase;
              letter-spacing:0.12em;color:#64748b;">${zoneLabel}</span>
          </div>`
-          : `<div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px;">
+          : `<div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px;
+             break-after:avoid;page-break-after:avoid;">
            <div style="flex:1;height:1px;background:#e2e8f0;"></div>
            <span style="font-size:9px;font-weight:700;text-transform:uppercase;
              letter-spacing:0.12em;color:#64748b;white-space:nowrap;">${zoneLabel}</span>
            <div style="flex:1;height:1px;background:#e2e8f0;"></div>
          </div>`;
 
-      return `${divider}${gridHTML}`;
+      return header + gridHTML;
     })
     .join("");
 
@@ -300,7 +308,8 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
 <div class="page">
 
   <!-- Header -->
-  <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px;">
+  <div style="border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:14px;
+    break-inside:avoid;page-break-inside:avoid;">
     <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;
       color:#64748b;margin-bottom:5px;">Banda CEDES Don Bosco · Formación de Desfile</div>
     <h1 style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;
@@ -312,7 +321,8 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
   </div>
 
   <!-- Section legend -->
-  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px;">
+  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px;
+    break-inside:avoid;page-break-inside:avoid;">
     ${legendHTML}
   </div>
 

@@ -2,13 +2,18 @@
 /**
  * FormationGrid.jsx — Premium parade formation renderer.
  *
+ * Interaction model (adaptive by pointer type):
+ *   - Desktop (pointer: fine)  → drag & drop between cells
+ *   - Mobile/tablet (pointer: coarse) → tap-to-select + tap-to-swap
+ *     First tap highlights a cell; second tap on another cell swaps them.
+ *     Tapping the same cell again cancels the selection.
+ *
  * Visual design:
  *   - Two-line name display (firstName / surname) with tooltip for full name.
  *   - Corner pip lock indicator — amber dot when locked, subtle on hover.
  *   - Full-spectrum section color palette, clearly distinguishable.
  *   - Zone dividers with colored accent chip and horizontal rules.
  *   - Fluid CSS grid: minmax(64px, 1fr) adapts from tablet to desktop.
- *   - Drag & drop swaps; locked cells cannot be moved.
  */
 
 import React, { useState } from "react";
@@ -23,12 +28,20 @@ import {
   toggleLock,
 } from "./formationEngine.js";
 
-// ── Name formatter ─────────────────────────────────────────────────────────────
+// ── Touch detection ───────────────────────────────────────────────────────────
 
 /**
- * Split "Nombre Apellido" into { first, last } for two-line display.
- * If the full name fits in ~12 chars, keep it on one line.
+ * Detects whether the primary pointer is coarse (touch/stylus).
+ * Uses matchMedia('pointer: coarse') — device-capability based, not width-based.
+ * Falls back to false (desktop behaviour) when window is not available.
  */
+function detectTouchPointer() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
+// ── Name formatter ─────────────────────────────────────────────────────────────
+
 function splitName(fullName) {
   if (!fullName) return { first: null, last: null };
   const parts = fullName.trim().split(/\s+/);
@@ -48,7 +61,19 @@ const ZONE_ACCENT = {
 
 // ── Slot cell ─────────────────────────────────────────────────────────────────
 
-function SlotCell({ slot, isDragging, onDragStart, onDrop, onToggleLock }) {
+function SlotCell({
+  slot,
+  // desktop
+  isDragging,
+  onDragStart,
+  onDrop,
+  // touch
+  isTouch,
+  isSelected,
+  onTap,
+  // shared
+  onToggleLock,
+}) {
   const key = slotKey(slot);
   const isEmpty = !slot.userId;
   const colors = SECTION_COLORS[slot.section];
@@ -68,21 +93,47 @@ function SlotCell({ slot, isDragging, onDragStart, onDrop, onToggleLock }) {
 
   const { first, last } = splitName(slot.displayName);
 
+  // ── Interaction props (desktop vs touch) ──────────────────────────────────
+  const interactionProps = isTouch
+    ? {
+        // Touch: tap to select / swap
+        onClick: () => {
+          if (!isEmpty && !slot.locked) onTap?.(key, slot);
+        },
+      }
+    : {
+        // Desktop: drag & drop
+        draggable: !slot.locked && !isEmpty,
+        onDragStart: () => !slot.locked && !isEmpty && onDragStart(key),
+        onDragOver: (e) => e.preventDefault(),
+        onDrop: () => onDrop(key),
+      };
+
+  // ── Cursor class ─────────────────────────────────────────────────────────
+  const cursorClass = isTouch
+    ? !isEmpty && !slot.locked
+      ? "cursor-pointer active:brightness-90"
+      : "cursor-default"
+    : !isEmpty && !slot.locked
+    ? "cursor-grab active:cursor-grabbing hover:shadow-md hover:brightness-[0.96]"
+    : "cursor-default";
+
+  // ── Selection ring (touch mode) ──────────────────────────────────────────
+  const selectionRing = isSelected
+    ? "ring-2 ring-indigo-500 ring-offset-1 brightness-95"
+    : "";
+
   return (
     <div
-      draggable={!slot.locked && !isEmpty}
-      onDragStart={() => !slot.locked && !isEmpty && onDragStart(key)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={() => onDrop(key)}
-      title={slot.displayName || (isEmpty ? "" : "")}
+      {...interactionProps}
+      title={slot.displayName || ""}
       className={[
         "group relative flex flex-col items-center justify-center text-center",
         "rounded-lg border select-none transition-all duration-150",
         cellBg,
-        !isEmpty && !slot.locked
-          ? "cursor-grab active:cursor-grabbing hover:shadow-md hover:brightness-[0.96]"
-          : "cursor-default",
+        cursorClass,
         isDragging ? "opacity-25 scale-95 ring-2 ring-indigo-300 ring-offset-1" : "",
+        selectionRing,
         "px-1 py-1.5",
       ].join(" ")}
       style={{ minHeight: 58 }}
@@ -132,6 +183,11 @@ function SlotCell({ slot, isDragging, onDragStart, onDrop, onToggleLock }) {
         </button>
       )}
 
+      {/* Touch: selection indicator badge */}
+      {isTouch && isSelected && (
+        <div className="absolute top-0 left-0 w-2.5 h-2.5 rounded-full bg-indigo-500 m-1" />
+      )}
+
       {isEmpty ? (
         <span className="text-slate-300 text-[11px] leading-none select-none">·</span>
       ) : (
@@ -152,7 +208,11 @@ function SlotCell({ slot, isDragging, onDragStart, onDrop, onToggleLock }) {
 
 // ── Zone grid ─────────────────────────────────────────────────────────────────
 
-function ZoneGrid({ zone, slots, columns, dragging, onDragStart, onDrop, onToggleLock }) {
+function ZoneGrid({
+  zone, slots, columns,
+  isTouch, dragging, selected,
+  onDragStart, onDrop, onToggleLock, onTap,
+}) {
   const zoneSlots = slots
     .filter((s) => s.zone === zone)
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
@@ -173,10 +233,13 @@ function ZoneGrid({ zone, slots, columns, dragging, onDragStart, onDrop, onToggl
           <SlotCell
             key={key}
             slot={slot}
-            isDragging={dragging === key}
+            isTouch={isTouch}
+            isDragging={!isTouch && dragging === key}
+            isSelected={isTouch && selected === key}
             onDragStart={onDragStart}
             onDrop={onDrop}
             onToggleLock={onToggleLock}
+            onTap={onTap}
           />
         );
       })}
@@ -219,7 +282,6 @@ function ZoneDivider({ zone }) {
 // ── Section legend ────────────────────────────────────────────────────────────
 
 function SectionLegend({ slots }) {
-  // Preserve order of first appearance (matches grid top-to-bottom flow)
   const seen = new Set();
   const presentSections = [];
   for (const s of slots) {
@@ -254,24 +316,21 @@ function SectionLegend({ slots }) {
 
 // ── Percussion zone grid (sub-grouped by section) ─────────────────────────────
 
-/**
- * Renders the PERCUSION zone as stacked sub-grids — one per section —
- * each with a subtle section label chip above it.
- * Filler slots (empty, section=null) are appended to the last sub-group.
- */
-function PercussionZoneGrid({ slots, columns, sectionOrder, dragging, onDragStart, onDrop, onToggleLock }) {
+function PercussionZoneGrid({
+  slots, columns, sectionOrder,
+  isTouch, dragging, selected,
+  onDragStart, onDrop, onToggleLock, onTap,
+}) {
   const zoneSlots = slots
     .filter((s) => s.zone === "PERCUSION")
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
 
   if (!zoneSlots.length) return null;
 
-  // Only sections that have at least one real member
   const presentSections = sectionOrder.filter((sec) =>
     zoneSlots.some((s) => s.section === sec)
   );
 
-  // Group by section; fillers (section=null) appended to last present section
   const grouped = {};
   for (const sec of presentSections) grouped[sec] = [];
   const fillers = [];
@@ -297,7 +356,6 @@ function PercussionZoneGrid({ slots, columns, sectionOrder, dragging, onDragStar
 
         return (
           <div key={sec}>
-            {/* Sub-section label — centered chip with flanking lines */}
             <div className="flex items-center gap-2 mb-1.5">
               {idx > 0 && <div className="flex-1 h-px bg-slate-100" />}
               <span
@@ -310,7 +368,6 @@ function PercussionZoneGrid({ slots, columns, sectionOrder, dragging, onDragStar
               <div className="flex-1 h-px bg-slate-100" />
             </div>
 
-            {/* Sub-grid */}
             <div
               style={{
                 display: "grid",
@@ -324,10 +381,13 @@ function PercussionZoneGrid({ slots, columns, sectionOrder, dragging, onDragStar
                   <SlotCell
                     key={key}
                     slot={slot}
-                    isDragging={dragging === key}
+                    isTouch={isTouch}
+                    isDragging={!isTouch && dragging === key}
+                    isSelected={isTouch && selected === key}
                     onDragStart={onDragStart}
                     onDrop={onDrop}
                     onToggleLock={onToggleLock}
+                    onTap={onTap}
                   />
                 );
               })}
@@ -339,11 +399,43 @@ function PercussionZoneGrid({ slots, columns, sectionOrder, dragging, onDragStar
   );
 }
 
+// ── Touch selection banner ────────────────────────────────────────────────────
+
+function TouchSelectionBanner({ selectedKey, slots, onCancel }) {
+  if (!selectedKey) return null;
+  const slot = slots.find((s) => slotKey(s) === selectedKey);
+  if (!slot) return null;
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 mb-3 rounded-xl bg-indigo-50 border border-indigo-200">
+      <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+      <span className="text-xs text-indigo-700 font-medium flex-1 truncate">
+        Seleccionado: <strong>{slot.displayName}</strong> — tocá otra celda para mover
+      </span>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="text-xs text-indigo-400 hover:text-indigo-700 font-semibold px-2 py-0.5 rounded-lg hover:bg-indigo-100 transition-colors"
+      >
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
 // ── Main grid ─────────────────────────────────────────────────────────────────
 
 export default function FormationGrid({ slots, columns, zoneColumns, onChange, readOnly, zoneOrders }) {
+  // Detect touch pointer once on mount (stable across renders)
+  const [isTouch] = useState(detectTouchPointer);
+
+  // Desktop: track dragging key
   const [dragging, setDragging] = useState(null);
 
+  // Touch: track selected key
+  const [selected, setSelected] = useState(null);
+
+  // ── Desktop handlers ────────────────────────────────────────────────────
   const handleDragStart = (key) => {
     if (!readOnly) setDragging(key);
   };
@@ -355,6 +447,21 @@ export default function FormationGrid({ slots, columns, zoneColumns, onChange, r
     onChange?.(swapSlots(slots, dragging, key));
     setDragging(null);
   };
+
+  // ── Touch handlers ──────────────────────────────────────────────────────
+  const handleTap = (key, slot) => {
+    if (readOnly || slot.locked || !slot.userId) return;
+    if (!selected) {
+      setSelected(key);
+    } else if (selected === key) {
+      setSelected(null);
+    } else {
+      onChange?.(swapSlots(slots, selected, key));
+      setSelected(null);
+    }
+  };
+
+  // ── Shared ──────────────────────────────────────────────────────────────
   const handleToggleLock = (key) => {
     if (!readOnly) onChange?.(toggleLock(slots, key));
   };
@@ -373,16 +480,18 @@ export default function FormationGrid({ slots, columns, zoneColumns, onChange, r
   const percussionOrder =
     (zoneOrders && zoneOrders["PERCUSION"]) || DEFAULT_ZONE_ORDERS.PERCUSION;
 
-  /** Returns the column count to use for a given zone. */
   const getZoneCols = (zone) =>
     zoneColumns && zoneColumns[zone] != null ? zoneColumns[zone] : columns;
 
   const sharedHandlers = {
     slots,
+    isTouch,
     dragging,
+    selected,
     onDragStart: handleDragStart,
     onDrop: handleDrop,
     onToggleLock: handleToggleLock,
+    onTap: handleTap,
   };
 
   return (
@@ -390,18 +499,23 @@ export default function FormationGrid({ slots, columns, zoneColumns, onChange, r
       <div className="min-w-fit p-5 space-y-0.5">
         <SectionLegend slots={slots} />
 
+        {/* Touch: selection status banner */}
+        {isTouch && !readOnly && (
+          <TouchSelectionBanner
+            selectedKey={selected}
+            slots={slots}
+            onCancel={() => setSelected(null)}
+          />
+        )}
+
         {presentZones.map((zone, idx) => (
           <div key={zone}>
             {idx === 0 ? <ZoneFirstHeader zone={zone} /> : <ZoneDivider zone={zone} />}
             {zone === "PERCUSION" ? (
               <PercussionZoneGrid
-                slots={slots}
                 columns={getZoneCols("PERCUSION")}
                 sectionOrder={percussionOrder}
-                dragging={dragging}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-                onToggleLock={handleToggleLock}
+                {...sharedHandlers}
               />
             ) : (
               <ZoneGrid zone={zone} columns={getZoneCols(zone)} {...sharedHandlers} />
@@ -412,7 +526,9 @@ export default function FormationGrid({ slots, columns, zoneColumns, onChange, r
         {/* Hint */}
         {!readOnly && (
           <p className="text-center text-[9px] text-black pt-4 tracking-wide">
-            Arrastrá celdas para mover
+            {isTouch
+              ? "Tocá una celda para seleccionarla · Tocá otra para mover · 🔓 para bloquear"
+              : "Arrastrá celdas para mover · 🔓 para bloquear"}
           </p>
         )}
       </div>
