@@ -1,37 +1,35 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "App";
 import { ApolloProvider } from "@apollo/client";
-
-// Banda CEDES Don Bosco Context Provider
-import { SoftUIControllerProvider } from "context";
-import client from "config/apollo";
-
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UserProvider } from "./UserContext";
-import MetaTagProvider from "MetaTagProvider";
-import "./i18n";
+
+import client from "config/apollo";
+import { SoftUIControllerProvider } from "context";
 import { ToastProvider } from "components/ui/Toast";
+import MetaTagProvider from "MetaTagProvider";
+import { UserProvider } from "./UserContext";
+import App from "App";
+import "./i18n";
 
-const rootElement = document.getElementById("root");
-
-const renderApp = () => (
+// ApolloProvider sube al nivel más alto para que UserProvider
+// pueda consumir el cache sin un segundo client context.
+// ToastProvider y SoftUIControllerProvider no dependen de Apollo
+// y no se re-renderizan por queries.
+createRoot(document.getElementById("root")).render(
   <BrowserRouter>
-    <MetaTagProvider>
-      <SoftUIControllerProvider>
-        <ToastProvider>
-          <ApolloProvider client={client}>
+    <ApolloProvider client={client}>
+      <MetaTagProvider>
+        <SoftUIControllerProvider>
+          <ToastProvider>
             <UserProvider>
               <App />
             </UserProvider>
             <ToastContainer />
-          </ApolloProvider>
-        </ToastProvider>
-      </SoftUIControllerProvider>
-    </MetaTagProvider>
+          </ToastProvider>
+        </SoftUIControllerProvider>
+      </MetaTagProvider>
+    </ApolloProvider>
   </BrowserRouter>
 );
-
-createRoot(rootElement).render(renderApp());
