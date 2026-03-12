@@ -1,329 +1,394 @@
-/**
-=========================================================
-* Banda CEDES Don Bosco - v4.0.0
-=========================================================
+/* eslint-disable react/prop-types */
 
-* Product Page: https://bandacedesdonbosco.com
-* Copyright 2022 Banda CEDES Don Bosco(https://www.bandacedesdonbosco.com)
-
-Coded by Josué Chinchilla Salazar
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useMutation } from "@apollo/client";
+import { AUTH_USER, REQUEST_RESET_MUTATION } from "graphql/mutations";
+import UserContext from "UserContext";
+import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
+import cover from "../../../assets/images/cover.webp";
 import "../../../styles.css";
 import "../../../main.css";
-import { LazyLoadImage } from "react-lazy-load-image-component";
+import logoBcdb from "../../../assets/images/logo-bcdb.webp";
 
-// react-router-dom components
+// ─── Reusable field ───────────────────────────────────────────────────────────
 
-// @mui material components
+function Field({ label, error, children }) {
+  return (
+    <div className="flex flex-col">
+      <label className="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-widest relative z-10">
+        {label}
+      </label>
 
-// Banda CEDES Don Bosco components
-import SoftBox from "components/SoftBox";
-import SoftTypography from "components/SoftTypography";
-// Authentication layout components
-import CoverLayout from "layouts/authentication/components/CoverLayout";
+      <div className="relative z-0">{children}</div>
 
-// Images
-import { gql, useMutation } from "@apollo/client";
-import curved9 from "assets/images/curved-images/curved-6.webp";
-import * as yup from "yup";
-import InputField from "../components/InputField";
-import MultiStepForm, { FormStep } from "../components/MultiStepForm";
-import { useContext } from "react";
-import UserContext from "UserContext";
-import Header from "components/Header";
-import cover from "../../../assets/images/about.webp";
-import { AUTH_USER } from "graphql/mutations";
-import login from "../../../assets/images/log-in.webp";
-import loginerror from "../../../assets/images/loginerror.webp";
-import { REQUEST_RESET_MUTATION } from "graphql/mutations";
-import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
+      {error && (
+        <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+          <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function TextInput({ icon, type = "text", className = "", ...props }) {
+  const [show, setShow] = useState(false);
+  const isPassword = type === "password";
+  const isDate = type === "date";
+
+  return (
+    <div className="relative">
+      {icon && !isDate && (
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
+          {icon}
+        </div>
+      )}
+
+      <input
+        type={isPassword ? (show ? "text" : "password") : type}
+        {...props}
+        className={`block relative z-20 w-full bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400
+          focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white
+          hover:border-slate-300 transition-all duration-150 py-3
+          ${icon && !isDate ? "pl-10 pr-4" : "px-4"}
+          ${isPassword ? "pr-11" : ""}
+          ${className}`}
+      />
+
+      {isPassword && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setShow((s) => !s)}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors z-30"
+        >
+          {show ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"
+              />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Toast notification ───────────────────────────────────────────────────────
+
+function Toast({ type, message, onDismiss }) {
+  if (!message) return null;
+  const isSuccess = type === "success";
+  return (
+    <div
+      className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300
+      ${
+        isSuccess
+          ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+          : "bg-red-50 border-red-200 text-red-800"
+      }`}
+    >
+      <div
+        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+        ${isSuccess ? "bg-emerald-500" : "bg-red-500"}`}
+      >
+        {isSuccess ? (
+          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        ) : (
+          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        )}
+      </div>
+      <span className="flex-1 leading-relaxed">{message}</span>
+      <button
+        onClick={onDismiss}
+        className="text-current opacity-50 hover:opacity-80 transition-opacity"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ─── SignIn ───────────────────────────────────────────────────────────────────
 
 const SignIn = () => {
-  useEffect(() => {
-    const meta = document.createElement("meta");
-    meta.name = "viewport";
-    meta.content = "width=device-width, initial-scale=1, maximum-scale=1";
-    document.head.appendChild(meta);
-
-    return () => {
-      document.head.removeChild(meta);
-    };
-  }, []);
+  const navigate = useNavigate();
+  const { refreshUserData } = useContext(UserContext);
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState(null); // { type, message }
+  const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+
+  const [authUser] = useMutation(AUTH_USER);
   const [requestReset] = useMutation(REQUEST_RESET_MUTATION);
 
-  const [showModal, setShowModal] = useState(false);
+  const showToast = (type, message, duration = 4000) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), duration);
+  };
 
-  const closeModal = () => {
-    setShowModal(false);
+  const validate = () => {
+    const errs = {};
+    if (!email.trim()) errs.email = "El correo es requerido";
+    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = "Correo no válido";
+    if (!password) errs.password = "La contraseña es requerida";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      const { data } = await authUser({ variables: { input: { email, password } } });
+      const { token } = data.authUser;
+      localStorage.setItem("token", token);
+      showToast("success", "¡Bienvenido! Redirigiendo…");
+      refreshUserData();
+      setTimeout(() => navigate("/dashboard"), 1500);
+    } catch (err) {
+      showToast("error", err.message.replace("GraphQL error: ", ""));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = async () => {
     try {
       await requestReset({ variables: { email } });
-      alert("If that email exists, a password reset link has been sent.");
-    } catch (error) {
-      // alert("Error sending reset link. Try again.");
+      showToast("success", "Si ese correo existe, recibirás un enlace de recuperación.");
+    } catch (_) {
+      showToast("success", "Si ese correo existe, recibirás un enlace de recuperación.");
     }
   };
-
-  const { refreshUserData } = useContext(UserContext);
-
-  // Use navigate to redirect user to sign in page
-  const navigate = useNavigate();
-
-  // State to show error message
-  const [message, setMessage] = useState(null);
-
-  // Mutation to authenticate user
-  const [authUser] = useMutation(AUTH_USER);
-
-  const showMessage = () => {
-    let imageSource = message !== "Autenticado correctamente. ¡Bienvenido!" ? loginerror : login;
-
-    return (
-      <div
-        style={{
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: "9999",
-          backgroundColor: "#ffffff",
-          padding: "20px",
-          textAlign: "center",
-          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-          borderRadius: "8px",
-          maxWidth: "90%",
-          width: "400px",
-        }}
-      >
-        <div className="container">
-          <div className="content" id="popup">
-            <img
-              src={imageSource}
-              alt="Banda CEDES Don Bosco"
-              style={{ width: "60%", display: "block", margin: "0 auto", marginBottom: "1rem" }}
-            />
-            <p style={{ marginBottom: "1rem" }}>{message}</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const validationSchema = yup.object().shape({
-    email: yup.string().email("Email no válido").required("Campo obligatorio"),
-    password: yup.string().required("Campo obligatorio"),
-  });
-
-  useEffect(() => {
-    let timeoutId = null;
-    if (message) {
-      timeoutId = setTimeout(() => {
-        setMessage(null);
-      }, 4000);
-    }
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [message]);
 
   return (
-    <>
-      <Header />
-      <section className="relative py-20 overflow-hidden lg:py-24">
-        <svg
-          width="1728"
-          height="894"
-          viewBox="0 0 1728 894"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="absolute inset-x-0 w-auto top-56 lg:inset-y-0"
-        >
-          <g clipPath="url(#clip0_8_95)">
-            <g opacity="0.6" filter="url(#filter0_f_8_95)">
-              <path
-                d="M201.4 582.997H330V342.155L23 501.52L201.4 582.997Z"
-                fill="#60A5FA"
-                fillOpacity="0.45"
-              />
-              <path
-                d="M330 342.155V284H90H-70L23 501.52L330 342.155Z"
-                fill="#7DD3FC"
-                fillOpacity="0.8"
-              />
-              <path
-                d="M-70 582.997H201.4L23 501.52L-70 284V582.997Z"
-                fill="#F0FDFA"
-                fillOpacity="0.5"
-              />
-            </g>
-          </g>
-          <defs>
-            <filter
-              id="filter0_f_8_95"
-              x="-370"
-              y="-16"
-              width="1000"
-              height="898.997"
-              filterUnits="userSpaceOnUse"
-              colorInterpolationFilters="sRGB"
-            >
-              <feFlood floodOpacity="0" result="BackgroundImageFix" />
-              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-              <feGaussianBlur stdDeviation="150" result="effect1_foregroundBlur_8_95" />
-            </filter>
-            <clipPath id="clip0_8_95">
-              <rect width="1728" height="894" fill="white" />
-            </clipPath>
-          </defs>
-        </svg>
+    <div className="min-h-screen bg-white flex">
+      {/* ── Left panel: form ── */}
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-16 max-w-xl">
+        {/* Logo / brand */}
+        <div className="mb-10">
+          <Link to="/" className="inline-flex items-center gap-3 group">
+            <img
+              src={logoBcdb}
+              alt="Logo Banda CEDES Don Bosco"
+              className="h-20 w-auto sm:h-24 object-contain"
+              loading="eager"
+              decoding="async"
+            />
+          </Link>
+        </div>
 
-        <div className="relative z-10 grid items-center max-w-screen-xl gap-16 px-5 mx-auto sm:px-6 lg:px-8 lg:grid-cols-2 lg:gap-8">
-          <div className="flex flex-col items-center max-w-2xl mx-auto lg:items-start">
-            <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl lg:text-left">
-              <span className="relative whitespace-nowrap">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="249"
-                  height="22"
-                  viewBox="0 0 249 22"
-                  fill="currentColor"
-                  className="absolute top-2/3 left-0 h-[0.6em] w-full fill-sky-200/75"
-                >
-                  <path d="M247.564 18.5807C241.772 13.3568 232.473 12.7526 225.225 11.4427C217.124 9.97395 208.996 8.57031 200.846 7.46093C186.542 5.51302 172.169 4.08854 157.79 3.01562C126.033 0.645827 94.0929 0.0338481 62.3387 2.36979C42.1785 3.85416 22.008 5.90885 2.32917 10.8463C-0.0155171 11.4349 0.207047 14.6719 2.6889 14.7083C22.0261 14.9896 41.3866 12.6406 60.7109 11.8568C79.9471 11.0807 99.2274 10.6719 118.484 10.9557C142.604 11.3125 166.719 12.8333 190.722 15.5156C199.956 16.5469 209.195 17.6016 218.411 18.8255C227.864 20.0807 237.259 22 246.767 20.7422C247.709 20.6198 248.426 19.3568 247.564 18.5807Z" />
+        {/* Heading */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight">
+            Bienvenido de vuelta
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+            Ingresá tus datos para acceder al sistema de la Banda CEDES Don Bosco.
+          </p>
+        </div>
+
+        {/* Toast */}
+        {toast && (
+          <div className="mb-5">
+            <Toast type={toast.type} message={toast.message} onDismiss={() => setToast(null)} />
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <Field label="Correo electrónico" error={errors.email}>
+            <TextInput
+              type="email"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setErrors((p) => ({ ...p, email: undefined }));
+              }}
+              autoComplete="email"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
                 </svg>
-                <span className="relative">Iniciar </span>
-              </span>
-              sesión{" "}
-            </h1>
-            <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left mb-6">
-              Ingrese los datos a continuación para ingresar al sistema.
-            </p>
+              }
+            />
+          </Field>
 
-            {message && showMessage()}
-            <div className="w-full max-w-lg">
-              <MultiStepForm
-                initialValues={{
-                  email: "",
-                  password: "",
-                }}
-                onSubmit={async (values) => {
-                  try {
-                    const { email, password } = values;
+          <Field label="Contraseña" error={errors.password}>
+            <TextInput
+              type="password"
+              placeholder="Tu contraseña"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setErrors((p) => ({ ...p, password: undefined }));
+              }}
+              autoComplete="current-password"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              }
+            />
+          </Field>
 
-                    // Authenticate user
-                    const { data } = await authUser({
-                      variables: {
-                        input: {
-                          email,
-                          password,
-                        },
-                      },
-                    });
-
-                    // User registered successfully
-                    setMessage(`Autenticado correctamente. ¡Bienvenido!`);
-
-                    // Save token in local storage
-                    const { token } = data.authUser;
-                    localStorage.setItem("token", token);
-
-                    //  Redirect to the login page
-                    setTimeout(() => {
-                      setMessage(null);
-                      navigate("/dashboard");
-                    }, 2000);
-                  } catch (error) {
-                    setMessage(error.message.replace("GraphQL error: ", ""));
-                    setTimeout(() => {
-                      setMessage(null);
-                    }, 4000);
-                  }
-                  refreshUserData();
-                }}
-              >
-                {/*Account Details */}
-
-                <FormStep stepName="Account Details" validationSchema={validationSchema}>
-                  <div className="space-y-7">
-                    <SoftBox component="form" role="form">
-                      <SoftBox mb={2}>
-                        <SoftBox mb={1} ml={0.5}>
-                          <label
-                            htmlFor="name"
-                            className="block font-medium leading-6 text-md text-slate-900"
-                          >
-                            Correo Electrónico
-                          </label>
-                        </SoftBox>
-                        <InputField name="email" placeholder="Correo Electrónico" />{" "}
-                      </SoftBox>
-
-                      <SoftBox mb={2}>
-                        <SoftBox mb={1} ml={0.5}>
-                          <SoftTypography component="label" variant="caption" fontWeight="bold">
-                            Contraseña
-                          </SoftTypography>
-                        </SoftBox>
-                        <InputField
-                          className="block w-full px-4 py-4 leading-4 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
-                          type="password"
-                          name="password"
-                          placeholder="Contraseña"
-                        />{" "}
-                      </SoftBox>
-
-                      <SoftTypography component="label" variant="caption" fontWeight="bold">
-                        ¿Olvidaste tu contraseña?{" "}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setShowModal(true);
-                          }}
-                        >
-                          Click aquí para recuperar
-                        </button>
-                      </SoftTypography>
-
-                      {showModal && (
-                        <ForgotPasswordModal
-                          open={showModal}
-                          onClose={closeModal}
-                          onSubmit={handleForgotPassword}
-                        />
-                      )}
-                    </SoftBox>
-                  </div>
-                </FormStep>
-              </MultiStepForm>
-            </div>
+          {/* Forgot password */}
+          <div className="flex justify-end -mt-1">
+            <button
+              type="button"
+              onClick={() => setShowForgot(true)}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors underline underline-offset-2"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
 
-          <div className="w-full max-w-lg mx-auto lg:mr-0 hidden lg:block">
-            <div className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50">
-              <LazyLoadImage
-                className="object-cover object-center w-full h-full rounded-2xl"
-                src={cover}
-                alt=""
-                sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
-              />
-            </div>
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold
+              hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed
+              transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+          >
+            {loading ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Ingresando…
+              </>
+            ) : (
+              "Iniciar sesión"
+            )}
+          </button>
+        </form>
+
+        {/* Sign up link */}
+        <p className="mt-8 text-sm text-slate-500 text-center">
+          ¿No tenés cuenta?{" "}
+          <Link
+            to="/autenticacion/registrarse-privado"
+            className="font-semibold text-slate-900 hover:underline underline-offset-2"
+          >
+            Registrarse
+          </Link>
+        </p>
+      </div>
+
+      {/* ── Right panel: image (desktop only) ── */}
+      <div className="hidden lg:flex flex-1 relative overflow-hidden bg-slate-900">
+        <img
+          src={cover}
+          alt="Banda CEDES Don Bosco"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
+        />
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-transparent" />
+
+        {/* Quote block */}
+        <div className="relative z-10 flex flex-col justify-end p-12 pb-14">
+          <div className="max-w-sm">
+            <div className="w-8 h-0.5 bg-white/50 mb-5" />
+            <p className="text-white text-xl font-medium leading-relaxed tracking-tight">
+              La música es el idioma universal de la humanidad.
+            </p>
+            <p className="mt-3 text-white/50 text-sm font-medium">— Henry Wadsworth Longfellow</p>
           </div>
         </div>
-      </section>
-    </>
+
+        {/* Decorative dots */}
+        <div className="absolute top-10 right-10 grid grid-cols-5 gap-1.5 opacity-20">
+          {Array.from({ length: 25 }).map((_, i) => (
+            <div key={i} className="w-1 h-1 rounded-full bg-white" />
+          ))}
+        </div>
+      </div>
+
+      {/* Forgot password modal */}
+      {showForgot && (
+        <ForgotPasswordModal
+          open={showForgot}
+          onClose={() => setShowForgot(false)}
+          onSubmit={handleForgotPassword}
+        />
+      )}
+    </div>
   );
 };
 

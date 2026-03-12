@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useImageUpload, cloudinaryOptimized } from "hooks/useImageUpload";
+import ImageCropModal from "components/ui/ImageCropModal";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,13 +22,25 @@ function userInitials(user) {
     .toUpperCase();
 }
 
+const OUTPUT_SIZE = { w: 800, h: 800 };
+
 export function AvatarArea({ user, canEdit, onZoom, onAvatarUpdated }) {
-  const { state, previewUrl, progress, errorMsg, confirm, cancel, openPicker, inputProps } =
-    useImageUpload(user?.id, {
-      maxWidthPx: 900, // slightly larger for admin view (full-width banner)
-      quality: 0.88,
-      onSuccess: onAvatarUpdated,
-    });
+  const {
+    state,
+    cropSrc,
+    previewUrl,
+    progress,
+    errorMsg,
+    confirmCrop,
+    confirm,
+    cancel,
+    openPicker,
+    inputProps,
+  } = useImageUpload(user?.id, {
+    maxWidthPx: OUTPUT_SIZE.w,
+    quality: 0.88,
+    onSuccess: onAvatarUpdated,
+  });
 
   // Reset when different user is opened
   useEffect(() => {
@@ -38,150 +51,160 @@ export function AvatarArea({ user, canEdit, onZoom, onAvatarUpdated }) {
   const isUploading = state === "uploading" || state === "compressing";
   const isSuccess = state === "success";
 
-  // Show preview blob OR optimized Cloudinary URL
   const displaySrc =
     previewUrl ||
     (user?.avatar ? cloudinaryOptimized(user.avatar, { width: 800, height: 400 }) : null);
 
   return (
-    <div className="relative group flex-shrink-0">
-      {/* ── Image / Initials ── */}
-      {displaySrc ? (
-        <div className="relative">
-          <img
-            src={displaySrc}
-            alt={fullName(user)}
-            loading="lazy"
-            onClick={!isPending && !isUploading ? onZoom : undefined}
-            className={[
-              "w-full h-48 object-cover object-top transition-all duration-300",
-              isPending || isUploading ? "brightness-60" : "cursor-zoom-in",
-            ].join(" ")}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+    <>
+      {/* Crop modal */}
+      {state === "cropping" && cropSrc && (
+        <ImageCropModal
+          src={cropSrc}
+          aspect={1}
+          outputSize={OUTPUT_SIZE}
+          onConfirm={confirmCrop}
+          onCancel={cancel}
+        />
+      )}
 
-          {/* Zoom hint */}
-          {!isPending && !isUploading && (
-            <button
-              onClick={onZoom}
-              className="absolute bottom-2 right-3 text-white text-[10px] font-semibold opacity-70 hover:opacity-100 flex items-center gap-1 pointer-events-auto"
-            >
-              🔍 Ampliar
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="flex items-center justify-center h-48 bg-gradient-to-br from-slate-100 to-slate-200">
-          <div className="w-20 h-20 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center text-3xl font-bold select-none">
-            {userInitials(user)}
+      <div className="relative group flex-shrink-0">
+        {/* ── Image / Initials ── */}
+        {displaySrc ? (
+          <div className="relative">
+            <img
+              src={displaySrc}
+              alt={fullName(user)}
+              loading="lazy"
+              onClick={!isPending && !isUploading ? onZoom : undefined}
+              className={[
+                "w-full h-48 object-cover object-top transition-all duration-300",
+                isPending || isUploading ? "brightness-60" : "cursor-zoom-in",
+              ].join(" ")}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+
+            {!isPending && !isUploading && (
+              <button
+                onClick={onZoom}
+                className="absolute bottom-2 right-3 text-white text-[10px] font-semibold opacity-70 hover:opacity-100 flex items-center gap-1 pointer-events-auto"
+              >
+                🔍 Ampliar
+              </button>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* ── Admin pencil button (visible on hover when idle) ── */}
-      {canEdit && state === "idle" && (
-        <button
-          onClick={openPicker}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-slate-700
-            opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white active:scale-95"
-          title="Cambiar foto"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* ── Compressing / uploading overlay ── */}
-      {isUploading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
-          {/* Progress bar */}
-          {state === "uploading" && (
-            <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden mb-3">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-200"
-                style={{ width: `${progress}%` }}
-              />
+        ) : (
+          <div className="flex items-center justify-center h-48 bg-gradient-to-br from-slate-100 to-slate-200">
+            <div className="w-20 h-20 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center text-3xl font-bold select-none">
+              {userInitials(user)}
             </div>
-          )}
-          <svg className="w-7 h-7 text-white animate-spin mb-1.5" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
+          </div>
+        )}
+
+        {/* Admin pencil button */}
+        {canEdit && state === "idle" && (
+          <button
+            onClick={openPicker}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-slate-700
+              opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white active:scale-95"
+            title="Cambiar foto"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
+        )}
+
+        {/* Uploading overlay */}
+        {isUploading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+            {state === "uploading" && (
+              <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+            <svg className="w-7 h-7 text-white animate-spin mb-1.5" fill="none" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+            <p className="text-white text-xs font-semibold">
+              {state === "compressing" ? "Optimizando imagen…" : `Subiendo… ${progress}%`}
+            </p>
+          </div>
+        )}
+
+        {/* Success flash */}
+        {isSuccess && (
+          <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/60 backdrop-blur-sm pointer-events-none">
+            <svg
+              className="w-10 h-10 text-white"
+              fill="none"
               stroke="currentColor"
-              strokeWidth="3"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <p className="text-white text-xs font-semibold">
-            {state === "compressing" ? "Optimizando imagen…" : `Subiendo… ${progress}%`}
-          </p>
-        </div>
-      )}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+        )}
 
-      {/* ── Success flash ── */}
-      {isSuccess && (
-        <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/60 backdrop-blur-sm pointer-events-none">
-          <svg
-            className="w-10 h-10 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-      )}
+        {/* Confirm / cancel bar */}
+        {isPending && (
+          <div className="absolute bottom-0 left-0 right-0 flex gap-2 px-3 py-2.5 bg-black/65 backdrop-blur-sm">
+            <button
+              onClick={cancel}
+              className="flex-1 py-1.5 rounded-lg border border-white/25 text-white text-xs font-medium hover:bg-white/10 transition-colors active:scale-95"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirm}
+              className="flex-1 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-semibold hover:bg-slate-100 transition-colors active:scale-95"
+            >
+              Guardar foto
+            </button>
+          </div>
+        )}
 
-      {/* ── Confirm / cancel bar ── */}
-      {isPending && (
-        <div className="absolute bottom-0 left-0 right-0 flex gap-2 px-3 py-2.5 bg-black/65 backdrop-blur-sm">
-          <button
-            onClick={cancel}
-            className="flex-1 py-1.5 rounded-lg border border-white/25 text-white text-xs font-medium hover:bg-white/10 transition-colors active:scale-95"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={confirm}
-            className="flex-1 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-semibold hover:bg-slate-100 transition-colors active:scale-95"
-          >
-            Guardar foto
-          </button>
-        </div>
-      )}
+        {/* Inline error */}
+        {state === "error" && errorMsg && (
+          <div className="absolute top-2 left-2 right-10 bg-red-500/90 text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2">
+            <span>{errorMsg}</span>
+            <button
+              onClick={cancel}
+              className="underline opacity-80 hover:opacity-100 whitespace-nowrap"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
-      {/* ── Inline error ── */}
-      {state === "error" && errorMsg && (
-        <div className="absolute top-2 left-2 right-10 bg-red-500/90 text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2">
-          <span>{errorMsg}</span>
-          <button
-            onClick={cancel}
-            className="underline opacity-80 hover:opacity-100 whitespace-nowrap"
-          >
-            Reintentar
-          </button>
-        </div>
-      )}
-
-      <input {...inputProps} />
-    </div>
+        <input {...inputProps} />
+      </div>
+    </>
   );
 }
 

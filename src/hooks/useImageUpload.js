@@ -1,15 +1,15 @@
 /**
  * useImageUpload — shared hook for all profile photo uploads.
  *
- * Strategy:
- *  1. Client-side resize + compress (canvas) before upload  → smaller payload, faster upload
- *  2. Cloudinary transformation via URL params              → serve WebP at exact size, no waste
- *  3. Consistent validation, progress, error states         → reused everywhere
+ * Flow:
+ *   idle → cropping (user adjusts crop) → previewing → compressing → uploading → success
+ *                                       ↘ cancel → idle
  *
- * @param {object} options
- *   maxWidthPx    — max dimension before compress (default 800)
- *   quality       — JPEG quality 0–1 (default 0.82)
- *   maxSizeMB     — reject files larger than this (default 8)
+ * Changes vs original:
+ *  - New "cropping" state inserted between file pick and preview.
+ *  - pickFile now goes to "cropping" instead of "previewing".
+ *  - New confirmCrop(croppedFile) method transitions from cropping → previewing.
+ *  - All output photos are fixed at OUTPUT_SIZE (800 × 800) — enforced by ImageCropModal.
  */
 
 import { useCallback, useRef, useState } from "react";
@@ -21,26 +21,14 @@ const CLOUD_NAME = "dnv9akklf";
 const UPLOAD_PRESET = "dn5llzqm";
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
-/**
- * Append Cloudinary fetch transformations to a URL so the browser
- * always gets a WebP image at the right display size.
- *
- * w_400,h_400,c_fill  → square crop at 400 px (retina: displayed at 200 px max)
- * q_auto:good         → Cloudinary picks optimal quality
- * f_auto              → serve WebP/AVIF when supported
- */
 export function cloudinaryOptimized(url, { width = 400, height = 400 } = {}) {
   if (!url || !url.includes("cloudinary.com")) return url;
-  // Insert transformation segment after /upload/
   return url.replace("/upload/", `/upload/w_${width},h_${height},c_fill,q_auto:good,f_auto/`);
 }
 
 // ── Client-side compress ──────────────────────────────────────────────────────
-
-/**
- * Resize + compress an image File on the client using an offscreen canvas.
- * Returns a new File (JPEG) that is ≤ targetMaxWidth on its longest side.
- */
+// Used only after crop, since ImageCropModal already exports at OUTPUT_SIZE.
+// This step mainly handles quality encoding.
 async function compressImage(file, { maxWidthPx = 800, quality = 0.82 } = {}) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -48,8 +36,6 @@ async function compressImage(file, { maxWidthPx = 800, quality = 0.82 } = {}) {
 
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-
-      // Calculate target dimensions — preserve aspect ratio
       let { width, height } = img;
       if (width > maxWidthPx || height > maxWidthPx) {
         if (width >= height) {
@@ -60,16 +46,13 @@ async function compressImage(file, { maxWidthPx = 800, quality = 0.82 } = {}) {
           height = maxWidthPx;
         }
       }
-
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-
       const ctx = canvas.getContext("2d");
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, width, height);
-
       canvas.toBlob(
         (blob) => {
           if (!blob) return reject(new Error("Canvas toBlob failed"));
@@ -94,7 +77,6 @@ async function compressImage(file, { maxWidthPx = 800, quality = 0.82 } = {}) {
 }
 
 // ── Upload to Cloudinary ──────────────────────────────────────────────────────
-
 async function uploadToCloudinary(file, onProgress) {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
@@ -106,9 +88,7 @@ async function uploadToCloudinary(file, onProgress) {
     xhr.open("POST", CLOUDINARY_URL);
 
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress?.(Math.round((e.loaded / e.total) * 100));
-      }
+      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
     };
 
     xhr.onload = () => {
@@ -126,7 +106,6 @@ async function uploadToCloudinary(file, onProgress) {
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
-
 const VALID_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic"];
 
 function validateFile(file, maxSizeMB = 8) {
@@ -136,17 +115,19 @@ function validateFile(file, maxSizeMB = 8) {
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
-
 /**
- * @returns {object}
- *   state        — "idle" | "previewing" | "compressing" | "uploading" | "success" | "error"
- *   previewUrl   — blob URL for local preview (null when idle)
- *   progress     — 0–100 upload progress
- *   errorMsg     — string error message
- *   pickFile     — call with a File to start the preview flow
- *   confirm      — call to compress + upload the pending file
- *   cancel       — reset everything
- *   inputProps   — spread onto <input type="file"> for file picking
+ * States:
+ *   "idle"        — nothing happening
+ *   "cropping"    — ImageCropModal is open; user adjusts framing
+ *   "previewing"  — cropped blob shown; user can confirm or cancel
+ *   "compressing" — re-encoding for upload
+ *   "uploading"   — XHR in progress
+ *   "success"     — done
+ *   "error"       — something went wrong
+ *
+ * New in this version:
+ *   cropSrc       — blob URL of the raw file to pass to ImageCropModal
+ *   confirmCrop   — call with the File returned by ImageCropModal to advance to "previewing"
  */
 export function useImageUpload(
   userId,
@@ -156,20 +137,24 @@ export function useImageUpload(
   const fileInputRef = useRef(null);
 
   const [state, setState] = useState("idle");
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null); // raw blob for the crop modal
+  const [previewUrl, setPreviewUrl] = useState(null); // cropped blob for preview
   const [pendingFile, setPendingFile] = useState(null);
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
 
   const reset = useCallback(() => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setCropSrc(null);
     setPreviewUrl(null);
     setPendingFile(null);
     setState("idle");
     setProgress(0);
     setErrorMsg("");
-  }, [previewUrl]);
+  }, [cropSrc, previewUrl]);
 
+  // Called when the user selects a file — opens the crop modal
   const pickFile = useCallback(
     (file) => {
       if (!file) return;
@@ -179,34 +164,42 @@ export function useImageUpload(
         setState("error");
         return;
       }
-
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      const blobUrl = URL.createObjectURL(file);
-      setPreviewUrl(blobUrl);
-      setPendingFile(file);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      setCropSrc(URL.createObjectURL(file));
       setErrorMsg("");
-      setState("previewing");
+      setState("cropping");
     },
-    [previewUrl, maxSizeMB]
+    [cropSrc, maxSizeMB]
   );
 
+  // Called by ImageCropModal with the cropped File → moves to "previewing"
+  const confirmCrop = useCallback(
+    (croppedFile) => {
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      setCropSrc(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const blobUrl = URL.createObjectURL(croppedFile);
+      setPreviewUrl(blobUrl);
+      setPendingFile(croppedFile);
+      setState("previewing");
+    },
+    [cropSrc, previewUrl]
+  );
+
+  // Called when the user confirms the preview → compress + upload
   const confirm = useCallback(async () => {
     if (!pendingFile || !userId) return;
 
     try {
-      // 1. Compress on client
       setState("compressing");
       const compressed = await compressImage(pendingFile, { maxWidthPx, quality });
 
-      // 2. Upload via XHR (real progress)
       setState("uploading");
       setProgress(0);
       const rawUrl = await uploadToCloudinary(compressed, setProgress);
 
-      // 3. Persist to DB
       await uploadProfilePic({ variables: { id: userId, avatar: rawUrl } });
 
-      // 4. Clean up & notify
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setPendingFile(null);
@@ -214,7 +207,6 @@ export function useImageUpload(
       setProgress(100);
 
       onSuccess?.(rawUrl);
-
       setTimeout(reset, 2500);
     } catch (err) {
       console.error("[useImageUpload]", err);
@@ -238,10 +230,12 @@ export function useImageUpload(
 
   return {
     state,
+    cropSrc,
     previewUrl,
     progress,
     errorMsg,
     pickFile,
+    confirmCrop,
     confirm,
     cancel: reset,
     openPicker,
