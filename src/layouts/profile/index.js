@@ -1,43 +1,11 @@
-/**
-=========================================================
-* Banda CEDES Don Bosco - v4.0.0
-=========================================================
+/* eslint-disable react/prop-types */
 
-* Product Page: 
-* Copyright 2023 Banda CEDES Don Bosco()
-
-Coded by Josué Chinchilla
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
-// @mui material components
-import Card from "@mui/material/Card";
-import Grid from "@mui/material/Grid";
-
-// @mui icons
-
-// Banda CEDES Don Bosco components
-import SoftBox from "components/SoftBox";
-import SoftTypography from "components/SoftTypography";
-
-// Banda CEDES Don Bosco examples
+import { useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
-
-// Overview page components
 import Header from "layouts/profile/components/Header";
-
-// Data
-
-// Images
-import { gql, useMutation, useQuery } from "@apollo/client";
-import { Box, Button, Divider, Icon } from "@mui/material";
-import Tooltip from "@mui/material/Tooltip";
 import MedicalRecordModal from "./components/Modals/MedicalRecordModal";
-import { useState } from "react";
 import InventoryModal from "./components/Modals/InventoryModal";
 import {
   GET_USERS_BY_ID,
@@ -51,8 +19,115 @@ import {
   UPDATE_INVENTORY,
 } from "graphql/mutations";
 
+// ─── Reusable field row ────────────────────────────────────────────────────────
+const InfoRow = ({ label, value, highlight }) => (
+  <div className="flex items-start justify-between py-3 border-b border-slate-100 last:border-0 gap-4">
+    <span className="text-xs font-medium text-slate-400 uppercase tracking-wide whitespace-nowrap">
+      {label}
+    </span>
+    <span
+      className={`text-sm text-right font-medium leading-snug break-words max-w-[60%] ${
+        highlight ? "text-slate-900" : "text-slate-600"
+      }`}
+    >
+      {value || "—"}
+    </span>
+  </div>
+);
+
+// ─── Badge for status ─────────────────────────────────────────────────────────
+const StatusBadge = ({ value }) => {
+  if (!value || value === "N/A" || value === "No")
+    return <span className="text-sm text-slate-400 font-medium">—</span>;
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">
+      {value}
+    </span>
+  );
+};
+
+// ─── Card wrapper ─────────────────────────────────────────────────────────────
+const ProfileCard = ({ title, subtitle, icon, children, action }) => (
+  <div
+    className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full"
+    style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}
+  >
+    {/* Card Header */}
+    <div className="flex items-center justify-between px-5 pt-5 pb-4">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0">
+          {icon}
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900 leading-tight">{title}</h2>
+          {subtitle && <p className="text-xs text-slate-400 mt-0.5 leading-tight">{subtitle}</p>}
+        </div>
+      </div>
+      {action && <div className="flex-shrink-0">{action}</div>}
+    </div>
+    <div className="w-full h-px bg-slate-100" />
+    {/* Card Body */}
+    <div className="px-5 py-4 flex-1 overflow-auto">{children}</div>
+  </div>
+);
+
+// ─── Edit button ──────────────────────────────────────────────────────────────
+const EditButton = ({ onClick, label }) => (
+  <button
+    onClick={onClick}
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors duration-150 active:scale-95"
+  >
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    </svg>
+    {label}
+  </button>
+);
+
+// ─── Primary action button ────────────────────────────────────────────────────
+const PrimaryButton = ({ onClick, label, icon }) => (
+  <button
+    onClick={onClick}
+    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-700 transition-all duration-150 active:scale-95 shadow-sm w-full justify-center"
+  >
+    {icon}
+    {label}
+  </button>
+);
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+const Skeleton = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin" />
+      <p className="text-sm text-slate-400 font-medium">Cargando perfil…</p>
+    </div>
+  </div>
+);
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+const EmptyState = ({ icon, message, action }) => (
+  <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+    <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+      {icon}
+    </div>
+    <p className="text-sm text-slate-400 font-medium leading-snug max-w-[180px]">{message}</p>
+    {action}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 const Overview = () => {
-  const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USERS_BY_ID);
+  const { data: userData, loading: userLoading } = useQuery(GET_USERS_BY_ID);
+  const { data: medicalRecordData, loading: medicalRecordLoading } = useQuery(
+    GET_MEDICAL_RECORD_BY_USER
+  );
+  const { data: inventoryData } = useQuery(GET_INVENTORY_BY_USER);
 
   const {
     name,
@@ -67,37 +142,21 @@ const Overview = () => {
     role,
     instrument,
   } = userData?.getUser || {};
-
   const userRole = userData?.getUser?.role;
-  // Call the second query after the first query's data is available
-  const {
-    data: medicalRecordData,
-    loading: medicalRecordLoading,
-    error: medicalRecordError,
-  } = useQuery(GET_MEDICAL_RECORD_BY_USER);
-
-  const {
-    data: inventoryData,
-    loading: inventoryLoading,
-    error: inventoryError,
-  } = useQuery(GET_INVENTORY_BY_USER);
 
   const [selected, setSelected] = useState(null);
-  const [modalType, setModalType] = useState(null); // "add", "edit", or "remove"
+  const [modalType, setModalType] = useState(null);
   const [openModal, setOpenModal] = useState(false);
 
   const [addMedicalRecord] = useMutation(CREATE_MEDICAL_RECORD, {
     refetchQueries: [{ query: GET_MEDICAL_RECORD_BY_USER }],
   });
-
   const [updateMedicalRecord] = useMutation(UPDATE_MEDICAL_RECORD, {
     refetchQueries: [{ query: GET_MEDICAL_RECORD_BY_USER }],
   });
-
   const [addInventory] = useMutation(CREATE_INVENTORY, {
     refetchQueries: [{ query: GET_INVENTORY_BY_USER }],
   });
-
   const [updateInventory] = useMutation(UPDATE_INVENTORY, {
     refetchQueries: [{ query: GET_INVENTORY_BY_USER }],
   });
@@ -107,602 +166,373 @@ const Overview = () => {
     setSelected(event);
     setOpenModal(true);
   };
-
   const handleCloseModal = () => {
     setOpenModal(false);
     setModalType(null);
     setSelected(null);
   };
 
-  const handleAddMedicalRecord = async (medicalRecordData) => {
-    await addMedicalRecord({ variables: { input: medicalRecordData } });
+  const handleAddMedicalRecord = async (data) => {
+    await addMedicalRecord({ variables: { input: data } });
     handleCloseModal();
   };
-
-  const handleAddInventory = async (inventoryData) => {
-    await addInventory({ variables: { input: inventoryData } });
+  const handleUpdateMedicalRecord = async (data) => {
+    await updateMedicalRecord({ variables: { id: selected.id, input: data } });
     handleCloseModal();
   };
-
-  const handleUpdateMedicalRecord = async (medicalRecordData) => {
-    await updateMedicalRecord({
-      variables: { id: selected.id, input: medicalRecordData },
-    });
+  const handleAddInventory = async (data) => {
+    await addInventory({ variables: { input: data } });
     handleCloseModal();
   };
-  const handleUpdateInventory = async (inventoryData) => {
-    await updateInventory({
-      variables: { id: selected.id, input: inventoryData },
-    });
+  const handleUpdateInventory = async (data) => {
+    await updateInventory({ variables: { id: selected.id, input: data } });
     handleCloseModal();
   };
-
-  // This is the medical record for the user
-  let identification;
-  let sex;
-  let bloodType;
-  let address;
-  let familyMemberName;
-  let familyMemberNumber;
-  let familyMemberNumberId;
-  let familyMemberRelationship;
-  let familyMemberOccupation;
-  let illness = [];
-  let medicine = [];
-  let medicineOnTour = [];
-  let allergies = [];
 
   const medicalRecords = medicalRecordData?.getMedicalRecordByUser || [];
+  const inventoryItems = inventoryData?.getInventoryByUser || [];
 
-  if (medicalRecords.length > 0) {
-    const record = medicalRecords[0];
+  if (userLoading || medicalRecordLoading) return <Skeleton />;
 
-    identification = record.identification;
-    sex = record.sex;
-    bloodType = record.bloodType;
-    address = record.address;
-    familyMemberName = record.familyMemberName;
-    familyMemberNumber = record.familyMemberNumber;
-    familyMemberNumberId = record.familyMemberNumberId;
-    familyMemberRelationship = record.familyMemberRelationship;
-    familyMemberOccupation = record.familyMemberOccupation;
-    illness = record.illness || []; // collect all illnesses
-    medicine = record.medicine || []; // collect all medicines
-    medicineOnTour = record.medicineOnTour || []; // collect all medicines on tour
-    allergies = record.allergies || [];
-  }
-
-  const inventoryArray = inventoryData?.getInventoryByUser || [];
-
-  const inventoryObject = inventoryArray.reduce((acc, item) => {
-    const { id, condition, brand, model, numberId, serie, mainteinance, details } = item;
-
-    acc[id] = {
-      condition,
-      brand,
-      model,
-      numberId,
-      serie,
-      mainteinance,
-      details,
-    };
-
-    return acc;
-  }, {});
-
-  const values = Object.values(inventoryObject);
-  values.forEach((item) => {});
-
-  // Handle loading state
-  if (userLoading || medicalRecordLoading)
-    return (
-      <div className="text-center">
-        <div role="status">
-          <svg
-            aria-hidden="true"
-            className="inline w-8 h-8 mr-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
-            viewBox="0 0 100 101"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-              fill="currentColor"
-            />
-            <path
-              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-              fill="currentFill"
-            />
-          </svg>
-          <span className="sr-only">Loading...</span>
-        </div>
-      </div>
-    );
-
-  // Handle error state
-  // if (userError || medicalRecordError) return <p>Error!</p>;
+  const canAddInventory = [
+    "Asistente de sección",
+    "Principal de sección",
+    "Integrante BCDB",
+    "Admin",
+  ].includes(userRole);
 
   return (
     <DashboardLayout>
       <Header />
-      <SoftBox mt={5} mb={3}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6} xl={4}>
-            <Card sx={{ height: "100%", minHeight: "400px" }}>
-              <SoftBox
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                pt={2}
-                px={2}
+
+      <div className="px-4 sm:px-6 lg:px-8 mt-8 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {/* ── Información general ────────────────────────── */}
+          <ProfileCard
+            title="Información general"
+            subtitle="Datos personales del integrante"
+            icon={
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <SoftTypography variant="h5" fontWeight="medium" textTransform="">
-                  Información general
-                </SoftTypography>
-              </SoftBox>
-              <SoftBox p={2}>
-                <SoftBox mb={2} lineHeight={1}>
-                  <SoftTypography variant="button" color="text" fontWeight="regular">
-                    Esta información puede ser editada en cualquier momento.
-                  </SoftTypography>
-                </SoftBox>
-                <SoftBox opacity={0.3}>
-                  <Divider />
-                </SoftBox>
-                <SoftBox key={identification} maxHeight="100%">
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Nombre completo:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {name} {firstSurName} {secondSurName}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Email:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {email}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Celular:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {phone}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Fecha de nacimiento:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {birthday}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Carnet:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {carnet ? carnet : "N/A"}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Estado:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {state ? state : "N/A"}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Año académico:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {grade ? grade : "N/A"}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Rol:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {role}
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox display="flex" py={1} pr={2}>
-                    <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                      Instrumento:
-                    </SoftTypography>
-                    <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                      {instrument ? instrument : "N/A"}
-                    </SoftTypography>
-                  </SoftBox>
-                </SoftBox>
-              </SoftBox>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6} xl={4}>
-            <Card sx={{ height: "100%", minHeight: "400px" }}>
-              <SoftBox
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                pt={2}
-                px={2}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            }
+          >
+            <InfoRow
+              label="Nombre completo"
+              value={`${name || ""} ${firstSurName || ""} ${secondSurName || ""}`.trim()}
+              highlight
+            />
+            <InfoRow label="Email" value={email} />
+            <InfoRow label="Celular" value={phone} />
+            <InfoRow label="Fecha de nacimiento" value={birthday} />
+            <InfoRow label="Carnet" value={carnet || "N/A"} />
+            <InfoRow label="Estado" value={state || "N/A"} />
+            <InfoRow label="Año académico" value={grade || "N/A"} />
+            <InfoRow label="Rol" value={role} />
+            <InfoRow label="Instrumento" value={instrument || "N/A"} />
+          </ProfileCard>
+
+          {/* ── Ficha médica ───────────────────────────────── */}
+          <ProfileCard
+            title="Ficha médica"
+            subtitle="Información de salud y contacto de emergencia"
+            icon={
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <SoftTypography variant="h5" fontWeight="medium" textTransform="">
-                  Ficha médica
-                </SoftTypography>
-              </SoftBox>
-              <SoftBox p={2}>
-                <SoftBox mb={2} lineHeight={1}>
-                  <SoftTypography variant="button" color="text" fontWeight="regular">
-                    Esta información puede ser editada en cualquier momento.
-                  </SoftTypography>
-                </SoftBox>
-                <SoftBox opacity={0.3}>
-                  <Divider />
-                </SoftBox>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+            }
+            action={
+              medicalRecords.length > 0 && (
+                <EditButton
+                  label="Editar"
+                  onClick={() => handleOpenModal("edit", medicalRecords[0])}
+                />
+              )
+            }
+          >
+            {medicalRecords.length > 0 ? (
+              (() => {
+                const r = medicalRecords[0];
+                const fmt = (v) => (!v || v === "No" ? "—" : v);
+                return (
+                  <>
+                    {/* Personal */}
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1 mt-1">
+                      Personal
+                    </p>
+                    <InfoRow label="Cédula" value={r.identification} highlight />
+                    <InfoRow label="Sexo" value={r.sex} />
+                    <InfoRow label="Tipo de sangre" value={r.bloodType} />
+                    <InfoRow label="Dirección" value={r.address} />
 
-                {medicalRecordData &&
-                medicalRecordData.getMedicalRecordByUser &&
-                medicalRecordData.getMedicalRecordByUser.length > 0 ? (
-                  medicalRecordData.getMedicalRecordByUser.map((medicalRecord) => {
-                    const {
-                      identification,
-                      sex,
-                      bloodType,
-                      address,
-                      familyMemberName,
-                      familyMemberNumber,
-                      familyMemberNumberId,
-                      familyMemberRelationship,
-                      familyMemberOccupation,
-                      illness,
-                      medicine,
-                      medicineOnTour,
-                      allergies,
-                    } = medicalRecord;
+                    {/* Salud */}
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1 mt-4">
+                      Salud
+                    </p>
+                    <InfoRow label="Enfermedades" value={fmt(r.illness)} />
+                    <InfoRow label="Medicamentos" value={fmt(r.medicine)} />
+                    <InfoRow label="Medicamentos en giras" value={fmt(r.medicineOnTour)} />
+                    <InfoRow label="Alergias" value={fmt(r.allergies)} />
 
-                    const formattedIllness = illness === "No" || !illness ? "N/A" : illness;
-                    const formattedAllergies = allergies === "No" || !allergies ? "N/A" : allergies;
+                    {/* Encargado */}
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1 mt-4">
+                      Contacto de emergencia
+                    </p>
+                    <InfoRow label="Nombre" value={r.familyMemberName} highlight />
+                    <InfoRow label="Teléfono" value={r.familyMemberNumber} />
+                    <InfoRow label="Cédula" value={r.familyMemberNumberId} />
+                    <InfoRow label="Parentesco" value={r.familyMemberRelationship} />
+                    <InfoRow label="Ocupación" value={r.familyMemberOccupation} />
 
-                    const formattedMedicine = medicine === "No" || !medicine ? "N/A" : medicine;
-                    const formattedMedicineOnTour =
-                      medicineOnTour === "No" || !medicineOnTour ? "N/A" : medicineOnTour;
-
-                    return (
-                      <SoftBox key={identification} maxHeight="100%">
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Cédula:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {identification}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Sexo:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {sex}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Tipo de sangre:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {bloodType}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Dirección:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {address}
-                          </SoftTypography>
-                        </SoftBox>
-
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Enfermedades:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedIllness}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Medicamentos:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedMedicine}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Medicamentos en giras de la banda:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedMedicineOnTour}
-                          </SoftTypography>
-                        </SoftBox>
-
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Alergias a medicamentos
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {formattedAllergies}
-                          </SoftTypography>
-                        </SoftBox>
-
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Nombre del encargado:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {familyMemberName}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Número del encargado:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {familyMemberNumber}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Cédula del encargado:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {familyMemberNumberId}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Parentesco del encargado:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {familyMemberRelationship}
-                          </SoftTypography>
-                        </SoftBox>
-                        <SoftBox display="flex" py={1} pr={2}>
-                          <SoftTypography variant="h6" fontWeight="bold" textTransform="">
-                            Ocupación del encargado:
-                          </SoftTypography>
-                          <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                            {familyMemberOccupation}
-                          </SoftTypography>
-                        </SoftBox>
-
-                        <Button
-                          variant="contained"
-                          color="info"
-                          style={{ marginTop: "1rem" }}
-                          onClick={() => handleOpenModal("edit", medicalRecord)}
-                        >
-                          Editar ficha médica
-                        </Button>
-
-                        {modalType === "edit" && selected && (
-                          <MedicalRecordModal
-                            open={openModal}
-                            onClose={handleCloseModal}
-                            initialValues={selected} // Pass selected as initialValues
-                            onSubmit={handleUpdateMedicalRecord}
-                          />
-                        )}
-                      </SoftBox>
-                    );
-                  })
-                ) : (
-                  <SoftBox
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    p={2}
-                    height="100%"
-                  >
-                    {userRole === "Padre/Madre de familia" ? (
-                      <SoftBox
-                        display="flex"
-                        justifyContent="center"
-                        alignItems="center"
-                        p={2}
-                        height="100%"
-                      >
-                        <SoftTypography variant="button" color="text" fontWeight="regular">
-                          No debes de añadir la ficha médica
-                        </SoftTypography>
-                      </SoftBox>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        color="info"
-                        onClick={() => handleOpenModal("add")}
-                      >
-                        Añadir ficha médica
-                      </Button>
-                    )}
-                    {modalType === "add" && (
+                    {modalType === "edit" && selected && (
                       <MedicalRecordModal
                         open={openModal}
                         onClose={handleCloseModal}
-                        onSubmit={handleAddMedicalRecord}
+                        initialValues={selected}
+                        onSubmit={handleUpdateMedicalRecord}
                       />
                     )}
-                  </SoftBox>
-                )}
-              </SoftBox>
-            </Card>
-          </Grid>
+                  </>
+                );
+              })()
+            ) : userRole === "Padre/Madre de familia" ? (
+              <EmptyState
+                icon={
+                  <svg
+                    className="w-6 h-6 text-slate-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    />
+                  </svg>
+                }
+                message="No es necesario añadir una ficha médica para tu rol."
+              />
+            ) : (
+              <EmptyState
+                icon={
+                  <svg
+                    className="w-6 h-6 text-slate-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                }
+                message="Aún no tienes una ficha médica registrada."
+                action={
+                  <PrimaryButton
+                    onClick={() => handleOpenModal("add")}
+                    label="Añadir ficha médica"
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    }
+                  />
+                }
+              />
+            )}
 
-          <Grid item xs={12} md={6} xl={4}>
-            <Card sx={{ height: "100%", minHeight: "400px" }}>
-              <SoftBox display="flex" flexDirection="column" height="100%">
-                <SoftBox
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  pt={2}
-                  px={2}
-                >
-                  <SoftTypography variant="h5" fontWeight="medium" textTransform="">
-                    Instrumento
-                  </SoftTypography>
-                </SoftBox>
-                <SoftBox p={2} flexGrow={1} overflow="auto">
-                  <SoftBox mb={2} lineHeight={1}>
-                    <SoftTypography variant="button" color="text" fontWeight="regular">
-                      Esta información puede ser editada en cualquier momento.
-                    </SoftTypography>
-                  </SoftBox>
-                  <SoftBox opacity={0.3}>
-                    <Divider />
-                  </SoftBox>
+            {modalType === "add" && (
+              <MedicalRecordModal
+                open={openModal}
+                onClose={handleCloseModal}
+                onSubmit={handleAddMedicalRecord}
+              />
+            )}
+          </ProfileCard>
 
-                  {inventoryData &&
-                  inventoryData.getInventoryByUser &&
-                  inventoryData.getInventoryByUser.length > 0 ? (
-                    inventoryData.getInventoryByUser.map((item) => {
-                      const { brand, model, numberId, serie, details, mainteinance, condition } =
-                        item;
+          {/* ── Instrumento / Inventario ──────────────────── */}
+          <ProfileCard
+            title="Instrumento"
+            subtitle="Equipo asignado e inventario"
+            icon={
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
+              </svg>
+            }
+            action={
+              inventoryItems.length > 0 && (
+                <EditButton
+                  label="Editar"
+                  onClick={() => handleOpenModal("editInventory", inventoryItems[0])}
+                />
+              )
+            }
+          >
+            {inventoryItems.length > 0 ? (
+              inventoryItems.map((item) => {
+                const { brand, model, numberId, serie, details, mainteinance, condition } = item;
 
-                      return (
-                        <SoftBox key={numberId} maxHeight="100%">
-                          <SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Marca:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {brand ? brand : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Modelo:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {model ? model : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Número de placa:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {numberId ? numberId : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Número de serie:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {serie ? serie : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Condición:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {condition ? condition : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Mantenimiento:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {mainteinance ? mainteinance : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
-                            <SoftBox display="flex" py={1} pr={2}>
-                              <SoftTypography variant="h6" fontWeight="medium" textTransform="">
-                                Detalles:
-                              </SoftTypography>
-                              <SoftTypography variant="body2" fontWeight="regular" ml={1}>
-                                {details ? details : "N/A"}
-                              </SoftTypography>
-                            </SoftBox>
+                const conditionColor =
+                  {
+                    Excelente: "bg-emerald-100 text-emerald-700",
+                    Bueno: "bg-blue-100 text-blue-700",
+                    Regular: "bg-amber-100 text-amber-700",
+                    Malo: "bg-red-100 text-red-700",
+                  }[condition] || "bg-slate-100 text-slate-600";
 
-                            <Button
-                              variant="contained"
-                              color="info"
-                              style={{ marginTop: "1rem" }}
-                              onClick={() => handleOpenModal("editInventory", item)}
-                            >
-                              Editar instrumento / inventario
-                            </Button>
+                return (
+                  <div key={numberId}>
+                    {/* Condition badge prominent */}
+                    {condition && (
+                      <div className="mb-4 flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${conditionColor}`}
+                        >
+                          Condición: {condition}
+                        </span>
+                      </div>
+                    )}
+                    <InfoRow label="Marca" value={brand || "N/A"} highlight />
+                    <InfoRow label="Modelo" value={model || "N/A"} />
+                    <InfoRow label="N° de placa" value={numberId || "N/A"} />
+                    <InfoRow label="N° de serie" value={serie || "N/A"} />
+                    <InfoRow label="Mantenimiento" value={mainteinance || "N/A"} />
+                    {details && (
+                      <div className="pt-3 pb-1">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
+                          Detalles
+                        </p>
+                        <p className="text-sm text-slate-600 leading-relaxed">{details}</p>
+                      </div>
+                    )}
 
-                            {modalType === "editInventory" && selected && (
-                              <InventoryModal
-                                open={openModal}
-                                onClose={handleCloseModal}
-                                initialValues={selected} // Pass selected as initialValues
-                                onSubmit={handleUpdateInventory}
-                              />
-                            )}
-                          </SoftBox>
-                        </SoftBox>
-                      );
-                    })
-                  ) : (
-                    // Render the "Add Instrument" button if inventoryData is null or undefined
-                    <SoftBox
-                      display="flex"
-                      flexDirection="column"
-                      justifyContent="center"
-                      alignItems="center"
-                      p={2}
-                      height="100%"
-                    >
-                      {userRole === "Asistente de sección" ||
-                      userRole === "Principal de sección" ||
-                      userRole === "Integrante BCDB" ||
-                      userRole === "Admin" ? (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="info"
-                            onClick={() => handleOpenModal("addInventory")}
-                          >
-                            Añadir instrumento
-                          </Button>
-                          {modalType === "addInventory" && (
-                            <InventoryModal
-                              open={openModal}
-                              onClose={handleCloseModal}
-                              onSubmit={handleAddInventory}
-                            />
-                          )}
-                        </>
-                      ) : (
-                        <SoftTypography variant="button" color="text" fontWeight="regular">
-                          No debes de añadir ningún instrumento
-                        </SoftTypography>
-                      )}
-                    </SoftBox>
-                  )}
-                </SoftBox>
-              </SoftBox>
-            </Card>
-          </Grid>
-        </Grid>
-      </SoftBox>
+                    {modalType === "editInventory" && selected && (
+                      <InventoryModal
+                        open={openModal}
+                        onClose={handleCloseModal}
+                        initialValues={selected}
+                        onSubmit={handleUpdateInventory}
+                      />
+                    )}
+                  </div>
+                );
+              })
+            ) : canAddInventory ? (
+              <EmptyState
+                icon={
+                  <svg
+                    className="w-6 h-6 text-slate-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                    />
+                  </svg>
+                }
+                message="Aún no tienes un instrumento asignado."
+                action={
+                  <PrimaryButton
+                    onClick={() => handleOpenModal("addInventory")}
+                    label="Añadir instrumento"
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    }
+                  />
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={
+                  <svg
+                    className="w-6 h-6 text-slate-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    />
+                  </svg>
+                }
+                message="No es necesario añadir un instrumento para tu rol."
+              />
+            )}
+
+            {modalType === "addInventory" && (
+              <InventoryModal
+                open={openModal}
+                onClose={handleCloseModal}
+                onSubmit={handleAddInventory}
+              />
+            )}
+          </ProfileCard>
+        </div>
+      </div>
 
       <Footer />
     </DashboardLayout>

@@ -1,340 +1,544 @@
-import React, { useState } from "react";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from "@mui/material";
+/* eslint-disable react/prop-types */
+
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import SoftBox from "components/SoftBox";
-import SoftTypography from "components/SoftTypography";
-import Input from "components/Input";
-import Select from "components/Select";
-import TextArea from "components/TextArea";
 
-// MedicalRecordForm component
-const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues, title: modalTitle }) => {
-  const [identification, setIdentification] = useState(
-    initialValues ? initialValues.identification : ""
-  );
-  const [sex, setSex] = useState(initialValues ? initialValues.sex : "");
-  const [bloodType, setBloodType] = useState(initialValues ? initialValues.bloodType : "");
-  const [address, setAddress] = useState(initialValues ? initialValues.address : "");
-  const [familyMemberName, setFamilyMemberName] = useState(
-    initialValues ? initialValues.familyMemberName : ""
-  );
-  const [familyMemberNumber, setFamilyMemberNumber] = useState(
-    initialValues ? initialValues.familyMemberNumber : ""
-  );
-  const [familyMemberNumberId, setFamilyMemberNumberId] = useState(
-    initialValues ? initialValues.familyMemberNumberId : ""
-  );
-  const [familyMemberRelationship, setFamilyMemberRelationship] = useState(
-    initialValues ? initialValues.familyMemberRelationship : ""
-  );
-  const [familyMemberOccupation, setFamilyMemberOccupation] = useState(
-    initialValues ? initialValues.familyMemberOccupation : ""
-  );
-  const [illness, setIllness] = useState(initialValues ? initialValues.illness : "");
-  const [medicine, setMedicine] = useState(initialValues ? initialValues.medicine : "");
-  const [medicineOnTour, setMedicineOnTour] = useState(
-    initialValues ? initialValues.medicineOnTour : ""
-  );
+// ─── Reusable field components ────────────────────────────────────────────────
 
-  const [allergies, setAllergies] = useState(initialValues ? initialValues.allergies : "");
+const FieldLabel = ({ children, required }) => (
+  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+    {children}
+    {required && <span className="text-red-400 ml-0.5">*</span>}
+  </label>
+);
 
-  const handleSubmit = () => {
+const TextInput = ({ label, required, hint, ...props }) => (
+  <div className="flex flex-col gap-1">
+    {label && <FieldLabel required={required}>{label}</FieldLabel>}
+    {hint && <p className="text-xs text-slate-400 -mt-0.5 mb-1">{hint}</p>}
+    <input
+      {...props}
+      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-300
+        focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
+        hover:border-slate-300 transition-all duration-150"
+    />
+  </div>
+);
+
+const SelectInput = ({ label, required, options, placeholder, ...props }) => (
+  <div className="flex flex-col gap-1">
+    {label && <FieldLabel required={required}>{label}</FieldLabel>}
+    <select
+      {...props}
+      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900
+        focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
+        hover:border-slate-300 transition-all duration-150 appearance-none cursor-pointer"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 12px center",
+        backgroundSize: "16px",
+        paddingRight: "2.5rem",
+      }}
+    >
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  </div>
+);
+
+const TextAreaInput = ({ label, required, hint, ...props }) => (
+  <div className="flex flex-col gap-1">
+    {label && <FieldLabel required={required}>{label}</FieldLabel>}
+    {hint && <p className="text-xs text-slate-400 -mt-0.5 mb-1">{hint}</p>}
+    <textarea
+      {...props}
+      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-300
+        focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400
+        hover:border-slate-300 transition-all duration-150 resize-none"
+    />
+  </div>
+);
+
+// ─── Step indicator ───────────────────────────────────────────────────────────
+
+const steps = [
+  { id: 1, label: "Personal", icon: "👤" },
+  { id: 2, label: "Salud", icon: "🩺" },
+  { id: 3, label: "Emergencia", icon: "📞" },
+];
+
+const StepIndicator = ({ current }) => (
+  <div className="flex items-center justify-center gap-0 mb-6">
+    {steps.map((step, i) => (
+      <React.Fragment key={step.id}>
+        <div className="flex flex-col items-center gap-1">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300
+              ${
+                current === step.id
+                  ? "bg-slate-900 text-white shadow-md scale-110"
+                  : current > step.id
+                  ? "bg-emerald-500 text-white"
+                  : "bg-slate-100 text-slate-400"
+              }`}
+          >
+            {current > step.id ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            ) : (
+              step.id
+            )}
+          </div>
+          <span
+            className={`text-[10px] font-medium transition-colors duration-200
+            ${
+              current === step.id
+                ? "text-slate-900"
+                : current > step.id
+                ? "text-emerald-600"
+                : "text-slate-400"
+            }`}
+          >
+            {step.label}
+          </span>
+        </div>
+        {i < steps.length - 1 && (
+          <div
+            className={`w-12 sm:w-20 h-0.5 mb-4 mx-1 transition-all duration-300
+            ${current > step.id ? "bg-emerald-400" : "bg-slate-200"}`}
+          />
+        )}
+      </React.Fragment>
+    ))}
+  </div>
+);
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((v) => ({
+  value: v,
+  label: v,
+}));
+const SEX_TYPES = [
+  { value: "Masculino", label: "Masculino" },
+  { value: "Femenino", label: "Femenino" },
+];
+const RELATIONSHIP_TYPES = [
+  "Padre",
+  "Madre",
+  "Hijo/Hija",
+  "Hermano/Hermana",
+  "Abuelo/Abuela",
+  "Nieto/Nieta",
+  "Bisabuelo/Bisabuela",
+  "Tío/Tía",
+  "Sobrino/Sobrina",
+  "Primo/Prima",
+  "Esposo/Esposa",
+  "Cuñado/Cuñada",
+  "Suegro/Suegra",
+  "Yerno/Nuera",
+  "Hermanastro/Hermanastra",
+  "Padrino/Madrina",
+].map((v) => ({ value: v, label: v }));
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+const MedicalRecordModal = ({ open, onClose, onSubmit, initialValues }) => {
+  const iv = initialValues || {};
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const [form, setForm] = useState({
+    identification: iv.identification || "",
+    sex: iv.sex || "",
+    bloodType: iv.bloodType || "",
+    address: iv.address || "",
+    illness: iv.illness || "",
+    medicine: iv.medicine || "",
+    medicineOnTour: iv.medicineOnTour || "",
+    allergies: iv.allergies || "",
+    familyMemberName: iv.familyMemberName || "",
+    familyMemberNumber: iv.familyMemberNumber || "",
+    familyMemberNumberId: iv.familyMemberNumberId || "",
+    familyMemberRelationship: iv.familyMemberRelationship || "",
+    familyMemberOccupation: iv.familyMemberOccupation || "",
+  });
+
+  // Reset step on open
+  useEffect(() => {
+    if (open) {
+      setStep(1);
+      setErrors({});
+    }
+  }, [open]);
+
+  const set = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validateStep = () => {
+    const errs = {};
+    if (step === 1) {
+      if (!form.identification.trim()) errs.identification = "Requerido";
+      if (!form.sex) errs.sex = "Requerido";
+      if (!form.bloodType) errs.bloodType = "Requerido";
+      if (!form.address.trim()) errs.address = "Requerido";
+    }
+    if (step === 3) {
+      if (!form.familyMemberName.trim()) errs.familyMemberName = "Requerido";
+      if (!form.familyMemberNumber.trim()) errs.familyMemberNumber = "Requerido";
+      if (!form.familyMemberRelationship) errs.familyMemberRelationship = "Requerido";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) setStep((s) => Math.min(s + 1, 3));
+  };
+
+  const handleBack = () => setStep((s) => Math.max(s - 1, 1));
+
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
+    setSubmitting(true);
     try {
-      console.log("Submitting form...");
-      onSubmit({
-        identification,
-        sex,
-        bloodType,
-        address,
-        familyMemberName,
-        familyMemberNumber,
-        familyMemberNumberId,
-        familyMemberRelationship,
-        familyMemberOccupation,
-        illness,
-        medicine,
-        medicineOnTour,
-        allergies,
-      });
-    } catch (error) {
-      console.error("Error during form submission:", error);
+      await onSubmit(form);
+    } catch (e) {
+      console.error("Error submitting medical record:", e);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const bloodTypes = [
-    { value: "A+", label: "A+" },
-    { value: "A-", label: "A-" },
-    { value: "B+", label: "B+" },
-    { value: "B-", label: "B-" },
-    { value: "AB+", label: "AB+" },
-    { value: "AB-", label: "AB-" },
-    { value: "O+", label: "O+" },
-    { value: "O-", label: "O-" },
-  ];
-
-  const sexTypes = [
-    { value: "Masculino", label: "Masculino" },
-    { value: "Femenino", label: "Femenino" },
-  ];
-
-  const relationshipTypes = [
-    { value: "Padre", label: "Padre" },
-    { value: "Madre", label: "Madre" },
-    { value: "Hijo/Hija", label: "Hijo/Hija" },
-    { value: "Hermano/Hermana", label: "Hermano/Hermana" },
-    { value: "Abuelo/Abuela", label: "Abuelo/Abuela" },
-    { value: "Nieto/Nieta", label: "Nieto/Nieta" },
-    { value: "Bisabuelo/Bisabuela", label: "Bisabuelo/Bisabuela" },
-    { value: "Tío/Tía", label: "Tío/Tía" },
-    { value: "Sobrino/Sobrina", label: "Sobrino/Sobrina" },
-    { value: "Primo/Prima", label: "Primo/Prima" },
-    { value: "Esposo/Esposa", label: "Esposo/Esposa" },
-    { value: "Cuñado/Cuñada", label: "Cuñado/Cuñada" },
-    { value: "Suegro/Suegra", label: "Suegro/Suegra" },
-    { value: "Yerno/Nuera", label: "Yerno/Nuera" },
-    { value: "Hermanastro/Hermanastra", label: "Hermanastro/Hermanastra" },
-    { value: "Padrino/Madrina", label: "Padrino/Madrina" },
-  ];
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{modalTitle}</DialogTitle>
-      <DialogContent>
-        <a
-          href="#0"
-          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
-        >
-          Información personal:
-        </a>
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Identificación
-          </SoftTypography>
-        </SoftBox>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-        <Input
-          name="identification"
-          value={identification}
-          onChange={(e) => setIdentification(e.target.value)}
-          fullWidth
-          type="text"
-          id="identification"
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Sexo
-          </SoftTypography>
-        </SoftBox>
+      {/* Modal panel */}
+      <div
+        className="relative w-full sm:max-w-lg bg-white sm:rounded-2xl shadow-2xl flex flex-col max-h-[95dvh] sm:max-h-[90vh] overflow-hidden"
+        style={{ borderRadius: "20px 20px 0 0" }}
+      >
+        {/* Drag handle (mobile) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-slate-200" />
+        </div>
 
-        <Select
-          id="sex"
-          name="sex"
-          value={sex}
-          onChange={(e) => setSex(e.target.value)}
-          options={sexTypes}
-          fullWidth
-        />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-4 sm:pt-5 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 leading-tight">
+              {initialValues?.identification ? "Editar ficha médica" : "Nueva ficha médica"}
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {step === 1 && "Datos personales básicos"}
+              {step === 2 && "Condiciones de salud"}
+              {step === 3 && "Contacto de emergencia"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-150"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
 
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Tipo de sangre
-          </SoftTypography>
-        </SoftBox>
+        {/* Step indicator */}
+        <div className="px-5 pt-5">
+          <StepIndicator current={step} />
+        </div>
 
-        <Select
-          id="bloodType"
-          name="bloodType"
-          value={bloodType}
-          onChange={(e) => setBloodType(e.target.value)}
-          options={bloodTypes}
-        />
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4">
+          {/* ── Step 1: Personal ── */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <TextInput
+                label="Número de cédula / identificación"
+                required
+                placeholder="Ej. 1-2345-6789"
+                value={form.identification}
+                onChange={set("identification")}
+              />
+              {errors.identification && (
+                <p className="text-xs text-red-500 -mt-2">{errors.identification}</p>
+              )}
 
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Dirección exacta de residencia
-          </SoftTypography>
-        </SoftBox>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <SelectInput
+                    label="Sexo"
+                    required
+                    value={form.sex}
+                    onChange={set("sex")}
+                    options={SEX_TYPES}
+                    placeholder="Seleccionar"
+                  />
+                  {errors.sex && <p className="text-xs text-red-500 mt-1">{errors.sex}</p>}
+                </div>
+                <div>
+                  <SelectInput
+                    label="Tipo de sangre"
+                    required
+                    value={form.bloodType}
+                    onChange={set("bloodType")}
+                    options={BLOOD_TYPES}
+                    placeholder="Seleccionar"
+                  />
+                  {errors.bloodType && (
+                    <p className="text-xs text-red-500 mt-1">{errors.bloodType}</p>
+                  )}
+                </div>
+              </div>
 
-        <TextArea
-          name="address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          fullWidth
-          rows="5"
-          placeholder=""
-        />
+              <div>
+                <TextAreaInput
+                  label="Dirección exacta de residencia"
+                  required
+                  placeholder="Provincia, cantón, distrito, señas adicionales…"
+                  rows={4}
+                  value={form.address}
+                  onChange={set("address")}
+                />
+                {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
+              </div>
+            </div>
+          )}
 
-        <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
+          {/* ── Step 2: Salud ── */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-2">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Dejá en blanco los campos que no apliquen. Esta información es confidencial y solo
+                  se usa en emergencias.
+                </p>
+              </div>
 
-        <a
-          href="#0"
-          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
-        >
-          Condiciones médicas:
-        </a>
-        <br />
-        <p style={{ fontSize: "0.8rem" }}>Dejar en blanco en caso de no tener</p>
+              <TextInput
+                label="Enfermedades diagnosticadas"
+                placeholder="Ej. Diabetes tipo 1, asma…"
+                value={form.illness}
+                onChange={set("illness")}
+              />
 
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Enfermedades
-          </SoftTypography>
-        </SoftBox>
+              <TextInput
+                label="Medicamentos que debe tomar"
+                placeholder="Ej. Metformina 500mg, ventolín…"
+                value={form.medicine}
+                onChange={set("medicine")}
+              />
 
-        <Input
-          name="illness"
-          value={illness}
-          onChange={(e) => setIllness(e.target.value)}
-          fullWidth
-          type="text"
-          id="illness"
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Medicamentos que debe tomar
-          </SoftTypography>
-        </SoftBox>
+              <TextInput
+                label="Medicamentos en giras de la BCDB"
+                hint="¿Necesita llevar algún medicamento durante las giras o actividades de la banda?"
+                placeholder="Ej. Inhalador, pastillas…"
+                value={form.medicineOnTour}
+                onChange={set("medicineOnTour")}
+              />
 
-        <Input
-          value={medicine}
-          onChange={(e) => setMedicine(e.target.value)}
-          fullWidth
-          type="text"
-          id="medicine"
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Medicamentos que debe tomar en giras de la BCDB
-          </SoftTypography>
-        </SoftBox>
+              <TextInput
+                label="Alergias a alimentos y/o medicamentos"
+                placeholder="Ej. Penicilina, mariscos, nueces…"
+                value={form.allergies}
+                onChange={set("allergies")}
+              />
+            </div>
+          )}
 
-        <Input
-          name="medicineOnTour"
-          value={medicineOnTour}
-          onChange={(e) => setMedicineOnTour(e.target.value)}
-          fullWidth
-          type="text"
-          id="medicineOnTour"
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            ¿Tiene alergias a algún alimento y/o medicamento?
-          </SoftTypography>
-        </SoftBox>
+          {/* ── Step 3: Emergencia ── */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-2 flex gap-2.5 items-start">
+                <svg
+                  className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Esta persona será contactada en caso de emergencia durante actividades de la
+                  banda.
+                </p>
+              </div>
 
-        <Input
-          name="allergies"
-          value={allergies}
-          onChange={(e) => setAllergies(e.target.value)}
-          fullWidth
-          type="text"
-          id="allergies"
-        />
+              <TextInput
+                label="Nombre completo"
+                required
+                placeholder="Nombre y apellidos"
+                value={form.familyMemberName}
+                onChange={set("familyMemberName")}
+              />
+              {errors.familyMemberName && (
+                <p className="text-xs text-red-500 -mt-2">{errors.familyMemberName}</p>
+              )}
 
-        <hr style={{ borderBottom: "1px solid #000;", margin: "2rem" }} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <TextInput
+                    label="Número de contacto"
+                    required
+                    placeholder="8888-8888"
+                    type="tel"
+                    value={form.familyMemberNumber}
+                    onChange={set("familyMemberNumber")}
+                  />
+                  {errors.familyMemberNumber && (
+                    <p className="text-xs text-red-500 mt-1">{errors.familyMemberNumber}</p>
+                  )}
+                </div>
+                <TextInput
+                  label="Cédula de identidad"
+                  placeholder="1-2345-6789"
+                  value={form.familyMemberNumberId}
+                  onChange={set("familyMemberNumberId")}
+                />
+              </div>
 
-        <a
-          href="#0"
-          className="group inline-flex items-center justify-center gap-3.5 text-base leading-5 tracking-wide text-sky-700 transition duration-200 ease-in-out hover:text-sky-600 sm:text-lg"
-        >
-          Información del encargado o contacto de emergencia
-        </a>
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Nombre completo
-          </SoftTypography>
-        </SoftBox>
+              <div>
+                <SelectInput
+                  label="Parentesco"
+                  required
+                  value={form.familyMemberRelationship}
+                  onChange={set("familyMemberRelationship")}
+                  options={RELATIONSHIP_TYPES}
+                  placeholder="Seleccionar parentesco"
+                />
+                {errors.familyMemberRelationship && (
+                  <p className="text-xs text-red-500 mt-1">{errors.familyMemberRelationship}</p>
+                )}
+              </div>
 
-        <Input
-          name="familyMemberName"
-          value={familyMemberName}
-          onChange={(e) => setFamilyMemberName(e.target.value)}
-          fullWidth
-          type="text"
-          id="familyMemberName"
-        />
+              <TextInput
+                label="Ocupación"
+                placeholder="Ej. Docente, ingeniero…"
+                value={form.familyMemberOccupation}
+                onChange={set("familyMemberOccupation")}
+              />
+            </div>
+          )}
+        </div>
 
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Número de contacto
-          </SoftTypography>
-        </SoftBox>
+        {/* Footer actions */}
+        <div className="px-5 py-4 border-t border-slate-100 bg-white flex items-center gap-3">
+          {step > 1 ? (
+            <button
+              onClick={handleBack}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors duration-150 active:scale-95"
+            >
+              Atrás
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors duration-150 active:scale-95"
+            >
+              Cancelar
+            </button>
+          )}
 
-        <Input
-          name="familyMemberNumber"
-          value={familyMemberNumber}
-          onChange={(e) => setFamilyMemberNumber(e.target.value)}
-          fullWidth
-          type="text"
-          id="familyMemberNumber"
-        />
-
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Cédula de identidad
-          </SoftTypography>
-        </SoftBox>
-
-        <Input
-          name="familyMemberNumberId"
-          value={familyMemberNumberId}
-          onChange={(e) => setFamilyMemberNumberId(e.target.value)}
-          fullWidth
-          type="text"
-          id="familyMemberNumberId"
-        />
-
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Parentesco
-          </SoftTypography>
-        </SoftBox>
-
-        <Select
-          name="familyMemberRelationship"
-          value={familyMemberRelationship}
-          onChange={(e) => setFamilyMemberRelationship(e.target.value)}
-          fullWidth
-          options={relationshipTypes}
-        />
-        <SoftBox mb={1} ml={0.5}>
-          <SoftTypography component="label" variant="caption" fontWeight="bold">
-            Ocupación
-          </SoftTypography>
-        </SoftBox>
-
-        <Input
-          name="familyMemberOccupation"
-          value={familyMemberOccupation}
-          onChange={(e) => setFamilyMemberOccupation(e.target.value)}
-          fullWidth
-          type="text"
-          id="familyMemberOccupation"
-        />
-
-        <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} color="primary">
-            Guardar
-          </Button>
-        </DialogActions>
-      </DialogContent>
-    </Dialog>
+          {step < 3 ? (
+            <button
+              onClick={handleNext}
+              className="flex-1 py-2.5 rounded-xl bg-slate-900 text-sm font-semibold text-white hover:bg-slate-700 transition-colors duration-150 active:scale-95 flex items-center justify-center gap-2"
+            >
+              Continuar
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 py-2.5 rounded-xl bg-slate-900 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  Guardando…
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Guardar ficha
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
 MedicalRecordModal.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  title: PropTypes.string,
-
+  onSubmit: PropTypes.func.isRequired,
   initialValues: PropTypes.shape({
     identification: PropTypes.string,
     sex: PropTypes.string,
@@ -350,27 +554,10 @@ MedicalRecordModal.propTypes = {
     medicineOnTour: PropTypes.string,
     allergies: PropTypes.string,
   }),
-  onSubmit: PropTypes.func.isRequired,
 };
 
 MedicalRecordModal.defaultProps = {
-  title: "",
-
-  initialValues: {
-    identification: "",
-    sex: "",
-    bloodType: "",
-    address: "",
-    familyMemberName: "",
-    familyMemberNumber: "",
-    familyMemberNumberId: "",
-    familyMemberRelationship: "",
-    familyMemberOccupation: "",
-    illness: "",
-    medicine: "",
-    medicineOnTour: "",
-    allergies: "",
-  },
+  initialValues: null,
 };
 
 export default MedicalRecordModal;

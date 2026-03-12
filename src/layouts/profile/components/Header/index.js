@@ -1,192 +1,156 @@
-/**
-=========================================================
-* Banda CEDES Don Bosco - v4.0.0
-=========================================================
-
-* Product Page: 
-* Copyright 2023 Banda CEDES Don Bosco()
-
-Coded by Josué Chinchilla
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
 import { useEffect, useState } from "react";
-
-// @mui material components
-import AppBar from "@mui/material/AppBar";
-import Card from "@mui/material/Card";
-import Grid from "@mui/material/Grid";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
-
-// Banda CEDES Don Bosco components
-import SoftAvatar from "components/SoftAvatar";
-import SoftBox from "components/SoftBox";
-import SoftTypography from "components/SoftTypography";
-
-// Banda CEDES Don Bosco examples
-import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-
-// Banda CEDES Don Bosco icons
-import Cube from "examples/Icons/Cube";
-import Document from "examples/Icons/Document";
-import Settings from "examples/Icons/Settings";
-
-// Banda CEDES Don Bosco base styles
-import breakpoints from "assets/theme/base/breakpoints";
-
-// Images
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import curved0 from "assets/images/curved-images/curved0.webp";
 import ProfileImageUploader from "../ProfilePicture/ProfileImageUploader";
-import { Avatar } from "@mui/material";
-import { GET_USERS_BY_ID } from "graphql/queries";
-import { GET_PARENTS_BY_ID } from "graphql/queries";
+import { GET_USERS_BY_ID, GET_PARENTS_BY_ID } from "graphql/queries";
+import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+
+const ROLE_BADGE_COLORS = {
+  Admin: "bg-violet-100 text-violet-700",
+  "Principal de sección": "bg-blue-100 text-blue-700",
+  "Asistente de sección": "bg-sky-100 text-sky-700",
+  "Integrante BCDB": "bg-emerald-100 text-emerald-700",
+  "Padre/Madre de familia": "bg-amber-100 text-amber-700",
+  default: "bg-slate-100 text-slate-600",
+};
 
 const Header = () => {
-  const [tabsOrientation, setTabsOrientation] = useState("horizontal");
-  const [tabValue, setTabValue] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
 
-  const { data, loading, error, refetch } = useQuery(GET_USERS_BY_ID);
+  const { data, loading, refetch } = useQuery(GET_USERS_BY_ID);
   const { data: parentsData } = useQuery(GET_PARENTS_BY_ID);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await refetch();
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    if (!loading) {
-      fetchData();
-    }
-  }, [loading, refetch]);
-
-  const { name, firstSurName, avatar, instrument } = data?.getUser || {};
   const {
-    name: parentName,
-    firstSurName: parenFirstSurName,
-    secondSurName: parenSecondSurName,
-  } = parentsData?.getParent || {};
-
-  const userRole = data?.getUser?.role;
+    name,
+    firstSurName,
+    secondSurName,
+    avatar,
+    instrument,
+    role: userRole,
+  } = data?.getUser || {};
+  const { name: parentName, firstSurName: parentFirstSurName } = parentsData?.getParent || {};
   const parentRole = parentsData?.getParent?.role;
 
-  // Function to get the display name and role dynamically
-  const getDisplayNameAndRole = () => {
-    if (userRole) {
-      return { displayName: name + " " + firstSurName, role: userRole };
-    } else if (parentRole) {
-      return { displayName: parentName + " " + parenFirstSurName };
-    } else {
-      return { displayName: "", role: "" };
-    }
-  };
-
-  const { displayName, role } = getDisplayNameAndRole();
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
-    // A function that sets the orientation state of the tabs.
-    function handleTabsOrientation() {
-      return window.innerWidth < breakpoints.values.sm
-        ? setTabsOrientation("vertical")
-        : setTabsOrientation("horizontal");
-    }
+    if (!loading) refetch().catch(console.error);
+  }, [loading]);
 
-    /** 
-     The event listener that's calling the handleTabsOrientation function when resizing the window.
-    */
-    window.addEventListener("resize", handleTabsOrientation);
+  const isParent = !!parentRole;
+  const displayName = isParent
+    ? `${parentName} ${parentFirstSurName}`
+    : `${name || ""} ${firstSurName || ""} ${secondSurName || ""}`.trim();
+  const displayRole = userRole || parentRole || "";
 
-    // Call the handleTabsOrientation function to set the state with the initial value.
-    handleTabsOrientation();
+  const badgeClass = ROLE_BADGE_COLORS[displayRole] || ROLE_BADGE_COLORS.default;
 
-    // Remove event listener on cleanup
-    return () => window.removeEventListener("resize", handleTabsOrientation);
-  }, [tabsOrientation]);
-
-  const handleSetTabValue = (event, newValue) => setTabValue(newValue);
-
-  const renderAvatar = () => {
-    if (parentRole) {
-      return (
-        <SoftAvatar
-          size="large"
-          name={parentName + " " + parenFirstSurName}
-          src={avatar}
-          alt="Avatar"
-        />
-      );
-    } else {
-      return (
-        <>
-          {!avatar || avatar === "" ? (
-            <ProfileImageUploader />
-          ) : (
-            <img
-              className="w-20 h-20 rounded"
-              style={{ objectFit: "cover", objectPosition: "center" }}
-              src={avatar}
-              alt="Avatar"
-            />
-          )}
-        </>
-      );
-    }
+  const getInitials = () => {
+    if (isParent && parentName && parentFirstSurName)
+      return `${parentName[0]}${parentFirstSurName[0]}`.toUpperCase();
+    if (name && firstSurName) return `${name[0]}${firstSurName[0]}`.toUpperCase();
+    return "?";
   };
 
   return (
-    <SoftBox position="relative">
+    <div className="relative w-full">
+      {/* Navbar */}
       <DashboardNavbar absolute light />
-      <SoftBox
-        display="flex"
-        alignItems="center"
-        position="relative"
-        minHeight="18.75rem"
-        borderRadius="xl"
-        sx={{
-          backgroundImage: ({ functions: { rgba, linearGradient }, palette: { gradients } }) =>
-            `${linearGradient(
-              rgba(gradients.info.main, 0.6),
-              rgba(gradients.info.state, 0.6)
-            )}, url(${curved0})`,
-          backgroundSize: "cover",
-          backgroundPosition: "100%",
-          overflow: "hidden",
-        }}
-      />
-      <Card
-        sx={{
-          backdropFilter: `saturate(200%) blur(30px)`,
-          backgroundColor: ({ functions: { rgba }, palette: { white } }) => rgba(white.main, 0.8),
-          boxShadow: ({ boxShadows: { navbarBoxShadow } }) => navbarBoxShadow,
-          position: "relative",
-          mt: -8,
-          mx: 3,
-          py: 2,
-          px: 2,
-        }}
+
+      {/* Hero Banner */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ minHeight: "280px", borderRadius: "0 0 24px 24px" }}
       >
-        <Grid container spacing={3} alignItems="center">
-          <Grid item>{renderAvatar()}</Grid>
-          <Grid item>
-            <SoftBox height="100%" mt={0.5} lineHeight={1}>
-              <SoftTypography variant="h5" fontWeight="medium">
-                {displayName}
-              </SoftTypography>
-              <SoftTypography variant="button" color="text" fontWeight="medium">
-                {instrument}
-              </SoftTypography>
-            </SoftBox>
-          </Grid>
-        </Grid>
-      </Card>
-    </SoftBox>
+        <img
+          src={curved0}
+          alt="Banner"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-800/50 to-blue-900/60" />
+
+        {/* Decorative elements */}
+        <div className="absolute top-8 right-8 w-32 h-32 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute bottom-4 left-16 w-24 h-24 rounded-full bg-blue-400/10 blur-xl" />
+      </div>
+
+      {/* Profile Card - floats over the banner */}
+      <div className="relative mx-4 sm:mx-6 lg:mx-8 -mt-16 z-10">
+        <div
+          className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/60 px-5 py-5 sm:px-8 sm:py-6"
+          style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.06)" }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              {loading ? (
+                <div className="w-20 h-20 rounded-full bg-slate-100 animate-pulse" />
+              ) : isParent ? (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center shadow-md">
+                  <span className="text-2xl font-semibold text-amber-700">{getInitials()}</span>
+                </div>
+              ) : (
+                <div className="relative">
+                  {!avatar || avatar === "" ? (
+                    <ProfileImageUploader size="lg" />
+                  ) : (
+                    <ProfileImageUploader size="lg" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              {loading ? (
+                <div className="space-y-2">
+                  <div className="h-6 w-48 bg-slate-100 rounded-lg animate-pulse" />
+                  <div className="h-4 w-32 bg-slate-100 rounded-lg animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight truncate">
+                    {displayName || "—"}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    {displayRole && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}
+                      >
+                        {displayRole}
+                      </span>
+                    )}
+                    {instrument && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                          />
+                        </svg>
+                        {instrument}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

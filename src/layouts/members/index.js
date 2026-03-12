@@ -13,11 +13,7 @@ import { useParentsPaginated } from "../../hooks/useParentsPaginated";
 import "./reset.css";
 
 // ── Role sets ────────────────────────────────────────────────────────────────
-const MUSICIAN_ROLES = [
-  "Principal de sección",
-  "Integrante BCDB",
-  "Asistente de sección",
-];
+const MUSICIAN_ROLES = ["Principal de sección", "Integrante BCDB", "Asistente de sección", "Admin"];
 
 const STAFF_ROLES = [
   "Director",
@@ -33,10 +29,10 @@ const INSTRUCTOR_ROLES = ["Instructor de instrumento"];
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
-  { key: "musicians",   label: "Integrantes"  },
-  { key: "staff",       label: "Staff"        },
+  { key: "musicians", label: "Integrantes" },
+  { key: "staff", label: "Staff" },
   { key: "instructors", label: "Instructores" },
-  { key: "parents",     label: "Padres"       },
+  { key: "parents", label: "Padres" },
 ];
 
 // ── Tab bar ──────────────────────────────────────────────────────────────────
@@ -110,7 +106,7 @@ const MembersPage = () => {
 
   const { userRole, getMedicalRecordForUserId, deleteUserAndMedicalRecord } = useMembersUtils();
 
-  const handleRowClick  = useCallback((user) => setSelectedUser(user), []);
+  const handleRowClick = useCallback((user) => setSelectedUser(user), []);
   const handleCloseModal = useCallback(() => setSelectedUser(null), []);
 
   const medicalRecord = useMemo(
@@ -118,10 +114,7 @@ const MembersPage = () => {
     [selectedUser, getMedicalRecordForUserId]
   );
 
-  const canDeleteUser = useMemo(
-    () => userRole === "Admin" || userRole === "Director",
-    [userRole]
-  );
+  const canDeleteUser = useMemo(() => userRole === "Admin" || userRole === "Director", [userRole]);
 
   const onConfirmDelete = useCallback(
     async ({ userId, medicalRecordId }) => {
@@ -149,10 +142,10 @@ const MembersPage = () => {
         <TabBar activeIndex={activeTab} onChange={setActiveTab} />
 
         {/* Only the active tab is mounted — one query at a time */}
-        {activeTab === 0 && <PaginatedTab roles={MUSICIAN_ROLES}  onRowClick={handleRowClick} />}
-        {activeTab === 1 && <PaginatedTab roles={STAFF_ROLES}     onRowClick={handleRowClick} />}
+        {activeTab === 0 && <PaginatedTab roles={MUSICIAN_ROLES} onRowClick={handleRowClick} />}
+        {activeTab === 1 && <PaginatedTab roles={STAFF_ROLES} onRowClick={handleRowClick} />}
         {activeTab === 2 && <PaginatedTab roles={INSTRUCTOR_ROLES} onRowClick={handleRowClick} />}
-        {activeTab === 3 && <ParentsTab                            onRowClick={handleRowClick} />}
+        {activeTab === 3 && <ParentsTab onRowClick={handleRowClick} />}
       </div>
       <Footer />
 
