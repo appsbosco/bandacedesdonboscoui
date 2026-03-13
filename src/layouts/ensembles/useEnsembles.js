@@ -5,27 +5,27 @@ import {
   USERS_PAGINATED,
   ENSEMBLE_MEMBERS,
   ENSEMBLE_AVAILABLE,
+  ENSEMBLE_IN_OTHER,   // ← NUEVA query: usuarios que están en al menos otro ensamble
   ENSEMBLE_COUNTS,
   ENSEMBLE_INSTRUMENT_STATS,
   ADD_USER_TO_ENSEMBLES,
   REMOVE_USER_FROM_ENSEMBLES,
 } from "./ensembles.gql.js";
 
+
+
 const DEFAULT_PAGINATION = { page: 1, limit: 25, sortBy: "firstSurName", sortDir: "asc" };
 
-// ── Dashboard hook ─────────────────────────────────────────────────────────────
+// ── Dashboard hook ──────────────────────────────────────────────────────────
 
 export function useEnsemblesDashboard() {
   const { data, loading, error, refetch } = useQuery(GET_ENSEMBLES, {
     fetchPolicy: "cache-and-network",
   });
-
-  const ensembles = data?.ensembles || [];
-
-  return { ensembles, loading, error, refetch };
+  return { ensembles: data?.ensembles || [], loading, error, refetch };
 }
 
-// ── Members paginated hook (used by both dashboard and ensemble members page) ──
+// ── Members paginated hook (dashboard / ensemble members page) ──────────────
 
 export function useMembersPaginated({ initialFilter = {}, queryType = "paginated", ensembleKey } = {}) {
   const [filter, setFilter] = useState(initialFilter);
@@ -36,7 +36,6 @@ export function useMembersPaginated({ initialFilter = {}, queryType = "paginated
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
-  // Debounce search
   const searchTimer = useRef(null);
   const setSearchText = useCallback((text) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -56,7 +55,6 @@ export function useMembersPaginated({ initialFilter = {}, queryType = "paginated
     setPagination(DEFAULT_PAGINATION);
   }, [initialFilter]);
 
-  // Query
   const paginatedVars = { filter, pagination };
   const memberVars = { ensembleKey, filter, pagination };
 
@@ -73,20 +71,19 @@ export function useMembersPaginated({ initialFilter = {}, queryType = "paginated
   });
 
   const activeResult = queryType === "ensemble" ? membersResult : paginatedResult;
-  const pageData = queryType === "ensemble"
-    ? activeResult.data?.ensembleMembers
-    : activeResult.data?.usersPaginated;
+  const pageData =
+    queryType === "ensemble"
+      ? activeResult.data?.ensembleMembers
+      : activeResult.data?.usersPaginated;
 
   const items  = pageData?.items  || [];
   const total  = pageData?.total  || 0;
   const facets = pageData?.facets || { byState: [], byRole: [], byInstrument: [], byEnsemble: [] };
 
-  // Selection
   const toggleSelect = useCallback((id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   }, []);
@@ -97,7 +94,6 @@ export function useMembersPaginated({ initialFilter = {}, queryType = "paginated
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-  // Bulk mutations
   const [addMutation, { loading: adding }] = useMutation(ADD_USER_TO_ENSEMBLES, {
     onCompleted: (data) => {
       const r = data?.addUserToEnsembles;
@@ -120,33 +116,25 @@ export function useMembersPaginated({ initialFilter = {}, queryType = "paginated
     onError: (e) => showToast(e.message, "error"),
   });
 
-  const handleBulkApply = useCallback(async (ensembleKeys, mode) => {
-    const userIds = Array.from(selectedIds);
-    if (!userIds.length || !ensembleKeys.length) return;
-    if (mode === "add") {
-      await addMutation({ variables: { userIds, ensembleKeys } });
-    } else {
-      await removeMutation({ variables: { userIds, ensembleKeys } });
-    }
-  }, [selectedIds, addMutation, removeMutation]);
-
-  const totalPages = Math.ceil(total / pagination.limit);
+  const handleBulkApply = useCallback(
+    async (ensembleKeys, mode) => {
+      const userIds = Array.from(selectedIds);
+      if (!userIds.length || !ensembleKeys.length) return;
+      if (mode === "add") await addMutation({ variables: { userIds, ensembleKeys } });
+      else await removeMutation({ variables: { userIds, ensembleKeys } });
+    },
+    [selectedIds, addMutation, removeMutation]
+  );
 
   return {
-    // Data
-    items, total, facets, totalPages,
+    items, total, facets, totalPages: Math.ceil(total / pagination.limit),
     loading: activeResult.loading,
     error: activeResult.error,
-    // Filter
     filter, pagination, setPagination,
     setSearchText, setFilterField, clearFilters,
-    // Selection
     selectedIds, toggleSelect, selectAll, clearSelection,
-    // Bulk
-    bulkModal, setBulkModal,
-    handleBulkApply,
+    bulkModal, setBulkModal, handleBulkApply,
     adding, removing,
-    // Toast
     toast, setToast,
   };
 }
@@ -156,8 +144,7 @@ export function useEnsemblesRef() {
   return useMemo(() => data?.ensembles || [], [data]);
 }
 
-// ── Counts hook: member + available totals for header badges ──────────────────
-// Runs always (no skip) so badges are correct on page load without visiting each tab.
+// ── Counts hook — ahora incluye inOtherTotal ─────────────────────────────────
 
 export function useEnsembleCounts(ensembleKey) {
   const { data, loading, refetch } = useQuery(ENSEMBLE_COUNTS, {
@@ -169,12 +156,13 @@ export function useEnsembleCounts(ensembleKey) {
   return {
     membersTotal:   data?.ensembleCounts?.membersTotal   ?? null,
     availableTotal: data?.ensembleCounts?.availableTotal ?? null,
+    inOtherTotal:   data?.ensembleCounts?.inOtherTotal   ?? null,  // ← nuevo
     loading,
     refetch,
   };
 }
 
-// ── Instrument stats hook ─────────────────────────────────────────────────────
+// ── Instrument stats hook ────────────────────────────────────────────────────
 
 export function useEnsembleInstrumentStats(ensembleKey) {
   const { data, loading, refetch } = useQuery(ENSEMBLE_INSTRUMENT_STATS, {
@@ -190,41 +178,46 @@ export function useEnsembleInstrumentStats(ensembleKey) {
   };
 }
 
-// ── Focused single-tab hook for EnsembleControlPage ──────────────────────────
+// ── useEnsemblePaginated ─────────────────────────────────────────────────────
 //
-// queryType: "members" → ensembleMembers query (users IN ensemble)
-//            "available" → ensembleAvailable query (users NOT in ensemble)
-// skip: when false this tab's query is suspended (other tab is active)
+// queryType:
+//   "members"   → ENSEMBLE_MEMBERS   (miembros del ensamble actual)
+//   "available" → ENSEMBLE_AVAILABLE (sin ningún ensamble asignado)
+//   "in_other"  → ENSEMBLE_IN_OTHER  (en al menos otro ensamble, no en este)
+//
+// Selección removida — vive en EnsembleControlPage (lifted up).
 //
 export function useEnsemblePaginated(ensembleKey, queryType, skip = false) {
-  const [filter, setFilterState]     = useState({});
+  const [filter, setFilterState]         = useState({});
   const [pagination, setPaginationState] = useState(DEFAULT_PAGINATION);
-  const [selectedIds, setSelectedIds]    = useState(new Set());
 
   const searchTimer = useRef(null);
+
   const setSearchText = useCallback((text) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
       setFilterState((prev) => ({ ...prev, searchText: text || undefined }));
       setPaginationState((prev) => ({ ...prev, page: 1 }));
-      setSelectedIds(new Set()); // clear selection on search
     }, 300);
   }, []);
 
   const setFilterField = useCallback((field, value) => {
     setFilterState((prev) => ({ ...prev, [field]: value || undefined }));
     setPaginationState((prev) => ({ ...prev, page: 1 }));
-    setSelectedIds(new Set()); // clear selection on filter
   }, []);
 
   const clearFilters = useCallback(() => {
     setFilterState({});
     setPaginationState(DEFAULT_PAGINATION);
-    setSelectedIds(new Set()); // clear selection on reset
   }, []);
 
-  const query   = queryType === "members" ? ENSEMBLE_MEMBERS : ENSEMBLE_AVAILABLE;
-  const dataKey = queryType === "members" ? "ensembleMembers" : "ensembleAvailable";
+  // Mapeo queryType → GQL query + data key
+  const queryMap = {
+    members:   { query: ENSEMBLE_MEMBERS,   dataKey: "ensembleMembers"  },
+    available: { query: ENSEMBLE_AVAILABLE, dataKey: "ensembleAvailable" },
+    in_other:  { query: ENSEMBLE_IN_OTHER,  dataKey: "ensembleInOther"  },
+  };
+  const { query, dataKey } = queryMap[queryType] ?? queryMap.available;
 
   const { data, loading, refetch } = useQuery(query, {
     variables: { ensembleKey, filter, pagination },
@@ -238,31 +231,17 @@ export function useEnsemblePaginated(ensembleKey, queryType, skip = false) {
   const total  = pageData?.total  || 0;
   const facets = pageData?.facets || { byState: [], byRole: [], byInstrument: [], byEnsemble: [] };
 
-  const toggleSelect = useCallback((id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const selectAll     = useCallback(() => setSelectedIds(new Set(items.map((u) => u.id))), [items]);
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-
   const setPagination = useCallback((updater) => {
     setPaginationState((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       return { ...prev, ...next };
     });
-    setSelectedIds(new Set()); // clear selection on page/limit change
   }, []);
 
   return {
     items, total, facets, loading,
     filter, pagination, setPagination,
     setSearchText, setFilterField, clearFilters,
-    selectedIds, toggleSelect, selectAll, clearSelection,
     refetch,
   };
 }

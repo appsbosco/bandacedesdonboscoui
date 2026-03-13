@@ -28,6 +28,15 @@ function formatDate(iso) {
   });
 }
 
+function formatTime12(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function participantInitials(p) {
   return [p.firstName, p.firstSurname]
     .filter(Boolean)
@@ -42,32 +51,35 @@ function participantFullName(p) {
 
 function FlightRow({ flight, onUnassign }) {
   const dir = FLIGHT_DIR[flight.direction] || FLIGHT_DIR.OUTBOUND;
+  const depTime = formatTime12(flight.departureAt);
+  const arrTime = formatTime12(flight.arrivalAt);
+
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-      <span
-        className={`px-1.5 py-0.5 rounded-full font-semibold text-[10px] border ${dir.badge} flex-shrink-0`}
-      >
+      <span className={`px-1.5 py-0.5 rounded-full font-semibold text-[10px] border ${dir.badge} flex-shrink-0`}>
         {dir.emoji} {dir.label}
       </span>
-      <span className="font-bold text-gray-900">
+      <span className="font-bold text-gray-900 flex-shrink-0">
         {flight.airline} {flight.flightNumber}
       </span>
-      <span className="text-gray-500 min-w-0 truncate">
+      <span className="text-gray-500 flex-shrink-0">
         {flight.origin}→{flight.destination}
       </span>
-      <span className="text-gray-400 ml-auto flex-shrink-0">{formatDate(flight.departureAt)}</span>
+      <span className="flex-1" />
+      <span className="text-gray-400 flex-shrink-0">{formatDate(flight.departureAt)}</span>
+      {depTime && (
+        <span className="text-gray-700 font-semibold flex-shrink-0">
+          {depTime}
+          {arrTime && <span className="text-gray-400 font-normal"> – {arrTime}</span>}
+        </span>
+      )}
       <button
         onClick={() => onUnassign(flight.id)}
-        className="ml-1 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
+        className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
         title="Quitar vuelo de este itinerario"
       >
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -81,7 +93,6 @@ function CapacityBar({ current, max }) {
   const isAlmostFull = !isFull && pct >= 80;
 
   const barColor = isFull ? "bg-red-500" : isAlmostFull ? "bg-amber-500" : "bg-emerald-500";
-
   const textColor = isFull ? "text-red-600" : isAlmostFull ? "text-amber-600" : "text-emerald-600";
 
   return (
@@ -93,9 +104,7 @@ function CapacityBar({ current, max }) {
         <span className={`font-semibold ${textColor}`}>
           {isFull
             ? "Sin cupos"
-            : `${remaining} cupo${remaining !== 1 ? "s" : ""} disponible${
-                remaining !== 1 ? "s" : ""
-              }`}
+            : `${remaining} cupo${remaining !== 1 ? "s" : ""} disponible${remaining !== 1 ? "s" : ""}`}
         </span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -120,13 +129,12 @@ export default function ItineraryCard({
   const flights = itinerary.flights || [];
   const leaders = itinerary.leaders || [];
 
-  // Group flights by direction for visual clarity
-  const outbound = flights.filter((f) => f.direction === "OUTBOUND");
+  const outbound   = flights.filter((f) => f.direction === "OUTBOUND");
   const connecting = flights.filter((f) => f.direction === "CONNECTING");
-  const inbound = flights.filter((f) => f.direction === "INBOUND");
+  const inbound    = flights.filter((f) => f.direction === "INBOUND");
 
   const passengerCount = itinerary.passengerCount || 0;
-  const maxPassengers = itinerary.maxPassengers ?? 60;
+  const maxPassengers  = itinerary.maxPassengers ?? 60;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden">
@@ -151,12 +159,7 @@ export default function ItineraryCard({
             title="Editar itinerario"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
           <button
@@ -165,12 +168,7 @@ export default function ItineraryCard({
             title="Eliminar itinerario"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
         </div>
@@ -266,12 +264,7 @@ export default function ItineraryCard({
           className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition-all"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
           </svg>
           Líderes
         </button>
@@ -280,12 +273,7 @@ export default function ItineraryCard({
           className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           Pasajeros
         </button>

@@ -133,6 +133,7 @@ export const ENSEMBLE_COUNTS = gql`
     ensembleCounts(ensembleKey: $ensembleKey) {
       membersTotal
       availableTotal
+        inOtherTotal
     }
   }
 `;
@@ -154,3 +155,38 @@ export const SET_USER_ENSEMBLES = gql`
     }
   }
 `;
+
+
+
+ 
+export const ENSEMBLE_IN_OTHER = gql`
+  query EnsembleInOther($ensembleKey: String!, $filter: UsersFilterInput, $pagination: PaginationInput) {
+    ensembleInOther(ensembleKey: $ensembleKey, filter: $filter, pagination: $pagination) {
+      items {
+        id
+        name
+        firstSurName
+        secondSurName
+        email
+        carnet
+        state
+        role
+        grade
+        instrument
+        bands
+        avatar
+        phone
+      }
+      total
+      page
+      limit
+      facets {
+        byState      { value count }
+        byRole       { value count }
+        byInstrument { value count }
+        byEnsemble   { value count }
+      }
+    }
+  }
+`;
+ 

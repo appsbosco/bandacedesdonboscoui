@@ -8,7 +8,7 @@
  *   - Blocked participants (in another itinerary) shown with their itinerary name.
  *   - Result banner differentiates ALREADY_ASSIGNED vs CAPACITY_EXCEEDED conflicts.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, gql } from "@apollo/client";
 
 const GET_TOUR_PARTICIPANTS_MODAL = gql`
@@ -42,6 +42,7 @@ export default function ItineraryPassengersModal({
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [search, setSearch] = useState("");
+  const [instrumentFilter, setInstrumentFilter] = useState("all");
   const [tab, setTab] = useState("add"); // "add" | "remove"
 
   const { data, loading } = useQuery(GET_TOUR_PARTICIPANTS_MODAL, {
@@ -54,6 +55,7 @@ export default function ItineraryPassengersModal({
     if (isOpen) {
       setSelectedIds(new Set());
       setSearch("");
+      setInstrumentFilter("all");
       setTab("add");
     }
   }, [isOpen, itinerary?.id]);
@@ -88,13 +90,29 @@ export default function ItineraryPassengersModal({
   const inOtherItinerary = allParticipants.filter((p) => inOtherItineraryMap.has(p.id));
   const assigned = itinerary.participants || [];
 
-  const filteredAvailable = search
-    ? available.filter((p) => participantName(p).toLowerCase().includes(search.toLowerCase()))
-    : available;
+  // Collect unique instruments from the relevant list per tab
+  const instrumentsInScope = tab === "add" ? available : assigned;
+  const uniqueInstruments = useMemo(() => {
+    const set = new Set(
+      instrumentsInScope
+        .map((p) => p.instrument)
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [instrumentsInScope]);
 
-  const filteredAssigned = search
-    ? assigned.filter((p) => participantName(p).toLowerCase().includes(search.toLowerCase()))
-    : assigned;
+  // Filtering helper: applies both search and instrument filter
+  const applyFilters = (list) =>
+    list.filter((p) => {
+      const matchesSearch =
+        !search || participantName(p).toLowerCase().includes(search.toLowerCase());
+      const matchesInstrument =
+        instrumentFilter === "all" || p.instrument === instrumentFilter;
+      return matchesSearch && matchesInstrument;
+    });
+
+  const filteredAvailable = applyFilters(available);
+  const filteredAssigned  = applyFilters(assigned);
 
   const toggleSelect = (id) => {
     if (tab === "add") {
@@ -111,11 +129,11 @@ export default function ItineraryPassengersModal({
 
   const selectAll = () => {
     if (tab === "add") {
-      // Only select up to seatsRemaining
-      const slice = available.slice(0, seatsRemaining);
+      // Only select up to seatsRemaining from the currently filtered list
+      const slice = filteredAvailable.slice(0, seatsRemaining);
       setSelectedIds(new Set(slice.map((p) => p.id)));
     } else {
-      setSelectedIds(new Set(assigned.map((p) => p.id)));
+      setSelectedIds(new Set(filteredAssigned.map((p) => p.id)));
     }
   };
   const clearSelection = () => setSelectedIds(new Set());
@@ -212,7 +230,7 @@ export default function ItineraryPassengersModal({
             ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => { setTab(t.id); setSelectedIds(new Set()); }}
+                onClick={() => { setTab(t.id); setSelectedIds(new Set()); setInstrumentFilter("all"); }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   tab === t.id
                     ? "bg-white text-gray-900 shadow-sm"
@@ -285,14 +303,60 @@ export default function ItineraryPassengersModal({
             </div>
           ) : (
             <>
-              {/* Search */}
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar participante…"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              />
+              {/* Search + Instrument filter */}
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar participante…"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                />
+
+                {uniqueInstruments.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setInstrumentFilter("all")}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                        instrumentFilter === "all"
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+                      }`}
+                    >
+                      Todos
+                    </button>
+                    {uniqueInstruments.map((inst) => (
+                      <button
+                        key={inst}
+                        onClick={() => setInstrumentFilter(inst === instrumentFilter ? "all" : inst)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                          instrumentFilter === inst
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+                        }`}
+                      >
+                        🎵 {inst}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Active filter summary */}
+                {(search || instrumentFilter !== "all") && (
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>
+                      {tab === "add" ? filteredAvailable.length : filteredAssigned.length} resultado{(tab === "add" ? filteredAvailable.length : filteredAssigned.length) !== 1 ? "s" : ""}
+                      {instrumentFilter !== "all" && <span className="ml-1 text-gray-500 font-medium">· {instrumentFilter}</span>}
+                    </span>
+                    <button
+                      onClick={() => { setSearch(""); setInstrumentFilter("all"); }}
+                      className="text-gray-400 hover:text-gray-600 underline"
+                    >
+                      Limpiar filtros
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* ADD tab */}
               {tab === "add" && (
@@ -335,6 +399,8 @@ export default function ItineraryPassengersModal({
                       <p className={`text-xs font-medium ${isFull ? "text-red-700" : "text-blue-700"}`}>
                         {isFull
                           ? "Itinerario completo. Sin cupos disponibles."
+                          : search || instrumentFilter !== "all"
+                          ? "No hay resultados para los filtros aplicados."
                           : inThisItineraryIds.size > 0
                           ? "✓ Todos los participantes disponibles ya están en este itinerario."
                           : "No hay participantes disponibles."}
@@ -396,7 +462,11 @@ export default function ItineraryPassengersModal({
                     </section>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-xs text-gray-400">Este itinerario no tiene pasajeros asignados.</p>
+                      <p className="text-xs text-gray-400">
+                        {search || instrumentFilter !== "all"
+                          ? "No hay resultados para los filtros aplicados."
+                          : "Este itinerario no tiene pasajeros asignados."}
+                      </p>
                     </div>
                   )}
                 </>

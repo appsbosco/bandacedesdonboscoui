@@ -7,16 +7,16 @@ import {
 import {
   CREAR_SECUENCIA,
   ACTUALIZAR_SECUENCIA,
-  ELIMINAR_SECUENCIA,
   MARCAR_ULTIMA_SECUENCIA,
 } from "../../graphql/mutations/practiceTools.js";
 
 const SS_KEY = "practica_seq_borrador_v1";
 
 export function crearSeccionNueva(sobreescribir = {}) {
+  const uid = `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   return {
-    id: `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    seccionId: `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    id: uid,
+    seccionId: uid,
     nombre: "Nueva sección",
     compas: { numerador: 4, denominador: 4 },
     tempo: { tipo: "fijo", bpm: 120 },
@@ -28,9 +28,9 @@ export function crearSeccionNueva(sobreescribir = {}) {
 }
 
 const SECCIONES_EJEMPLO = [
-  crearSeccionNueva({ nombre: "Intro",     tempo: { tipo: "fijo", bpm: 80  }, repeticiones: 2 }),
-  crearSeccionNueva({ nombre: "Desarrollo",tempo: { tipo: "fijo", bpm: 100 }, repeticiones: 4 }),
-  crearSeccionNueva({ nombre: "Clímax",    tempo: { tipo: "curva", inicio: 100, fin: 120, curva: "lineal" }, repeticiones: 4 }),
+  crearSeccionNueva({ nombre: "Intro",      tempo: { tipo: "fijo", bpm: 80  }, repeticiones: 2 }),
+  crearSeccionNueva({ nombre: "Desarrollo", tempo: { tipo: "fijo", bpm: 100 }, repeticiones: 4 }),
+  crearSeccionNueva({ nombre: "Clímax",     tempo: { tipo: "curva", inicio: 100, fin: 120, curva: "lineal" }, repeticiones: 4 }),
 ];
 
 function leerBorrador() {
@@ -49,50 +49,65 @@ function escribirBorrador(secciones) {
 }
 
 export function useMetronomoSecuencia(motorRef, userId) {
-  const [secciones, setSecciones] = useState(() => leerBorrador() || SECCIONES_EJEMPLO);
-  const [estadoRepro, setEstadoRepro] = useState("detenido");
-  const [tickActual, setTickActual] = useState(null);
-  const [countIn, setCountIn] = useState(true);
-  const [countInBeats, setCountInBeats] = useState(2);
-  const [sonido, setSonido] = useState("click");
-  const [volumen, setVolumen] = useState(0.8);
+  const [secciones, setSecciones]           = useState(() => leerBorrador() || SECCIONES_EJEMPLO);
+  const [estadoRepro, setEstadoRepro]       = useState("detenido");
+  const [tickActual, setTickActual]         = useState(null);
+  const [countIn, setCountIn]               = useState(true);
+  const [countInBeats, setCountInBeats]     = useState(2);
+  const [sonido, setSonido]                 = useState("click");
+  const [volumen, setVolumen]               = useState(0.8);
   const [secuenciaActualId, setSecuenciaActualId] = useState(null);
-  const [guardandoEnBD, setGuardandoEnBD] = useState(false);
-  const [errores, setErrores] = useState(null);
+  const [guardandoEnBD, setGuardandoEnBD]   = useState(false);
+  const [errores, setErrores]               = useState(null);
 
-  // ── GraphQL ──────────────────────────────────────────────
+  // ── Borrador ─────────────────────────────────────────────
+  useEffect(() => {
+    if (secciones.length > 0) escribirBorrador(secciones);
+  }, [secciones]);
+
+  // ── GraphQL queries ──────────────────────────────────────
   const { data: dataSecuencias } = useQuery(GET_MIS_SECUENCIAS, {
     skip: !userId,
     fetchPolicy: "cache-and-network",
   });
 
+  // FIX: onCompleted no es confiable en Apollo v3.8+ — usar useEffect sobre `data`
   const { data: dataUltima } = useQuery(GET_ULTIMA_SECUENCIA, {
     skip: !userId,
     fetchPolicy: "network-only",
-    onCompleted: (data) => {
-      if (data?.ultimaSecuencia && !leerBorrador()) {
-        cargarSecuencia(data.ultimaSecuencia);
-      }
-    },
   });
 
-  const [mutCrear]   = useMutation(CREAR_SECUENCIA,   { refetchQueries: [GET_MIS_SECUENCIAS] });
-  const [mutActualizar] = useMutation(ACTUALIZAR_SECUENCIA);
-  const [mutEliminar]   = useMutation(ELIMINAR_SECUENCIA, { refetchQueries: [GET_MIS_SECUENCIAS] });
-  const [mutMarcarUltima] = useMutation(MARCAR_ULTIMA_SECUENCIA);
-
-  // Guardar borrador en sessionStorage
+  const ultimaCargadaRef = useRef(false);
   useEffect(() => {
-    if (secciones.length > 0) escribirBorrador(secciones);
-  }, [secciones]);
+    // Solo cargar una vez al montar, y solo si no hay borrador local
+    if (ultimaCargadaRef.current) return;
+    if (!dataUltima?.ultimaSecuencia) return;
+    if (leerBorrador()) return; // Hay borrador local — el usuario lo tiene como prioridad
+    ultimaCargadaRef.current = true;
+    cargarSecuencia(dataUltima.ultimaSecuencia);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUltima]);
+
+  // ── GraphQL mutations ────────────────────────────────────
+  // FIX: refetchQueries con string del operationName, no el DocumentNode
+  const [mutCrear]        = useMutation(CREAR_SECUENCIA,    { refetchQueries: ["MisSecuencias"] });
+  const [mutActualizar]   = useMutation(ACTUALIZAR_SECUENCIA);
+  const [mutMarcarUltima] = useMutation(MARCAR_ULTIMA_SECUENCIA);
 
   // ── Carga de secuencia desde BD ──────────────────────────
   const cargarSecuencia = useCallback((seq) => {
-    setSecciones(seq.secciones.map((s) => ({ ...s, id: s.seccionId })));
-    setCountIn(seq.countIn);
-    setCountInBeats(seq.countInBeats);
-    setSonido(seq.sonido);
-    setVolumen(seq.volumen);
+    setSecciones(
+      seq.secciones.map((s) => ({
+        ...s,
+        // Garantizar que id y seccionId estén siempre sincronizados
+        id: s.seccionId || s.id,
+        seccionId: s.seccionId || s.id,
+      }))
+    );
+    setCountIn(seq.countIn ?? true);
+    setCountInBeats(seq.countInBeats ?? 2);
+    setSonido(seq.sonido ?? "click");
+    setVolumen(seq.volumen ?? 0.8);
     setSecuenciaActualId(seq.id);
   }, []);
 
@@ -101,23 +116,39 @@ export function useMetronomoSecuencia(motorRef, userId) {
     if (!userId) return null;
     setGuardandoEnBD(true);
     setErrores(null);
+
+    // FIX: no destruir `id` — el campo que el backend espera es `seccionId`
+    // Preservar `id` local para que el motor siga funcionando tras guardar
+    const seccionesParaBD = secciones.map((sec) => ({
+      seccionId: sec.seccionId || sec.id,
+      nombre: sec.nombre,
+      compas: sec.compas,
+      tempo: sec.tempo,
+      subdivision: sec.subdivision,
+      patronAcento: sec.patronAcento,
+      repeticiones: sec.repeticiones,
+    }));
+
     const input = {
       nombre,
       descripcion,
-      secciones: secciones.map(({ id, ...s }) => ({ ...s, seccionId: s.seccionId || id })),
+      secciones: seccionesParaBD,
       countIn,
       countInBeats,
       sonido,
       volumen,
     };
+
     try {
       if (secuenciaActualId) {
         const { data } = await mutActualizar({ variables: { id: secuenciaActualId, input } });
         return data.actualizarSecuencia;
       } else {
         const { data } = await mutCrear({ variables: { input } });
-        setSecuenciaActualId(data.crearSecuencia.id);
-        await mutMarcarUltima({ variables: { id: data.crearSecuencia.id } });
+        const newId = data.crearSecuencia.id;
+        setSecuenciaActualId(newId);
+        // Marcar como última usada (no bloquear si falla)
+        mutMarcarUltima({ variables: { id: newId } }).catch(() => {});
         return data.crearSecuencia;
       }
     } catch (e) {
@@ -126,14 +157,15 @@ export function useMetronomoSecuencia(motorRef, userId) {
     } finally {
       setGuardandoEnBD(false);
     }
-  }, [userId, secciones, countIn, countInBeats, sonido, volumen, secuenciaActualId, mutCrear, mutActualizar, mutMarcarUltima]);
+  }, [userId, secciones, countIn, countInBeats, sonido, volumen, secuenciaActualId,
+      mutCrear, mutActualizar, mutMarcarUltima]);
 
   // ── Motor: reproducción ──────────────────────────────────
   const arrancarMotor = useCallback((desdeId) => {
     const motor = motorRef.current;
     if (!motor) return;
     motor.onTick = (tick) => setTickActual(tick);
-    motor.onFin = () => { setEstadoRepro("detenido"); setTickActual(null); };
+    motor.onFin  = () => { setEstadoRepro("detenido"); setTickActual(null); };
     motor.reproducir(secciones, desdeId, countIn, countInBeats, sonido, volumen);
     setEstadoRepro("reproduciendo");
   }, [motorRef, secciones, countIn, countInBeats, sonido, volumen]);
@@ -175,10 +207,11 @@ export function useMetronomoSecuencia(motorRef, userId) {
   }, []);
 
   const duplicarSeccion = useCallback((seccion) => {
+    const uid = `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const copia = crearSeccionNueva({
       ...seccion,
-      id: undefined,
-      seccionId: undefined,
+      id: uid,
+      seccionId: uid,
       nombre: `${seccion.nombre} (copia)`,
     });
     setSecciones((s) => {
@@ -203,13 +236,18 @@ export function useMetronomoSecuencia(motorRef, userId) {
     });
   }, []);
 
-  // ── Export local (JSON) ──────────────────────────────────
+  // ── Export / Import local (JSON) ─────────────────────────
   const exportarJSON = useCallback(() => {
-    const preset = { nombre: "Preset", secciones, countIn, countInBeats, sonido, volumen, fecha: new Date().toISOString() };
+    const preset = {
+      nombre: "Preset",
+      secciones,
+      countIn, countInBeats, sonido, volumen,
+      fecha: new Date().toISOString(),
+    };
     const blob = new Blob([JSON.stringify(preset, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `secuencia-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
@@ -221,17 +259,17 @@ export function useMetronomoSecuencia(motorRef, userId) {
       try {
         const preset = JSON.parse(e.target.result);
         if (Array.isArray(preset.secciones)) {
-          setSecciones(preset.secciones.map((s) => ({
-            ...s,
-            id: s.seccionId || s.id || `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          })));
-          if (preset.countIn !== undefined) setCountIn(preset.countIn);
-          if (preset.countInBeats) setCountInBeats(preset.countInBeats);
-          if (preset.sonido) setSonido(preset.sonido);
-          if (preset.volumen !== undefined) setVolumen(preset.volumen);
-          setSecuenciaActualId(null); // Es nueva, no tiene ID en BD
+          setSecciones(preset.secciones.map((s) => {
+            const uid = s.seccionId || s.id || `sec_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            return { ...s, id: uid, seccionId: uid };
+          }));
+          if (preset.countIn     !== undefined) setCountIn(preset.countIn);
+          if (preset.countInBeats !== undefined) setCountInBeats(preset.countInBeats);
+          if (preset.sonido)                    setSonido(preset.sonido);
+          if (preset.volumen     !== undefined) setVolumen(preset.volumen);
+          setSecuenciaActualId(null);
         }
-      } catch { console.error("Error al importar preset JSON"); }
+      } catch { console.error("Error al importar JSON"); }
     };
     reader.readAsText(archivo);
   }, []);
@@ -240,10 +278,10 @@ export function useMetronomoSecuencia(motorRef, userId) {
     secciones,
     estadoRepro,
     tickActual,
-    countIn, setCountIn,
+    countIn,    setCountIn,
     countInBeats, setCountInBeats,
-    sonido, setSonido,
-    volumen, setVolumen,
+    sonido,     setSonido,
+    volumen,    setVolumen,
     secuenciaActualId,
     secuenciasEnBD: dataSecuencias?.misSecuencias || [],
     guardandoEnBD,

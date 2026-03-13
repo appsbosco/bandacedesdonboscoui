@@ -21,7 +21,7 @@ function initials(user) {
 }
 
 function fullName(u) {
-  return [u.firstSurName, u.secondSurName, u.name].filter(Boolean).join(" ");
+  return [u.name, u.firstSurName, u.secondSurName].filter(Boolean).join(" ");
 }
 
 function childFullName(c) {

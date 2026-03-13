@@ -279,7 +279,7 @@ export default function PremiumUsersTable({
   const handleLimitChange = (lim) => setPagination({ page: 1, limit: lim, sortBy: "firstSurName", sortDir: "asc" });
 
   const fullName = (u) =>
-    [u.firstSurName, u.secondSurName, u.name].filter(Boolean).join(" ");
+    [u.name, u.firstSurName, u.secondSurName].filter(Boolean).join(" ");
 
   return (
     <div className="space-y-4">
