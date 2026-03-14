@@ -55,6 +55,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     statusFilter,
     setStatusFilter,
     toast,
+     openDetailDrawer,  
+  openAccountModal,
     setToast,
     registerModal,
     setRegisterModal,
@@ -175,17 +177,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
               participant: { id: row.participantId, fullName: row.fullName },
             })
           }
-          onOpenDetail={(row) =>
-            setDetailDrawer({
-              open: true,
-              participantId: row.participantId,
-              tourId,
-              participant: row,
-            })
-          }
-          onAdjustAccount={(row) => {
-            setAccountModal({ open: true, participantId: row.participantId, row });
-          }}
+        onOpenDetail={openDetailDrawer}
+onAdjustAccount={openAccountModal}
           onDeleteParticipant={(row) =>
             setDeleteParticipantModal({ open: true, participant: row })
           }

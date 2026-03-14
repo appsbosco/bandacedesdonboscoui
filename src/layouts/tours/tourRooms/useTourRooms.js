@@ -9,6 +9,7 @@ import {
   ASSIGN_OCCUPANT,
   REMOVE_OCCUPANT,
   UPDATE_TOUR_PARTICIPANT_SEX,
+  SET_ROOM_RESPONSIBLE,
 } from "./tourRooms.gql";
 import {
   suggestRoomsFromGroup,
@@ -103,6 +104,7 @@ export function useTourRooms(tourId) {
   const [removeOccupantRaw] = useMutation(REMOVE_OCCUPANT);
   const [updateRoomRaw] = useMutation(UPDATE_TOUR_ROOM);
   const [updateParticipantSexMutation] = useMutation(UPDATE_TOUR_PARTICIPANT_SEX);
+  const [setRoomResponsibleMutation] = useMutation(SET_ROOM_RESPONSIBLE);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const showToast = (message, type = "success") => setToast({ message, type });
@@ -277,30 +279,49 @@ export function useTourRooms(tourId) {
     [updateParticipantSexMutation, refetchParticipants]
   );
 
+  // ── Planner: set / clear responsible person for a room ───────────────────────
+  const handleSetResponsible = useCallback(
+    async (roomId, participantId) => {
+      try {
+        await setRoomResponsibleMutation({ variables: { roomId, participantId: participantId || null } });
+        await refetch();
+      } catch (e) {
+        showToast(e.message || "Error al actualizar responsable", "error");
+      }
+    },
+    [setRoomResponsibleMutation, refetch]
+  );
+
   // ── Planner: create rooms from a suggested group ──────────────────────────────
   /**
-   * Takes a GroupBucket from computeGroups and creates N rooms automatically.
-   * Each room gets capacity-many participants, remainder goes into last room.
+   * Takes a GroupBucket from computeGroups and creates rooms automatically.
+   *
+   * Key guarantee: EVERY participant in group.participants ends up assigned.
+   * Room capacity comes from suggestion.capacity (computed by optimalRoomSizes),
+   * NOT from plannerCapacity (which is only for manual room creation).
    */
   const handleCreateRoomsFromGroup = useCallback(
     async (group) => {
-      const capacity = plannerCapacity;
       const hotel = plannerHotel || "Sin especificar";
       const prefix = groupRoomPrefix(group);
-      const suggestions = suggestRoomsFromGroup(group.participants, capacity);
+      // Pass { prefix } as options — capacity is determined by optimalRoomSizes internally
+      const suggestions = suggestRoomsFromGroup(group.participants, { prefix });
       if (suggestions.length === 0) return;
 
       setBulkCreating(true);
       let created = 0;
       let occupied = 0;
+      let skipped = 0;
 
       for (const suggestion of suggestions) {
         try {
           const roomInput = {
             hotelName: hotel,
-            roomNumber: `${prefix}-${String(suggestion.index).padStart(2, "0")}`,
-            roomType: capacityToRoomType(capacity),
-            capacity,
+            // suggestion.name already includes the prefix (e.g. "M-1", "M-2")
+            roomNumber: suggestion.name,
+            // ← FIX: use suggestion.capacity, not plannerCapacity
+            roomType: capacityToRoomType(suggestion.capacity),
+            capacity: suggestion.capacity,
             tourId,
           };
           const res = await createRoomRaw({ variables: { input: roomInput } });
@@ -312,25 +333,28 @@ export function useTourRooms(tourId) {
                 await assignOccupantRaw({ variables: { roomId: newRoomId, participantId: p.id } });
                 occupied++;
               } catch {
-                // participant may already be assigned elsewhere; continue
+                // participant may already be assigned elsewhere; count as skipped
+                skipped++;
               }
             }
           }
         } catch {
-          // continue with next room
+          // continue with next room on creation failure
         }
       }
 
       await refetch();
+      await refetchParticipants();
       setBulkCreating(false);
+
+      const skippedNote = skipped > 0 ? ` · ${skipped} omitido${skipped !== 1 ? "s" : ""}` : "";
       showToast(
-        `${created} habitación${created !== 1 ? "es" : ""} creada${
-          created !== 1 ? "s" : ""
-        } · ${occupied} asignados`,
-        "success"
+        `${created} habitación${created !== 1 ? "es" : ""} creada${created !== 1 ? "s" : ""} · ${occupied} asignados${skippedNote}`,
+        skipped > 0 ? "warning" : "success"
       );
     },
-    [plannerCapacity, plannerHotel, tourId, createRoomRaw, assignOccupantRaw, refetch]
+    // plannerCapacity intentionally removed — room sizes come from optimalRoomSizes
+    [plannerHotel, tourId, createRoomRaw, assignOccupantRaw, refetch, refetchParticipants]
   );
 
   // ── Derived data ──────────────────────────────────────────────────────────────
@@ -423,6 +447,7 @@ export function useTourRooms(tourId) {
     // Planner
     sexOverrides,
     handleSetSex,
+    handleSetResponsible,
     handleCapacityChange,
     plannerCapacity,
     setPlannerCapacity,

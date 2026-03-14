@@ -22,6 +22,7 @@ export default function RoomPlanner({
   // Planner state
   sexOverrides,
   handleSetSex,
+  handleSetResponsible,
   plannerCapacity,
   setPlannerCapacity,
   plannerHotel,
@@ -110,7 +111,7 @@ export default function RoomPlanner({
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4 flex flex-wrap items-end gap-5">
         <div>
           <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
-            Capacidad por habitación
+            Capacidad (habitación manual)
           </label>
           <input
             type="number"
@@ -136,6 +137,7 @@ export default function RoomPlanner({
         <div className="text-[10px] text-gray-400 self-center">
           <p>🔗 Arrastrá participantes entre habitaciones</p>
           <p>🏷️ Clic en badge de sexo para cambiar M/F/O/?</p>
+          <p>🤖 Grupos sugeridos usan tamaños óptimos (5→4→3)</p>
         </div>
       </div>
 
@@ -154,7 +156,6 @@ export default function RoomPlanner({
           <SuggestedGroupsPanel
             unassignedParticipants={unassignedParticipants}
             sexOverrides={sexOverrides}
-            capacity={plannerCapacity}
             onCreateRooms={handleCreateRoomsFromGroup}
             bulkCreating={bulkCreating}
           />
@@ -172,6 +173,7 @@ export default function RoomPlanner({
             onDelete={openDeleteModal}
             onAddRoom={openCreateModal}
             onCapacityChange={handleCapacityChange}
+            onSetResponsible={handleSetResponsible}
             movingId={movingId}
           />
         </div>

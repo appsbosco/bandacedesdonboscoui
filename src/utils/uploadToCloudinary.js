@@ -57,7 +57,6 @@ export async function uploadToCloudinary(imageData, options = {}, onProgress) {
 
   formData.append("file", imageData);
   formData.append("upload_preset", uploadPreset);
-  formData.append("folder", options.folder || "documents");
 
   // Tags opcionales para organización
   if (options.tags) {

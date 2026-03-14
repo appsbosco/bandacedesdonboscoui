@@ -70,6 +70,12 @@ export default function RoomCard({ room, onEdit, onDelete, onManageOccupants }) 
       <div className="px-4 pt-3 pb-1">
         <p className="text-xs text-gray-400">Hotel</p>
         <p className="text-sm font-semibold text-gray-800">{room.hotelName}</p>
+        {room.responsible && (
+          <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-0.5">
+            <span>👑</span>
+            <span>{participantName(room.responsible)}</span>
+          </p>
+        )}
       </div>
 
       {/* Occupancy bar */}

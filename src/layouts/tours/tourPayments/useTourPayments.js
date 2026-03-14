@@ -221,15 +221,27 @@ export function useTourPayments(tourId) {
     fetchPolicy: "cache-and-network",
   });
 
-  const {
-    data: accountsData,
-    loading: accountsLoading,
-    refetch: refetchAccounts,
-  } = useQuery(GET_FINANCIAL_ACCOUNTS_BY_TOUR, {
+const [accountsEnabled, setAccountsEnabled] = useState(false);
+
+const openDetailDrawer = useCallback((row) => {
+  setAccountsEnabled(true);
+  setDetailDrawer({ open: true, participantId: row.participantId, tourId, participant: row });
+}, [tourId]);
+
+const openAccountModal = useCallback((row) => {
+  setAccountsEnabled(true);
+  setAccountModal({ open: true, participantId: row.participantId, row });
+}, []);
+
+
+const { data: accountsData, loading: accountsLoading, refetch: refetchAccounts } = useQuery(
+  GET_FINANCIAL_ACCOUNTS_BY_TOUR,
+  {
     variables: { tourId },
-    skip: !tourId,
+    skip: !tourId || !accountsEnabled,
     fetchPolicy: "cache-and-network",
-  });
+  }
+);
 
   const { data: flowData, loading: flowLoading } = useQuery(GET_PAYMENT_FLOW, {
     variables: { tourId },
@@ -273,14 +285,72 @@ export function useTourPayments(tourId) {
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
-  const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT, {
-    onCompleted: () => {
-      showToast("Pago registrado y aplicado a cuotas");
-      setRegisterModal({ open: false, participant: null });
-      refetchAfterPayment();
-    },
-    onError: (e) => showToast(e.message, "error"),
-  });
+
+const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT, {
+  update(cache, { data }) {
+    const payment = data?.registerPayment;
+    if (!payment?.appliedTo?.length) return;
+
+    const existing = cache.readQuery({
+      query: GET_FINANCIAL_TABLE,
+      variables: { tourId },
+    });
+    if (!existing?.getFinancialTable) return;
+
+    const participantId = payment.participant.id;
+
+    const updatedRows = existing.getFinancialTable.rows.map((row) => {
+      if (row.participantId !== participantId) return row;
+
+      // Construir un mapa de cuánto se aplicó por orden de cuota
+      const appliedByOrder = new Map(
+        payment.appliedTo.map((a) => [a.installment.order, a.amountApplied])
+      );
+
+      const updatedInstallments = row.installments.map((inst) => {
+        const applied = appliedByOrder.get(inst.order) ?? 0;
+        if (applied === 0) return inst;
+
+        const newPaid = inst.paidAmount + applied;
+        const newStatus =
+          newPaid >= inst.amount
+            ? "PAID"
+            : newPaid > 0
+            ? "PARTIAL"
+            : inst.status;
+
+        return { ...inst, paidAmount: newPaid, status: newStatus };
+      });
+
+      const newTotalPaid = row.totalPaid + payment.amount - (payment.unappliedAmount ?? 0);
+      const newBalance   = row.finalAmount - newTotalPaid;
+
+      return {
+        ...row,
+        totalPaid:    newTotalPaid,
+        balance:      newBalance,
+        installments: updatedInstallments,
+      };
+    });
+
+    cache.writeQuery({
+      query: GET_FINANCIAL_TABLE,
+      variables: { tourId },
+      data: {
+        getFinancialTable: {
+          ...existing.getFinancialTable,
+          rows: updatedRows,
+        },
+      },
+    });
+  },
+  onCompleted: () => {
+    showToast("Pago registrado y aplicado a cuotas");
+    setRegisterModal({ open: false, participant: null });
+    refetchAfterPayment(); // sincronización de seguridad en background
+  },
+  onError: (e) => showToast(e.message, "error"),
+});
 
   const [deletePayment, { loading: deletingPay }] = useMutation(DELETE_PAYMENT, {
     onCompleted: () => {
@@ -548,6 +618,12 @@ export function useTourPayments(tourId) {
     // ── Data ──────────────────────────────────────────────────────────────────
     financialTable,
     tableRows,
+
+    openDetailDrawer,   
+  openAccountModal, 
+
+    accountsLoading,
+
     tableColumns, // expuesto por separado para evitar acceder a financialTable.columns en el render
     installmentsByRow, // Map pre-indexado: elimina O(n²) en celdas de la tabla
     footerTotals, // Totales pre-calculados: elimina reduce() en render del tfoot

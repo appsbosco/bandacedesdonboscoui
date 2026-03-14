@@ -14,7 +14,7 @@ import {
 
 
 
-const DEFAULT_PAGINATION = { page: 1, limit: 25, sortBy: "firstSurName", sortDir: "asc" };
+const DEFAULT_PAGINATION = { page: 1, limit: 100, sortBy: "firstSurName", sortDir: "asc" };
 
 // ── Dashboard hook ──────────────────────────────────────────────────────────
 

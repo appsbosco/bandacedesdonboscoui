@@ -763,41 +763,41 @@ export function DocumentDetail() {
       </Modal>
 
       {/* Delete Modal */}
-      <Modal
-        isOpen={deleteModal}
-        onClose={() => setDeleteModal(false)}
-        title="Confirmar Eliminación"
-        footer={
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => setDeleteModal(false)}
-              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleDelete}
-              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition"
-            >
-              Eliminar
-            </button>
-          </div>
-        }
+    <Modal
+  isOpen={deleteModal}
+  onClose={() => setDeleteModal(false)}
+  title="Confirmar Eliminación"
+>
+  <div className="space-y-4">
+    <p className="text-sm text-slate-600">
+      Esta acción eliminará el documento y todas sus imágenes asociadas.
+    </p>
+    <div className="bg-red-50 ring-1 ring-red-200 rounded-xl p-4">
+      <p className="text-sm font-medium text-red-900">Se eliminará:</p>
+      <ul className="text-sm text-red-700 mt-2 list-disc list-inside">
+        <li>{getDocumentTypeLabel(document.type)}</li>
+        <li>{document.extracted?.fullName || document.notes || "Sin nombre"}</li>
+        <li>{document.images?.length || 0} imagen(es)</li>
+      </ul>
+    </div>
+
+    {/* Botones aquí dentro, no como footer prop */}
+    <div className="flex gap-3 justify-end pt-2">
+      <button
+        onClick={() => setDeleteModal(false)}
+        className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Esta acción eliminará el documento y todas sus imágenes asociadas.
-          </p>
-          <div className="bg-red-50 ring-1 ring-red-200 rounded-xl p-4">
-            <p className="text-sm font-medium text-red-900">Se eliminará:</p>
-            <ul className="text-sm text-red-700 mt-2 list-disc list-inside">
-              <li>{getDocumentTypeLabel(document.type)}</li>
-              <li>{document.extracted?.fullName || document.notes || "Sin nombre"}</li>
-              <li>{document.images?.length || 0} imagen(es)</li>
-            </ul>
-          </div>
-        </div>
-      </Modal>
+        Cancelar
+      </button>
+      <button
+        onClick={handleDelete}
+        className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition"
+      >
+        Eliminar
+      </button>
+    </div>
+  </div>
+</Modal>
     </div>
   );
 }

@@ -32,7 +32,6 @@ export async function uploadToCloudinary(file, onProgress) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  formData.append("folder", "documents"); // Carpeta específica para documentos
 
   // TODO: Cuando esté disponible signed upload, usar esto:
   // const signature = await getUploadSignature();

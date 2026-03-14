@@ -15,6 +15,13 @@ import { canvasToBlob } from "../../utils/uploadToCloudinary.js";
 import { uploadSignedToCloudinary } from "../../services/cloudinarySignedUpload.js";
 import { DOCUMENT_TYPES } from "../../utils/constants";
 
+
+function normalizeMimeType(type) {
+  if (!type) return type;
+  if (type === 'image/pdf') return 'application/pdf';
+  return type;
+}
+
 function NewDocumentPage() {
   const navigate = useNavigate();
 
@@ -176,8 +183,7 @@ function NewDocumentPage() {
               width: result.width,
               height: result.height,
               bytes: result.bytes,
-              mimeType: `image/${result.format}`,
-            },
+mimeType: normalizeMimeType(file.type)            },
           },
         });
 

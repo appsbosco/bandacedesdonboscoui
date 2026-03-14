@@ -1,56 +1,64 @@
 /**
  * roomGrouping.js
  * Frontend-only grouping engine for tour room planning.
- * Groups participants by sex + age bucket, suggests room splits.
  *
- * Sex is persisted on TourParticipant (participant.sex).
- * sexOverrides Map is derived from participant data and passed as a convenience.
+ * NUEVA REGLA DE GRUPOS SUGERIDOS:
+ *  - Se agrupa SOLO por sexo.
+ *  - Dentro de cada sexo, se ordena por edad ascendente.
+ *  - Si empatan en edad, se desempata alfabéticamente.
+ *  - Las habitaciones sugeridas se llenan empezando por 5, luego 4, luego 3,
+ *    luego 2 y luego 1 (greedy real, sin re-optimizar para evitar singles).
  *
- * Assignment rules:
- *  - Men with men, women with women — except staff, who may share mixed rooms.
- *  - Sorted by age first, then alphabetically within each age group.
- *  - Room sizes: fill 5-person rooms first, then 4-person, then 3-person.
- *  - Avoid mixing adults (18+) with minors, EXCEPT when the age difference is
- *    minimal (e.g. a 17-year-old with 18-year-olds). The "soft border" window
- *    is controlled by ADULT_MINOR_SOFT_BORDER_YEARS (default 1 year).
- *
- * ⚠️  All ages are calculated relative to TOUR_REFERENCE_DATE, not today.
- *     This ensures assignments reflect how old participants will be on the tour.
+ * REGLAS GENERALES:
+ *  - Hombres con hombres, mujeres con mujeres — excepto staff, que puede ir mixto.
+ *  - En la asignación completa (`assignRooms`) se evita mezclar adultos (18+) con menores,
+ *    salvo frontera suave (ej. 17 con 18).
+ *  - Todas las edades se calculan respecto a TOUR_REFERENCE_DATE.
  */
 
 // ── Tour reference date ───────────────────────────────────────────────────────
 
 /**
- * The date used as "today" for all age calculations.
- * Ages are computed as of this date so that room assignments reflect
- * participants' ages at the time of the tour, not at planning time.
+ * Fecha de referencia para calcular edades del tour.
  */
 export const TOUR_REFERENCE_DATE = new Date("2027-01-04");
 
-// ── Age buckets ───────────────────────────────────────────────────────────────
+// ── Age buckets (se conservan para warnings / validaciones) ──────────────────
 
 export const DEFAULT_AGE_BUCKETS = [
-  { label: "0–11",  min: 0,  max: 11 },
+  { label: "0–11", min: 0, max: 11 },
   { label: "12–14", min: 12, max: 14 },
   { label: "15–17", min: 15, max: 17 },
-  { label: "18+",   min: 18, max: Infinity },
+  { label: "18+", min: 18, max: Infinity },
 ];
 
 export const SEX_CONFIG = {
-  M:       { label: "Hombres",  short: "M", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  F:       { label: "Mujeres",  short: "F", color: "bg-pink-100 text-pink-700 border-pink-200" },
-  UNKNOWN: { label: "Sin sexo", short: "?", color: "bg-gray-100 text-gray-500 border-gray-200" },
+  M: {
+    label: "Hombres",
+    short: "M",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+  },
+  F: {
+    label: "Mujeres",
+    short: "F",
+    color: "bg-pink-100 text-pink-700 border-pink-200",
+  },
+  UNKNOWN: {
+    label: "Sin sexo",
+    short: "?",
+    color: "bg-gray-100 text-gray-500 border-gray-200",
+  },
 };
 
 // Cycle sex values on click: UNKNOWN → M → F → UNKNOWN
 export const SEX_CYCLE = ["UNKNOWN", "M", "F"];
+
 export function nextSex(current) {
   const idx = SEX_CYCLE.indexOf(current || "UNKNOWN");
   return SEX_CYCLE[(idx + 1) % SEX_CYCLE.length];
 }
 
-// How many years of age difference are tolerated when mixing minors / adults.
-// A 17-year-old and an 18-year-old differ by 1 year → allowed with default value.
+// Cuántos años de diferencia se toleran al mezclar menor/adulto
 export const ADULT_MINOR_SOFT_BORDER_YEARS = 1;
 
 // ── Age helpers ───────────────────────────────────────────────────────────────
@@ -61,11 +69,15 @@ export const ADULT_MINOR_SOFT_BORDER_YEARS = 1;
  */
 export function calcAge(birthDate, asOf = TOUR_REFERENCE_DATE) {
   if (!birthDate) return null;
+
   const birth = new Date(birthDate);
   if (isNaN(birth.getTime())) return null;
+
   let age = asOf.getFullYear() - birth.getFullYear();
   const m = asOf.getMonth() - birth.getMonth();
+
   if (m < 0 || (m === 0 && asOf.getDate() < birth.getDate())) age--;
+
   return age < 0 ? 0 : age;
 }
 
@@ -74,176 +86,338 @@ export function getAgeBucket(age, buckets = DEFAULT_AGE_BUCKETS) {
   return buckets.find((b) => age >= b.min && age <= b.max) || null;
 }
 
-/** Returns true if the two ages are on different sides of the adult threshold
- *  (18) but within ADULT_MINOR_SOFT_BORDER_YEARS of each other. */
+/**
+ * True cuando dos edades están en lados distintos del umbral de 18
+ * pero dentro de la frontera suave permitida.
+ */
 export function isSoftAdultBorder(ageA, ageB) {
   if (ageA === null || ageB === null) return false;
+
   const THRESHOLD = 18;
   const straddled =
     (ageA < THRESHOLD && ageB >= THRESHOLD) ||
     (ageB < THRESHOLD && ageA >= THRESHOLD);
+
   return straddled && Math.abs(ageA - ageB) <= ADULT_MINOR_SOFT_BORDER_YEARS;
 }
 
-// ── Max room capacity ──────────────────────────────────────────────────────────
+// ── Age-compatibility partitioning ────────────────────────────────────────────
 
 /**
- * Maximum occupants in a single room before overflow cascade triggers.
- * Matches the largest size used by optimalRoomSizes (5-person rooms).
+ * Partitions a sorted list of participants into age-compatible subgroups.
+ *
+ * Core rule: a group may contain both minors (<18) and adults (18+) ONLY if
+ * every minor is within `softBorder` years of every adult. With the default
+ * soft border of 1, ONLY 17-year-olds can share with 18-year-olds.
+ *
+ * The algorithm iterates through the sorted list and, when a new adult wants
+ * to join a group that already contains minors, it checks the new adult against
+ * the YOUNGEST minor in the group (the most-restrictive constraint).
+ *
+ * This prevents the "incremental-bypass bug" where a sequence like
+ *   15 → 17 → 18 (soft-border ✓) → 24 (both adults ✓)
+ * would incorrectly land 15 and 24 in the same subgroup.
+ *
+ * Trace for [15, 16, 17, 24] (the Jossue bug):
+ *   15 → group=[15], youngestMinor=15
+ *   16 → minor → group=[15,16], youngestMinor=15
+ *   17 → minor → group=[15,16,17], youngestMinor=15
+ *   24 → adult, 24-15=9 > 1 → FLUSH → group2=[24]
+ *   Result: [15,16,17] | [24]  ✓
+ *
+ * Trace for [17, 18] (soft-border allowed):
+ *   17 → group=[17], youngestMinor=17
+ *   18 → adult, 18-17=1 ≤ 1 → ok → group=[17,18]
+ *   Result: [17,18]  ✓
+ *
+ * @param {Array}  sorted      - participants already sorted by participantComparator
+ * @param {number} [softBorder]- years tolerance (default ADULT_MINOR_SOFT_BORDER_YEARS)
+ * @returns {Array<Array>}      - array of subgroups, each internally age-compatible
+ */
+export function partitionByAgeCompatibility(
+  sorted,
+  softBorder = ADULT_MINOR_SOFT_BORDER_YEARS
+) {
+  if (!sorted || sorted.length === 0) return [];
+
+  const result = [];
+  let current = [];
+  let youngestMinorAge = Infinity; // youngest minor in the current group
+
+  for (const p of sorted) {
+    const age = calcAge(p.birthDate);
+
+    // Unknown age: no split, neutral participant
+    if (age === null) {
+      if (current.length === 0) current.push(p);
+      else current.push(p);
+      continue;
+    }
+
+    const isAdult = age >= 18;
+
+    if (current.length === 0) {
+      current.push(p);
+      if (!isAdult) youngestMinorAge = age;
+      continue;
+    }
+
+    // New adult entering a group that already has minors?
+    // Check against the YOUNGEST minor (most restrictive constraint).
+    if (isAdult && youngestMinorAge < Infinity) {
+      if (age - youngestMinorAge > softBorder) {
+        // Hard conflict: flush and start a new adult group
+        result.push(current);
+        current = [p];
+        youngestMinorAge = Infinity;
+        continue;
+      }
+    }
+
+    // Compatible — add and keep tracking the youngest minor
+    current.push(p);
+    if (!isAdult && age < youngestMinorAge) youngestMinorAge = age;
+  }
+
+  if (current.length > 0) result.push(current);
+  return result;
+}
+
+export function formatAgeRange(minAge, maxAge) {
+  if (minAge === null || minAge === undefined || maxAge === null || maxAge === undefined) {
+    return null;
+  }
+  if (minAge === maxAge) return `${minAge}`;
+  if (maxAge === Infinity) return `${minAge}+`;
+  return `${minAge}–${maxAge}`;
+}
+
+// ── Max room capacity ─────────────────────────────────────────────────────────
+
+/**
+ * Máxima capacidad "normal" antes de overflow cascade en rebalancing.
  */
 export const MAX_ROOM_CAPACITY = 5;
 
 // ── Sorting helpers ───────────────────────────────────────────────────────────
 
-/** Compare two participants: age ascending, then alphabetical (surname + name). */
+/**
+ * Compare two participants:
+ *  1. age ascending
+ *  2. alphabetical (surname + name)
+ */
 export function participantComparator(a, b) {
   const ageA = calcAge(a.birthDate) ?? Infinity;
   const ageB = calcAge(b.birthDate) ?? Infinity;
+
   if (ageA !== ageB) return ageA - ageB;
-  const nameA = `${a.firstSurname ?? ""} ${a.firstName ?? ""}`.trim().toLowerCase();
-  const nameB = `${b.firstSurname ?? ""} ${b.firstName ?? ""}`.trim().toLowerCase();
+
+  const nameA = `${a.firstSurname ?? ""} ${a.secondSurname ?? ""} ${a.firstName ?? ""}`
+    .trim()
+    .toLowerCase();
+
+  const nameB = `${b.firstSurname ?? ""} ${b.secondSurname ?? ""} ${b.firstName ?? ""}`
+    .trim()
+    .toLowerCase();
+
   return nameA.localeCompare(nameB);
 }
 
 // ── Main grouping ─────────────────────────────────────────────────────────────
 
 /**
- * Groups an array of participants by (sex, ageBucket).
+ * Groups participants ONLY by sex.
  *
- * @param {Array}  participants  - TourParticipant objects with birthDate
+ * @param {Array} participants
  * @param {object} options
- * @param {Array}  options.ageBuckets    - age bucket definitions
- * @param {Map}    options.sexOverrides  - Map<participantId, 'M'|'F'|'UNKNOWN'>
+ * @param {Map} options.sexOverrides - Map<participantId, 'M'|'F'|'UNKNOWN'>
  * @returns {Array<GroupBucket>}
- *   GroupBucket: { key, sex, sexLabel, ageBucketLabel, participants, label }
+ *
+ * GroupBucket:
+ * {
+ *   key,
+ *   sex,
+ *   sexLabel,
+ *   ageBucketLabel,   // se mantiene por compatibilidad, pero ahora refleja rango dinámico
+ *   ageRangeLabel,    // rango real dinámico del grupo
+ *   minAge,
+ *   maxAge,
+ *   participants,
+ *   label
+ * }
  */
 export function computeGroups(
   participants,
-  { ageBuckets = DEFAULT_AGE_BUCKETS, sexOverrides = new Map() } = {}
+  { sexOverrides = new Map() } = {}
 ) {
   const map = new Map();
 
   for (const p of participants) {
     const sex = p.sex || sexOverrides.get(p.id) || "UNKNOWN";
-    const age = calcAge(p.birthDate);
-    const bucket = getAgeBucket(age, ageBuckets);
-    const ageLabel = bucket ? bucket.label : "Sin edad";
-    const key = `${sex}||${ageLabel}`;
 
-    if (!map.has(key)) {
-      map.set(key, {
-        key,
+    if (!map.has(sex)) {
+      map.set(sex, {
+        key: sex,
         sex,
         sexLabel: SEX_CONFIG[sex]?.label || "Sin sexo",
-        ageBucketLabel: ageLabel,
+        ageBucketLabel: null,   // compatibilidad con UI anterior
+        ageRangeLabel: null,
+        minAge: null,
+        maxAge: null,
         participants: [],
-        label: `${SEX_CONFIG[sex]?.label || "Sin sexo"} · ${ageLabel}`,
+        label: `${SEX_CONFIG[sex]?.label || "Sin sexo"}`,
       });
     }
-    map.get(key).participants.push(p);
+
+    map.get(sex).participants.push(p);
   }
 
-  // Sort participants within each bucket: age ascending, then alphabetical
-  for (const bucket of map.values()) {
-    bucket.participants.sort(participantComparator);
+  for (const group of map.values()) {
+    group.participants.sort(participantComparator);
+
+    const ages = group.participants
+      .map((p) => calcAge(p.birthDate))
+      .filter((a) => a !== null);
+
+    if (ages.length > 0) {
+      group.minAge = Math.min(...ages);
+      group.maxAge = Math.max(...ages);
+      group.ageRangeLabel = formatAgeRange(group.minAge, group.maxAge);
+      group.ageBucketLabel = group.ageRangeLabel; // backward compatibility
+    }
   }
 
-  // Sort buckets: M → F → OTHER → UNKNOWN; within same sex by age bucket label
   const sexOrder = { M: 0, F: 1, OTHER: 2, UNKNOWN: 3 };
+
   return Array.from(map.values()).sort((a, b) => {
-    const sexDiff = (sexOrder[a.sex] ?? 9) - (sexOrder[b.sex] ?? 9);
-    if (sexDiff !== 0) return sexDiff;
-    return a.ageBucketLabel.localeCompare(b.ageBucketLabel);
+    return (sexOrder[a.sex] ?? 9) - (sexOrder[b.sex] ?? 9);
   });
 }
 
 // ── Room-size assignment ──────────────────────────────────────────────────────
 
 /**
- * Given a count of people, calculate the optimal mix of rooms of sizes 5, 4 and 3
- * that uses the fewest rooms while accommodating everyone.
- * Strategy: fill as many 5-person rooms as possible, then 4-person, then 3-person.
+ * Regla de tamaños de habitación (exhaustiva — nadie queda fuera):
  *
- * Returns an ordered array of capacities, e.g. [5, 5, 4] for 14 people.
+ *  Objetivo:   minimizar habitaciones de 3/2/1, luego maximizar 5s, luego 4s.
+ *  Algoritmo:  busca la combinación (k×5 + m×4 + t×3) que agota `count`
+ *              con el menor t (threes) posible y, dentro de ese t, el mayor k.
+ *
+ *  Para cualquier n ≥ 3 la solución siempre existe con t ≤ 2:
+ *    • Si (n - 5k) % 4 = 0 para algún k  → solo 5s y 4s   (t=0)
+ *    • De lo contrario, con un 3 restante  → 5s + 4s + 3   (t=1)
+ *    • De lo contrario, con dos 3s restantes → 5s + 4s + 3 + 3 (t=2, ej. n=6)
+ *
+ *  n=1 → [1]  n=2 → [2]  (casos inevitables)
+ *
+ *  Ejemplos:
+ *   6  → [3,3]         7  → [4,3]         8  → [4,4]
+ *   9  → [5,4]         11 → [4,4,3]        17 → [5,4,4,4]
+ *   18 → [5,5,4,4]     20 → [5,5,5,5]      21 → [5,4,4,4,4]
+ *   22 → [5,5,4,4,4]   23 → [5,5,5,4,4]
  */
 export function optimalRoomSizes(count) {
   if (count <= 0) return [];
+  if (count <= 2) return [count]; // [1] o [2] — inevitable
 
-  const maxFives = Math.ceil(count / 5);
-  for (let fives = maxFives; fives >= 0; fives--) {
-    const remaining = count - fives * 5;
-    if (remaining < 0) continue;
+  // Intenta t=0,1,2 threes. Para cada t, busca el mayor k (fives) tal que
+  // (count - 3t - 5k) sea divisible por 4 (el resto son cuádruples).
+  const maxThrees = Math.min(2, Math.floor(count / 3));
 
-    const maxFours = Math.ceil(remaining / 4);
-    for (let fours = maxFours; fours >= 0; fours--) {
-      const leftover = remaining - fours * 4;
-      if (leftover < 0) continue;
-      if (leftover === 0) {
+  for (let t = 0; t <= maxThrees; t++) {
+    const withoutThrees = count - 3 * t;
+    if (withoutThrees < 0) break;
+
+    const maxK = Math.floor(withoutThrees / 5);
+    for (let k = maxK; k >= 0; k--) {
+      const r = withoutThrees - 5 * k;
+      if (r >= 0 && r % 4 === 0) {
+        const m = r / 4;
         return [
-          ...Array(fives).fill(5),
-          ...Array(fours).fill(4),
-        ];
-      }
-      if (leftover % 3 === 0) {
-        const threes = leftover / 3;
-        return [
-          ...Array(fives).fill(5),
-          ...Array(fours).fill(4),
-          ...Array(threes).fill(3),
+          ...Array(k).fill(5),
+          ...Array(m).fill(4),
+          ...Array(t).fill(3),
         ];
       }
     }
   }
 
-  // Fallback
+  // Fallback para t>2 (p.ej. n=6 cuando maxThrees<2 no aplica, pero lo cubrimos igual)
   const rooms = [];
   let left = count;
-  while (left > 0) {
-    const size = Math.min(left, 3);
-    rooms.push(size);
-    left -= size;
-  }
+  while (left >= 5) { rooms.push(5); left -= 5; }
+  while (left >= 4) { rooms.push(4); left -= 4; }
+  while (left >= 3) { rooms.push(3); left -= 3; }
+  if (left > 0) rooms.push(left);
   return rooms;
 }
 
 /**
- * Split participants into room suggestions following the 5→4→3 capacity rule.
+ * Split participants into room suggestions following the 5→4→3→2→1 rule.
  * Participants are expected to already be sorted (age asc, then alpha).
  *
- * @param {Array}  participants  - already-sorted list
+ * @param {Array} participants
  * @param {object} options
- * @param {string} options.prefix  - room name prefix, e.g. "M-15-17"
+ * @param {string} options.prefix
  * @returns {Array<RoomSuggestion>}
- *   RoomSuggestion: { index, name, capacity, participants }
+ *
+ * RoomSuggestion: { index, name, capacity, participants }
  */
 export function suggestRoomsFromGroup(participants, { prefix = "" } = {}) {
   if (!participants || participants.length === 0) return [];
 
-  const sizes = optimalRoomSizes(participants.length);
+  const sorted = [...participants].sort(participantComparator);
+  const partitions = partitionByAgeCompatibility(sorted);
   const rooms = [];
-  let offset = 0;
+  let globalIndex = 1;
 
-  sizes.forEach((size, i) => {
-    rooms.push({
-      index: i + 1,
-      name: prefix ? `${prefix}-${i + 1}` : `${i + 1}`,
-      capacity: size,
-      participants: participants.slice(offset, offset + size),
-    });
-    offset += size;
-  });
+  for (const partition of partitions) {
+    const sizes = optimalRoomSizes(partition.length);
+    let offset = 0;
+
+    for (const size of sizes) {
+      rooms.push({
+        index: globalIndex,
+        name: prefix ? `${prefix}-${globalIndex}` : `${globalIndex}`,
+        capacity: size,
+        participants: partition.slice(offset, offset + size),
+      });
+      globalIndex++;
+      offset += size;
+    }
+  }
 
   return rooms;
+}
+
+/**
+ * Helper útil para UI:
+ * Genera grupos sugeridos por sexo y ya les agrega habitaciones sugeridas.
+ */
+export function computeSuggestedGroupsWithRooms(
+  participants,
+  { sexOverrides = new Map() } = {}
+) {
+  const groups = computeGroups(participants, { sexOverrides });
+
+  return groups.map((group) => ({
+    ...group,
+    rooms: suggestRoomsFromGroup(group.participants, {
+      prefix: SEX_CONFIG[group.sex]?.short || "X",
+    }),
+  }));
 }
 
 // ── Staff mixed-room assignment ───────────────────────────────────────────────
 
 /**
- * Assign staff members to rooms. Staff may be mixed-sex.
- * Follows the same 5→4→3 size rule, sorted by age then alpha.
+ * Staff puede ir mixto.
+ * Se ordena por edad ascendente y luego alfabético.
+ * Se llena por 5 → 4 → 3 → 2 → 1.
  */
 export function suggestStaffRooms(staffParticipants) {
   if (!staffParticipants || staffParticipants.length === 0) return [];
+
   const sorted = [...staffParticipants].sort(participantComparator);
   return suggestRoomsFromGroup(sorted, { prefix: "STAFF" });
 }
@@ -259,21 +433,22 @@ export function suggestStaffRooms(staffParticipants) {
  *  3. Within each sex group, participants are sorted by age then alphabetically.
  *  4. Adults (18+) are NOT mixed with minors, UNLESS the age gap is within
  *     ADULT_MINOR_SOFT_BORDER_YEARS (e.g. a 17-year-old may room with 18-year-olds).
- *  5. Rooms are filled 5→4→3 persons.
+ *  5. Rooms are filled 5→4→3→2→1.
  *  6. All ages computed as of TOUR_REFERENCE_DATE.
  */
 export function assignRooms(
   participants,
   { sexOverrides = new Map(), ageBuckets = DEFAULT_AGE_BUCKETS } = {}
 ) {
-  const staff  = participants.filter((p) => p.isStaff);
+  const staff = participants.filter((p) => p.isStaff);
   const guests = participants.filter((p) => !p.isStaff);
 
   // ── Staff ──
   const staffRooms = suggestStaffRooms(staff);
 
-  // ── Guests: split by sex, then by age-compatibility ──
+  // ── Guests: split by sex ──
   const bySex = new Map();
+
   for (const p of guests) {
     const sex = p.sex || sexOverrides.get(p.id) || "UNKNOWN";
     if (!bySex.has(sex)) bySex.set(sex, []);
@@ -285,56 +460,31 @@ export function assignRooms(
   for (const [sex, group] of bySex) {
     const sorted = [...group].sort(participantComparator);
 
-    // Partition into age-compatible sub-groups.
-    // The ONLY hard cut is the adult/minor threshold (18 years).
-    // Differences within minors (e.g. age 10 vs 14) are fine — they stay together.
-    const subGroups = [];
-    let current = [];
-
-    for (const p of sorted) {
-      const age = calcAge(p.birthDate);
-
-      if (current.length === 0) {
-        current.push(p);
-        continue;
-      }
-
-      const oldestAge = calcAge(current[current.length - 1].birthDate);
-
-      const hardConflict =
-        age !== null &&
-        oldestAge !== null &&
-        (age >= 18) !== (oldestAge >= 18) &&
-        !isSoftAdultBorder(age, oldestAge);
-
-      if (hardConflict) {
-        subGroups.push(current);
-        current = [p];
-      } else {
-        current.push(p);
-      }
-    }
-    if (current.length > 0) subGroups.push(current);
+    // Partición correcta por compatibilidad menor/adulto
+    const subGroups = partitionByAgeCompatibility(sorted);
 
     const sexShort = SEX_CONFIG[sex]?.short || "X";
     const allRooms = [];
     let roomCounter = 1;
 
     for (const sg of subGroups) {
-      const ageTag = (() => {
-        const ages = sg.map((p) => calcAge(p.birthDate)).filter((a) => a !== null);
-        if (ages.length === 0) return "X";
-        const min = Math.min(...ages);
-        const max = Math.max(...ages);
-        return min === max ? `${min}` : `${min}-${max}`;
-      })();
+      const ages = sg
+        .map((p) => calcAge(p.birthDate))
+        .filter((a) => a !== null);
+
+      const ageTag =
+        ages.length === 0
+          ? "X"
+          : ages.length === 1
+            ? `${ages[0]}`
+            : `${Math.min(...ages)}-${Math.max(...ages)}`;
 
       const prefix = `${sexShort}-${ageTag}`;
-      const rooms  = suggestRoomsFromGroup(sg, { prefix });
+      const rooms = suggestRoomsFromGroup(sg, { prefix });
 
       rooms.forEach((r) => {
         r.index = roomCounter++;
-        r.name  = `${prefix}-${r.index}`;
+        r.name = `${prefix}-${r.index}`;
         allRooms.push(r);
       });
     }
@@ -344,6 +494,7 @@ export function assignRooms(
 
   // ── Warnings ──
   const warnings = [];
+
   for (const [, rooms] of guestRooms) {
     for (const room of rooms) {
       const w = roomWarnings(room.participants, sexOverrides, ageBuckets);
@@ -356,14 +507,13 @@ export function assignRooms(
 
 // ── Utility ───────────────────────────────────────────────────────────────────
 
-/** Generate a room prefix code from a group. e.g. sex=M age=15-17 → "M-15-17" */
+/**
+ * Prefix para grupo.
+ * Como ahora computeGroups es SOLO por sexo, se usa solo la abreviatura del sexo.
+ */
 export function groupRoomPrefix(group) {
   const sexShort = SEX_CONFIG[group.sex]?.short || "X";
-  const ageShort = group.ageBucketLabel
-    .replace(/[^0-9+]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-  return `${sexShort}-${ageShort}`;
+  return `${sexShort}`;
 }
 
 /** Infer roomType from capacity. */
@@ -393,15 +543,6 @@ export function capacityToRoomType(n) {
  *  - Staff participants are compatible with any room.
  *  - Cascade stops when the receiving room does not overflow, or no compatible
  *    next room exists (capacity will simply expand past maxCapacity).
- *
- * @param {object} params
- * @param {Array}  params.rooms           - rooms from backend (with occupants)
- * @param {string} params.participantId   - participant being moved
- * @param {string|null} params.fromRoomId - source room (null = currently unassigned)
- * @param {string|null} params.toRoomId   - destination room (null = unassign)
- * @param {Map}    params.sexOverrides    - Map<id, 'M'|'F'|'UNKNOWN'>
- * @param {Array}  params.allParticipants - full participant list (for isStaff, sex)
- * @param {number} [params.maxCapacity]   - overflow threshold (default MAX_ROOM_CAPACITY)
  */
 export function computeRebalanceOps({
   rooms,
@@ -427,8 +568,7 @@ export function computeRebalanceOps({
   );
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  const getSex = (p) =>
-    p?.sex || sexOverrides.get(p?.id) || "UNKNOWN";
+  const getSex = (p) => p?.sex || sexOverrides.get(p?.id) || "UNKNOWN";
 
   const isStaff = (pId) =>
     allParticipants.find((x) => x.id === pId)?.isStaff === true;
@@ -437,6 +577,7 @@ export function computeRebalanceOps({
   const getRoomDominantSex = (roomId) => {
     const room = roomMap.get(roomId);
     if (!room || room.occupants.length === 0) return null;
+
     const sexes = [
       ...new Set(
         room.occupants
@@ -444,6 +585,7 @@ export function computeRebalanceOps({
           .filter((s) => s !== "UNKNOWN")
       ),
     ];
+
     if (sexes.length === 0) return "UNKNOWN";
     if (sexes.length === 1) return sexes[0];
     return "MIXED";
@@ -451,11 +593,15 @@ export function computeRebalanceOps({
 
   /** Returns true if pId can be placed in roomId (sex compatibility). */
   const canGoToRoom = (pId, roomId) => {
-    if (isStaff(pId)) return true; // staff always ok
+    if (isStaff(pId)) return true;
+
     const p = allParticipants.find((x) => x.id === pId);
     const pSex = getSex(p || { id: pId });
+
     if (pSex === "UNKNOWN") return true;
+
     const roomSex = getRoomDominantSex(roomId);
+
     if (!roomSex || roomSex === "UNKNOWN") return true;
     return pSex === roomSex;
   };
@@ -465,15 +611,33 @@ export function computeRebalanceOps({
     [...roomMap.values()].sort((a, b) => {
       const minAge = (r) => {
         if (r.occupants.length === 0) return Infinity;
+
         const ages = r.occupants
           .map((o) => calcAge((o.participant || o).birthDate))
-          .filter((a) => a !== null);
+          .filter((age) => age !== null);
+
         return ages.length > 0 ? Math.min(...ages) : Infinity;
       };
+
       return minAge(a) - minAge(b);
     });
 
-  // ── Primary move ────────────────────────────────────────────────────────────
+  /**
+   * Ensure roomId has room for one more person.
+   * If simulated occupant count exceeds stored capacity, expand before assign.
+   */
+  const expandIfNeeded = (roomId) => {
+    const room = roomMap.get(roomId);
+    if (!room) return;
+
+    if (room.occupants.length > room.capacity) {
+      const newCap = room.occupants.length;
+      ops.push({ type: "updateCapacity", roomId, capacity: newCap });
+      room.capacity = newCap;
+    }
+  };
+
+  // ── Primary remove ──────────────────────────────────────────────────────────
   if (fromRoomId && roomMap.has(fromRoomId)) {
     const fromRoom = roomMap.get(fromRoomId);
     fromRoom.occupants = fromRoom.occupants.filter(
@@ -482,10 +646,14 @@ export function computeRebalanceOps({
     ops.push({ type: "remove", roomId: fromRoomId, participantId });
   }
 
+  // ── Primary assign + cascade ────────────────────────────────────────────────
   if (toRoomId && roomMap.has(toRoomId)) {
     const toRoom = roomMap.get(toRoomId);
     const pObj = allParticipants.find((p) => p.id === participantId);
+
     toRoom.occupants.push({ participant: pObj || { id: participantId } });
+
+    expandIfNeeded(toRoomId);
     ops.push({ type: "assign", roomId: toRoomId, participantId });
 
     // ── Cascade overflow ────────────────────────────────────────────────────
@@ -496,17 +664,18 @@ export function computeRebalanceOps({
       const currentRoom = roomMap.get(currentRoomId);
       if (!currentRoom || currentRoom.occupants.length <= maxCapacity) break;
 
-      // Last occupant = oldest / alphabetically last (push them forward)
+      // Último = mayor edad / último alfabéticamente
       const sorted = [...currentRoom.occupants].sort((a, b) =>
         participantComparator(a.participant || a, b.participant || b)
       );
       const overflowEntry = sorted[sorted.length - 1];
       const overflowPId = (overflowEntry.participant || overflowEntry).id;
 
-      // Find next compatible room in sorted order
       const sortedRooms = getSortedRoomList();
       const currentIdx = sortedRooms.findIndex((r) => r.id === currentRoomId);
+
       let nextRoom = null;
+
       for (let i = currentIdx + 1; i < sortedRooms.length; i++) {
         if (canGoToRoom(overflowPId, sortedRooms[i].id)) {
           nextRoom = roomMap.get(sortedRooms[i].id);
@@ -514,29 +683,31 @@ export function computeRebalanceOps({
         }
       }
 
-      if (!nextRoom) break; // no compatible room — capacity will expand
+      if (!nextRoom) break;
 
-      // Simulate move of overflow participant
       currentRoom.occupants = currentRoom.occupants.filter(
         (o) => (o.participant || o).id !== overflowPId
       );
-      nextRoom.occupants.push(overflowEntry);
       ops.push({ type: "remove", roomId: currentRoomId, participantId: overflowPId });
+
+      nextRoom.occupants.push(overflowEntry);
+      expandIfNeeded(nextRoom.id);
       ops.push({ type: "assign", roomId: nextRoom.id, participantId: overflowPId });
 
       currentRoomId = nextRoom.id;
     }
   }
 
-  // ── Capacity sync for all affected rooms ────────────────────────────────────
+  // ── Shrink capacity for rooms that lost occupants ───────────────────────────
   const affectedRoomIds = new Set(ops.map((op) => op.roomId));
+
   for (const roomId of affectedRoomIds) {
     const room = roomMap.get(roomId);
-    if (room) {
-      const newCap = Math.max(1, room.occupants.length);
-      if (newCap !== room.capacity) {
-        ops.push({ type: "updateCapacity", roomId, capacity: newCap });
-      }
+    if (!room) continue;
+
+    const finalCount = Math.max(1, room.occupants.length);
+    if (finalCount < room.capacity) {
+      ops.push({ type: "updateCapacity", roomId, capacity: finalCount });
     }
   }
 
@@ -547,19 +718,12 @@ export function computeRebalanceOps({
 
 /**
  * Build a structured rooming-list dataset suitable for export to the hotel.
- *
- * Returns rooms sorted by hotel name then room number, each with:
- *   { id, hotelName, roomNumber, roomType, capacity, floor, notes,
- *     occupants: [{ id, name, firstName, firstSurname, secondSurname,
- *                   age, birthDate, sex, isStaff, instrument, role }],
- *     warnings: roomWarnings() result }
- *
- * Age rules enforced in `warnings`:
- *  - mixed_sex: men and women in same room (except staff rooms)
- *  - mixed_age: adult (18+) with minor without soft border
- *  - unknown_sex: participant with unknown sex
  */
-export function generateRoomingListData(rooms, allParticipants = [], sexOverrides = new Map()) {
+export function generateRoomingListData(
+  rooms,
+  allParticipants = [],
+  sexOverrides = new Map()
+) {
   const participantMap = new Map((allParticipants || []).map((p) => [p.id, p]));
 
   const data = rooms.map((room) => {
@@ -568,6 +732,7 @@ export function generateRoomingListData(rooms, allParticipants = [], sexOverride
       const full = participantMap.get(p.id) || p;
       const age = calcAge(p.birthDate);
       const sex = p.sex || sexOverrides.get(p.id) || "UNKNOWN";
+
       return {
         id: p.id,
         name: [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" "),
@@ -585,6 +750,15 @@ export function generateRoomingListData(rooms, allParticipants = [], sexOverride
 
     const warnings = roomWarnings(room.occupants, sexOverrides);
 
+    const resp = room.responsible
+      ? {
+          id: room.responsible.id,
+          name: [room.responsible.firstName, room.responsible.firstSurname, room.responsible.secondSurname]
+            .filter(Boolean)
+            .join(" "),
+        }
+      : null;
+
     return {
       id: room.id,
       hotelName: room.hotelName || "Sin hotel",
@@ -595,10 +769,10 @@ export function generateRoomingListData(rooms, allParticipants = [], sexOverride
       notes: room.notes,
       occupants,
       warnings,
+      responsible: resp,
     };
   });
 
-  // Sort: hotel alphabetically, then room number
   return data.sort((a, b) => {
     const h = (a.hotelName || "").localeCompare(b.hotelName || "");
     if (h !== 0) return h;
@@ -606,9 +780,15 @@ export function generateRoomingListData(rooms, allParticipants = [], sexOverride
   });
 }
 
+// ── Warnings ──────────────────────────────────────────────────────────────────
+
 /**
  * Warn about room composition issues.
- * Returns array of { type: 'mixed_sex'|'mixed_age'|'mixed_age_soft'|'unknown_sex', label }
+ * Returns array of:
+ *  - mixed_sex
+ *  - mixed_age
+ *  - mixed_age_soft
+ *  - unknown_sex
  */
 export function roomWarnings(
   occupants,
@@ -624,10 +804,12 @@ export function roomWarnings(
       return p.sex || sexOverrides.get(p.id) || "UNKNOWN";
     })
   );
+
   const ages = occupants.map((o) => {
     const p = o.participant || o;
     return calcAge(p.birthDate);
   });
+
   const ageBucketLabels = new Set(
     ages.map((age) => {
       const bucket = getAgeBucket(age, ageBuckets);
@@ -635,15 +817,18 @@ export function roomWarnings(
     })
   );
 
-  if (sexes.has("UNKNOWN"))
+  if (sexes.has("UNKNOWN")) {
     warnings.push({ type: "unknown_sex", label: "Sexo desconocido" });
+  }
 
   const knownSexes = [...sexes].filter((s) => s !== "UNKNOWN");
-  if (knownSexes.length > 1)
+  if (knownSexes.length > 1) {
     warnings.push({ type: "mixed_sex", label: "Sexo mixto" });
+  }
 
   if (ageBucketLabels.size > 1) {
     const knownAges = ages.filter((a) => a !== null);
+
     const hasHardConflict = knownAges.some((ageA) =>
       knownAges.some(
         (ageB) =>
@@ -652,10 +837,18 @@ export function roomWarnings(
           !isSoftAdultBorder(ageA, ageB)
       )
     );
-    if (hasHardConflict)
-      warnings.push({ type: "mixed_age", label: "Adultos con menores (conflicto)" });
-    else
-      warnings.push({ type: "mixed_age_soft", label: "Edades mixtas (frontera suave)" });
+
+    if (hasHardConflict) {
+      warnings.push({
+        type: "mixed_age",
+        label: "Adultos con menores (conflicto)",
+      });
+    } else {
+      warnings.push({
+        type: "mixed_age_soft",
+        label: "Edades mixtas (frontera suave)",
+      });
+    }
   }
 
   return warnings;

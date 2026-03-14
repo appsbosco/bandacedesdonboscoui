@@ -57,6 +57,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
     // planner
     sexOverrides,
     handleSetSex,
+    handleSetResponsible,
     handleCapacityChange,
     plannerCapacity,
     setPlannerCapacity,
@@ -100,6 +101,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
             participantRoomAssignments={participantRoomAssignments}
             sexOverrides={sexOverrides}
             handleSetSex={handleSetSex}
+            handleSetResponsible={handleSetResponsible}
             plannerCapacity={plannerCapacity}
             setPlannerCapacity={setPlannerCapacity}
             plannerHotel={plannerHotel}

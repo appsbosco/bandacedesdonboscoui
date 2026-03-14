@@ -12,6 +12,12 @@ export const GET_TOUR_ROOMS = gql`
       notes
       occupantCount
       isFull
+      responsible {
+        id
+        firstName
+        firstSurname
+        secondSurname
+      }
       occupants {
         participant {
           id
@@ -154,6 +160,12 @@ export const REMOVE_OCCUPANT = gql`
       id
       occupantCount
       isFull
+      responsible {
+        id
+        firstName
+        firstSurname
+        secondSurname
+      }
       occupants {
         participant {
           id
@@ -165,6 +177,20 @@ export const REMOVE_OCCUPANT = gql`
           sex
         }
         confirmedAt
+      }
+    }
+  }
+`;
+
+export const SET_ROOM_RESPONSIBLE = gql`
+  mutation SetRoomResponsible($roomId: ID!, $participantId: ID) {
+    setRoomResponsible(roomId: $roomId, participantId: $participantId) {
+      id
+      responsible {
+        id
+        firstName
+        firstSurname
+        secondSurname
       }
     }
   }

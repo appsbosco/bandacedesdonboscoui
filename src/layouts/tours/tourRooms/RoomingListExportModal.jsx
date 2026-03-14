@@ -43,11 +43,12 @@ function buildCSV(data, tourName) {
   const rows = [
     [`Rooming List — ${tourName} (edades al ${refYear})`],
     [],
-    ["Hotel", "Habitación", "Tipo", "Piso", "Cap.", "Nombre completo", "Edad", "Sexo", "Instrumento/Rol", "Advertencias"],
+    ["Hotel", "Habitación", "Tipo", "Piso", "Cap.", "Responsable", "Nombre completo", "Edad", "Sexo", "Instrumento/Rol", "Advertencias"],
   ];
 
   for (const room of data) {
     const warningText = room.warnings.map((w) => w.label).join("; ");
+    const responsibleName = room.responsible?.name || "";
     if (room.occupants.length === 0) {
       rows.push([
         esc(room.hotelName),
@@ -55,6 +56,7 @@ function buildCSV(data, tourName) {
         esc(ROOM_TYPE_LABELS[room.roomType] || room.roomType || ""),
         esc(room.floor || ""),
         esc(room.capacity),
+        esc(responsibleName),
         esc("(vacía)"),
         "",
         "",
@@ -69,6 +71,7 @@ function buildCSV(data, tourName) {
           esc(idx === 0 ? (ROOM_TYPE_LABELS[room.roomType] || room.roomType || "") : ""),
           esc(idx === 0 ? (room.floor || "") : ""),
           esc(idx === 0 ? room.capacity : ""),
+          esc(idx === 0 ? responsibleName : ""),
           esc(occ.name),
           esc(occ.age !== null ? occ.age : ""),
           esc(SEX_LABELS[occ.sex] || occ.sex),
@@ -153,6 +156,11 @@ function RoomBlock({ room }) {
           {isStaffRoom && (
             <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
               STAFF
+            </span>
+          )}
+          {room.responsible && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              👑 {room.responsible.name}
             </span>
           )}
         </div>

@@ -4,18 +4,34 @@
  * Shows auto-computed sex+age groups with "Crear habitaciones" action.
  */
 import { useMemo } from "react";
-import { computeGroups, suggestRoomsFromGroup, SEX_CONFIG } from "./roomGrouping";
+import { computeGroups, suggestRoomsFromGroup, groupRoomPrefix, SEX_CONFIG } from "./roomGrouping";
 
 function participantFullName(p) {
   return [p.firstName, p.firstSurname].filter(Boolean).join(" ");
 }
 
-function GroupCard({ group, capacity, onCreateRooms, creating }) {
+function GroupCard({ group, onCreateRooms, creating }) {
+  const prefix = groupRoomPrefix(group);
+  // Uses optimalRoomSizes internally — capacity varies per room, everyone is assigned
   const roomSuggestions = useMemo(
-    () => suggestRoomsFromGroup(group.participants, capacity),
-    [group, capacity]
+    () => suggestRoomsFromGroup(group.participants, { prefix }),
+    [group, prefix]
   );
   const sexCfg = SEX_CONFIG[group.sex] || SEX_CONFIG.UNKNOWN;
+
+  // Summarize room sizes for the description (e.g. "3×5 · 1×4")
+  const sizeSummary = useMemo(() => {
+    const freq = {};
+    for (const s of roomSuggestions) {
+      freq[s.capacity] = (freq[s.capacity] || 0) + 1;
+    }
+    return Object.entries(freq)
+      .sort((a, b) => Number(b[0]) - Number(a[0]))
+      .map(([size, count]) => `${count}×${size}`)
+      .join(" · ");
+  }, [roomSuggestions]);
+
+  const totalAssigned = roomSuggestions.reduce((acc, s) => acc + s.participants.length, 0);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -28,10 +44,10 @@ function GroupCard({ group, capacity, onCreateRooms, creating }) {
           <div>
             <p className="text-xs font-bold text-gray-900">{group.label}</p>
             <p className="text-[10px] text-gray-400">
-              {group.participants.length} participante{group.participants.length !== 1 ? "s" : ""}{" "}
+              {totalAssigned} participante{totalAssigned !== 1 ? "s" : ""}{" "}
               →{" "}
-              {roomSuggestions.length} habitación{roomSuggestions.length !== 1 ? "es" : ""} de{" "}
-              ≤{capacity}
+              {roomSuggestions.length} hab.{" "}
+              <span className="font-semibold text-gray-500">{sizeSummary}</span>
             </p>
           </div>
         </div>
@@ -53,14 +69,14 @@ function GroupCard({ group, capacity, onCreateRooms, creating }) {
         </button>
       </div>
 
-      {/* Room breakdown preview */}
+      {/* Room breakdown preview — shows actual sizes and participants */}
       <div className="px-4 pb-3 flex flex-wrap gap-1.5">
         {roomSuggestions.map((suggestion) => (
           <div
             key={suggestion.index}
             className="flex items-center gap-1 px-2 py-1 bg-gray-50 border border-gray-100 rounded-lg"
           >
-            <span className="text-[10px] font-semibold text-gray-500">#{suggestion.index}</span>
+            <span className="text-[10px] font-bold text-gray-600">{suggestion.capacity}p</span>
             <span className="text-[10px] text-gray-400">
               {suggestion.participants.map((p) => participantFullName(p)).join(", ")}
             </span>
@@ -74,7 +90,6 @@ function GroupCard({ group, capacity, onCreateRooms, creating }) {
 export default function SuggestedGroupsPanel({
   unassignedParticipants,
   sexOverrides,
-  capacity,
   onCreateRooms,
   bulkCreating,
 }) {
@@ -110,14 +125,13 @@ export default function SuggestedGroupsPanel({
           Grupos sugeridos
         </p>
         <p className="text-[10px] text-gray-400">
-          Asignando sexo con el badge · Creando de capacidad {capacity}
+          Tamaños automáticos: 5→4→3 · todos asignados
         </p>
       </div>
       {groups.map((group) => (
         <GroupCard
           key={group.key}
           group={group}
-          capacity={capacity}
           onCreateRooms={onCreateRooms}
           creating={bulkCreating}
         />

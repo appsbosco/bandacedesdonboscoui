@@ -16,7 +16,7 @@ import {
 export function useTourItineraries(tourId) {
   const [formModal, setFormModal] = useState({ open: false, mode: "create", itinerary: null });
   const [assignFlightsModal, setAssignFlightsModal] = useState({ open: false, itinerary: null });
-  const [assignPassengersModal, setAssignPassengersModal] = useState({ open: false, itinerary: null });
+const [assignPassengersModal, setAssignPassengersModal] = useState({ open: false, itineraryId: null });
   const [leadersModal, setLeadersModal] = useState({ open: false, itinerary: null });
   const [assignResult, setAssignResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -143,12 +143,13 @@ export function useTourItineraries(tourId) {
   const closeAssignFlightsModal = useCallback(() =>
     setAssignFlightsModal({ open: false, itinerary: null }), []);
 
-  const openAssignPassengersModal = useCallback((itinerary) => {
-    setAssignResult(null);
-    setAssignPassengersModal({ open: true, itinerary });
-  }, []);
-  const closeAssignPassengersModal = useCallback(() =>
-    setAssignPassengersModal({ open: false, itinerary: null }), []);
+const openAssignPassengersModal = useCallback((itinerary) => {
+  setAssignResult(null);
+  setAssignPassengersModal({ open: true, itineraryId: itinerary.id });
+}, []);
+
+const closeAssignPassengersModal = useCallback(() =>
+  setAssignPassengersModal({ open: false, itineraryId: null }), []);
 
   const openLeadersModal = useCallback((itinerary) =>
     setLeadersModal({ open: true, itinerary }), []);
@@ -197,8 +198,19 @@ export function useTourItineraries(tourId) {
   const itineraries = itinerariesData?.getTourItineraries || [];
   const unassignedFlights = unassignedData?.getUnassignedTourFlights || [];
 
+
+
+  const activePassengersItinerary = assignPassengersModal.itineraryId
+  ? itineraries.find((it) => it.id === assignPassengersModal.itineraryId) ?? null
+  : null;
+
+
   return {
     itineraries,
+    assignPassengersModal: {
+    open: assignPassengersModal.open,
+    itinerary: activePassengersItinerary, 
+  },
     unassignedFlights,
     itinerariesLoading,
     itinerariesError,
