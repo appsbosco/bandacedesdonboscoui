@@ -151,22 +151,48 @@ function UploadStep({ onPreview, loading }) {
 
 // ── Step 2: Preview ────────────────────────────────────────────────────────────
 
-function PreviewStep({ previewData, onConfirm, onBack, loading }) {
+function PreviewStep({ previewData, importMode, onConfirm, onBack, loading }) {
   const { validRows, invalidRows, duplicateRows, totalRows, rows } = previewData;
-  const noValidRows = validRows === 0;
+  const isUpsert = importMode === "UPSERT";
+
+  // In UPSERT mode, "duplicates" are actually rows to be updated — they are actionable.
+  const actionableRows = isUpsert ? validRows + duplicateRows : validRows;
+  const canConfirm = actionableRows > 0;
 
   return (
     <div className="space-y-4">
       <ImportStats
         stats={{
           total: totalRows,
-          valid: validRows,
+          valid: isUpsert ? actionableRows : validRows,
           invalid: invalidRows,
-          duplicates: duplicateRows,
+          duplicates: isUpsert ? 0 : duplicateRows,
         }}
       />
 
-      {noValidRows && (
+      {isUpsert && duplicateRows > 0 && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3.5 flex items-start gap-2.5">
+          <svg
+            className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <p className="text-xs text-blue-700 font-medium">
+            Modo actualización: {duplicateRows} participante(s) existente(s) serán actualizados con los datos del Excel.
+            {validRows > 0 && ` Además se agregarán ${validRows} nuevo(s).`}
+          </p>
+        </div>
+      )}
+
+      {!isUpsert && !canConfirm && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-2.5">
           <svg
             className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
@@ -200,7 +226,7 @@ function PreviewStep({ previewData, onConfirm, onBack, loading }) {
         </button>
         <button
           onClick={onConfirm}
-          disabled={noValidRows || loading}
+          disabled={!canConfirm || loading}
           className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm disabled:opacity-40 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -220,8 +246,10 @@ function PreviewStep({ previewData, onConfirm, onBack, loading }) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              Importando…
+              {isUpsert ? "Actualizando…" : "Importando…"}
             </>
+          ) : isUpsert ? (
+            `Confirmar actualización (${actionableRows})`
           ) : (
             `Confirmar importación (${validRows})`
           )}
@@ -234,6 +262,7 @@ function PreviewStep({ previewData, onConfirm, onBack, loading }) {
 // ── Step 3: Done ───────────────────────────────────────────────────────────────
 
 function DoneStep({ result, onNew, onClose }) {
+  const isUpsert = result?.mode === "UPSERT";
   return (
     <div className="text-center space-y-5 py-4">
       <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
@@ -247,21 +276,32 @@ function DoneStep({ result, onNew, onClose }) {
         </svg>
       </div>
       <div>
-        <h4 className="text-lg font-bold text-gray-900">¡Importación completada!</h4>
+        <h4 className="text-lg font-bold text-gray-900">
+          {isUpsert ? "¡Actualización completada!" : "¡Importación completada!"}
+        </h4>
         <p className="text-sm text-gray-500 mt-1">
-          Los participantes han sido agregados a la gira.
+          {isUpsert
+            ? "Los datos de los participantes han sido actualizados."
+            : "Los participantes han sido agregados a la gira."}
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-emerald-50 rounded-2xl p-3">
-          <p className="text-xl font-bold text-emerald-700">{result?.imported ?? 0}</p>
-          <p className="text-xs text-gray-500">Importados</p>
+          <p className="text-xl font-bold text-emerald-700">{result?.importedCount ?? 0}</p>
+          <p className="text-xs text-gray-500">Nuevos</p>
         </div>
-        <div className="bg-amber-50 rounded-2xl p-3">
-          <p className="text-xl font-bold text-amber-700">{result?.duplicates ?? 0}</p>
-          <p className="text-xs text-gray-500">Duplicados</p>
-        </div>
+        {isUpsert ? (
+          <div className="bg-blue-50 rounded-2xl p-3">
+            <p className="text-xl font-bold text-blue-700">{result?.updatedCount ?? 0}</p>
+            <p className="text-xs text-gray-500">Actualizados</p>
+          </div>
+        ) : (
+          <div className="bg-amber-50 rounded-2xl p-3">
+            <p className="text-xl font-bold text-amber-700">{result?.duplicates ?? 0}</p>
+            <p className="text-xs text-gray-500">Duplicados</p>
+          </div>
+        )}
         <div className="bg-red-50 rounded-2xl p-3">
           <p className="text-xl font-bold text-red-600">{result?.errors ?? 0}</p>
           <p className="text-xs text-gray-500">Errores</p>
@@ -320,6 +360,7 @@ function ErrorStep({ message, onRetry }) {
 export default function ImportWizardModal({
   isOpen,
   step,
+  importMode,
   previewData,
   confirmResult,
   errorMsg,
@@ -388,6 +429,7 @@ export default function ImportWizardModal({
           {(step === "preview" || step === "confirming") && previewData && (
             <PreviewStep
               previewData={previewData}
+              importMode={importMode}
               onConfirm={onConfirm}
               onBack={onRetry}
               loading={step === "confirming"}

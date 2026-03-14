@@ -33,10 +33,12 @@ export default function RoomPlanner({
   handleCreateRoomsFromGroup,
   handleAssignOccupant,
   handleRemoveOccupant,
+  handleCapacityChange,
   // Room CRUD
   formModal,
   deleteModal,
   openCreateModal,
+  openEditModal,
   closeFormModal,
   openDeleteModal,
   closeDeleteModal,
@@ -166,8 +168,10 @@ export default function RoomPlanner({
             onDragStart={handleDragStart}
             onDrop={handleDrop}
             onMove={handleMove}
+            onEdit={openEditModal}
             onDelete={openDeleteModal}
             onAddRoom={openCreateModal}
+            onCapacityChange={handleCapacityChange}
             movingId={movingId}
           />
         </div>

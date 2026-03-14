@@ -60,6 +60,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     setRegisterModal,
     deletePayModal,
     setDeletePayModal,
+    deleteParticipantModal,
+    setDeleteParticipantModal,
     accountModal,
     setAccountModal,
     planModal,
@@ -70,6 +72,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     setDetailDrawer,
     handleRegisterPayment,
     handleDeletePayment,
+    handleDeleteParticipant,
     handleUpdateAccount,
     handleCreatePlan,
     handleUpdatePlan,
@@ -80,6 +83,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     tableError,
     registering,
     deletingPay,
+    deletingParticipant,
     updatingAccount,
     creatingPlan,
     updatingPlan,
@@ -180,9 +184,11 @@ export default function TourPaymentsPage({ tourId, tourName }) {
             })
           }
           onAdjustAccount={(row) => {
-            // Buscar la cuenta completa en accounts
             setAccountModal({ open: true, participantId: row.participantId, row });
           }}
+          onDeleteParticipant={(row) =>
+            setDeleteParticipantModal({ open: true, participant: row })
+          }
         />
       )}
 
@@ -216,6 +222,13 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         onConfirm={handleDeletePayment}
         onCancel={() => setDeletePayModal({ open: false, payment: null })}
         loading={deletingPay}
+      />
+
+      <DeleteParticipantModal
+        participant={deleteParticipantModal.participant}
+        onConfirm={handleDeleteParticipant}
+        onCancel={() => setDeleteParticipantModal({ open: false, participant: null })}
+        loading={deletingParticipant}
       />
 
       <AccountAdjustModal
@@ -359,6 +372,7 @@ function FinancialTableView({
   onRegisterPayment,
   onOpenDetail,
   onAdjustAccount,
+  onDeleteParticipant,
 }) {
   if (loading) return <TableSkeleton />;
   if (error) return <ErrorState message={error.message} />;
@@ -557,6 +571,25 @@ function FinancialTableView({
                               strokeLinejoin="round"
                               strokeWidth={2}
                               d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => onDeleteParticipant(row)}
+                          title="Eliminar participante"
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                             />
                           </svg>
                         </button>
@@ -874,6 +907,56 @@ function PlanCard({ plan, onEdit, onDelete }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DELETE PARTICIPANT MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
+  if (!participant) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+          <h3 className="text-base font-bold text-slate-900">Eliminar participante</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Esta acción no se puede deshacer</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-gray-50 rounded-2xl p-4 space-y-1">
+            <p className="text-sm font-bold text-gray-900">{participant.fullName}</p>
+            <p className="text-xs text-gray-500">{participant.identification}</p>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 space-y-1">
+            <p className="font-bold">Se eliminarán también:</p>
+            <p>• Asignaciones de vuelos e itinerarios</p>
+            <p>• Asignaciones de habitaciones</p>
+            <p>• Historial de pagos y cuotas</p>
+            <p>• Cuenta financiera</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm disabled:opacity-50 transition-all"
+            >
+              {loading ? "Eliminando…" : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TableSkeleton() {
   return (

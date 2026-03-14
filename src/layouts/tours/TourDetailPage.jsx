@@ -17,11 +17,11 @@ import TourRoomsPage from "./tourRooms/TourRoomsPage";
 import TourDocumentsPage from "./tourDocuments/TourDocumentsPage";
 
 const TABS = [
-  { id: "imports", label: "Importación", emoji: "📋" },
+  { id: "documents", label: "Documentos", emoji: "📄" },
+  { id: "payments", label: "Pagos", emoji: "💰" },
   { id: "flights", label: "Vuelos", emoji: "✈️" },
   { id: "rooms", label: "Habitaciones", emoji: "🏨" },
-  { id: "payments", label: "Pagos", emoji: "💰" },
-  { id: "documents", label: "Documentos", emoji: "📄" },
+  { id: "imports", label: "Importación", emoji: "📋" },
 ];
 
 function TourInfoCard({ tour }) {

@@ -7,9 +7,6 @@ import {
   GET_TOUR_IMPORT_BATCHES,
 } from "./tourImports.gql";
 
-// idle → uploading → preview → confirming → done
-//                           ↘ error (any step)
-
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -21,14 +18,14 @@ function fileToBase64(file) {
 
 export function useTourImports(tourId) {
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [step, setStep] = useState("idle"); // idle|uploading|preview|confirming|done|error
+  const [step, setStep] = useState("idle");
   const [file, setFile] = useState(null);
   const [sheetName, setSheetName] = useState("");
+  const [importMode, setImportMode] = useState("INSERT"); // "INSERT" | "UPSERT"
   const [previewData, setPreviewData] = useState(null);
   const [confirmResult, setConfirmResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // ── Batch history ───────────────────────────────────────────────────────────
   const {
     data: batchesData,
     loading: batchesLoading,
@@ -39,16 +36,15 @@ export function useTourImports(tourId) {
     fetchPolicy: "cache-and-network",
   });
 
-  // ── Mutations ───────────────────────────────────────────────────────────────
   const [previewMutation] = useMutation(PREVIEW_TOUR_PARTICIPANT_IMPORT);
   const [confirmMutation] = useMutation(CONFIRM_TOUR_PARTICIPANT_IMPORT);
   const [cancelMutation] = useMutation(CANCEL_TOUR_IMPORT_BATCH);
 
-  // ── Wizard open/close ───────────────────────────────────────────────────────
-  const openWizard = useCallback(() => {
+  const openWizard = useCallback((mode = "INSERT") => {
     setStep("idle");
     setFile(null);
     setSheetName("");
+    setImportMode(mode);
     setPreviewData(null);
     setConfirmResult(null);
     setErrorMsg(null);
@@ -59,7 +55,6 @@ export function useTourImports(tourId) {
     setWizardOpen(false);
   }, []);
 
-  // ── Step 1: Preview ─────────────────────────────────────────────────────────
   const handlePreview = useCallback(
     async (selectedFile, selectedSheet) => {
       if (!selectedFile) return;
@@ -77,6 +72,7 @@ export function useTourImports(tourId) {
               fileBase64: base64,
               fileName: selectedFile.name,
               sheetName: selectedSheet || undefined,
+              mode: importMode,
             },
           },
         });
@@ -87,7 +83,7 @@ export function useTourImports(tourId) {
         setStep("error");
       }
     },
-    [tourId, previewMutation]
+    [tourId, importMode, previewMutation]
   );
 
   const handleConfirm = useCallback(async () => {
@@ -95,7 +91,6 @@ export function useTourImports(tourId) {
     setStep("confirming");
     setErrorMsg(null);
 
-    console.log("Preview data", previewData);
     try {
       const base64 = await fileToBase64(file);
       const { data } = await confirmMutation({
@@ -104,6 +99,7 @@ export function useTourImports(tourId) {
             batchId: previewData.batchId,
             fileBase64: base64,
             sheetName: sheetName || undefined,
+            mode: importMode,
           },
         },
       });
@@ -114,9 +110,8 @@ export function useTourImports(tourId) {
       setErrorMsg(err.message || "Error al confirmar la importación");
       setStep("error");
     }
-  }, [previewData, file, sheetName, confirmMutation, refetchBatches]);
+  }, [previewData, file, sheetName, importMode, confirmMutation, refetchBatches]);
 
-  // ── Cancel a PREVIEW batch from history ────────────────────────────────────
   const handleCancelBatch = useCallback(
     async (batchId) => {
       try {
@@ -129,7 +124,6 @@ export function useTourImports(tourId) {
     [cancelMutation, refetchBatches]
   );
 
-  // ── Reset to try again ──────────────────────────────────────────────────────
   const handleRetry = useCallback(() => {
     setStep("idle");
     setFile(null);
@@ -139,16 +133,15 @@ export function useTourImports(tourId) {
   }, []);
 
   return {
-    // Wizard state
     wizardOpen,
     step,
+    importMode,
+    setImportMode,
     previewData,
     confirmResult,
     errorMsg,
-    // Batch history
     batches: batchesData?.getTourImportBatches || [],
     batchesLoading,
-    // Actions
     openWizard,
     closeWizard,
     handlePreview,

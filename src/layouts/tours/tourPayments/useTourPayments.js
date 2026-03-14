@@ -36,6 +36,7 @@
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useQuery, useMutation } from "@apollo/client";
+import { DELETE_TOUR_PARTICIPANT } from "../tours.gql";
 import {
   GET_FINANCIAL_TABLE,
   GET_FINANCIAL_SUMMARY,
@@ -172,6 +173,7 @@ export function useTourPayments(tourId) {
   // Modals
   const [registerModal, setRegisterModal] = useState({ open: false, participant: null });
   const [deletePayModal, setDeletePayModal] = useState({ open: false, payment: null });
+  const [deleteParticipantModal, setDeleteParticipantModal] = useState({ open: false, participant: null });
   const [accountModal, setAccountModal] = useState({ open: false, account: null });
   const [planModal, setPlanModal] = useState({ open: false, plan: null, mode: "create" });
   const [setupModal, setSetupModal] = useState({ open: false });
@@ -356,6 +358,18 @@ export function useTourPayments(tourId) {
     }
   );
 
+  const [deleteParticipantMutation, { loading: deletingParticipant }] = useMutation(
+    DELETE_TOUR_PARTICIPANT,
+    {
+      onCompleted: () => {
+        showToast("Participante eliminado correctamente");
+        setDeleteParticipantModal({ open: false, participant: null });
+        refetchAll();
+      },
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
   // ── Datos derivados base ─────────────────────────────────────────────────────
   const financialTable = tableData?.getFinancialTable ?? null;
   const summary = summaryData?.getFinancialSummary ?? null;
@@ -521,6 +535,13 @@ export function useTourPayments(tourId) {
     [assignPlanToParticipant, tourId]
   );
 
+  const handleDeleteParticipant = useCallback(async () => {
+    if (!deleteParticipantModal.participant) return;
+    await deleteParticipantMutation({
+      variables: { id: deleteParticipantModal.participant.participantId },
+    });
+  }, [deleteParticipantMutation, deleteParticipantModal.participant]);
+
   const loading = tableLoading || summaryLoading;
 
   return {
@@ -551,6 +572,8 @@ export function useTourPayments(tourId) {
     setRegisterModal,
     deletePayModal,
     setDeletePayModal,
+    deleteParticipantModal,
+    setDeleteParticipantModal,
     accountModal,
     setAccountModal,
     planModal,
@@ -563,6 +586,7 @@ export function useTourPayments(tourId) {
     // ── Actions ───────────────────────────────────────────────────────────────
     handleRegisterPayment,
     handleDeletePayment,
+    handleDeleteParticipant,
     handleUpdateAccount,
     handleCreatePlan,
     handleUpdatePlan,
@@ -579,6 +603,7 @@ export function useTourPayments(tourId) {
     flowLoading,
     registering,
     deletingPay,
+    deletingParticipant,
     updatingAccount,
     creatingPlan,
     updatingPlan,

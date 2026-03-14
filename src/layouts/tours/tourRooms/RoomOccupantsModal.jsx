@@ -73,7 +73,7 @@ export default function RoomOccupantsModal({
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[88vh] min-h-0">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] min-h-0">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-start justify-between">

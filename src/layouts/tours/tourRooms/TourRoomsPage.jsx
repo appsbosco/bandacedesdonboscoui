@@ -10,6 +10,7 @@ import RoomFormModal from "./RoomFormModal";
 import RoomDeleteModal from "./RoomDeleteModal";
 import RoomOccupantsModal from "./RoomOccupantsModal";
 import RoomPlanner from "./RoomPlanner";
+import RoomingListExportModal from "./RoomingListExportModal";
 import { Toast } from "../TourHelpers";
 
 const VIEWS = [
@@ -21,10 +22,12 @@ export default function TourRoomsPage({ tourId, tourName }) {
   const [mode, setMode] = useState("list");
   const [search, setSearch] = useState("");
   const [hotelFilter, setHotelFilter] = useState("ALL");
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const state = useTourRooms(tourId);
   const {
     rooms,
+    allParticipants,
     unassignedParticipants,
     totalOccupants,
     fullRooms,
@@ -54,6 +57,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
     // planner
     sexOverrides,
     handleSetSex,
+    handleCapacityChange,
     plannerCapacity,
     setPlannerCapacity,
     plannerHotel,
@@ -106,9 +110,11 @@ export default function TourRoomsPage({ tourId, tourName }) {
             handleCreateRoomsFromGroup={handleCreateRoomsFromGroup}
             handleAssignOccupant={handleAssignOccupant}
             handleRemoveOccupant={handleRemoveOccupant}
+            handleCapacityChange={handleCapacityChange}
             formModal={formModal}
             deleteModal={deleteModal}
             openCreateModal={openCreateModal}
+            openEditModal={openEditModal}
             closeFormModal={closeFormModal}
             openDeleteModal={openDeleteModal}
             closeDeleteModal={closeDeleteModal}
@@ -136,8 +142,19 @@ export default function TourRoomsPage({ tourId, tourName }) {
             Gestioná el alojamiento de <span className="font-semibold">{tourName}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <ViewSwitcher mode={mode} onSwitch={setMode} />
+          {rooms.length > 0 && (
+            <button
+              onClick={() => setExportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-2xl active:scale-[0.98] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Exportar
+            </button>
+          )}
           <button
             onClick={openCreateModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
@@ -279,6 +296,15 @@ export default function TourRoomsPage({ tourId, tourName }) {
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <RoomingListExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        rooms={rooms}
+        allParticipants={allParticipants}
+        sexOverrides={sexOverrides}
+        tourName={tourName}
+      />
     </div>
   );
 }

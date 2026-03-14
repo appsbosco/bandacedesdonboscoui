@@ -79,3 +79,20 @@ export const DELETE_TOUR = gql`
     deleteTour(id: $id)
   }
 `;
+
+export const DELETE_TOUR_PARTICIPANT = gql`
+  mutation DeleteTourParticipant($id: ID!) {
+    deleteTourParticipant(id: $id) {
+      success
+      deletedId
+      cascadeResults {
+        itineraryAssignments
+        routeAssignments
+        roomsModified
+        payments
+        installments
+        financialAccounts
+      }
+    }
+  }
+`;

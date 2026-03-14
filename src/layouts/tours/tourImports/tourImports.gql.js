@@ -18,6 +18,7 @@ export const PREVIEW_TOUR_PARTICIPANT_IMPORT = gql`
         identification
         email
         phone
+        birthDate
         instrument
         grade
         passportNumber
@@ -36,8 +37,10 @@ export const CONFIRM_TOUR_PARTICIPANT_IMPORT = gql`
       batchId
       tourId
       importedCount
+      updatedCount
       duplicates
       errors
+      mode
     }
   }
 `;
