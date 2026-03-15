@@ -16,7 +16,8 @@ export async function uploadSignedToCloudinary({
   fd.append("api_key", apiKey);
   fd.append("timestamp", String(timestamp));
   fd.append("signature", signature);
-  fd.append("public_id", publicId);
+  if (folder) fd.append("folder", folder);
+  if (publicId) fd.append("public_id", publicId);
 
   const res = await fetch(url, { method: "POST", body: fd });
   if (!res.ok) {

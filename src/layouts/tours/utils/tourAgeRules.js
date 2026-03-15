@@ -95,12 +95,17 @@ export function getDaysUntilExpiry(expirationDate) {
  */
 export function computeParticipantDocStatus(p, refDate) {
   const passportExpiry = getExpiryStatus(p.passportExpiry);
-  const visaExpiry = p.hasVisa ? getExpiryStatus(p.visaExpiry) : null;
+  // Visa: si hasVisa=false → "missing" (no se puede contar como ok)
+  const visaExpiry = p.hasVisa ? getExpiryStatus(p.visaExpiry) : "missing";
   const exitRequired = isExitPermitRequired(p.birthDate, refDate);
 
   const hasExpired = passportExpiry === "expired" || visaExpiry === "expired";
   const hasWarning = passportExpiry === "warning" || visaExpiry === "warning";
-  const isMissing = !p.passportNumber || (exitRequired && !p.hasExitPermit);
+  // hasVisa=false → isMissing=true; pasaporte ausente → isMissing=true
+  const isMissing =
+    !p.passportNumber ||
+    !p.hasVisa ||
+    (exitRequired && !p.hasExitPermit);
 
   if (hasExpired) return "EXPIRED";
   if (isMissing) return "INCOMPLETE";

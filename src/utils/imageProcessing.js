@@ -100,13 +100,177 @@ export function captureHighQualityFrame(video) {
   return canvas;
 }
 
+/**
+ * Map viewport-relative scanArea to video-native coordinates.
+ * Needed because the <video> uses object-cover, which scales & crops
+ * the feed to fill the viewport — overlay percentages are viewport-relative
+ * but drawImage needs video-native percentages.
+ */
+export function mapScanAreaToVideo(scanArea, video, viewportW, viewportH) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh || !viewportW || !viewportH) return scanArea;
+
+  const videoRatio = vw / vh;
+  const vpRatio = viewportW / viewportH;
+
+  let offsetX = 0;
+  let offsetY = 0;
+  let visibleW = 1;
+  let visibleH = 1;
+
+  if (videoRatio > vpRatio) {
+    // Video wider than viewport → left/right cropped
+    const scale = viewportH / vh;
+    const dispW = vw * scale;
+    const crop = (dispW - viewportW) / 2 / dispW;
+    offsetX = crop;
+    visibleW = 1 - 2 * crop;
+  } else {
+    // Video taller than viewport → top/bottom cropped
+    const scale = viewportW / vw;
+    const dispH = vh * scale;
+    const crop = (dispH - viewportH) / 2 / dispH;
+    offsetY = crop;
+    visibleH = 1 - 2 * crop;
+  }
+
+  return {
+    x: offsetX + scanArea.x * visibleW,
+    y: offsetY + scanArea.y * visibleH,
+    width: scanArea.width * visibleW,
+    height: scanArea.height * visibleH,
+  };
+}
+
 export function processScannedDocument(video, scanArea, options = {}) {
-  const { enhance = false } = options;
+  const { enhance = false, viewportW, viewportH } = options;
+
+  // If viewport dimensions provided, compensate for object-cover crop
+  const mappedArea = (viewportW && viewportH)
+    ? mapScanAreaToVideo(scanArea, video, viewportW, viewportH)
+    : scanArea;
+
   const fullFrame = captureHighQualityFrame(video);
-  const cropped = cropToScanArea(fullFrame, scanArea);
+  const cropped = cropToScanArea(fullFrame, mappedArea);
 
   if (enhance) {
     return enhanceForOCR(cropped, { contrast: 1.05, brightness: 0, sharpen: false });
   }
   return cropped;
+}
+
+/**
+ * Normalize a captured document image to consistent dimensions.
+ * Ensures all output images have the same orientation and aspect ratio
+ * regardless of how the document was captured.
+ *
+ * @param {HTMLCanvasElement} sourceCanvas — cropped/rectified document image
+ * @param {Object} opts
+ * @param {number} opts.targetWidth — desired output width (default 1200)
+ * @param {number} opts.aspectRatio — document aspect ratio w/h (default 1.42 for passport)
+ * @returns {HTMLCanvasElement}
+ */
+export function normalizeDocumentImage(sourceCanvas, opts = {}) {
+  const { targetWidth = 1200, aspectRatio = 1.42 } = opts;
+  const targetHeight = Math.round(targetWidth / aspectRatio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Fill white background first (avoids transparent edges from perspective warp)
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+  // Scale source to fit target, preserving aspect ratio
+  const srcW = sourceCanvas.width;
+  const srcH = sourceCanvas.height;
+  const srcRatio = srcW / srcH;
+  const tgtRatio = targetWidth / targetHeight;
+
+  let drawW, drawH, drawX, drawY;
+  if (srcRatio > tgtRatio) {
+    // Source is wider — fit by width
+    drawW = targetWidth;
+    drawH = Math.round(targetWidth / srcRatio);
+    drawX = 0;
+    drawY = Math.round((targetHeight - drawH) / 2);
+  } else {
+    // Source is taller — fit by height
+    drawH = targetHeight;
+    drawW = Math.round(targetHeight * srcRatio);
+    drawX = Math.round((targetWidth - drawW) / 2);
+    drawY = 0;
+  }
+
+  ctx.drawImage(sourceCanvas, 0, 0, srcW, srcH, drawX, drawY, drawW, drawH);
+
+  return canvas;
+}
+
+/**
+ * Extract the MRZ region from a document image.
+ * MRZ is located at the bottom of the document:
+ * - TD3 (passport): bottom ~25% of the page, 2 lines of 44 chars
+ * - TD1 (ID card):  bottom ~33% of the page, 3 lines of 30 chars
+ *
+ * The extracted region is enhanced for OCR (higher contrast, sharpened).
+ *
+ * @param {HTMLCanvasElement} sourceCanvas — full document image
+ * @param {string} documentType — "PASSPORT" | "VISA" | "ID_CARD"
+ * @returns {HTMLCanvasElement} — MRZ region, enhanced for OCR
+ */
+export function extractMRZRegion(sourceCanvas, documentType = "PASSPORT") {
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+
+  // MRZ occupies the bottom portion of the document
+  const mrzHeightPct = documentType === "ID_CARD" ? 0.38 : 0.30;
+  const mrzY = Math.round(h * (1 - mrzHeightPct));
+  const mrzH = h - mrzY;
+
+  // Add small horizontal margin to avoid border artifacts
+  const marginX = Math.round(w * 0.02);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w - 2 * marginX;
+  canvas.height = mrzH;
+
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(sourceCanvas, marginX, mrzY, canvas.width, mrzH, 0, 0, canvas.width, mrzH);
+
+  // Enhance for OCR: boost contrast, convert towards grayscale, sharpen
+  return enhanceForOCR(canvas, { contrast: 1.3, brightness: 5, sharpen: true });
+}
+
+/**
+ * Generate all image variants needed for the document pipeline.
+ *
+ * @param {HTMLCanvasElement} capturedCanvas — the raw captured image
+ * @param {string} documentType
+ * @param {number} aspectRatio
+ * @returns {{ raw: HTMLCanvasElement, normalized: HTMLCanvasElement, mrzRoi: HTMLCanvasElement|null }}
+ */
+export function generateAllImageVariants(capturedCanvas, documentType, aspectRatio = 1.42) {
+  const needsMRZ = ["PASSPORT", "VISA"].includes(documentType?.toUpperCase());
+
+  const normalized = normalizeDocumentImage(capturedCanvas, {
+    targetWidth: 1200,
+    aspectRatio,
+  });
+
+  const mrzRoi = needsMRZ ? extractMRZRegion(normalized, documentType) : null;
+
+  return {
+    raw: capturedCanvas,
+    normalized,
+    mrzRoi,
+  };
 }

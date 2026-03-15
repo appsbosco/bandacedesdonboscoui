@@ -51,7 +51,8 @@ export function useTourDocuments(tourId, tour) {
         ...p,
         _docStatus: computeParticipantDocStatus(p, refDate),
         _passportExpiry: getExpiryStatus(p.passportExpiry),
-        _visaExpiry: p.hasVisa ? getExpiryStatus(p.visaExpiry) : null,
+        // hasVisa=false → "missing" (no puede pintarse como ok)
+        _visaExpiry: p.hasVisa ? getExpiryStatus(p.visaExpiry) : "missing",
         _exitRequired: isExitPermitRequired(p.birthDate, refDate),
       })),
     [participants, refDate]

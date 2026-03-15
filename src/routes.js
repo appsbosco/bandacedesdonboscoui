@@ -58,6 +58,7 @@ import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import Tuner from "layouts/tuner";
 import DocumentsPage from "components/documents/DocumentsPage";
 import NewDocumentPage from "components/documents/NewDocumentPage";
+import { DocumentDetail } from "components/documents/DocumentDetail";
 import ParentDashboardPage from "layouts/parentDashboard";
 
 import FinanceDashboard from "layouts/finance/index";
@@ -428,6 +429,13 @@ const items = {
       component: <NewDocumentPage />,
     }),
 
+  documentDetail: () =>
+    routeOnly({
+      key: "document-detail",
+      route: "/documents/:id",
+      component: <DocumentDetail />,
+    }),
+
   // Tickets
   ticketList: () =>
     collapse({
@@ -586,6 +594,7 @@ const documentsMenu = () => [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
+  items.documentDetail(),
 ];
 /**
  * Exports: protectedRoutes + attendanceRoutes
@@ -700,6 +709,7 @@ export const adminRoutes = [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
+  items.documentDetail(),
 
   // title("Pagos", "pagos"),
   // items.payments(),
@@ -839,6 +849,12 @@ export const membersRoutes = [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
+  items.documentDetail(),
+
+  // Acceso self-service a giras (solo lectura, controlado por selfServiceAccess del Admin)
+  title("Giras", "giras-member"),
+  items.tours(),
+  items.tourDetail(),
 
   title("Cuenta", "account-pages"),
   items.profile(),
@@ -851,6 +867,7 @@ export const sectionRoutes = [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
+  items.documentDetail(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -871,6 +888,11 @@ export const parentsRoutes = [
 
   title("Asistencia", "attendance-pages"),
   items.parentDashboard(),
+
+  // Acceso self-service a giras para padres (controlado por selfServiceAccess del Admin)
+  title("Giras", "giras-parent"),
+  items.tours(),
+  items.tourDetail(),
 
   title("Cuenta", "account-pages"),
   items.parentsProfile(),

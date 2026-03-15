@@ -30,6 +30,14 @@ export const GET_TOUR = gql`
       endDate
       status
       description
+      selfServiceAccess {
+        enabled
+        documents
+        payments
+        rooms
+        itinerary
+        flights
+      }
       createdAt
       updatedAt
       createdBy {
@@ -37,6 +45,53 @@ export const GET_TOUR = gql`
         firstSurName
       }
       updatedBy {
+        name
+        firstSurName
+      }
+    }
+  }
+`;
+
+export const UPDATE_TOUR_SELF_SERVICE_ACCESS = gql`
+  mutation UpdateTourSelfServiceAccess($tourId: ID!, $input: TourSelfServiceAccessInput!) {
+    updateTourSelfServiceAccess(tourId: $tourId, input: $input) {
+      id
+      selfServiceAccess {
+        enabled
+        documents
+        payments
+        rooms
+        itinerary
+        flights
+      }
+    }
+  }
+`;
+
+export const GET_MY_TOUR_PARTICIPANT = gql`
+  query GetMyTourParticipant($tourId: ID!) {
+    myTourParticipant(tourId: $tourId) {
+      id
+      firstName
+      firstSurname
+      secondSurname
+      identification
+      email
+      phone
+      birthDate
+      sex
+      instrument
+      grade
+      passportNumber
+      passportExpiry
+      hasVisa
+      visaExpiry
+      hasExitPermit
+      status
+      role
+      notes
+      linkedUser {
+        id
         name
         firstSurName
       }

@@ -1,6 +1,31 @@
 // src/utils/constants.js
 
+/**
+ * Compute the scan guide rectangle for a given document aspect ratio
+ * and screen dimensions. The guide fills ~85% of the narrowest screen
+ * axis, centered, always landscape-oriented.
+ */
+export function computeScanArea(docAspectRatio = 1.42, screenW = 1, screenH = 1) {
+  const screenRatio = screenW / screenH;
+  // Target: guide is 85% of the width on portrait screens
+  const guideWidthPct = screenRatio < 1 ? 0.88 : 0.75;
+  const guideWidth = guideWidthPct;
+  const guideHeight = guideWidth / docAspectRatio / (screenRatio || 1);
+
+  // Clamp height to max 55% of screen
+  const clampedHeight = Math.min(guideHeight, 0.55);
+  const clampedWidth = clampedHeight > guideHeight ? guideWidth : guideWidth * (clampedHeight / guideHeight);
+
+  return {
+    x: (1 - clampedWidth) / 2,
+    y: (1 - clampedHeight) / 2,
+    width: clampedWidth,
+    height: clampedHeight,
+  };
+}
+
 export const SCANNER_CONFIG = {
+  // Default scan area; overridden at runtime by computeScanArea()
   scanArea: { x: 0.05, y: 0.25, width: 0.9, height: 0.5 },
   analysisFPS: 8,
   analysisResolution: 400,
@@ -31,7 +56,7 @@ export const DOCUMENT_TYPES = {
   //   id: "PASSPORT",
   //   label: "Pasaporte",
   //   description: "Documento de viaje internacional con MRZ",
-  //   icon: "🛂",
+  //   icon: "\u{1F6C2}",
   //   requiresMRZ: true,
   //   aspectRatio: 1.42,
   //   mrzLines: 2,
@@ -41,37 +66,17 @@ export const DOCUMENT_TYPES = {
   //   id: "VISA",
   //   label: "Visa",
   //   description: "Visa de viaje o permiso de entrada",
-  //   icon: "📋",
+  //   icon: "\u2708\uFE0F",
   //   requiresMRZ: true,
   //   aspectRatio: 1.42,
   //   mrzLines: 2,
   //   color: "purple",
   // },
-  // ID_CARD: {
-  //   id: "ID_CARD",
-  //   label: "Cédula de Identidad",
-  //   description: "Documento de identificación nacional",
-  //   icon: "🪪",
-  //   requiresMRZ: true,
-  //   aspectRatio: 1.58,
-  //   mrzLines: 3,
-  //   color: "green",
-  // },
-  // TRAVEL_PERMIT: {
-  //   id: "TRAVEL_PERMIT",
-  //   label: "Permiso de Salida",
-  //   description: "Permiso de viaje para menores",
-  //   icon: "📄",
-  //   requiresMRZ: false,
-  //   aspectRatio: 1.41,
-  //   mrzLines: 0,
-  //   color: "orange",
-  // },
   // PERMISO_SALIDA: {
   //   id: "PERMISO_SALIDA",
   //   label: "Permiso de Salida",
   //   description: "Permiso de viaje para menores",
-  //   icon: "📄",
+  //   icon: "\u{1F4C4}",
   //   requiresMRZ: false,
   //   aspectRatio: 1.41,
   //   mrzLines: 0,
@@ -81,7 +86,7 @@ export const DOCUMENT_TYPES = {
     id: "OTHER",
     label: "Otro documento",
     description: "Otro tipo de documento",
-    icon: "📎",
+    icon: "\u{1F4CE}",
     requiresMRZ: false,
     aspectRatio: 1.5,
     mrzLines: 0,

@@ -87,7 +87,7 @@ export default function TourImportsPage({ tourId, tourName }) {
       </div>
 
       {/* Info banners */}
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
           <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -99,7 +99,7 @@ export default function TourImportsPage({ tourId, tourName }) {
             <strong>Actualizar datos existentes</strong> — usa el mismo Excel para rellenar campos faltantes (ej. fechas de nacimiento, pasaporte) en participantes ya importados. No crea duplicados.
           </p>
         </div>
-      </div>
+      </div> */}
 
       {/* Batch history */}
       {batchesLoading ? (

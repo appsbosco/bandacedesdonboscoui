@@ -1,116 +1,243 @@
 /**
- * MRZ Detection and Parsing Utilities
- * Detecta y parsea Machine Readable Zone de documentos
+ * MRZ Detection and Parsing — ICAO 9303 compliant
+ *
+ * Supports:
+ * - TD3 (Passport): 2 lines x 44 chars
+ * - TD1 (ID card):  3 lines x 30 chars
+ * - TD2:            2 lines x 36 chars
+ *
+ * Provides:
+ * - OCR error correction (common misreads)
+ * - Check digit validation per ICAO 9303
+ * - Confidence scoring
+ * - Structured parsed output
  */
 
-// Caracteres válidos en MRZ
-const MRZ_CHARS = /^[A-Z0-9<]+$/;
+// Valid MRZ characters
+const MRZ_VALID = /^[A-Z0-9<]+$/;
 
-// Patrones de MRZ por tipo de documento
-const MRZ_PATTERNS = {
-  // TD3 (Pasaporte): 2 líneas de 44 caracteres
-  TD3: {
-    lines: 2,
-    lineLength: 44,
-    regex:
-      /^[A-Z<]{2}[A-Z<]{3}[A-Z<]{39}\n[A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{6}[0-9][MF<][0-9]{6}[0-9][A-Z0-9<]{14}[0-9][0-9]$/,
-  },
-  // TD1 (ID Card): 3 líneas de 30 caracteres
-  TD1: {
-    lines: 3,
-    lineLength: 30,
-    regex:
-      /^[A-Z<]{2}[A-Z<]{3}[A-Z0-9<]{25}\n[0-9]{6}[0-9][MF<][0-9]{6}[0-9][A-Z<]{3}[A-Z0-9<]{11}[0-9]\n[A-Z<]{30}$/,
-  },
-  // TD2: 2 líneas de 36 caracteres
-  TD2: {
-    lines: 2,
-    lineLength: 36,
-    regex:
-      /^[A-Z<]{2}[A-Z<]{3}[A-Z<]{31}\n[A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{6}[0-9][MF<][0-9]{6}[0-9][A-Z0-9<]{7}[0-9]$/,
-  },
-};
+// ICAO 9303 check digit weights
+const CHECK_WEIGHTS = [7, 3, 1];
+
+// Character values for check digit computation (ICAO 9303 §4.9)
+function charValue(ch) {
+  if (ch === "<") return 0;
+  if (ch >= "0" && ch <= "9") return ch.charCodeAt(0) - 48;
+  if (ch >= "A" && ch <= "Z") return ch.charCodeAt(0) - 55; // A=10, B=11, ...
+  return 0;
+}
 
 /**
- * Detecta líneas MRZ en texto OCR
- * @param {string} text - Texto completo del OCR
- * @returns {Object|null} - MRZ detectado o null
+ * Compute ICAO 9303 check digit for a string
+ * @param {string} str - MRZ field string
+ * @returns {number} check digit 0-9
+ */
+export function computeCheckDigit(str) {
+  let sum = 0;
+  for (let i = 0; i < str.length; i++) {
+    sum += charValue(str[i]) * CHECK_WEIGHTS[i % 3];
+  }
+  return sum % 10;
+}
+
+/**
+ * Validate a field against its check digit
+ */
+export function validateCheckDigit(field, expectedDigit) {
+  if (!field || expectedDigit == null) return false;
+  const expected = typeof expectedDigit === "string" ? parseInt(expectedDigit, 10) : expectedDigit;
+  if (isNaN(expected)) return false;
+  return computeCheckDigit(field) === expected;
+}
+
+// ── OCR Error Correction ─────────────────────────────────────────────────────
+
+/**
+ * Context-aware OCR correction for MRZ lines.
+ * Different positions expect different character types (alpha vs digit),
+ * so we correct based on context rather than blindly replacing.
+ */
+function correctOCRChar(ch, expectDigit) {
+  if (expectDigit) {
+    // In digit positions: common OCR misreads
+    if (ch === "O" || ch === "o") return "0";
+    if (ch === "I" || ch === "l" || ch === "|") return "1";
+    if (ch === "Z") return "2";
+    if (ch === "S" || ch === "s") return "5";
+    if (ch === "B") return "8";
+    if (ch === "G") return "6";
+    if (ch === "T") return "7";
+  } else {
+    // In alpha positions: common OCR misreads
+    if (ch === "0") return "O";
+    if (ch === "1") return "I";
+    if (ch === "8") return "B";
+    if (ch === "5") return "S";
+    if (ch === "2") return "Z";
+  }
+  return ch.toUpperCase();
+}
+
+/**
+ * Clean a raw OCR line into valid MRZ characters.
+ * Strips invalid chars, applies basic corrections.
+ */
+function cleanMRZLine(raw) {
+  let cleaned = raw
+    .replace(/\s+/g, "")   // Remove spaces
+    .replace(/[^A-Za-z0-9<]/g, "") // Keep only valid chars
+    .toUpperCase();
+  return cleaned;
+}
+
+/**
+ * Apply context-aware correction to TD3 line 2.
+ * Line 2 has a strict format: digits and alpha at specific positions.
+ * Format: [doc#:9][cd:1][nat:3][dob:6][cd:1][sex:1][exp:6][cd:1][opt:14][cd:1][final:1]
+ */
+function correctTD3Line2(line) {
+  if (line.length !== 44) return line;
+  const chars = line.split("");
+
+  // Position map: true = expect digit, false = expect alpha, null = either
+  const digitPositions = new Set([
+    // passport number check digit
+    9,
+    // date of birth
+    13, 14, 15, 16, 17, 18,
+    // birth check digit
+    19,
+    // expiration date
+    21, 22, 23, 24, 25, 26,
+    // expiry check digit
+    27,
+    // personal number check digit
+    42,
+    // final check digit
+    43,
+  ]);
+
+  const alphaPositions = new Set([
+    // nationality
+    10, 11, 12,
+    // sex
+    20,
+  ]);
+
+  for (let i = 0; i < chars.length; i++) {
+    if (chars[i] === "<") continue;
+    if (digitPositions.has(i)) {
+      chars[i] = correctOCRChar(chars[i], true);
+    } else if (alphaPositions.has(i)) {
+      chars[i] = correctOCRChar(chars[i], false);
+    }
+  }
+
+  return chars.join("");
+}
+
+/**
+ * Apply context-aware correction to TD1 line 2.
+ * Format: [dob:6][cd:1][sex:1][exp:6][cd:1][nat:3][opt:11][cd:1]
+ */
+function correctTD1Line2(line) {
+  if (line.length !== 30) return line;
+  const chars = line.split("");
+
+  const digitPositions = new Set([0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 29]);
+  const alphaPositions = new Set([7, 15, 16, 17]);
+
+  for (let i = 0; i < chars.length; i++) {
+    if (chars[i] === "<") continue;
+    if (digitPositions.has(i)) {
+      chars[i] = correctOCRChar(chars[i], true);
+    } else if (alphaPositions.has(i)) {
+      chars[i] = correctOCRChar(chars[i], false);
+    }
+  }
+
+  return chars.join("");
+}
+
+// ── MRZ Detection ────────────────────────────────────────────────────────────
+
+/**
+ * Detect and parse MRZ from OCR text.
+ * @param {string} text - Full OCR text
+ * @returns {Object|null} { type, raw, parsed, confidence, checkDigits }
  */
 export function detectMRZ(text) {
   if (!text) return null;
 
-  // Normalizar texto
-  const normalized = text
-    .toUpperCase()
-    .replace(/[^A-Z0-9<\n]/g, "") // Solo caracteres válidos
-    .replace(/0/g, "O") // Corrección común OCR
-    .replace(/O(?=[0-9])/g, "0") // Pero O antes de números probablemente es 0
-    .replace(/\n+/g, "\n")
-    .trim();
+  // Split into lines, clean each line
+  const rawLines = text.split(/\n/);
+  const cleanedLines = rawLines.map(cleanMRZLine).filter((l) => l.length > 0);
 
-  const lines = normalized.split("\n");
-
-  // Buscar secuencias de líneas que parezcan MRZ
-  const mrzCandidates = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Línea con muchos '<' es candidata a MRZ
-    if (line.includes("<") && line.length >= 28) {
-      mrzCandidates.push({ line, index: i });
+  // Collect candidate MRZ lines (lines with '<' and sufficient length)
+  const candidates = [];
+  for (let i = 0; i < cleanedLines.length; i++) {
+    const line = cleanedLines[i];
+    if (line.length >= 28 && (line.includes("<") || MRZ_VALID.test(line))) {
+      candidates.push({ line, index: i });
     }
   }
 
-  // Intentar armar MRZ desde candidatos
-  for (const { line, index } of mrzCandidates) {
-    // TD3 (Pasaporte): buscar 2 líneas de ~44 chars
+  // Try TD3 first (most common for passports)
+  for (const { line, index } of candidates) {
     if (line.length >= 40 && line.length <= 48) {
-      const nextLine = lines[index + 1];
+      // Look for the next candidate line
+      const nextIdx = candidates.findIndex((c) => c.index === index + 1);
+      if (nextIdx === -1) continue;
 
-      if (nextLine && nextLine.length >= 40 && nextLine.length <= 48) {
-        const mrz = [normalizeLineLength(line, 44), normalizeLineLength(nextLine, 44)].join("\n");
+      const nextLine = candidates[nextIdx].line;
+      if (nextLine.length < 40 || nextLine.length > 48) continue;
 
-        const parsed = parseTD3(mrz);
-        if (parsed) {
-          return {
-            type: "TD3",
-            raw: mrz,
-            parsed,
-            confidence: calculateMRZConfidence(mrz, "TD3"),
-          };
-        }
+      const l1 = normalizeLineLength(line, 44);
+      const l2 = normalizeLineLength(correctTD3Line2(normalizeLineLength(nextLine, 44)), 44);
+
+      const parsed = parseTD3(l1, l2);
+      if (parsed) {
+        const mrz = `${l1}\n${l2}`;
+        const allChecksPass = Object.values(parsed.checkDigits).every((cd) => cd.valid);
+        return {
+          type: "TD3",
+          format: "TD3",
+          raw: mrz,
+          parsed: parsed.data,
+          checkDigits: parsed.checkDigits,
+          checkDigitsValid: allChecksPass,
+          confidence: parsed.confidence,
+        };
       }
     }
+  }
 
-    // TD1 (ID): buscar 3 líneas de ~30 chars
+  // Try TD1
+  for (const { line, index } of candidates) {
     if (line.length >= 26 && line.length <= 34) {
-      const line2 = lines[index + 1];
-      const line3 = lines[index + 2];
+      const l2c = candidates.find((c) => c.index === index + 1);
+      const l3c = candidates.find((c) => c.index === index + 2);
+      if (!l2c || !l3c) continue;
+      if (l2c.line.length < 26 || l2c.line.length > 34) continue;
+      if (l3c.line.length < 26 || l3c.line.length > 34) continue;
 
-      if (
-        line2 &&
-        line3 &&
-        line2.length >= 26 &&
-        line2.length <= 34 &&
-        line3.length >= 26 &&
-        line3.length <= 34
-      ) {
-        const mrz = [
-          normalizeLineLength(line, 30),
-          normalizeLineLength(line2, 30),
-          normalizeLineLength(line3, 30),
-        ].join("\n");
+      const l1 = normalizeLineLength(line, 30);
+      const l2 = normalizeLineLength(correctTD1Line2(normalizeLineLength(l2c.line, 30)), 30);
+      const l3 = normalizeLineLength(l3c.line, 30);
 
-        const parsed = parseTD1(mrz);
-        if (parsed) {
-          return {
-            type: "TD1",
-            raw: mrz,
-            parsed,
-            confidence: calculateMRZConfidence(mrz, "TD1"),
-          };
-        }
+      const parsed = parseTD1(l1, l2, l3);
+      if (parsed) {
+        const mrz = `${l1}\n${l2}\n${l3}`;
+        const allChecksPass = Object.values(parsed.checkDigits).every((cd) => cd.valid);
+        return {
+          type: "TD1",
+          format: "TD1",
+          raw: mrz,
+          parsed: parsed.data,
+          checkDigits: parsed.checkDigits,
+          checkDigitsValid: allChecksPass,
+          confidence: parsed.confidence,
+        };
       }
     }
   }
@@ -118,235 +245,311 @@ export function detectMRZ(text) {
   return null;
 }
 
-/**
- * Normaliza una línea al largo esperado
- */
+// ── Line Normalization ───────────────────────────────────────────────────────
+
 function normalizeLineLength(line, expectedLength) {
   if (line.length === expectedLength) return line;
   if (line.length > expectedLength) return line.substring(0, expectedLength);
   return line.padEnd(expectedLength, "<");
 }
 
-/**
- * Parsea MRZ tipo TD3 (Pasaporte)
- * Línea 1: P<PAISNOMBRE<<APELLIDO<<<<<<<<<<<<<<<<<<<<<<
- * Línea 2: PASAPORTE#CDIGESTOPAISYYNACIMCDIGMFYYEXPIRAC#CDIGDATOSADIC#CDIG
- */
-function parseTD3(mrz) {
-  const lines = mrz.split("\n");
-  if (lines.length !== 2) return null;
+// ── TD3 Parser (Passport) ────────────────────────────────────────────────────
 
-  const line1 = lines[0];
-  const line2 = lines[1];
+function parseTD3(line1, line2) {
+  if (line1.length !== 44 || line2.length !== 44) return null;
 
   try {
-    // Línea 1
+    // Line 1: type[2] + country[3] + name[39]
     const documentType = line1.substring(0, 2).replace(/<+$/, "");
     const issuingCountry = line1.substring(2, 5).replace(/<+$/, "");
     const namePart = line1.substring(5, 44);
     const nameParts = namePart.split("<<");
     const surname = nameParts[0]?.replace(/<+/g, " ").trim() || "";
-    const givenNames = nameParts[1]?.replace(/<+/g, " ").trim() || "";
+    const givenNames = nameParts.slice(1).join(" ").replace(/<+/g, " ").trim() || "";
 
-    // Línea 2
-    const passportNumber = line2.substring(0, 9).replace(/<+$/, "");
-    const passportCheckDigit = line2[9];
+    // Line 2: docNum[9] + cd[1] + nat[3] + dob[6] + cd[1] + sex[1] + exp[6] + cd[1] + opt[14] + cd[1] + final[1]
+    const docNumField = line2.substring(0, 9);
+    const docNumCD = line2[9];
     const nationality = line2.substring(10, 13).replace(/<+$/, "");
-    const birthDateRaw = line2.substring(13, 19);
-    const birthCheckDigit = line2[19];
+    const dobField = line2.substring(13, 19);
+    const dobCD = line2[19];
     const sex = line2[20];
-    const expiryDateRaw = line2.substring(21, 27);
-    const expiryCheckDigit = line2[27];
-    const personalNumber = line2.substring(28, 42).replace(/<+$/, "");
-    const personalCheckDigit = line2[42];
-    const finalCheckDigit = line2[43];
+    const expField = line2.substring(21, 27);
+    const expCD = line2[27];
+    const optionalField = line2.substring(28, 42);
+    const optionalCD = line2[42];
+    const finalCD = line2[43];
 
-    // Parsear fechas
-    const dateOfBirth = parseDate(birthDateRaw);
-    const expirationDate = parseDate(expiryDateRaw, true);
-
-    return {
-      documentType,
-      issuingCountry,
-      surname,
-      givenNames,
-      fullName: `${givenNames} ${surname}`.trim(),
-      passportNumber,
-      nationality,
-      dateOfBirth,
-      sex: sex === "M" ? "MALE" : sex === "F" ? "FEMALE" : null,
-      expirationDate,
-      personalNumber: personalNumber || null,
-      checkDigits: {
-        passport: passportCheckDigit,
-        birth: birthCheckDigit,
-        expiry: expiryCheckDigit,
-        personal: personalCheckDigit,
-        final: finalCheckDigit,
+    // Validate check digits
+    const checkDigits = {
+      documentNumber: {
+        field: docNumField,
+        expected: parseInt(docNumCD, 10),
+        computed: computeCheckDigit(docNumField),
+        valid: validateCheckDigit(docNumField, docNumCD),
+      },
+      dateOfBirth: {
+        field: dobField,
+        expected: parseInt(dobCD, 10),
+        computed: computeCheckDigit(dobField),
+        valid: validateCheckDigit(dobField, dobCD),
+      },
+      expirationDate: {
+        field: expField,
+        expected: parseInt(expCD, 10),
+        computed: computeCheckDigit(expField),
+        valid: validateCheckDigit(expField, expCD),
+      },
+      optional: {
+        field: optionalField,
+        expected: parseInt(optionalCD, 10),
+        computed: computeCheckDigit(optionalField),
+        valid: validateCheckDigit(optionalField, optionalCD),
+      },
+      final: {
+        // Composite check: docNum+cd+dob+cd+exp+cd+optional+cd
+        field: line2.substring(0, 10) + line2.substring(13, 20) + line2.substring(21, 43),
+        expected: parseInt(finalCD, 10),
+        computed: computeCheckDigit(
+          line2.substring(0, 10) + line2.substring(13, 20) + line2.substring(21, 43)
+        ),
+        valid: validateCheckDigit(
+          line2.substring(0, 10) + line2.substring(13, 20) + line2.substring(21, 43),
+          finalCD
+        ),
       },
     };
-  } catch (error) {
-    console.error("Error parsing TD3 MRZ:", error);
+
+    const validChecks = Object.values(checkDigits).filter((c) => c.valid).length;
+    const totalChecks = Object.keys(checkDigits).length;
+
+    // Must have at least document type starting with P and reasonable name
+    if (!documentType.startsWith("P") && !documentType.startsWith("V")) return null;
+    if (!surname && !givenNames) return null;
+
+    const passportNumber = docNumField.replace(/<+$/, "");
+    const dateOfBirth = parseMRZDate(dobField);
+    const expirationDate = parseMRZDate(expField, true);
+
+    // Confidence based on check digit validation
+    const confidence = calculateConfidence(line1, line2, validChecks, totalChecks);
+
+    return {
+      data: {
+        documentType,
+        issuingCountry,
+        surname,
+        givenNames,
+        fullName: `${givenNames} ${surname}`.trim(),
+        passportNumber,
+        documentNumber: passportNumber,
+        nationality,
+        dateOfBirth,
+        sex: normalizeSex(sex),
+        expirationDate,
+        personalNumber: optionalField.replace(/<+$/, "") || null,
+        mrzValid: validChecks >= 3, // At least 3 of 5 checks pass
+        mrzFormat: "TD3",
+      },
+      checkDigits,
+      confidence,
+    };
+  } catch (err) {
+    console.error("[MRZ] TD3 parse error:", err);
     return null;
   }
 }
 
-/**
- * Parsea MRZ tipo TD1 (ID Card)
- */
-function parseTD1(mrz) {
-  const lines = mrz.split("\n");
-  if (lines.length !== 3) return null;
+// ── TD1 Parser (ID Card) ─────────────────────────────────────────────────────
 
-  const line1 = lines[0];
-  const line2 = lines[1];
-  const line3 = lines[2];
+function parseTD1(line1, line2, line3) {
+  if (line1.length !== 30 || line2.length !== 30 || line3.length !== 30) return null;
 
   try {
-    // Línea 1
+    // Line 1: type[2] + country[3] + docNum[9] + cd[1] + optional[15]
     const documentType = line1.substring(0, 2).replace(/<+$/, "");
     const issuingCountry = line1.substring(2, 5).replace(/<+$/, "");
-    const documentNumber = line1.substring(5, 14).replace(/<+$/, "");
-    const documentCheckDigit = line1[14];
+    const docNumField = line1.substring(5, 14);
+    const docNumCD = line1[14];
     const optionalData1 = line1.substring(15, 30).replace(/<+$/, "");
 
-    // Línea 2
-    const birthDateRaw = line2.substring(0, 6);
-    const birthCheckDigit = line2[6];
+    // Line 2: dob[6] + cd[1] + sex[1] + exp[6] + cd[1] + nat[3] + optional[11] + cd[1]
+    const dobField = line2.substring(0, 6);
+    const dobCD = line2[6];
     const sex = line2[7];
-    const expiryDateRaw = line2.substring(8, 14);
-    const expiryCheckDigit = line2[14];
+    const expField = line2.substring(8, 14);
+    const expCD = line2[14];
     const nationality = line2.substring(15, 18).replace(/<+$/, "");
     const optionalData2 = line2.substring(18, 29).replace(/<+$/, "");
-    const finalCheckDigit = line2[29];
+    const finalCD = line2[29];
 
-    // Línea 3: Nombre
-    const namePart = line3;
-    const nameParts = namePart.split("<<");
+    // Line 3: name (surname<<givennames)
+    const nameParts = line3.split("<<");
     const surname = nameParts[0]?.replace(/<+/g, " ").trim() || "";
-    const givenNames = nameParts[1]?.replace(/<+/g, " ").trim() || "";
+    const givenNames = nameParts.slice(1).join(" ").replace(/<+/g, " ").trim() || "";
 
-    const dateOfBirth = parseDate(birthDateRaw);
-    const expirationDate = parseDate(expiryDateRaw, true);
-
-    return {
-      documentType,
-      issuingCountry,
-      surname,
-      givenNames,
-      fullName: `${givenNames} ${surname}`.trim(),
-      documentNumber,
-      nationality,
-      dateOfBirth,
-      sex: sex === "M" ? "MALE" : sex === "F" ? "FEMALE" : null,
-      expirationDate,
-      checkDigits: {
-        document: documentCheckDigit,
-        birth: birthCheckDigit,
-        expiry: expiryCheckDigit,
-        final: finalCheckDigit,
+    const checkDigits = {
+      documentNumber: {
+        field: docNumField,
+        expected: parseInt(docNumCD, 10),
+        computed: computeCheckDigit(docNumField),
+        valid: validateCheckDigit(docNumField, docNumCD),
+      },
+      dateOfBirth: {
+        field: dobField,
+        expected: parseInt(dobCD, 10),
+        computed: computeCheckDigit(dobField),
+        valid: validateCheckDigit(dobField, dobCD),
+      },
+      expirationDate: {
+        field: expField,
+        expected: parseInt(expCD, 10),
+        computed: computeCheckDigit(expField),
+        valid: validateCheckDigit(expField, expCD),
+      },
+      final: {
+        // Composite: line1[5..30] + line2[0..7] + line2[8..15] + line2[18..29]
+        field: line1.substring(5, 30) + line2.substring(0, 7) + line2.substring(8, 15) + line2.substring(18, 29),
+        expected: parseInt(finalCD, 10),
+        computed: computeCheckDigit(
+          line1.substring(5, 30) + line2.substring(0, 7) + line2.substring(8, 15) + line2.substring(18, 29)
+        ),
+        valid: validateCheckDigit(
+          line1.substring(5, 30) + line2.substring(0, 7) + line2.substring(8, 15) + line2.substring(18, 29),
+          finalCD
+        ),
       },
     };
-  } catch (error) {
-    console.error("Error parsing TD1 MRZ:", error);
+
+    const validChecks = Object.values(checkDigits).filter((c) => c.valid).length;
+    const totalChecks = Object.keys(checkDigits).length;
+
+    if (!surname && !givenNames) return null;
+
+    const documentNumber = docNumField.replace(/<+$/, "");
+    const dateOfBirth = parseMRZDate(dobField);
+    const expirationDate = parseMRZDate(expField, true);
+
+    const confidence = validChecks / totalChecks;
+
+    return {
+      data: {
+        documentType,
+        issuingCountry,
+        surname,
+        givenNames,
+        fullName: `${givenNames} ${surname}`.trim(),
+        documentNumber,
+        passportNumber: documentNumber,
+        nationality,
+        dateOfBirth,
+        sex: normalizeSex(sex),
+        expirationDate,
+        mrzValid: validChecks >= 2,
+        mrzFormat: "TD1",
+      },
+      checkDigits,
+      confidence,
+    };
+  } catch (err) {
+    console.error("[MRZ] TD1 parse error:", err);
     return null;
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function normalizeSex(ch) {
+  if (ch === "M") return "M";
+  if (ch === "F") return "F";
+  return null;
+}
+
 /**
- * Parsea fecha de MRZ (YYMMDD)
- * @param {string} dateStr - Fecha en formato YYMMDD
- * @param {boolean} isFuture - Si es fecha de expiración (posiblemente futura)
- * @returns {string|null} - Fecha en formato ISO
+ * Parse YYMMDD date from MRZ
+ * @param {string} dateStr - 6-digit date YYMMDD
+ * @param {boolean} isFuture - true for expiration dates
+ * @returns {string|null} ISO date string YYYY-MM-DD
  */
-function parseDate(dateStr, isFuture = false) {
-  if (!dateStr || dateStr.length !== 6 || !/^\d{6}$/.test(dateStr)) {
-    return null;
-  }
+function parseMRZDate(dateStr, isFuture = false) {
+  if (!dateStr || dateStr.length !== 6 || !/^\d{6}$/.test(dateStr)) return null;
 
   let year = parseInt(dateStr.substring(0, 2), 10);
   const month = parseInt(dateStr.substring(2, 4), 10);
   const day = parseInt(dateStr.substring(4, 6), 10);
 
-  // Determinar siglo
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
   const currentYear = new Date().getFullYear() % 100;
 
   if (isFuture) {
-    // Para fechas de expiración, asumir 2000s si el año es menor que el actual + 20
-    year = year <= currentYear + 20 ? 2000 + year : 1900 + year;
+    // Expiration: assume 2000s if year <= currentYear + 30
+    year = year <= currentYear + 30 ? 2000 + year : 1900 + year;
   } else {
-    // Para fechas de nacimiento, asumir 1900s si el año es mayor que el actual
+    // Birth: assume 1900s if year > currentYear
     year = year > currentYear ? 1900 + year : 2000 + year;
-  }
-
-  // Validar fecha
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
-    return null;
   }
 
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /**
- * Calcula confianza del MRZ detectado
+ * Calculate confidence score for MRZ detection
  */
-function calculateMRZConfidence(mrz, type) {
-  const pattern = MRZ_PATTERNS[type];
-  if (!pattern) return 0;
-
-  const lines = mrz.split("\n");
+function calculateConfidence(line1, line2, validChecks, totalChecks) {
   let score = 0;
 
-  // Verificar número de líneas
-  if (lines.length === pattern.lines) score += 0.3;
+  // Check digit validation weight (most important)
+  score += (validChecks / totalChecks) * 0.5;
 
-  // Verificar largo de líneas
-  const correctLengths = lines.every((l) => Math.abs(l.length - pattern.lineLength) <= 2);
-  if (correctLengths) score += 0.3;
+  // Valid MRZ characters
+  const allValid = MRZ_VALID.test(line1) && MRZ_VALID.test(line2);
+  if (allValid) score += 0.2;
 
-  // Verificar caracteres válidos
-  const validChars = lines.every((l) => MRZ_CHARS.test(l));
-  if (validChars) score += 0.2;
+  // Correct line lengths
+  if (line1.length === 44 && line2.length === 44) score += 0.1;
 
-  // Verificar presencia de '<' (separadores)
-  const hasFillers = lines.some((l) => l.includes("<"));
-  if (hasFillers) score += 0.2;
+  // Has filler characters (expected in MRZ)
+  if (line1.includes("<") && line2.includes("<")) score += 0.1;
+
+  // Starts with P or V (passport/visa)
+  if (/^[PV]/.test(line1)) score += 0.1;
 
   return Math.min(score, 1);
 }
 
+// ── OCR Text Extraction (fallback when no MRZ) ──────────────────────────────
+
 /**
- * Extrae datos relevantes de texto OCR general (sin MRZ)
- * Busca patrones comunes en documentos
+ * Extract document data from general OCR text (no MRZ found).
+ * Best-effort pattern matching.
  */
 export function extractFromOCRText(text) {
+  if (!text) return {};
   const extracted = {};
 
-  // Patrones comunes
   const patterns = {
-    // Número de pasaporte (varios formatos)
-    passportNumber: /(?:passport|pasaporte|no\.?|n[uú]mero)[:\s]*([A-Z]{1,2}[0-9]{6,9})/i,
-
-    // Fechas en varios formatos
-    datePattern: /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{2,4}[-/]\d{1,2}[-/]\d{1,2})/g,
-
-    // Nacionalidad
-    nationality: /(?:nationality|nacionalidad)[:\s]*([A-Z]{3}|[A-Z][a-z]+)/i,
-
-    // Nombres (después de ciertas palabras clave)
-    name: /(?:name|nombre|given\s*names?)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+    passportNumber: /(?:passport|pasaporte|no\.?|n[uú]mero)[:\s]*([A-Z]{1,2}\d{6,9})/i,
+    nationality: /(?:nationality|nacionalidad|citizen)[:\s]*([A-Z]{3}|[A-Z][a-z]+)/i,
     surname: /(?:surname|apellido|family\s*name)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
-
-    // Sexo
+    givenNames: /(?:name|nombre|given\s*names?|first\s*name)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
     sex: /(?:sex|sexo|gender)[:\s]*(M|F|MALE|FEMALE|MASCULINO|FEMENINO)/i,
+    dateOfBirth: /(?:birth|nacimiento|DOB)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
+    expirationDate: /(?:expir|vencimiento|valid\s*until)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
   };
 
-  // Intentar extraer cada campo
   for (const [field, pattern] of Object.entries(patterns)) {
     const match = text.match(pattern);
-    if (match && match[1]) {
+    if (match?.[1]) {
       extracted[field] = match[1].trim();
     }
+  }
+
+  // Normalize sex value
+  if (extracted.sex) {
+    const s = extracted.sex.toUpperCase();
+    if (s === "MALE" || s === "MASCULINO") extracted.sex = "M";
+    else if (s === "FEMALE" || s === "FEMENINO") extracted.sex = "F";
   }
 
   return extracted;

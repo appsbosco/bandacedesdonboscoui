@@ -194,24 +194,15 @@ export function ScannerOverlay({
 
       {/* Detected document polygon overlay (SVG) */}
       {polygonPoints && polygonPoints.length === 4 && (
-        <svg className="absolute inset-0 w-full h-full overflow-visible">
-          <defs>
-            <linearGradient id="docGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={isReady ? "#34d399" : "#38bdf8"} stopOpacity="0.6" />
-              <stop offset="100%" stopColor={isReady ? "#10b981" : "#0ea5e9"} stopOpacity="0.4" />
-            </linearGradient>
-          </defs>
-
-          {/* Document outline polygon */}
+        <svg
+          className="absolute inset-0 w-full h-full overflow-visible"
+          viewBox="0 0 1000 1000"
+          preserveAspectRatio="none"
+        >
+          {/* Document outline polygon — viewBox coords (0-1000) */}
           <polygon
             points={polygonPoints
-              .map((c) => {
-                // Convert from analysis coords to screen coords
-                // corners are normalized 0-1, need to map to viewport
-                const x = c.x;
-                const y = c.y;
-                return `${x * 100}%,${y * 100}%`;
-              })
+              .map((c) => `${c.x * 1000},${c.y * 1000}`)
               .join(" ")}
             fill="none"
             stroke={isReady ? "rgba(52, 211, 153, 0.7)" : "rgba(56, 189, 248, 0.6)"}
@@ -219,27 +210,27 @@ export function ScannerOverlay({
             strokeLinejoin="round"
             strokeDasharray={isReady ? "0" : "12,6"}
             className="transition-all duration-300"
-            style={{
-              vectorEffect: "non-scaling-stroke",
-            }}
+            style={{ vectorEffect: "non-scaling-stroke" }}
           />
 
           {/* Corner markers */}
           {polygonPoints.map((c, i) => (
             <g key={i}>
               <circle
-                cx={`${c.x * 100}%`}
-                cy={`${c.y * 100}%`}
+                cx={c.x * 1000}
+                cy={c.y * 1000}
                 r="8"
                 fill={isReady ? "rgba(52, 211, 153, 0.9)" : "rgba(56, 189, 248, 0.8)"}
                 className="transition-all duration-300"
+                style={{ vectorEffect: "non-scaling-stroke" }}
               />
               <circle
-                cx={`${c.x * 100}%`}
-                cy={`${c.y * 100}%`}
+                cx={c.x * 1000}
+                cy={c.y * 1000}
                 r="4"
                 fill="white"
                 className="transition-all duration-300"
+                style={{ vectorEffect: "non-scaling-stroke" }}
               />
             </g>
           ))}
