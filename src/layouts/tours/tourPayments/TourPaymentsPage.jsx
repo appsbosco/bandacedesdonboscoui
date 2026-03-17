@@ -3,7 +3,7 @@
  * TourPaymentsPage — sistema financiero completo por participante.
  * Vistas: Tabla financiera | Cuentas | Resumen | Configuración
  */
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   useTourPayments,
   FINANCIAL_STATUS_CONFIG,
@@ -38,15 +38,56 @@ const VIEWS = [
   { id: "setup", label: "Configuración", icon: "⚙️" },
 ];
 
+const EMPTY_REGISTER_MODAL = { open: false, participant: null };
+const EMPTY_DELETE_PAYMENT_MODAL = { open: false, payment: null };
+const EMPTY_DELETE_PARTICIPANT_MODAL = { open: false, participant: null };
+const EMPTY_ACCOUNT_MODAL = { open: false, participantId: null, row: null };
+const EMPTY_PLAN_MODAL = { open: false, plan: null, mode: "create" };
+const EMPTY_SETUP_MODAL = { open: false };
+const EMPTY_DETAIL_DRAWER = {
+  open: false,
+  participantId: null,
+  tourId: null,
+  participant: null,
+};
+const INSTALLMENT_TEXT_CLASS = {
+  PENDING: "text-gray-400",
+  PARTIAL: "text-amber-600 font-bold",
+  PAID: "text-emerald-600 font-bold",
+  LATE: "text-red-600 font-bold",
+  WAIVED: "text-gray-300",
+};
+
+function getParticipantInitials(fullName = "") {
+  return fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((name) => name[0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+
+function getBalanceClassName(balance) {
+  if (balance > 0) return "text-amber-600";
+  if (balance < 0) return "text-violet-600";
+  return "text-gray-400";
+}
+
+function isKeyboardActivationKey(event) {
+  return event.key === "Enter" || event.key === " ";
+}
+
 export default function TourPaymentsPage({ tourId, tourName }) {
   const state = useTourPayments(tourId);
 
   const {
     financialTable,
     tableRows,
+    tableColumns,
+    installmentsByRow,
+    footerTotals,
     summary,
     plans,
-    defaultPlan,
     paymentFlow,
     activeView,
     setActiveView,
@@ -55,8 +96,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     statusFilter,
     setStatusFilter,
     toast,
-     openDetailDrawer,  
-  openAccountModal,
+    openDetailDrawer,
+    openAccountModal,
     setToast,
     registerModal,
     setRegisterModal,
@@ -93,8 +134,74 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     assigningPlan,
   } = state;
 
-  const hasData = (financialTable?.rows?.length ?? 0) > 0;
   const hasPlans = plans.length > 0;
+  const openRegisterModal = useCallback(() => {
+    setRegisterModal({ open: true, participant: null });
+  }, [setRegisterModal]);
+  const openSetupModal = useCallback(() => {
+    setSetupModal({ open: true });
+  }, [setSetupModal]);
+  const handleOpenSetupView = useCallback(() => {
+    setActiveView("setup");
+    openSetupModal();
+  }, [openSetupModal, setActiveView]);
+  const handleSearchChange = useCallback((event) => {
+    setSearch(event.target.value);
+  }, [setSearch]);
+  const handleStatusChange = useCallback((value) => {
+    setStatusFilter(value);
+  }, [setStatusFilter]);
+  const handleOpenRegisterForRow = useCallback((row) => {
+    setRegisterModal({
+      open: true,
+      participant: { id: row.participantId, fullName: row.fullName },
+    });
+  }, [setRegisterModal]);
+  const handleDeleteParticipantRequest = useCallback((row) => {
+    setDeleteParticipantModal({ open: true, participant: row });
+  }, [setDeleteParticipantModal]);
+  const handleCreatePlanRequest = useCallback(() => {
+    setPlanModal({ open: true, plan: null, mode: "create" });
+  }, [setPlanModal]);
+  const handleEditPlanRequest = useCallback((plan) => {
+    setPlanModal({ open: true, plan, mode: "edit" });
+  }, [setPlanModal]);
+  const handleCloseRegisterModal = useCallback(() => {
+    setRegisterModal(EMPTY_REGISTER_MODAL);
+  }, [setRegisterModal]);
+  const handleCloseDeletePaymentModal = useCallback(() => {
+    setDeletePayModal(EMPTY_DELETE_PAYMENT_MODAL);
+  }, [setDeletePayModal]);
+  const handleCloseDeleteParticipantModal = useCallback(() => {
+    setDeleteParticipantModal(EMPTY_DELETE_PARTICIPANT_MODAL);
+  }, [setDeleteParticipantModal]);
+  const handleCloseAccountModal = useCallback(() => {
+    setAccountModal(EMPTY_ACCOUNT_MODAL);
+  }, [setAccountModal]);
+  const handleClosePlanModal = useCallback(() => {
+    setPlanModal(EMPTY_PLAN_MODAL);
+  }, [setPlanModal]);
+  const handleCloseSetupModal = useCallback(() => {
+    setSetupModal(EMPTY_SETUP_MODAL);
+  }, [setSetupModal]);
+  const handleCloseDetailDrawer = useCallback(() => {
+    setDetailDrawer(EMPTY_DETAIL_DRAWER);
+  }, [setDetailDrawer]);
+  const handleDrawerRegisterPayment = useCallback((participant) => {
+    setDetailDrawer(EMPTY_DETAIL_DRAWER);
+    setRegisterModal({ open: true, participant });
+  }, [setDetailDrawer, setRegisterModal]);
+  const handleDrawerDeletePayment = useCallback((payment) => {
+    setDetailDrawer(EMPTY_DETAIL_DRAWER);
+    setDeletePayModal({ open: true, payment });
+  }, [setDetailDrawer, setDeletePayModal]);
+  const handlePlanSubmit = useCallback((input) => {
+    if (planModal.mode === "create") {
+      return handleCreatePlan(input);
+    }
+
+    return handleUpdatePlan(planModal.plan.id, input);
+  }, [handleCreatePlan, handleUpdatePlan, planModal.mode, planModal.plan]);
 
   return (
     <div className="space-y-5">
@@ -107,7 +214,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
           </p>
         </div>
         <button
-          onClick={() => setRegisterModal({ open: true, participant: null })}
+          onClick={openRegisterModal}
           className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -118,7 +225,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
       </div>
 
       {/* ── Sin configuración warning ─────────────────────────────────────── */}
-      {!loading && !hasData && !hasPlans && (
+      {!loading && !financialTable?.rows?.length && !hasPlans && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
           <span className="text-xl flex-shrink-0">⚠️</span>
           <div className="flex-1">
@@ -128,10 +235,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
             </p>
           </div>
           <button
-            onClick={() => {
-              setActiveView("setup");
-              setSetupModal({ open: true });
-            }}
+            onClick={handleOpenSetupView}
             className="flex-shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all"
           >
             Configurar ahora
@@ -165,23 +269,19 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         <FinancialTableView
           financialTable={financialTable}
           tableRows={tableRows}
+          columns={tableColumns}
+          installmentsByRow={installmentsByRow}
+          footerTotals={footerTotals}
           loading={tableLoading}
           error={tableError}
           search={search}
-          setSearch={setSearch}
+          onSearchChange={handleSearchChange}
           statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          onRegisterPayment={(row) =>
-            setRegisterModal({
-              open: true,
-              participant: { id: row.participantId, fullName: row.fullName },
-            })
-          }
-        onOpenDetail={openDetailDrawer}
-onAdjustAccount={openAccountModal}
-          onDeleteParticipant={(row) =>
-            setDeleteParticipantModal({ open: true, participant: row })
-          }
+          onStatusChange={handleStatusChange}
+          onRegisterPayment={handleOpenRegisterForRow}
+          onOpenDetail={openDetailDrawer}
+          onAdjustAccount={openAccountModal}
+          onDeleteParticipant={handleDeleteParticipantRequest}
         />
       )}
 
@@ -189,14 +289,11 @@ onAdjustAccount={openAccountModal}
 
       {activeView === "setup" && (
         <SetupView
-          tourId={tourId}
           plans={plans}
-          onCreatePlan={() => setPlanModal({ open: true, plan: null, mode: "create" })}
-          onEditPlan={(plan) => setPlanModal({ open: true, plan, mode: "edit" })}
+          onCreatePlan={handleCreatePlanRequest}
+          onEditPlan={handleEditPlanRequest}
           onDeletePlan={handleDeletePlan}
-          onSetupAll={() => setSetupModal({ open: true })}
-          hasData={hasData}
-          deletingPlan={updatingPlan}
+          onSetupAll={openSetupModal}
         />
       )}
 
@@ -205,7 +302,7 @@ onAdjustAccount={openAccountModal}
         isOpen={registerModal.open}
         tourId={tourId}
         prefillParticipant={registerModal.participant}
-        onClose={() => setRegisterModal({ open: false, participant: null })}
+        onClose={handleCloseRegisterModal}
         onSubmit={handleRegisterPayment}
         loading={registering}
       />
@@ -213,14 +310,14 @@ onAdjustAccount={openAccountModal}
       <DeletePaymentModal
         payment={deletePayModal.payment}
         onConfirm={handleDeletePayment}
-        onCancel={() => setDeletePayModal({ open: false, payment: null })}
+        onCancel={handleCloseDeletePaymentModal}
         loading={deletingPay}
       />
 
       <DeleteParticipantModal
         participant={deleteParticipantModal.participant}
         onConfirm={handleDeleteParticipant}
-        onCancel={() => setDeleteParticipantModal({ open: false, participant: null })}
+        onCancel={handleCloseDeleteParticipantModal}
         loading={deletingParticipant}
       />
 
@@ -229,7 +326,7 @@ onAdjustAccount={openAccountModal}
         participantId={accountModal.participantId}
         row={accountModal.row}
         tourId={tourId}
-        onClose={() => setAccountModal({ open: false, account: null })}
+        onClose={handleCloseAccountModal}
         onSubmit={handleUpdateAccount}
         loading={updatingAccount}
       />
@@ -238,12 +335,8 @@ onAdjustAccount={openAccountModal}
         isOpen={planModal.open}
         mode={planModal.mode}
         plan={planModal.plan}
-        onClose={() => setPlanModal({ open: false, plan: null, mode: "create" })}
-        onSubmit={
-          planModal.mode === "create"
-            ? handleCreatePlan
-            : (input) => handleUpdatePlan(planModal.plan.id, input)
-        }
+        onClose={handleClosePlanModal}
+        onSubmit={handlePlanSubmit}
         loading={creatingPlan || updatingPlan}
       />
 
@@ -251,7 +344,7 @@ onAdjustAccount={openAccountModal}
         isOpen={setupModal.open}
         tourId={tourId}
         plans={plans}
-        onClose={() => setSetupModal({ open: false })}
+        onClose={handleCloseSetupModal}
         onSubmit={handleSetupAll}
         loading={creatingAccounts || assigningPlan}
       />
@@ -261,15 +354,9 @@ onAdjustAccount={openAccountModal}
         participantId={detailDrawer.participantId}
         tourId={detailDrawer.tourId}
         participant={detailDrawer.participant}
-        onClose={() => setDetailDrawer({ open: false, participantId: null, tourId: null })}
-        onRegisterPayment={(p) => {
-          setDetailDrawer({ open: false });
-          setRegisterModal({ open: true, participant: p });
-        }}
-        onDeletePayment={(payment) => {
-          setDetailDrawer({ open: false });
-          setDeletePayModal({ open: true, payment });
-        }}
+        onClose={handleCloseDetailDrawer}
+        onRegisterPayment={handleDrawerRegisterPayment}
+        onDeletePayment={handleDrawerDeletePayment}
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -281,7 +368,7 @@ onAdjustAccount={openAccountModal}
 // SUMMARY CARDS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SummaryCards({ summary }) {
+const SummaryCards = memo(function SummaryCards({ summary }) {
   const pct =
     summary.totalAssigned > 0
       ? Math.min(100, (summary.totalCollected / summary.totalAssigned) * 100)
@@ -338,30 +425,33 @@ function SummaryCards({ summary }) {
       </div>
     </div>
   );
-}
+});
 
-function StatCard({ label, value, color = "text-gray-900", small = false }) {
+const StatCard = memo(function StatCard({ label, value, color = "text-gray-900", small = false }) {
   return (
     <div>
       <p className={`${small ? "text-xl" : "text-xl"} font-bold ${color}`}>{value}</p>
       <p className="text-xs text-gray-400 mt-0.5">{label}</p>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FINANCIAL TABLE VIEW — tabla tipo Excel
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function FinancialTableView({
+const FinancialTableView = memo(function FinancialTableView({
   financialTable,
   tableRows,
+  columns,
+  installmentsByRow,
+  footerTotals,
   loading,
   error,
   search,
-  setSearch,
+  onSearchChange,
   statusFilter,
-  setStatusFilter,
+  onStatusChange,
   onRegisterPayment,
   onOpenDetail,
   onAdjustAccount,
@@ -370,8 +460,6 @@ function FinancialTableView({
   if (loading) return <TableSkeleton />;
   if (error) return <ErrorState message={error.message} />;
   if (!financialTable) return <EmptyTableState />;
-
-  const columns = financialTable.columns || [];
 
   return (
     <div className="space-y-3">
@@ -396,7 +484,7 @@ function FinancialTableView({
             type="text"
             placeholder="Buscar participante..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={onSearchChange}
             className="w-full pl-12 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
@@ -404,7 +492,7 @@ function FinancialTableView({
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
-              onClick={() => setStatusFilter(f.value)}
+              onClick={() => onStatusChange(f.value)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                 statusFilter === f.value
                   ? "bg-gray-900 text-white border-gray-900"
@@ -453,192 +541,182 @@ function FinancialTableView({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {tableRows.map((row) => {
-                const cfg =
-                  FINANCIAL_STATUS_CONFIG[row.financialStatus] || FINANCIAL_STATUS_CONFIG.PENDING;
-
-                return (
-                  <tr
-                    key={row.participantId}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => onOpenDetail(row)}
-                  >
-                    {/* Nombre */}
-                    <td className="px-4 py-3 sticky left-0 bg-white hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
-                          {row.fullName
-                            .split(" ")
-                            .slice(0, 2)
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 truncate max-w-[130px]">
-                            {row.fullName}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                            <span className="text-gray-400 truncate">
-                              {row.instrument} • {cfg.label}
-                            </span>{" "}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Totales */}
-                    <td className="px-3 py-3 text-right font-semibold text-gray-700 whitespace-nowrap">
-                      {fmtAmount(row.finalAmount)}
-                    </td>
-                    <td className="px-3 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
-                      {fmtAmount(row.totalPaid)}
-                    </td>
-                    <td
-                      className={`px-3 py-3 text-right font-bold whitespace-nowrap ${
-                        row.balance > 0
-                          ? "text-amber-600"
-                          : row.balance < 0
-                          ? "text-violet-600"
-                          : "text-gray-400"
-                      }`}
-                    >
-                      {row.balance < 0
-                        ? `+${fmtAmount(Math.abs(row.balance))}`
-                        : fmtAmount(row.balance)}
-                    </td>
-
-                    {/* Cuotas */}
-                    {columns.map((col) => {
-                      const cell = row.installments?.find((i) => i.order === col.order);
-                      if (!cell) {
-                        return (
-                          <td key={col.order} className="px-3 py-3 text-center text-gray-300">
-                            —
-                          </td>
-                        );
-                      }
-                      return (
-                        <td key={col.order} className="px-3 py-3 text-center">
-                          <InstallmentCell cell={cell} />
-                        </td>
-                      );
-                    })}
-
-                    {/* Acciones */}
-                    <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => onRegisterPayment(row)}
-                          title="Registrar pago"
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => onAdjustAccount(row)}
-                          title="Ajustar cuenta"
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => onDeleteParticipant(row)}
-                          title="Eliminar participante"
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {tableRows.map((row) => (
+                <FinancialTableRow
+                  key={row.participantId}
+                  row={row}
+                  columns={columns}
+                  installmentsMap={installmentsByRow.get(row.participantId)}
+                  onRegisterPayment={onRegisterPayment}
+                  onOpenDetail={onOpenDetail}
+                  onAdjustAccount={onAdjustAccount}
+                  onDeleteParticipant={onDeleteParticipant}
+                />
+              ))}
             </tbody>
 
-            {/* Footer totales */}
-            {tableRows.length > 1 && (
-              <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                  <td className="px-4 py-3 text-xs text-gray-500 sticky left-0 bg-gray-50">
-                    {tableRows.length} participantes
-                  </td>
-                  <td className="px-3 py-3 text-right text-xs text-gray-700">
-                    {fmtAmount(tableRows.reduce((s, r) => s + r.finalAmount, 0))}
-                  </td>
-                  <td className="px-3 py-3 text-right text-xs text-emerald-600">
-                    {fmtAmount(tableRows.reduce((s, r) => s + r.totalPaid, 0))}
-                  </td>
-                  <td className="px-3 py-3 text-right text-xs text-amber-600">
-                    {fmtAmount(tableRows.reduce((s, r) => s + Math.max(0, r.balance), 0))}
-                  </td>
-                  {columns.map((col) => (
-                    <td key={col.order} className="px-3 py-3 text-center text-xs text-gray-400">
-                      {fmtAmount(
-                        tableRows.reduce((s, r) => {
-                          const cell = r.installments?.find((i) => i.order === col.order);
-                          return s + (cell?.paidAmount ?? 0);
-                        }, 0)
-                      )}
-                    </td>
-                  ))}
-                  <td />
-                </tr>
-              </tfoot>
-            )}
+            <FinancialTableFooter columns={columns} footerTotals={footerTotals} rowCount={tableRows.length} />
           </table>
         </div>
       )}
     </div>
   );
-}
+});
 
-function InstallmentCell({ cell }) {
-  const cfg = {
-    PENDING: "text-gray-400",
-    PARTIAL: "text-amber-600 font-bold",
-    PAID: "text-emerald-600 font-bold",
-    LATE: "text-red-600 font-bold",
-    WAIVED: "text-gray-300",
-  };
-  const colorClass = cfg[cell.status] || "text-gray-400";
+const FinancialTableRow = memo(function FinancialTableRow({
+  row,
+  columns,
+  installmentsMap,
+  onRegisterPayment,
+  onOpenDetail,
+  onAdjustAccount,
+  onDeleteParticipant,
+}) {
+  const statusConfig =
+    FINANCIAL_STATUS_CONFIG[row.financialStatus] || FINANCIAL_STATUS_CONFIG.PENDING;
+  const initials = getParticipantInitials(row.fullName);
+  const balanceClassName = getBalanceClassName(row.balance);
+  const handleOpenDetail = useCallback(() => {
+    onOpenDetail(row);
+  }, [onOpenDetail, row]);
+  const handleRegisterPayment = useCallback(() => {
+    onRegisterPayment(row);
+  }, [onRegisterPayment, row]);
+  const handleAdjustAccount = useCallback(() => {
+    onAdjustAccount(row);
+  }, [onAdjustAccount, row]);
+  const handleDeleteParticipant = useCallback(() => {
+    onDeleteParticipant(row);
+  }, [onDeleteParticipant, row]);
+  const stopPropagation = useCallback((event) => {
+    event.stopPropagation();
+  }, []);
+
+  return (
+    <tr
+      className="hover:bg-gray-50 transition-colors cursor-pointer"
+      onClick={handleOpenDetail}
+    >
+      <td className="px-4 py-3 sticky left-0 bg-white hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 truncate max-w-[130px]">{row.fullName}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusConfig.dot}`} />
+              <span className="text-gray-400 truncate">
+                {row.instrument} • {statusConfig.label}
+              </span>
+            </div>
+          </div>
+        </div>
+      </td>
+
+      <td className="px-3 py-3 text-right font-semibold text-gray-700 whitespace-nowrap">
+        {fmtAmount(row.finalAmount)}
+      </td>
+      <td className="px-3 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
+        {fmtAmount(row.totalPaid)}
+      </td>
+      <td className={`px-3 py-3 text-right font-bold whitespace-nowrap ${balanceClassName}`}>
+        {row.balance < 0 ? `+${fmtAmount(Math.abs(row.balance))}` : fmtAmount(row.balance)}
+      </td>
+
+      {columns.map((col) => {
+        const cell = installmentsMap?.get(col.order);
+        if (!cell) {
+          return (
+            <td key={col.order} className="px-3 py-3 text-center text-gray-300">
+              —
+            </td>
+          );
+        }
+
+        return (
+          <td key={col.order} className="px-3 py-3 text-center">
+            <InstallmentCell cell={cell} />
+          </td>
+        );
+      })}
+
+      <td className="px-3 py-3 text-center" onClick={stopPropagation}>
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={handleRegisterPayment}
+            title="Registrar pago"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+          <button
+            onClick={handleAdjustAccount}
+            title="Ajustar cuenta"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={handleDeleteParticipant}
+            title="Eliminar participante"
+            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+const FinancialTableFooter = memo(function FinancialTableFooter({ columns, footerTotals, rowCount }) {
+  if (!footerTotals) return null;
+
+  return (
+    <tfoot>
+      <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
+        <td className="px-4 py-3 text-xs text-gray-500 sticky left-0 bg-gray-50">
+          {rowCount} participantes
+        </td>
+        <td className="px-3 py-3 text-right text-xs text-gray-700">
+          {fmtAmount(footerTotals.finalAmount)}
+        </td>
+        <td className="px-3 py-3 text-right text-xs text-emerald-600">
+          {fmtAmount(footerTotals.totalPaid)}
+        </td>
+        <td className="px-3 py-3 text-right text-xs text-amber-600">
+          {fmtAmount(footerTotals.balance)}
+        </td>
+        {columns.map((col) => (
+          <td key={col.order} className="px-3 py-3 text-center text-xs text-gray-400">
+            {fmtAmount(footerTotals.byColumn.get(col.order) ?? 0)}
+          </td>
+        ))}
+        <td />
+      </tr>
+    </tfoot>
+  );
+});
+
+const InstallmentCell = memo(function InstallmentCell({ cell }) {
+  const colorClass = INSTALLMENT_TEXT_CLASS[cell.status] || INSTALLMENT_TEXT_CLASS.PENDING;
 
   if (cell.status === "WAIVED") return <span className="text-gray-300 text-xs">exon.</span>;
 
@@ -648,13 +726,13 @@ function InstallmentCell({ cell }) {
       <span className="text-gray-300 font-normal">/{fmtAmount(cell.amount)}</span>
     </span>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUMMARY VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SummaryView({ summary, paymentFlow }) {
+const SummaryView = memo(function SummaryView({ summary, paymentFlow }) {
   if (!summary)
     return <div className="text-center py-10 text-sm text-gray-400">Cargando resumen…</div>;
 
@@ -743,13 +821,13 @@ function SummaryView({ summary, paymentFlow }) {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SETUP VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SetupView({ plans, onCreatePlan, onEditPlan, onDeletePlan, onSetupAll, hasData }) {
+const SetupView = memo(function SetupView({ plans, onCreatePlan, onEditPlan, onDeletePlan, onSetupAll }) {
   return (
     <div className="space-y-4">
       {/* Planes de pago */}
@@ -810,15 +888,40 @@ function SetupView({ plans, onCreatePlan, onEditPlan, onDeletePlan, onSetupAll, 
       </div>
     </div>
   );
-}
+});
 
-function PlanCard({ plan, onEdit, onDelete }) {
+const PlanCard = memo(function PlanCard({ plan, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false);
+  const sortedInstallments = useMemo(
+    () => [...plan.installments].sort((a, b) => a.order - b.order),
+    [plan.installments]
+  );
+  const toggleExpanded = useCallback(() => {
+    setExpanded((value) => !value);
+  }, []);
+  const handleToggleKeyDown = useCallback((event) => {
+    if (!isKeyboardActivationKey(event)) return;
+    event.preventDefault();
+    toggleExpanded();
+  }, [toggleExpanded]);
+  const stopPropagation = useCallback((event) => {
+    event.stopPropagation();
+  }, []);
+  const handleEdit = useCallback(() => {
+    onEdit(plan);
+  }, [onEdit, plan]);
+  const handleDelete = useCallback(() => {
+    onDelete(plan.id);
+  }, [onDelete, plan.id]);
+
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden">
       <div
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={toggleExpanded}
+        onKeyDown={handleToggleKeyDown}
+        role="button"
+        tabIndex={0}
       >
         <div className="flex items-center gap-3">
           {plan.isDefault && (
@@ -833,9 +936,12 @@ function PlanCard({ plan, onEdit, onDelete }) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => onEdit(plan)}
+            onClick={(event) => {
+              stopPropagation(event);
+              handleEdit();
+            }}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -848,7 +954,10 @@ function PlanCard({ plan, onEdit, onDelete }) {
             </svg>
           </button>
           <button
-            onClick={() => onDelete(plan.id)}
+            onClick={(event) => {
+              stopPropagation(event);
+              handleDelete();
+            }}
             className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -873,29 +982,27 @@ function PlanCard({ plan, onEdit, onDelete }) {
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-100">
           <div className="mt-3 space-y-1.5">
-            {[...plan.installments]
-              .sort((a, b) => a.order - b.order)
-              .map((inst) => (
-                <div
-                  key={inst.id}
-                  className="flex items-center justify-between text-xs py-1.5 border-b border-gray-50 last:border-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600">
-                      {inst.order}
-                    </span>
-                    <span className="text-gray-700">{inst.concept}</span>
-                    <span className="text-gray-400">· {fmtDate(inst.dueDate)}</span>
-                  </div>
-                  <span className="font-bold text-gray-900">{fmtAmount(inst.amount)}</span>
+            {sortedInstallments.map((inst) => (
+              <div
+                key={inst.id}
+                className="flex items-center justify-between text-xs py-1.5 border-b border-gray-50 last:border-0"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600">
+                    {inst.order}
+                  </span>
+                  <span className="text-gray-700">{inst.concept}</span>
+                  <span className="text-gray-400">· {fmtDate(inst.dueDate)}</span>
                 </div>
-              ))}
+                <span className="font-bold text-gray-900">{fmtAmount(inst.amount)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATES
@@ -906,12 +1013,27 @@ function PlanCard({ plan, onEdit, onDelete }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
+  const handleBackdropClick = useCallback((event) => {
+    if (event.target === event.currentTarget) {
+      onCancel();
+    }
+  }, [onCancel]);
+  const handleBackdropKeyDown = useCallback((event) => {
+    if (event.target !== event.currentTarget) return;
+    if (!isKeyboardActivationKey(event) && event.key !== "Escape") return;
+    event.preventDefault();
+    onCancel();
+  }, [onCancel]);
   if (!participant) return null;
+
   return (
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => e.target === e.currentTarget && onCancel()}
+      onClick={handleBackdropClick}
+      onKeyDown={handleBackdropKeyDown}
+      role="button"
+      tabIndex={0}
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="px-6 pt-6 pb-4 border-b border-slate-100">
@@ -952,11 +1074,15 @@ function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
 }
 
 function TableSkeleton() {
+  const skeletonRows = ["header", "row-1", "row-2", "row-3", "row-4", "row-5"];
+
   return (
     <div className="space-y-2 animate-pulse">
-      <div className="h-10 bg-gray-100 rounded-xl" />
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+      {skeletonRows.map((rowId, index) => (
+        <div
+          key={rowId}
+          className={index === 0 ? "h-10 bg-gray-100 rounded-xl" : "h-12 bg-gray-100 rounded-xl"}
+        />
       ))}
     </div>
   );

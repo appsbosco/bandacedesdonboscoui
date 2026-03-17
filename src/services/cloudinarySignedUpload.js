@@ -6,17 +6,16 @@ export async function uploadSignedToCloudinary({
   apiKey,
   timestamp,
   signature,
-  folder,
   publicId,
   fileBlob,
+  resourceType = "image",
 }) {
-  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
   const fd = new FormData();
   fd.append("file", fileBlob);
   fd.append("api_key", apiKey);
   fd.append("timestamp", String(timestamp));
   fd.append("signature", signature);
-  if (folder) fd.append("folder", folder);
   if (publicId) fd.append("public_id", publicId);
 
   const res = await fetch(url, { method: "POST", body: fd });

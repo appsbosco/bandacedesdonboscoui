@@ -87,6 +87,7 @@ export const GET_SIGNED_UPLOAD = gql`
       cloudName
       folder
       publicId
+      resourceType
     }
   }
 `;

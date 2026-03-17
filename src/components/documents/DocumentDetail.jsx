@@ -35,6 +35,46 @@ const POLL_TIMEOUT_MS = 180000;
 // Tipos que no usan OCR
 const NON_OCR_TYPES = new Set(["OTHER", "PERMISO_SALIDA"]);
 
+function getApiBaseUrl() {
+  const graphqlUrl = process.env.REACT_APP_GRAPHQL_URL;
+  if (!graphqlUrl) return "";
+
+  try {
+    const parsed = new URL(graphqlUrl);
+    return parsed.origin;
+  } catch (error) {
+    return "";
+  }
+}
+
+function isPdfMimeType(type) {
+  return type === "application/pdf" || type === "image/pdf";
+}
+
+function buildPdfPreviewUrl(url, publicId) {
+  if (!url && !publicId) return url;
+  if (url && !url.startsWith("https://res.cloudinary.com/")) return url;
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) return url;
+  const params = new URLSearchParams();
+  if (url) params.set("url", url);
+  if (publicId) params.set("publicId", publicId);
+  return `${apiBaseUrl}/api/pdf-preview?${params.toString()}`;
+}
+
+function getCloudinaryPdfUrl(image) {
+  if (!image) return null;
+
+  const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+  if (image.publicId && cloudName) {
+    const publicId = image.publicId.endsWith(".pdf") ? image.publicId : `${image.publicId}.pdf`;
+    return `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}`;
+  }
+
+  if (!image.url) return image.url;
+  return image.url.endsWith(".pdf") ? image.url : `${image.url}.pdf`;
+}
+
 function isAdminUser(user) {
   if (!user) return false;
   return user.role === "Admin" || user?.roles?.includes("Admin");
@@ -127,6 +167,51 @@ DataField.propTypes = {
 
 DataField.defaultProps = { sensitive: false };
 
+function DocumentFilePreview({
+  image,
+  alt,
+  className = "",
+  frameClassName = "",
+  compact = false,
+}) {
+  if (!image?.url) return null;
+
+  if (isPdfMimeType(image.mimeType)) {
+    const pdfUrl = getCloudinaryPdfUrl(image);
+    return (
+      <div
+        className={`bg-slate-50 ${className}`.trim()}
+      >
+        <iframe
+          src={buildPdfPreviewUrl(pdfUrl, image.publicId)}
+          title={alt || "Vista previa PDF"}
+          className={`w-full border-0 ${compact ? "h-44" : "h-72"} ${frameClassName}`.trim()}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={image.url}
+      alt={alt}
+      className={className || "w-full block"}
+    />
+  );
+}
+
+DocumentFilePreview.propTypes = {
+  image: PropTypes.shape({
+    url: PropTypes.string,
+    mimeType: PropTypes.string,
+    publicId: PropTypes.string,
+  }),
+  alt: PropTypes.string,
+  className: PropTypes.string,
+  frameClassName: PropTypes.string,
+  compact: PropTypes.bool,
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function DocumentDetail() {
   const { id } = useParams();
@@ -134,7 +219,7 @@ export function DocumentDetail() {
   const { addToast } = useToast();
 
   const [deleteModal, setDeleteModal] = useState(false);
-  const [imageModal, setImageModal] = useState({ isOpen: false, imageUrl: null, index: 0 });
+  const [imageModal, setImageModal] = useState({ isOpen: false, image: null, index: 0 });
   const [pollTimedOut, setPollTimedOut] = useState(false);
   const pollStartRef = useRef(null);
 
@@ -210,8 +295,8 @@ export function DocumentDetail() {
     enqueueOcr({ variables: { input: { documentId: id } } });
   }, [enqueueOcr, id]);
 
-  const openImageModal = (url, index) => setImageModal({ isOpen: true, imageUrl: url, index });
-  const closeImageModal = () => setImageModal({ isOpen: false, imageUrl: null, index: 0 });
+  const openImageModal = (image, index) => setImageModal({ isOpen: true, image, index });
+  const closeImageModal = () => setImageModal({ isOpen: false, image: null, index: 0 });
 
   if (!id) return null;
 
@@ -473,12 +558,14 @@ export function DocumentDetail() {
                   <div
                     key={image.url}
                     className="relative group cursor-pointer rounded-xl overflow-hidden ring-1 ring-slate-200"
-                    onClick={() => openImageModal(image.url, index)}
+                    onClick={() => openImageModal(image, index)}
                   >
-                    <img
-                      src={image.url}
+                    <DocumentFilePreview
+                      image={image}
                       alt={`${image.kind ?? "archivo"} - ${index + 1}`}
+                      compact
                       className="w-full h-44 object-cover"
+                      frameClassName="h-44"
                     />
                     {!isOtherType && (
                       <div className="absolute top-2 left-2">
@@ -530,12 +617,13 @@ export function DocumentDetail() {
               {mainImage && (
                 <div
                   className="rounded-2xl overflow-hidden ring-1 ring-slate-200 mb-6 cursor-pointer"
-                  onClick={() => openImageModal(mainImage.url, 0)}
+                  onClick={() => openImageModal(mainImage, 0)}
                 >
-                  <img
-                    src={mainImage.url}
+                  <DocumentFilePreview
+                    image={mainImage}
                     alt="Documento"
                     className="w-full block max-h-72 object-contain bg-slate-50"
+                    frameClassName="max-h-72"
                   />
                 </div>
               )}
@@ -677,7 +765,7 @@ export function DocumentDetail() {
               <div className="text-center">
                 {mainImage && (
                   <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 mb-6 max-w-sm mx-auto">
-                    <img src={mainImage.url} alt="Documento" className="w-full block" />
+                    <DocumentFilePreview image={mainImage} alt="Documento" className="w-full block" />
                   </div>
                 )}
                 <h2 className="text-lg font-semibold text-slate-900 mb-1">
@@ -714,18 +802,40 @@ export function DocumentDetail() {
       {/* Image Modal */}
       <Modal isOpen={imageModal.isOpen} onClose={closeImageModal} size="full">
         <div className="relative">
-          <img
-            src={imageModal.imageUrl}
-            alt="Vista ampliada"
-            className="w-full h-auto max-h-[80vh] object-contain"
-          />
+          {imageModal.image && (
+            <DocumentFilePreview
+              image={imageModal.image}
+              alt="Vista ampliada"
+              className="w-full h-auto max-h-[80vh] object-contain"
+              frameClassName="h-[80vh]"
+            />
+          )}
+          {imageModal.image?.url && (
+            <div className="mt-4 flex justify-center">
+              <a
+                href={
+                  isPdfMimeType(imageModal.image.mimeType)
+                    ? buildPdfPreviewUrl(
+                        getCloudinaryPdfUrl(imageModal.image),
+                        imageModal.image.publicId,
+                      )
+                    : imageModal.image.url
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold border border-slate-700 bg-slate-800 text-white hover:bg-slate-700 transition"
+              >
+                Abrir en una pestaña nueva
+              </a>
+            </div>
+          )}
           {document.images?.length > 1 && (
             <>
               <button
                 onClick={() => {
                   const prev =
                     imageModal.index === 0 ? document.images.length - 1 : imageModal.index - 1;
-                  setImageModal({ isOpen: true, imageUrl: document.images[prev].url, index: prev });
+                  setImageModal({ isOpen: true, image: document.images[prev], index: prev });
                 }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >
@@ -741,7 +851,7 @@ export function DocumentDetail() {
               <button
                 onClick={() => {
                   const next = (imageModal.index + 1) % document.images.length;
-                  setImageModal({ isOpen: true, imageUrl: document.images[next].url, index: next });
+                  setImageModal({ isOpen: true, image: document.images[next], index: next });
                 }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >

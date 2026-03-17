@@ -3,6 +3,8 @@ import PropTypes from "prop-types";
 import { CameraAutoScanner } from "./CameraAutoScanner";
 import { DOCUMENT_TYPES } from "../../utils/constants";
 
+const ALLOWED_OTHER_FILE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 export function WizardStep2({ documentType, onCapture, onFileUpload, onCancel }) {
   const [phase, setPhase] = useState("scanning");
   const [capturedCanvas, setCapturedCanvas] = useState(null);
@@ -36,6 +38,11 @@ export function WizardStep2({ documentType, onCapture, onFileUpload, onCancel })
     (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      if (!ALLOWED_OTHER_FILE_TYPES.has(file.type)) {
+        window.alert("Solo se permiten imagenes JPG, PNG o WEBP.");
+        e.target.value = "";
+        return;
+      }
       setSelectedFile(file);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
@@ -99,7 +106,7 @@ export function WizardStep2({ documentType, onCapture, onFileUpload, onCancel })
               </div>
               <h2 className="text-xl font-semibold text-slate-900 mb-1">Adjuntar documento</h2>
               <p className="text-sm text-slate-500">
-                Seleccioná una imagen o PDF desde tu dispositivo
+                Selecciona una imagen desde tu dispositivo
               </p>
             </div>
 
@@ -121,13 +128,13 @@ export function WizardStep2({ documentType, onCapture, onFileUpload, onCancel })
                 />
               </svg>
               <span className="text-sm font-medium text-slate-600">Elegir archivo</span>
-              <p className="text-xs text-slate-400 mt-1">JPG, PNG, PDF — hasta 10 MB</p>
+              <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP - hasta 10 MB</p>
             </button>
 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -174,25 +181,6 @@ export function WizardStep2({ documentType, onCapture, onFileUpload, onCancel })
             {previewUrl && selectedFile?.type?.startsWith("image/") && (
               <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 mb-4">
                 <img src={previewUrl} alt="Preview" className="w-full block" />
-              </div>
-            )}
-
-            {selectedFile?.type === "application/pdf" && (
-              <div className="rounded-2xl bg-slate-100 ring-1 ring-slate-200 p-6 mb-4 text-center">
-                <svg
-                  className="w-10 h-10 mx-auto text-red-400 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  />
-                </svg>
-                <span className="text-sm text-slate-500">PDF adjunto</span>
               </div>
             )}
 

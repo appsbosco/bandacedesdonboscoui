@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@apollo/client";
+import PropTypes from "prop-types";
 import {
   CREATE_DOCUMENT,
   ADD_DOCUMENT_IMAGE,
@@ -19,11 +20,58 @@ import { DOCUMENT_TYPES, SCANNER_CONFIG } from "../../utils/constants";
 
 // Document types that use the OCR/MRZ extraction step
 const OCR_TYPES = new Set(["PASSPORT", "VISA"]);
+const ALLOWED_OTHER_FILE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function getApiBaseUrl() {
+  const graphqlUrl = process.env.REACT_APP_GRAPHQL_URL;
+  if (!graphqlUrl) return "";
+
+  try {
+    const parsed = new URL(graphqlUrl);
+    return parsed.origin;
+  } catch (error) {
+    return "";
+  }
+}
 
 function normalizeMimeType(type) {
   if (!type) return type;
   if (type === "image/pdf") return "application/pdf";
   return type;
+}
+
+function isPdfMimeType(type) {
+  return normalizeMimeType(type) === "application/pdf";
+}
+
+function buildPdfPreviewUrl(url) {
+  if (!url) return url;
+  if (!url.startsWith("https://res.cloudinary.com/")) return url;
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) return url;
+  return `${apiBaseUrl}/api/pdf-preview?url=${encodeURIComponent(url)}`;
+}
+
+function FilePreview({ url, mimeType, alt }) {
+  if (!url) return null;
+
+  if (isPdfMimeType(mimeType)) {
+    return (
+      <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 bg-slate-50">
+        <iframe
+          src={buildPdfPreviewUrl(url)}
+          title={alt || "Vista previa PDF"}
+          className="w-full h-72 block"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200">
+      <img src={url} alt={alt} className="w-full block" />
+    </div>
+  );
 }
 
 function NewDocumentPage() {
@@ -42,6 +90,7 @@ function NewDocumentPage() {
   const [uploadProgress, setUploadProgress] = useState("");
   const [createdDocId, setCreatedDocId] = useState(null);
   const previewUrlRef = useRef(null);
+  const previewMimeTypeRef = useRef(null);
   const canvasRef = useRef(null);
 
   const [createDocument] = useMutation(CREATE_DOCUMENT, {
@@ -107,6 +156,7 @@ function NewDocumentPage() {
         const previewBlob = await canvasToBlob(canvas, "image/jpeg", 0.6);
         if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
         previewUrlRef.current = URL.createObjectURL(previewBlob);
+        previewMimeTypeRef.current = previewBlob.type;
       } catch {
         // Preview is non-critical
       }
@@ -182,7 +232,7 @@ function NewDocumentPage() {
       const blob = await canvasToBlob(canvas, "image/jpeg", kind === "RAW" ? 0.92 : 0.85);
 
       const { data: signData } = await getSignedUpload({
-        variables: { input: { documentId, kind } },
+        variables: { input: { documentId, kind, mimeType: blob.type } },
       });
       const signed = signData?.getSignedUpload;
       if (!signed) throw new Error(`No se pudo obtener firma para ${kind}`);
@@ -192,9 +242,9 @@ function NewDocumentPage() {
         apiKey: signed.apiKey,
         timestamp: signed.timestamp,
         signature: signed.signature,
-        folder: signed.folder,
         publicId: signed.publicId,
         fileBlob: blob,
+        resourceType: signed.resourceType,
       });
 
       const imageInput = {
@@ -229,6 +279,13 @@ function NewDocumentPage() {
   // File upload handler (for OTHER type)
   const handleStep2File = useCallback(
     async (file) => {
+      if (!ALLOWED_OTHER_FILE_TYPES.has(normalizeMimeType(file?.type))) {
+        setStep(2);
+        setUploadState("error");
+        setUploadError("Solo se permiten imagenes JPG, PNG o WEBP.");
+        return;
+      }
+
       setStep(needsOCR ? 4 : 3);
       setUploadState("uploading");
       setUploadError(null);
@@ -237,6 +294,7 @@ function NewDocumentPage() {
       try {
         if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
         previewUrlRef.current = URL.createObjectURL(file);
+        previewMimeTypeRef.current = normalizeMimeType(file.type);
       } catch {
         // non-critical
       }
@@ -249,7 +307,13 @@ function NewDocumentPage() {
         if (!documentId) throw new Error("No se pudo crear el documento");
 
         const { data: signData } = await getSignedUpload({
-          variables: { input: { documentId, kind: "RAW" } },
+          variables: {
+            input: {
+              documentId,
+              kind: "RAW",
+              mimeType: normalizeMimeType(file.type),
+            },
+          },
         });
         const signed = signData?.getSignedUpload;
         if (!signed) throw new Error("No se pudo obtener firma de subida");
@@ -259,9 +323,9 @@ function NewDocumentPage() {
           apiKey: signed.apiKey,
           timestamp: signed.timestamp,
           signature: signed.signature,
-          folder: signed.folder,
           publicId: signed.publicId,
           fileBlob: file,
+          resourceType: signed.resourceType,
         });
 
         await addDocumentImage({
@@ -310,6 +374,7 @@ function NewDocumentPage() {
       URL.revokeObjectURL(previewUrlRef.current);
       previewUrlRef.current = null;
     }
+    previewMimeTypeRef.current = null;
   }, []);
 
   const handleRetryCapture = useCallback(() => {
@@ -324,6 +389,7 @@ function NewDocumentPage() {
 
   const handleCancel = useCallback(() => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewMimeTypeRef.current = null;
     navigate("/documents");
   }, [navigate]);
 
@@ -392,8 +458,12 @@ function NewDocumentPage() {
                 <p className="text-sm text-slate-500">{uploadProgress || "Procesando"}</p>
 
                 {previewUrlRef.current && (
-                  <div className="mt-5 rounded-2xl overflow-hidden ring-1 ring-slate-200 opacity-60">
-                    <img src={previewUrlRef.current} alt="Preview" className="w-full block" />
+                  <div className="mt-5 opacity-60">
+                    <FilePreview
+                      url={previewUrlRef.current}
+                      mimeType={previewMimeTypeRef.current}
+                      alt="Preview"
+                    />
                   </div>
                 )}
               </div>
@@ -426,8 +496,12 @@ function NewDocumentPage() {
                 </div>
 
                 {previewUrlRef.current && (
-                  <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 mb-4">
-                    <img src={previewUrlRef.current} alt="Documento capturado" className="w-full block" />
+                  <div className="mb-4">
+                    <FilePreview
+                      url={previewUrlRef.current}
+                      mimeType={previewMimeTypeRef.current}
+                      alt="Documento capturado"
+                    />
                   </div>
                 )}
 
@@ -487,5 +561,11 @@ function NewDocumentPage() {
     </div>
   );
 }
+
+FilePreview.propTypes = {
+  url: PropTypes.string,
+  mimeType: PropTypes.string,
+  alt: PropTypes.string,
+};
 
 export default NewDocumentPage;
