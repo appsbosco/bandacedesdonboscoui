@@ -1,37 +1,20 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { useTranslation } from "react-i18next";
 import landing from "../assets/images/landing-5.webp";
-// import landing2 from "../assets/images/landing-2.webp";
 import landing3 from "../assets/images/landing-3.webp";
-import landing4 from "../assets/images/landing-4.webp";
 import landing5 from "../assets/images/landing-6.webp";
 import pasion from "../assets/images/pasion.webp";
 import friends from "../assets/images/friends.webp";
 import family from "../assets/images/family.webp";
 
 const HERO_IMAGES = [
-  {
-    src: landing,
-    alt: "Banda CEDES Don Bosco - Banda de marcha",
-  },
-  {
-    src: landing3,
-    alt: "Banda CEDES Don Bosco - Presentación",
-  },
-  // {
-  //   src: landing4,
-  //   alt: "Banda CEDES Don Bosco - Ensayo",
-  // },
-  {
-    src: landing5,
-    alt: "Banda CEDES Don Bosco - Ensayo",
-  },
+  { src: landing, alt: "Banda CEDES Don Bosco - Banda de marcha" },
+  { src: landing3, alt: "Banda CEDES Don Bosco - Presentación" },
+  { src: landing5, alt: "Banda CEDES Don Bosco - Ensayo" },
 ];
 
-const TRANSITION_INTERVAL = 5000; // 5 segundos
+const TRANSITION_INTERVAL = 5000;
 
 export default function HeroSection() {
   const { i18n, t } = useTranslation();
@@ -57,27 +40,35 @@ export default function HeroSection() {
     <div className="w-full max-w-lg mx-auto lg:mr-0">
       <div
         className="relative aspect-h-5 aspect-w-4 rounded-2xl bg-slate-50"
-        style={{
-          aspectRatio: "5 / 6",
-        }}
+        style={{ aspectRatio: "5 / 6" }}
       >
-        {/* Preload todas las imágenes */}
-        {HERO_IMAGES.map((img, idx) => (
-          <LazyLoadImage
-            key={img.src}
-            className={`object-cover object-center w-full h-full rounded-2xl transition-opacity duration-300 ${
-              idx === currentImageIndex && !isTransitioning ? "opacity-100" : "opacity-0"
-            }`}
-            src={img.src}
-            alt={img.alt}
-            sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
-            fill
-            priority={idx === 0}
-          />
-        ))}
+        {HERO_IMAGES.map((img, idx) =>
+          idx === 0 ? (
+            <img
+              key={img.src}
+              className={`object-cover object-center w-full h-full rounded-2xl transition-opacity duration-300 ${
+                idx === currentImageIndex && !isTransitioning ? "opacity-100" : "opacity-0"
+              }`}
+              src={img.src}
+              alt={img.alt}
+              fetchpriority="high"
+              decoding="async"
+              sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
+            />
+          ) : (
+            <LazyLoadImage
+              key={img.src}
+              className={`object-cover object-center w-full h-full rounded-2xl transition-opacity duration-300 ${
+                idx === currentImageIndex && !isTransitioning ? "opacity-100" : "opacity-0"
+              }`}
+              src={img.src}
+              alt={img.alt}
+              sizes="(min-width: 552px) 32rem, calc(100vw - 40px)"
+            />
+          )
+        )}
 
         <div>
-          {/* Floating handwritten text with arrow */}
           <div className="absolute hidden w-max md:top-16 md:left-full md:block lg:-top-8 lg:-left-28 2xl:top-16 2xl:left-full">
             <span className="inline-block transform font-writing text-2xl tracking-wide text-slate-600 md:rotate-[16deg] lg:translate-x-6 lg:rotate-[-18deg] 2xl:rotate-12">
               {t("hero.handwritten")}
@@ -101,21 +92,17 @@ export default function HeroSection() {
             </svg>
           </div>
 
-          {/* Floating divs over image */}
           <div>
-            {/* Experience with Tech 1 */}
             <div className="absolute right-12 -top-6 inline-flex h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:-left-28 md:top-14 lg:left-44 lg:-top-6 lg:px-10 2xl:-left-48 2xl:top-14">
               <LazyLoadImage width={10} height={10} src={family} alt="" className="w-4 h-auto" />
               {t("hero.label_family")}
             </div>
 
-            {/* Experience with Tech 2 */}
             <div className="absolute top-full left-12 inline-flex h-12 w-max -translate-y-6 items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-0 md:-translate-x-20 md:-translate-y-24 lg:-left-3 lg:-translate-y-24 lg:px-10 xl:-left-6 xl:-translate-y-32 xl:-translate-x-28">
               <LazyLoadImage width={10} height={10} src={friends} alt="" className="w-auto h-6" />
               {t("hero.label_friends")}
             </div>
 
-            {/* Experience with Tech 3 */}
             <div className="absolute top-[350px] hidden h-12 w-max items-center justify-center gap-3.5 rounded-2xl bg-white/90 px-8 text-sm font-semibold text-slate-700 shadow-lg shadow-sky-100/50 ring-1 ring-slate-900/5 backdrop-blur-md md:left-full md:inline-flex md:-translate-x-32 lg:left-48 lg:hidden lg:px-10 2xl:left-full 2xl:inline-flex 2xl:-translate-x-28">
               <LazyLoadImage width={10} height={10} src={pasion} alt="" className="h-auto w-7" />
               {t("hero.label_passion")}

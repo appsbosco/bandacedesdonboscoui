@@ -3,7 +3,6 @@ import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { useQuery } from "@apollo/client";
-import jwtDecode from "jwt-decode";
 
 import theme from "assets/theme";
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
@@ -43,8 +42,6 @@ import {
 import LanguageRedirect from "./LanguageRedirect";
 import PageLoader from "components/ui/PageLoader";
 
-// ─── Lazy imports — zero cost until navigation ────────────────────────────────
-// Public / landing
 const Landing = lazy(() => import("layouts/landing/Landing"));
 const About = lazy(() => import("components/About"));
 const Contact = lazy(() => import("components/Contact"));
@@ -61,12 +58,9 @@ const INS = lazy(() => import("layouts/sponsors/INS"));
 const DocumentDetail = lazy(() =>
   import("components/documents/DocumentDetail").then((m) => ({ default: m.DocumentDetail }))
 );
-
-// Auth
 const SignUp = lazy(() => import("layouts/authentication/sign-up"));
 const SignIn = lazy(() => import("layouts/authentication/sign-in"));
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function App() {
   const [controller, dispatch] = useSoftUIController();
   const { miniSidenav, direction, layout, openConfigurator, sidenavColor } = controller;
@@ -75,8 +69,6 @@ export default function App() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  // Token check — localStorage read is synchronous, kept outside useMemo
-  // because it doesn't need to be reactive (token doesn't change mid-session)
   const token = localStorage.getItem("token");
   const isAuthenticated = useMemo(() => Boolean(token && !isTokenExpired(token)), [token]);
 
@@ -115,7 +107,6 @@ export default function App() {
     }
   }, [pathname, isAuthenticated, navigate]);
 
-  // Solo dispara si el usuario está autenticado — evita query anónima
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
     skip: !isAuthenticated,
   });
@@ -170,7 +161,6 @@ export default function App() {
         </>
       )}
 
-      {/* Suspense con fallback mínimo — no spinner complejo para no bloquear paint */}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LanguageRedirect />} />

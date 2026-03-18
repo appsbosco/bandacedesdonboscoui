@@ -5,34 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17c1e8" />
     <title>Banda CEDES Don Bosco</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
     />
     <link
       rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-      crossorigin=""
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"
     />
     <link
-      href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"
+      media="print"
+      onload="this.media='all'"
     />
+
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+      />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"
+      />
+    </noscript>
+
     <link rel="apple-touch-icon" sizes="180x180" href="./Icons-03.png" />
-
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
-
-    <!-- Nepcha Analytics (nepcha.com) -->
-    <!-- Nepcha is a easy-to-use web analytics. No cookies and fully compliant with GDPR, CCPA and PECR. -->
-    <!-- <script
-      defer
-      data-site="https://bandacedesdonbosco.com/"
-      src="https://api.nepcha.com/js/nepcha-analytics.js"
-    ></script> -->
-
     <link rel="icon" href="./favicon.webp" />
     <link rel="manifest" href="./manifest.json" />
+
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
   </head>
 
   <body>
@@ -40,10 +56,8 @@
     <div id="root"></div>
 
     <script>
-      // Debe existir ANTES de cargar opencv.js
       var Module = {
         locateFile: function (path) {
-          // Fuerza a que el wasm se cargue desde tu app (sin CORS)
           return "/opencv/" + path;
         },
         onRuntimeInitialized() {

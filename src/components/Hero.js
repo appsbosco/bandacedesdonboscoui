@@ -1,9 +1,4 @@
 import React from "react";
-import landing from "../assets/images/landing.webp";
-import pasion from "../assets/images/pasion.webp";
-import friends from "../assets/images/friends.webp";
-import family from "../assets/images/family.webp";
-import { LazyLoadImage } from "react-lazy-load-image-component";
 import { useTranslation } from "react-i18next";
 import HeroSection from "./HeroImages";
 
@@ -60,7 +55,6 @@ const Hero = () => {
         </defs>
       </svg>
 
-      {/* Hero content */}
       <div className="relative z-10 grid items-center max-w-screen-xl gap-16 px-5 mx-auto sm:px-6 lg:px-8 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-center max-w-2xl mx-auto lg:items-start">
           <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl lg:text-left">
@@ -90,7 +84,6 @@ const Hero = () => {
               {t("hero.contact")}
             </a>
 
-            {/* Social links */}
             <div className="flex gap-3 sm:gap-4">
               <a
                 className="flex items-center justify-center duration-200 border rounded-full h-11 w-11 border-slate-200 hover:bg-slate-50"
@@ -113,7 +106,6 @@ const Hero = () => {
                 </svg>
               </a>
 
-              {/* Link 3 */}
               <a
                 className="flex items-center justify-center duration-200 border rounded-full h-11 w-11 border-slate-200 hover:bg-slate-50"
                 href="https://www.facebook.com/bcdbcr"
@@ -134,8 +126,7 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Hero graphics */}
-        <HeroSection />
+        <HeroSection priority />
       </div>
     </section>
   );

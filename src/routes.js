@@ -1,17 +1,4 @@
-// Banda CEDES Don Bosco layouts
-import SignIn from "layouts/authentication/sign-in";
-import SignUp from "layouts/authentication/sign-up";
-import ParentsSignUp from "layouts/authentication/sign-up/parents";
-
-import Billing from "layouts/billing";
-import Dashboard from "layouts/dashboard";
-import Profile from "layouts/profile";
-import RTL from "layouts/rtl";
-import Tables from "layouts/members";
-import VirtualReality from "layouts/virtual-reality";
 import FolderCopyIcon from "@mui/icons-material/FolderCopy";
-
-// Banda CEDES Don Bosco icons
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import EventIcon from "@mui/icons-material/Event";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
@@ -24,16 +11,35 @@ import FlagIcon from "@mui/icons-material/Flag";
 import Document from "examples/Icons/Document";
 import SendIcon from "@mui/icons-material/Send";
 import SpaceShip from "examples/Icons/SpaceShip";
-import Inventory from "layouts/inventory";
+import PaidIcon from "@mui/icons-material/Paid";
+import SchoolIcon from "@mui/icons-material/School";
+import PublicIcon from "@mui/icons-material/Public";
+import AccessibilityIcon from "@mui/icons-material/Accessibility";
+import QrCodeIcon from "@mui/icons-material/QrCode";
+import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
+import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
+import ViewModuleIcon from "@mui/icons-material/ViewModule";
+
+import SignIn from "layouts/authentication/sign-in";
+import SignUp from "layouts/authentication/sign-up";
+import ParentsSignUp from "layouts/authentication/sign-up/parents";
+import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
+import Billing from "layouts/billing";
+import Dashboard from "layouts/dashboard";
+import Profile from "layouts/profile";
+import RTL from "layouts/rtl";
+import Tables from "layouts/members";
+import VirtualReality from "layouts/virtual-reality";
 import About from "components/About";
 import Contact from "components/Contact";
+import Inventory from "layouts/inventory";
 import PaymentComponent from "layouts/Payments/Payments";
-import PaidIcon from "@mui/icons-material/Paid";
 import ParentsProfile from "layouts/parentsProfile";
 import Email from "layouts/email";
-import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
 import Alumni from "layouts/Alumni/Alumni";
-import SchoolIcon from "@mui/icons-material/School";
 import AlumniDashboard from "layouts/Alumni/AlumniDashboard";
 import ColorGuardCamp from "layouts/ColorGuardCamp/ColorGuardCamp";
 import ColorGuardCampDashboard from "layouts/ColorGuardCamp/ColorGuardCampDashboard";
@@ -42,58 +48,37 @@ import Almuerzos from "layouts/almuerzos";
 import ListaAlmuerzos from "layouts/almuerzos/lista";
 import Guatemala from "layouts/guatemala/Guatemala";
 import GuatemalaDashboard from "layouts/guatemala/GuatemalaDashboard";
-import PublicIcon from "@mui/icons-material/Public";
 import Apoyo from "layouts/apoyo/Apoyo";
 import ApoyoDashboard from "layouts/apoyo/ApoyoDashboard";
-import AccessibilityIcon from "@mui/icons-material/Accessibility";
 import QRScanner from "layouts/tickets/QrScanner";
-import QrCodeIcon from "@mui/icons-material/QrCode";
 import TicketList from "layouts/tickets/TicketList";
-import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import AssignTickets from "layouts/tickets/TicketAssignation";
 import VeladaTickets from "layouts/tickets/BuyTickets";
 import Raffle from "layouts/tickets/Raffle";
 import ClassAttendance from "layouts/classAttendance/lista";
-import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import Tuner from "layouts/tuner";
 import DocumentsPage from "components/documents/DocumentsPage";
 import NewDocumentPage from "components/documents/NewDocumentPage";
 import { DocumentDetail } from "components/documents/DocumentDetail";
 import ParentDashboardPage from "layouts/parentDashboard";
-
 import FinanceDashboard from "layouts/finance/index";
 import SalesPage from "layouts/finance/components/SalesPage";
 import ExpensesPage from "layouts/finance/components/Expenses";
 import ReportsPage from "layouts/finance/components/ReportsPage";
 import CatalogsPage from "layouts/finance/components/Catalogs";
-
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-
 import BudgetsPage from "layouts/finance/components/BudgetsPage";
 import CommitteeDetailPage from "layouts/finance/components/CommitteeDetailPage";
 import BudgetConfigPage from "layouts/finance/components/budgets/config/BudgetConfigPage";
-
 import TourListPage from "layouts/tours/TourListPage";
 import TourDetailPage from "layouts/tours/TourDetailPage";
-import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
-
 import EnsemblesDashboardPage from "layouts/ensembles/EnsemblesDashboardPage";
 import EnsembleControlPage from "layouts/ensembles/EnsembleControlPage";
-import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
-
 import FormationsPage from "layouts/formations";
 import FormationBuilderPage from "layouts/formations/FormationBuilderPage";
 import FormationDetailPage from "layouts/formations/FormationDetailPage";
-import ViewModuleIcon from "@mui/icons-material/ViewModule";
 
-/**
- * Helpers
- * - Evitan duplicación
- * - Evitan keys duplicadas en el mismo array
- * - Corrigen el uso de "size" en íconos MUI (se usa sx/fontSize)
- */
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const ICON_SX_12 = { fontSize: 12 };
-
 const muiIcon12 = (IconCmp) => <IconCmp sx={ICON_SX_12} />;
 
 const collapse = ({ name, key, route, icon, component }) => ({
@@ -120,11 +105,8 @@ const title = (titleText, key) => ({
   key,
 });
 
-/**
- * Route factories (fresh objects each time; no riesgo de mutación accidental)
- */
+// ─── Route factories ──────────────────────────────────────────────────────────
 const items = {
-  // Public pages
   about: () =>
     collapse({
       name: "Nosotros",
@@ -133,7 +115,6 @@ const items = {
       icon: "",
       component: <About />,
     }),
-
   contact: () =>
     collapse({
       name: "Contacto",
@@ -142,7 +123,6 @@ const items = {
       icon: "",
       component: <Contact />,
     }),
-
   alumniPublic: () =>
     collapse({
       name: "Alumni",
@@ -151,7 +131,6 @@ const items = {
       icon: "",
       component: <Alumni />,
     }),
-
   guatemalaPublic: () =>
     collapse({
       name: "Guatemala",
@@ -160,7 +139,6 @@ const items = {
       icon: "",
       component: <Guatemala />,
     }),
-
   veladaPublic: () =>
     collapse({
       name: "Velada",
@@ -169,7 +147,6 @@ const items = {
       icon: "",
       component: <VeladaTickets />,
     }),
-
   rafflePublic: () =>
     collapse({
       name: "Raffle",
@@ -178,7 +155,6 @@ const items = {
       icon: "",
       component: <Raffle eventId="66b45c2f9834903c1becfecf" />,
     }),
-
   apoyoPublic: () =>
     collapse({
       name: "Grupo Apoyo",
@@ -187,7 +163,6 @@ const items = {
       icon: "",
       component: <Apoyo />,
     }),
-
   colorGuardCampPublic: () =>
     collapse({
       name: "Color Guard Camp",
@@ -196,7 +171,6 @@ const items = {
       icon: "",
       component: <ColorGuardCamp />,
     }),
-
   classAttendancePublic: () =>
     collapse({
       name: "Asistencia",
@@ -206,7 +180,6 @@ const items = {
       component: <ClassAttendance />,
     }),
 
-  // Shared app pages
   dashboard: () =>
     collapse({
       name: "Dashboard",
@@ -215,7 +188,6 @@ const items = {
       icon: muiIcon12(DashboardIcon),
       component: <Dashboard />,
     }),
-
   events: () =>
     collapse({
       name: "Calendario",
@@ -224,7 +196,6 @@ const items = {
       icon: muiIcon12(EventIcon),
       component: <Billing />,
     }),
-
   almuerzos: () =>
     collapse({
       name: "Almuerzos",
@@ -233,7 +204,6 @@ const items = {
       icon: muiIcon12(RestaurantIcon),
       component: <Almuerzos />,
     }),
-
   listaAlmuerzos: () =>
     collapse({
       name: "Lista de almuerzos",
@@ -242,7 +212,6 @@ const items = {
       icon: muiIcon12(RestaurantIcon),
       component: <ListaAlmuerzos />,
     }),
-
   tuner: () =>
     collapse({
       name: "Afinador",
@@ -251,7 +220,6 @@ const items = {
       icon: muiIcon12(SentimentSatisfiedAltIcon),
       component: <Tuner />,
     }),
-
   profile: () =>
     collapse({
       name: "Perfil",
@@ -261,7 +229,6 @@ const items = {
       component: <Profile />,
     }),
 
-  // Auth
   signIn: () =>
     collapse({
       name: "Sign In",
@@ -270,7 +237,6 @@ const items = {
       icon: <Document size="12px" />,
       component: <SignIn />,
     }),
-
   signUp: () =>
     collapse({
       name: "Sign Up",
@@ -279,7 +245,6 @@ const items = {
       icon: <SpaceShip size="12px" />,
       component: <SignUp />,
     }),
-
   parentsSignUp: () =>
     collapse({
       name: "Sign Up",
@@ -288,7 +253,6 @@ const items = {
       icon: <SpaceShip size="12px" />,
       component: <ParentsSignUp />,
     }),
-
   passwordReset: () =>
     collapse({
       name: "Password Reset",
@@ -298,7 +262,6 @@ const items = {
       component: <PasswordReset />,
     }),
 
-  // Members / org
   members: () =>
     collapse({
       name: "Miembros",
@@ -307,7 +270,6 @@ const items = {
       icon: muiIcon12(PeopleAltIcon),
       component: <Tables />,
     }),
-
   inventory: () =>
     collapse({
       name: "Inventario",
@@ -316,7 +278,6 @@ const items = {
       icon: muiIcon12(InventoryIcon),
       component: <Inventory />,
     }),
-
   alumniDashboard: () =>
     collapse({
       name: "Exalumnos",
@@ -325,7 +286,6 @@ const items = {
       icon: muiIcon12(SchoolIcon),
       component: <AlumniDashboard />,
     }),
-
   guatemalaDashboard: () =>
     collapse({
       name: "Guatemala",
@@ -334,7 +294,6 @@ const items = {
       icon: muiIcon12(PublicIcon),
       component: <GuatemalaDashboard />,
     }),
-
   apoyoDashboard: () =>
     collapse({
       name: "Grupo Apoyo",
@@ -343,7 +302,6 @@ const items = {
       icon: muiIcon12(AccessibilityIcon),
       component: <ApoyoDashboard />,
     }),
-
   parentDashboard: () =>
     collapse({
       name: "Asistencia de mi hijo/a",
@@ -352,8 +310,6 @@ const items = {
       icon: muiIcon12(DashboardIcon),
       component: <ParentDashboardPage />,
     }),
-
-  // Payments
   payments: () =>
     collapse({
       name: "Pagos",
@@ -363,7 +319,6 @@ const items = {
       component: <PaymentComponent />,
     }),
 
-  // Attendance
   attendanceTake: () =>
     collapse({
       name: "Tomar Asistencia",
@@ -372,7 +327,6 @@ const items = {
       icon: muiIcon12(FactCheckIcon),
       component: <RTL />,
     }),
-
   attendanceHistory: () =>
     collapse({
       name: "Historial de Asistencia",
@@ -381,7 +335,6 @@ const items = {
       icon: muiIcon12(ReceiptLongIcon),
       component: <VirtualReality />,
     }),
-
   performanceAttendance: () =>
     collapse({
       name: "Asist. a presentaciones",
@@ -391,7 +344,6 @@ const items = {
       component: <PerformanceAttendance />,
     }),
 
-  // Email
   email: () =>
     collapse({
       name: "Correo",
@@ -400,7 +352,6 @@ const items = {
       icon: muiIcon12(SendIcon),
       component: <Email />,
     }),
-
   parentsProfile: () =>
     collapse({
       name: "Perfil",
@@ -410,7 +361,6 @@ const items = {
       component: <ParentsProfile />,
     }),
 
-  // Documents
   documents: () =>
     collapse({
       name: "Documentos",
@@ -419,7 +369,6 @@ const items = {
       icon: muiIcon12(FolderCopyIcon),
       component: <DocumentsPage />,
     }),
-
   newDocument: () =>
     collapse({
       name: "Subir documentos",
@@ -428,15 +377,9 @@ const items = {
       icon: muiIcon12(DriveFolderUploadIcon),
       component: <NewDocumentPage />,
     }),
-
   documentDetail: () =>
-    routeOnly({
-      key: "document-detail",
-      route: "/documents/:id",
-      component: <DocumentDetail />,
-    }),
+    routeOnly({ key: "document-detail", route: "/documents/:id", component: <DocumentDetail /> }),
 
-  // Tickets
   ticketList: () =>
     collapse({
       name: "Lista de entradas",
@@ -445,7 +388,6 @@ const items = {
       icon: muiIcon12(ConfirmationNumberIcon),
       component: <TicketList />,
     }),
-
   ticketAssign: () =>
     collapse({
       name: "Asignar entradas",
@@ -454,7 +396,6 @@ const items = {
       icon: muiIcon12(ConfirmationNumberIcon),
       component: <AssignTickets />,
     }),
-
   ticketScan: ({ name = "Escaneo de entradas", key = "qr-scanner" } = {}) =>
     collapse({
       name,
@@ -464,7 +405,6 @@ const items = {
       component: <QRScanner />,
     }),
 
-  // Color Guard Camp dashboard
   colorGuardCampDashboard: ({ icon = muiIcon12(SchoolIcon) } = {}) =>
     collapse({
       name: "Color Guard Camp",
@@ -474,7 +414,6 @@ const items = {
       component: <ColorGuardCampDashboard />,
     }),
 
-  // Finance
   finance: () =>
     collapse({
       name: "Finanzas",
@@ -483,50 +422,22 @@ const items = {
       icon: muiIcon12(AccountBalanceWalletIcon),
       component: <FinanceDashboard />,
     }),
-
-  // subrutas (solo router; NO menú)
   financeSales: () =>
-    routeOnly({
-      key: "finance-sales",
-      route: "/finance/sales",
-      component: <SalesPage />,
-    }),
-
+    routeOnly({ key: "finance-sales", route: "/finance/sales", component: <SalesPage /> }),
   financeExpenses: () =>
-    routeOnly({
-      key: "finance-expenses",
-      route: "/finance/expenses",
-      component: <ExpensesPage />,
-    }),
-
+    routeOnly({ key: "finance-expenses", route: "/finance/expenses", component: <ExpensesPage /> }),
   financeReports: () =>
-    routeOnly({
-      key: "finance-reports",
-      route: "/finance/reports",
-      component: <ReportsPage />,
-    }),
-
+    routeOnly({ key: "finance-reports", route: "/finance/reports", component: <ReportsPage /> }),
   financeCatalogs: () =>
-    routeOnly({
-      key: "finance-catalogs",
-      route: "/finance/catalogs",
-      component: <CatalogsPage />,
-    }),
-
+    routeOnly({ key: "finance-catalogs", route: "/finance/catalogs", component: <CatalogsPage /> }),
   financeBudgets: () =>
-    routeOnly({
-      key: "finance-budgets",
-      route: "/finance/budgets",
-      component: <BudgetsPage />,
-    }),
-
+    routeOnly({ key: "finance-budgets", route: "/finance/budgets", component: <BudgetsPage /> }),
   financeCommitteeDetail: () =>
     routeOnly({
       key: "finance-committee-detail",
       route: "/finance/budgets/:committeeId",
       component: <CommitteeDetailPage />,
     }),
-
   financeBudgetsConfig: () =>
     routeOnly({
       key: "finance-budgets-config",
@@ -542,13 +453,8 @@ const items = {
       icon: muiIcon12(FlightTakeoffIcon),
       component: <TourListPage />,
     }),
-
   tourDetail: () =>
-    routeOnly({
-      key: "tour-detail",
-      route: "/tours/:tourId",
-      component: <TourDetailPage />,
-    }),
+    routeOnly({ key: "tour-detail", route: "/tours/:tourId", component: <TourDetailPage /> }),
 
   ensembles: () =>
     collapse({
@@ -558,7 +464,6 @@ const items = {
       icon: muiIcon12(LibraryMusicIcon),
       component: <EnsemblesDashboardPage />,
     }),
-
   ensembleMembers: () =>
     routeOnly({
       key: "ensemble-members",
@@ -574,14 +479,12 @@ const items = {
       icon: muiIcon12(ViewModuleIcon),
       component: <FormationsPage />,
     }),
-
   formationNew: () =>
     routeOnly({
       key: "formation-new",
       route: "/formations/new",
       component: <FormationBuilderPage />,
     }),
-
   formationDetail: () =>
     routeOnly({
       key: "formation-detail",
@@ -590,15 +493,27 @@ const items = {
     }),
 };
 
+// ─── Menus reutilizables ──────────────────────────────────────────────────────
 const documentsMenu = () => [
   title("Documentos", "documents-pages"),
   items.documents(),
   items.newDocument(),
   items.documentDetail(),
 ];
-/**
- * Exports: protectedRoutes + attendanceRoutes
- */
+
+const financeMenu = () => [
+  title("Finanzas", "finanzas"),
+  items.finance(),
+  items.financeSales(),
+  items.financeExpenses(),
+  items.financeReports(),
+  items.financeCatalogs(),
+  items.financeBudgets(),
+  items.financeBudgetsConfig(),
+  items.financeCommitteeDetail(),
+];
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
 export const protectedRoutes = [
   items.members(),
   items.inventory(),
@@ -609,7 +524,6 @@ export const protectedRoutes = [
   ...documentsMenu(),
 
   title("Entradas", "entradas-eventos"),
-  // En este menú “protegido”, el nombre original era "Entradas"
   collapse({
     name: "Entradas",
     key: "lista-entradas",
@@ -617,7 +531,6 @@ export const protectedRoutes = [
     icon: muiIcon12(ConfirmationNumberIcon),
     component: <TicketList />,
   }),
-  // Nombre original "QRScanner" y key "qrscanner"
   items.ticketScan({ name: "QRScanner", key: "qrscanner" }),
   items.ticketAssign(),
   items.colorGuardCampDashboard({ icon: muiIcon12(SchoolIcon) }),
@@ -626,15 +539,7 @@ export const protectedRoutes = [
   items.payments(),
   items.listaAlmuerzos(),
 
-  title("Finanzas", "finanzas"),
-  items.finance(),
-  items.financeSales(),
-  items.financeExpenses(),
-  items.financeReports(),
-  items.financeCatalogs(),
-  items.financeBudgets(),
-  items.financeBudgetsConfig(),
-  items.financeCommitteeDetail(),
+  ...financeMenu(),
 
   items.attendanceTake(),
   items.attendanceHistory(),
@@ -649,46 +554,10 @@ export const attendanceRoutes = [
   items.performanceAttendance(),
 ];
 
-/**
- * Public routes (default export)
- * - Se mantiene el set completo original
- * - Íconos vacíos se dejan como "" (como estaba)
- */
-const routes = [
-  items.about(),
-  items.alumniPublic(),
-  items.guatemalaPublic(),
-  items.veladaPublic(),
-  items.rafflePublic(),
-  items.apoyoPublic(),
-  items.colorGuardCampPublic(),
-  items.classAttendancePublic(),
-  items.contact(),
-
-  items.dashboard(),
-  items.events(),
-  items.almuerzos(),
-  items.tuner(),
-
-  title("Cuenta", "account-pages"),
-  items.profile(),
-  items.signIn(),
-  items.signUp(),
-  items.parentsSignUp(),
-  items.passwordReset(),
-];
-
-/**
- * Role-based routes
- * - Mantienen el contenido del archivo original
- * - Se elimina el bug de keys duplicadas dentro del mismo array
- * - Se corrige component/icon vacíos en principalRoutes para evitar fallos
- */
 export const adminRoutes = [
   items.dashboard(),
 
   title("Integrantes", "integrantes"),
-
   items.members(),
 
   title("Agrupaciones", "agrupaciones"),
@@ -696,41 +565,22 @@ export const adminRoutes = [
   items.ensembleMembers(),
 
   title("Calendario", "calendario"),
-
   items.events(),
 
   title("Inventario", "inventory"),
-
   items.inventory(),
 
   title("Afinador", "tuner-pages"),
   items.tuner(),
 
-  title("Documentos", "documents-pages"),
-  items.documents(),
-  items.newDocument(),
-  items.documentDetail(),
-
-  // title("Pagos", "pagos"),
-  // items.payments(),
-
-  title("Finanzas", "finanzas"),
-  items.finance(),
-  items.financeSales(),
-  items.financeExpenses(),
-  items.financeReports(),
-  items.financeCatalogs(),
-  items.financeBudgets(),
-  items.financeBudgetsConfig(),
-  items.financeCommitteeDetail(),
+  ...documentsMenu(),
+  ...financeMenu(),
 
   title("Giras", "giras"),
-
   items.tours(),
   items.tourDetail(),
 
   title("Desfile", "desfile"),
-
   items.formations(),
   items.formationNew(),
   items.formationDetail(),
@@ -754,7 +604,6 @@ export const adminRoutes = [
   items.colorGuardCampDashboard({ icon: muiIcon12(FlagIcon) }),
   items.alumniDashboard(),
   items.guatemalaDashboard(),
-
   collapse({
     name: "Apoyo",
     key: "grupo-apoyo-dashboard",
@@ -778,19 +627,9 @@ export const staffRoutes = [
   items.events(),
 
   ...documentsMenu(),
-
-  title("Finanzas", "finanzas"),
-  items.finance(),
-  items.financeSales(),
-  items.financeExpenses(),
-  items.financeReports(),
-  items.financeCatalogs(),
-  items.financeBudgets(),
-  items.financeBudgetsConfig(),
-  items.financeCommitteeDetail(),
+  ...financeMenu(),
 
   title("Asistencia", "attendance-pages"),
-
   items.performanceAttendance(),
 
   title("Entradas", "entradas-eventos"),
@@ -815,23 +654,13 @@ export const principalRoutes = [
   items.performanceAttendance(),
 
   ...documentsMenu(),
-
-  title("Finanzas", "finanzas"),
-  items.finance(),
-  items.financeSales(),
-  items.financeExpenses(),
-  items.financeReports(),
-  items.financeCatalogs(),
-  items.financeBudgets(),
-  items.financeBudgetsConfig(),
-  items.financeCommitteeDetail(),
+  ...financeMenu(),
 
   title("Almuerzos", "almuerzos-pages"),
   items.almuerzos(),
 
   title("Cuenta", "account-pages"),
   items.profile(),
-
   items.signIn(),
   items.signUp(),
 ];
@@ -846,12 +675,8 @@ export const membersRoutes = [
   title("Afinador", "tuner-pages"),
   items.tuner(),
 
-  title("Documentos", "documents-pages"),
-  items.documents(),
-  items.newDocument(),
-  items.documentDetail(),
+  ...documentsMenu(),
 
-  // Acceso self-service a giras (solo lectura, controlado por selfServiceAccess del Admin)
   title("Giras", "giras-member"),
   items.tours(),
   items.tourDetail(),
@@ -864,10 +689,7 @@ export const sectionRoutes = [
   items.dashboard(),
   items.events(),
 
-  title("Documentos", "documents-pages"),
-  items.documents(),
-  items.newDocument(),
-  items.documentDetail(),
+  ...documentsMenu(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -883,13 +705,11 @@ export const sectionRoutes = [
 
 export const parentsRoutes = [
   items.dashboard(),
-
   items.events(),
 
   title("Asistencia", "attendance-pages"),
   items.parentDashboard(),
 
-  // Acceso self-service a giras para padres (controlado por selfServiceAccess del Admin)
   title("Giras", "giras-parent"),
   items.tours(),
   items.tourDetail(),
@@ -923,6 +743,30 @@ export const colorGuardCampRoutes = [
 
   title("Cuenta", "account-pages"),
   items.profile(),
+];
+
+const routes = [
+  items.about(),
+  items.alumniPublic(),
+  items.guatemalaPublic(),
+  items.veladaPublic(),
+  items.rafflePublic(),
+  items.apoyoPublic(),
+  items.colorGuardCampPublic(),
+  items.classAttendancePublic(),
+  items.contact(),
+
+  items.dashboard(),
+  items.events(),
+  items.almuerzos(),
+  items.tuner(),
+
+  title("Cuenta", "account-pages"),
+  items.profile(),
+  items.signIn(),
+  items.signUp(),
+  items.parentsSignUp(),
+  items.passwordReset(),
 ];
 
 export default routes;
