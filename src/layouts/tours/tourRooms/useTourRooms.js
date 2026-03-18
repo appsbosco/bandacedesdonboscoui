@@ -18,11 +18,19 @@ import {
   computeRebalanceOps,
 } from "./roomGrouping";
 
+function inferRoomType(room, occupantCountOverride = null) {
+  const occupantCount = occupantCountOverride ?? room?.occupantCount ?? 0;
+  const effectiveCount = occupantCount > 0 ? occupantCount : (room?.capacity ?? 1);
+
+  return capacityToRoomType(Math.max(1, effectiveCount));
+}
+
 export function useTourRooms(tourId) {
   const [formModal, setFormModal] = useState({ open: false, mode: "create", room: null });
   const [deleteModal, setDeleteModal] = useState({ open: false, room: null });
   const [occupantsModal, setOccupantsModal] = useState({ open: false, room: null });
   const [toast, setToast] = useState(null);
+  const [syncingRoomTypes, setSyncingRoomTypes] = useState(false);
 
   // ── Planner state ────────────────────────────────────────────────────────────
   const [plannerCapacity, setPlannerCapacity] = useState(4);
@@ -109,6 +117,26 @@ export function useTourRooms(tourId) {
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const showToast = (message, type = "success") => setToast({ message, type });
 
+  const syncRoomShape = useCallback(
+    async (roomId, occupantCount, capacity) => {
+      const input = {
+        roomType: capacityToRoomType(Math.max(1, occupantCount)),
+      };
+
+      if (typeof capacity === "number") {
+        input.capacity = capacity;
+      }
+
+      await updateRoomRaw({
+        variables: {
+          id: roomId,
+          input,
+        },
+      });
+    },
+    [updateRoomRaw]
+  );
+
   const openCreateModal = useCallback(
     () => setFormModal({ open: true, mode: "create", room: null }),
     []
@@ -148,32 +176,26 @@ export function useTourRooms(tourId) {
 
   const handleAssignOccupant = async (roomId, participantId) => {
     await assignOccupant({ variables: { roomId, participantId } });
-    // Sync capacity upward if room is now over its stored capacity
     const room = roomsRef.current.find((r) => r.id === roomId);
     if (room) {
       const newCount = (room.occupantCount || 0) + 1;
-      if (newCount > room.capacity) {
-        try {
-          await updateRoomRaw({ variables: { id: roomId, input: { capacity: newCount } } });
-        } catch {
-          // non-critical — ignore
-        }
+      try {
+        await syncRoomShape(roomId, newCount, newCount > room.capacity ? newCount : undefined);
+      } catch {
+        // non-critical — ignore
       }
     }
   };
 
   const handleRemoveOccupant = async (roomId, participantId) => {
     await removeOccupant({ variables: { roomId, participantId } });
-    // Shrink capacity to match new occupant count
     const room = roomsRef.current.find((r) => r.id === roomId);
     if (room) {
       const newCount = Math.max(1, (room.occupantCount || 1) - 1);
-      if (newCount !== room.capacity) {
-        try {
-          await updateRoomRaw({ variables: { id: roomId, input: { capacity: newCount } } });
-        } catch {
-          // non-critical — ignore
-        }
+      try {
+        await syncRoomShape(roomId, newCount, newCount);
+      } catch {
+        // non-critical — ignore
       }
     }
   };
@@ -219,9 +241,7 @@ export function useTourRooms(tourId) {
               variables: { roomId: op.roomId, participantId: op.participantId },
             });
           } else if (op.type === "updateCapacity") {
-            await updateRoomRaw({
-              variables: { id: op.roomId, input: { capacity: op.capacity } },
-            });
+            await syncRoomShape(op.roomId, op.capacity, op.capacity);
           }
         }
 
@@ -245,7 +265,7 @@ export function useTourRooms(tourId) {
     },
     // Refs (roomsRef, allParticipantsRef, sexOverridesRef) are intentionally omitted
     // from deps — refs are stable objects; their .current is always up to date.
-    [removeOccupantRaw, assignOccupantRaw, updateRoomRaw, refetch]
+    [removeOccupantRaw, assignOccupantRaw, syncRoomShape, refetch]
   );
 
   // ── Planner: inline capacity change (CapacityEditor in RoomListPanel) ─────────
@@ -255,7 +275,10 @@ export function useTourRooms(tourId) {
         await updateRoomRaw({
           variables: {
             id: room.id,
-            input: { capacity: newCapacity },
+            input: {
+              capacity: newCapacity,
+              roomType: inferRoomType(room),
+            },
           },
         });
         await refetch();
@@ -291,6 +314,39 @@ export function useTourRooms(tourId) {
     },
     [setRoomResponsibleMutation, refetch]
   );
+
+  const handleSyncRoomTypes = useCallback(async () => {
+    const roomsToSync = roomsRef.current.filter((room) => inferRoomType(room) !== room.roomType);
+
+    if (roomsToSync.length === 0) {
+      showToast("Las denominaciones ya estan sincronizadas", "success");
+      return;
+    }
+
+    setSyncingRoomTypes(true);
+    try {
+      for (const room of roomsToSync) {
+        await updateRoomRaw({
+          variables: {
+            id: room.id,
+            input: {
+              roomType: inferRoomType(room),
+            },
+          },
+        });
+      }
+
+      await refetch();
+      showToast(
+        `${roomsToSync.length} habitacion${roomsToSync.length !== 1 ? "es" : ""} sincronizada${roomsToSync.length !== 1 ? "s" : ""}`,
+        "success"
+      );
+    } catch (e) {
+      showToast(e.message || "Error al sincronizar denominaciones", "error");
+    } finally {
+      setSyncingRoomTypes(false);
+    }
+  }, [updateRoomRaw, refetch]);
 
   // ── Planner: create rooms from a suggested group ──────────────────────────────
   /**
@@ -358,7 +414,14 @@ export function useTourRooms(tourId) {
   );
 
   // ── Derived data ──────────────────────────────────────────────────────────────
-  const rooms = data?.getTourRooms || [];
+  const rooms = useMemo(
+    () =>
+      (data?.getTourRooms || []).map((room) => ({
+        ...room,
+        roomType: inferRoomType(room),
+      })),
+    [data]
+  );
   const allParticipants = participantsData?.getTourParticipants || [];
 
   // Keep refs in sync so callbacks always read fresh data
@@ -448,6 +511,7 @@ export function useTourRooms(tourId) {
     sexOverrides,
     handleSetSex,
     handleSetResponsible,
+    handleSyncRoomTypes,
     handleCapacityChange,
     plannerCapacity,
     setPlannerCapacity,
@@ -457,6 +521,7 @@ export function useTourRooms(tourId) {
     handleCreateRoomsFromGroup,
     bulkCreating,
     movingId,
+    syncingRoomTypes,
     // Toast
     toast,
     setToast,

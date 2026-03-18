@@ -3,7 +3,7 @@
  * TourRoomsPage — gestión de habitaciones de una gira.
  * Dos modos: Lista (view) · Planificador (planner)
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTourRooms } from "./useTourRooms";
 import RoomCard from "./RoomCard";
 import RoomFormModal from "./RoomFormModal";
@@ -16,6 +16,14 @@ import { Toast } from "../TourHelpers";
 const VIEWS = [
   { id: "list", label: "Lista", emoji: "📋" },
   { id: "planner", label: "Planificador", emoji: "🗺️" },
+];
+
+const ROOM_TYPE_WIDGETS = [
+  { type: "SINGLE", label: "Individual", emoji: "🛏️", color: "text-gray-700", tone: "bg-gray-50 border-gray-200" },
+  { type: "DOUBLE", label: "Doble", emoji: "🛏️🛏️", color: "text-blue-700", tone: "bg-blue-50 border-blue-100" },
+  { type: "TRIPLE", label: "Triple", emoji: "🛏️🛏️🛏️", color: "text-violet-700", tone: "bg-violet-50 border-violet-100" },
+  { type: "QUAD", label: "Cuadruple", emoji: "🏨", color: "text-amber-700", tone: "bg-amber-50 border-amber-100" },
+  { type: "SUITE", label: "Suite", emoji: "⭐", color: "text-emerald-700", tone: "bg-emerald-50 border-emerald-100" },
 ];
 
 export default function TourRoomsPage({ tourId, tourName }) {
@@ -58,6 +66,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
     sexOverrides,
     handleSetSex,
     handleSetResponsible,
+    handleSyncRoomTypes,
     handleCapacityChange,
     plannerCapacity,
     setPlannerCapacity,
@@ -67,6 +76,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
     handleCreateRoomsFromGroup,
     bulkCreating,
     movingId,
+    syncingRoomTypes,
     toast,
     setToast,
   } = state;
@@ -87,6 +97,19 @@ export default function TourRoomsPage({ tourId, tourName }) {
     return acc;
   }, {});
 
+  const roomTypeCounts = useMemo(() => {
+    const counts = rooms.reduce((acc, room) => {
+      const type = room.roomType || "SINGLE";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    return ROOM_TYPE_WIDGETS.map((item) => ({
+      ...item,
+      value: counts[item.type] || 0,
+    }));
+  }, [rooms]);
+
   if (mode === "planner") {
     return (
       <>
@@ -102,6 +125,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
             sexOverrides={sexOverrides}
             handleSetSex={handleSetSex}
             handleSetResponsible={handleSetResponsible}
+            handleSyncRoomTypes={handleSyncRoomTypes}
             plannerCapacity={plannerCapacity}
             setPlannerCapacity={setPlannerCapacity}
             plannerHotel={plannerHotel}
@@ -125,6 +149,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
             creating={creating}
             updating={updating}
             deleting={deleting}
+            syncingRoomTypes={syncingRoomTypes}
             toast={toast}
             setToast={setToast}
           />
@@ -146,6 +171,23 @@ export default function TourRoomsPage({ tourId, tourName }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <ViewSwitcher mode={mode} onSwitch={setMode} />
+          {rooms.length > 0 && (
+            <button
+              onClick={handleSyncRoomTypes}
+              disabled={syncingRoomTypes}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-2xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m14.836 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-14.838-2m14.838 2H15"
+                />
+              </svg>
+              {syncingRoomTypes ? "Sincronizando..." : "Sincronizar denominaciones"}
+            </button>
+          )}
           {rooms.length > 0 && (
             <button
               onClick={() => setExportModalOpen(true)}
@@ -181,6 +223,22 @@ export default function TourRoomsPage({ tourId, tourName }) {
         <StatCard value={fullRooms} label="Completas" color="text-emerald-600" />
         <StatCard value={totalOccupants} label="Asignados" color="text-violet-600" />
       </div>
+
+      {rooms.length > 0 && (
+        <section className="space-y-2">
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              Denominacion de habitaciones
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">Conteo por tipo registrado</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
+            {roomTypeCounts.map((item) => (
+              <RoomTypeWidget key={item.type} {...item} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Unassigned alert */}
       {!loading && unassignedParticipants.length > 0 && (
@@ -337,6 +395,19 @@ function StatCard({ value, label, color = "text-gray-900" }) {
     <div className="bg-white rounded-2xl border border-gray-200 p-4">
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function RoomTypeWidget({ value, label, emoji, color, tone }) {
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${tone}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm">{emoji}</span>
+        <span className={`text-lg font-bold ${color}`}>{value}</span>
+      </div>
+      <p className="text-[11px] font-semibold text-gray-700 mt-2 leading-tight">{label}</p>
+      <p className="text-[10px] text-gray-500 leading-tight">habitaciones</p>
     </div>
   );
 }

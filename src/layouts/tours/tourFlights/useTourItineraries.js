@@ -16,7 +16,10 @@ import {
 export function useTourItineraries(tourId) {
   const [formModal, setFormModal] = useState({ open: false, mode: "create", itinerary: null });
   const [assignFlightsModal, setAssignFlightsModal] = useState({ open: false, itinerary: null });
-const [assignPassengersModal, setAssignPassengersModal] = useState({ open: false, itineraryId: null });
+  const [assignPassengersModalState, setAssignPassengersModal] = useState({
+    open: false,
+    itineraryId: null,
+  });
   const [leadersModal, setLeadersModal] = useState({ open: false, itinerary: null });
   const [assignResult, setAssignResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -143,13 +146,15 @@ const [assignPassengersModal, setAssignPassengersModal] = useState({ open: false
   const closeAssignFlightsModal = useCallback(() =>
     setAssignFlightsModal({ open: false, itinerary: null }), []);
 
-const openAssignPassengersModal = useCallback((itinerary) => {
-  setAssignResult(null);
-  setAssignPassengersModal({ open: true, itineraryId: itinerary.id });
-}, []);
+  const openAssignPassengersModal = useCallback((itinerary) => {
+    setAssignResult(null);
+    setAssignPassengersModal({ open: true, itineraryId: itinerary.id });
+  }, []);
 
-const closeAssignPassengersModal = useCallback(() =>
-  setAssignPassengersModal({ open: false, itineraryId: null }), []);
+  const closeAssignPassengersModal = useCallback(
+    () => setAssignPassengersModal({ open: false, itineraryId: null }),
+    []
+  );
 
   const openLeadersModal = useCallback((itinerary) =>
     setLeadersModal({ open: true, itinerary }), []);
@@ -181,7 +186,7 @@ const closeAssignPassengersModal = useCallback(() =>
 
   const handleAssignPassengers = async (participantIds) => {
     const result = await assignPassengersMutation({
-      variables: { itineraryId: assignPassengersModal.itinerary.id, participantIds },
+      variables: { itineraryId: assignPassengersModalState.itineraryId, participantIds },
     });
     return result?.data?.assignPassengersToItinerary || null;
   };
@@ -197,27 +202,25 @@ const closeAssignPassengersModal = useCallback(() =>
   // ── Derived data ─────────────────────────────────────────────────────────────
   const itineraries = itinerariesData?.getTourItineraries || [];
   const unassignedFlights = unassignedData?.getUnassignedTourFlights || [];
+  const activePassengersItinerary = assignPassengersModalState.itineraryId
+    ? itineraries.find((it) => it.id === assignPassengersModalState.itineraryId) ?? null
+    : null;
 
-
-
-  const activePassengersItinerary = assignPassengersModal.itineraryId
-  ? itineraries.find((it) => it.id === assignPassengersModal.itineraryId) ?? null
-  : null;
+  const assignPassengersModal = {
+    open: assignPassengersModalState.open,
+    itinerary: activePassengersItinerary,
+  };
 
 
   return {
     itineraries,
-    assignPassengersModal: {
-    open: assignPassengersModal.open,
-    itinerary: activePassengersItinerary, 
-  },
+    assignPassengersModal,
     unassignedFlights,
     itinerariesLoading,
     itinerariesError,
     unassignedLoading,
     formModal,
     assignFlightsModal,
-    assignPassengersModal,
     leadersModal,
     assignResult,
     openCreateModal,

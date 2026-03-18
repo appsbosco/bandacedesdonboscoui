@@ -98,25 +98,9 @@ export default function SuggestedGroupsPanel({
     [unassignedParticipants, sexOverrides]
   );
 
-  if (unassignedParticipants.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-        <p className="text-2xl mb-2">✓</p>
-        <p className="text-xs font-semibold text-gray-600 mb-1">Sin participantes sin asignar</p>
-        <p className="text-xs text-gray-400">
-          Todos los participantes ya tienen habitación.
-        </p>
-      </div>
-    );
-  }
+  if (unassignedParticipants.length === 0) return null;
 
-  if (groups.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-        <p className="text-xs text-gray-400">Sin grupos para mostrar.</p>
-      </div>
-    );
-  }
+  if (groups.length === 0) return null;
 
   return (
     <div className="space-y-3">

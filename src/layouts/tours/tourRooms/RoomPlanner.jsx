@@ -4,13 +4,21 @@
  * Layout: Settings bar | Left: Unassigned + Groups | Right: Room list
  * Drag & drop: native HTML5 — no new libraries.
  */
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import UnassignedParticipantsPanel from "./UnassignedParticipantsPanel";
 import SuggestedGroupsPanel from "./SuggestedGroupsPanel";
 import RoomListPanel from "./RoomListPanel";
 import RoomFormModal from "./RoomFormModal";
 import RoomDeleteModal from "./RoomDeleteModal";
 import { Toast } from "../TourHelpers";
+
+const ROOM_TYPE_WIDGETS = [
+  { type: "SINGLE", label: "Individual", emoji: "🛏️", color: "text-gray-700", tone: "bg-gray-50 border-gray-200" },
+  { type: "DOUBLE", label: "Doble", emoji: "🛏️🛏️", color: "text-blue-700", tone: "bg-blue-50 border-blue-100" },
+  { type: "TRIPLE", label: "Triple", emoji: "🛏️🛏️🛏️", color: "text-violet-700", tone: "bg-violet-50 border-violet-100" },
+  { type: "QUAD", label: "Cuadruple", emoji: "🏨", color: "text-amber-700", tone: "bg-amber-50 border-amber-100" },
+  { type: "SUITE", label: "Suite", emoji: "⭐", color: "text-emerald-700", tone: "bg-emerald-50 border-emerald-100" },
+];
 
 export default function RoomPlanner({
   tourId,
@@ -23,6 +31,7 @@ export default function RoomPlanner({
   sexOverrides,
   handleSetSex,
   handleSetResponsible,
+  handleSyncRoomTypes,
   plannerCapacity,
   setPlannerCapacity,
   plannerHotel,
@@ -48,6 +57,7 @@ export default function RoomPlanner({
   creating,
   updating,
   deleting,
+  syncingRoomTypes,
   // Toast
   toast,
   setToast,
@@ -81,6 +91,18 @@ export default function RoomPlanner({
   const totalCapacity = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
   const totalAssigned = rooms.reduce((acc, r) => acc + (r.occupantCount || 0), 0);
   const totalUnassigned = unassignedParticipants.length;
+  const roomTypeCounts = useMemo(() => {
+    const counts = rooms.reduce((acc, room) => {
+      const type = room.roomType || "SINGLE";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    return ROOM_TYPE_WIDGETS.map((item) => ({
+      ...item,
+      value: counts[item.type] || 0,
+    }));
+  }, [rooms]);
 
   return (
     <div className="space-y-4">
@@ -93,6 +115,23 @@ export default function RoomPlanner({
             <span className="font-semibold">{tourName}</span>
           </p>
         </div>
+        {rooms.length > 0 && (
+          <button
+            onClick={handleSyncRoomTypes}
+            disabled={syncingRoomTypes}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-2xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m14.836 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-14.838-2m14.838 2H15"
+              />
+            </svg>
+            {syncingRoomTypes ? "Sincronizando..." : "Sincronizar denominaciones"}
+          </button>
+        )}
       </div>
 
       {/* Summary bar */}
@@ -107,12 +146,28 @@ export default function RoomPlanner({
         />
       </div>
 
+      {rooms.length > 0 && (
+        <section className="space-y-2">
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              Denominacion de habitaciones
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">Conteo actual por tipo</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
+            {roomTypeCounts.map((item) => (
+              <RoomTypeWidget key={item.type} {...item} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Settings bar */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4 flex flex-wrap items-end gap-5">
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
+          <p className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
             Capacidad (habitación manual)
-          </label>
+          </p>
           <input
             type="number"
             min={1}
@@ -123,9 +178,9 @@ export default function RoomPlanner({
           />
         </div>
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
+          <p className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">
             Hotel (para habitaciones nuevas)
-          </label>
+          </p>
           <input
             type="text"
             value={plannerHotel}
@@ -206,6 +261,19 @@ function SumStat({ value, label, color = "text-gray-900" }) {
     <div className="bg-white rounded-2xl border border-gray-200 p-4">
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function RoomTypeWidget({ value, label, emoji, color, tone }) {
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${tone}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm">{emoji}</span>
+        <span className={`text-lg font-bold ${color}`}>{value}</span>
+      </div>
+      <p className="text-[11px] font-semibold text-gray-700 mt-2 leading-tight">{label}</p>
+      <p className="text-[10px] text-gray-500 leading-tight">habitaciones</p>
     </div>
   );
 }

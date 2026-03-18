@@ -67,6 +67,8 @@ export default function UnassignedParticipantsPanel({
 }) {
   const [search, setSearch] = useState("");
 
+  if (participants.length === 0) return null;
+
   const filtered = search
     ? participants.filter((p) =>
         participantFullName(p).toLowerCase().includes(search.toLowerCase())
@@ -85,11 +87,6 @@ export default function UnassignedParticipantsPanel({
           <h3 className="text-sm font-bold text-gray-900">Sin habitación</h3>
           <p className="text-xs text-gray-400">{participants.length} participante{participants.length !== 1 ? "s" : ""}</p>
         </div>
-        {participants.length === 0 && (
-          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-            ✓ Todos asignados
-          </span>
-        )}
       </div>
 
       {/* Sex legend */}
@@ -119,12 +116,6 @@ export default function UnassignedParticipantsPanel({
       <div className="p-4 flex-1 overflow-y-auto space-y-2 min-h-0" style={{ maxHeight: "340px" }}>
         {filtered.length === 0 && participants.length > 0 && (
           <p className="text-xs text-gray-400 text-center py-4">Sin resultados para &ldquo;{search}&rdquo;</p>
-        )}
-        {filtered.length === 0 && participants.length === 0 && (
-          <div className="text-center py-6">
-            <p className="text-2xl mb-1">✓</p>
-            <p className="text-xs text-gray-400">Todos los participantes tienen habitación.</p>
-          </div>
         )}
         {filtered.map((p) => (
           <ParticipantChip

@@ -8,7 +8,7 @@
  *   - Blocked participants (in another itinerary) shown with their itinerary name.
  *   - Result banner differentiates ALREADY_ASSIGNED vs CAPACITY_EXCEEDED conflicts.
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, gql } from "@apollo/client";
 
 const GET_TOUR_PARTICIPANTS_MODAL = gql`
@@ -26,6 +26,10 @@ const GET_TOUR_PARTICIPANTS_MODAL = gql`
 
 function participantName(p) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
+}
+
+function resultsLabel(n) {
+  return `${n} resultado${n !== 1 ? "s" : ""}`;
 }
 
 export default function ItineraryPassengersModal({
@@ -92,14 +96,9 @@ export default function ItineraryPassengersModal({
 
   // Collect unique instruments from the relevant list per tab
   const instrumentsInScope = tab === "add" ? available : assigned;
-  const uniqueInstruments = useMemo(() => {
-    const set = new Set(
-      instrumentsInScope
-        .map((p) => p.instrument)
-        .filter(Boolean)
-    );
-    return Array.from(set).sort();
-  }, [instrumentsInScope]);
+  const uniqueInstruments = Array.from(
+    new Set(instrumentsInScope.map((p) => p.instrument).filter(Boolean))
+  ).sort();
 
   // Filtering helper: applies both search and instrument filter
   const applyFilters = (list) =>
@@ -313,49 +312,69 @@ export default function ItineraryPassengersModal({
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 />
 
-                {uniqueInstruments.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      onClick={() => setInstrumentFilter("all")}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
-                        instrumentFilter === "all"
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
-                      }`}
-                    >
-                      Todos
-                    </button>
-                    {uniqueInstruments.map((inst) => (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 space-y-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+                        Filtros
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {resultsLabel(tab === "add" ? filteredAvailable.length : filteredAssigned.length)}
+                      </p>
+                    </div>
+                    {(search || instrumentFilter !== "all") && (
                       <button
-                        key={inst}
-                        onClick={() => setInstrumentFilter(inst === instrumentFilter ? "all" : inst)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
-                          instrumentFilter === inst
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
-                        }`}
+                        onClick={() => {
+                          setSearch("");
+                          setInstrumentFilter("all");
+                        }}
+                        className="text-xs font-semibold text-gray-500 hover:text-gray-700 underline"
                       >
-                        🎵 {inst}
+                        Limpiar filtros
                       </button>
-                    ))}
+                    )}
                   </div>
-                )}
 
-                {/* Active filter summary */}
-                {(search || instrumentFilter !== "all") && (
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>
-                      {tab === "add" ? filteredAvailable.length : filteredAssigned.length} resultado{(tab === "add" ? filteredAvailable.length : filteredAssigned.length) !== 1 ? "s" : ""}
-                      {instrumentFilter !== "all" && <span className="ml-1 text-gray-500 font-medium">· {instrumentFilter}</span>}
-                    </span>
-                    <button
-                      onClick={() => { setSearch(""); setInstrumentFilter("all"); }}
-                      className="text-gray-400 hover:text-gray-600 underline"
-                    >
-                      Limpiar filtros
-                    </button>
-                  </div>
-                )}
+                  {uniqueInstruments.length > 0 && (
+                    <div className="grid gap-2 sm:grid-cols-[140px_1fr] sm:items-center">
+                      <label className="text-xs font-semibold text-gray-600">
+                        Instrumento
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={instrumentFilter}
+                          onChange={(e) => setInstrumentFilter(e.target.value)}
+                          className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 pr-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                        >
+                          <option value="all">Todos los instrumentos</option>
+                          {uniqueInstruments.map((inst) => (
+                            <option key={inst} value={inst}>
+                              {inst}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                          ▾
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(search || instrumentFilter !== "all") && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {search && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                          Buscar: {search}
+                        </span>
+                      )}
+                      {instrumentFilter !== "all" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                          Instrumento: {instrumentFilter}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ADD tab */}

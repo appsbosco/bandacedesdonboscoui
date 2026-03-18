@@ -24,6 +24,15 @@ import {
   MAX_ROOM_CAPACITY,
 } from "./roomGrouping";
 
+const ROOM_TYPE_FILTERS = [
+  { value: "ALL", label: "Todas" },
+  { value: "SINGLE", label: "Individual" },
+  { value: "DOUBLE", label: "Doble" },
+  { value: "TRIPLE", label: "Triple" },
+  { value: "QUAD", label: "Cuadruple" },
+  { value: "SUITE", label: "Suite" },
+];
+
 function participantFullName(p) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
 }
@@ -472,6 +481,7 @@ function RoomPlannerCard({
 
 // ── Visual section ─────────────────────────────────────────────────────────────
 function RoomSection({
+  sectionKey,
   title,
   subtitle,
   badge,
@@ -489,6 +499,8 @@ function RoomSection({
   movingId,
   dragOverRoomId,
   onDragOver,
+  collapsed,
+  onToggleCollapse,
 }) {
   if (!rooms.length) return null;
 
@@ -497,45 +509,57 @@ function RoomSection({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span
-          className={`inline-flex items-center justify-center w-7 h-7 rounded-xl border text-xs font-extrabold ${badgeClass}`}
-        >
-          {badge}
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={`inline-flex items-center justify-center w-7 h-7 rounded-xl border text-xs font-extrabold ${badgeClass}`}
+          >
+            {badge}
+          </span>
 
-        <div className="min-w-0">
-          <h3 className="text-sm font-extrabold text-gray-900">{title}</h3>
-          <p className="text-[11px] text-gray-500">
-            {rooms.length} hab · {sectionOccupants}/{sectionCapacity} ocupados
-            {subtitle ? ` · ${subtitle}` : ""}
-          </p>
+          <div className="min-w-0">
+            <h3 className="text-sm font-extrabold text-gray-900">{title}</h3>
+            <p className="text-[11px] text-gray-500">
+              {rooms.length} hab · {sectionOccupants}/{sectionCapacity} ocupados
+              {subtitle ? ` · ${subtitle}` : ""}
+            </p>
+          </div>
         </div>
+
+        <button
+          onClick={() => onToggleCollapse(sectionKey)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-[11px] font-semibold text-gray-600 transition-all"
+        >
+          <span>{collapsed ? "Expandir" : "Colapsar"}</span>
+          <span className="text-xs">{collapsed ? "▾" : "▴"}</span>
+        </button>
       </div>
 
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}
-      >
-        {rooms.map((room) => (
-          <RoomPlannerCard
-            key={room.id}
-            room={room}
-            rooms={allRooms}
-            sexOverrides={sexOverrides}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onMove={onMove}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onCapacityChange={onCapacityChange}
-            onSetResponsible={onSetResponsible}
-            movingId={movingId}
-            dragOverRoomId={dragOverRoomId}
-          />
-        ))}
-      </div>
+      {!collapsed && (
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}
+        >
+          {rooms.map((room) => (
+            <RoomPlannerCard
+              key={room.id}
+              room={room}
+              rooms={allRooms}
+              sexOverrides={sexOverrides}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              onMove={onMove}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onCapacityChange={onCapacityChange}
+              onSetResponsible={onSetResponsible}
+              movingId={movingId}
+              dragOverRoomId={dragOverRoomId}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -555,6 +579,13 @@ export default function RoomListPanel({
   movingId,
 }) {
   const [dragOverRoomId, setDragOverRoomId] = useState(null);
+  const [roomTypeFilter, setRoomTypeFilter] = useState("ALL");
+  const [collapsedSections, setCollapsedSections] = useState({
+    men: false,
+    women: false,
+    mixed_staff: false,
+    unassigned: false,
+  });
 
   const handleDragOver = (roomId) => setDragOverRoomId(roomId);
 
@@ -564,11 +595,22 @@ export default function RoomListPanel({
   };
 
   const handleDragEnd = () => setDragOverRoomId(null);
+  const handleToggleCollapse = (sectionKey) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
 
   const sortedRooms = useMemo(
     () => [...rooms].sort((a, b) => roomMinAge(a) - roomMinAge(b)),
     [rooms]
   );
+
+  const filteredRooms = useMemo(() => {
+    if (roomTypeFilter === "ALL") return sortedRooms;
+    return sortedRooms.filter((room) => room.roomType === roomTypeFilter);
+  }, [sortedRooms, roomTypeFilter]);
 
   const groupedRooms = useMemo(() => {
     const groups = {
@@ -578,17 +620,17 @@ export default function RoomListPanel({
       unassigned: [],
     };
 
-    for (const room of sortedRooms) {
+    for (const room of filteredRooms) {
       const category = getRoomVisualCategory(room, sexOverrides);
       groups[category].push(room);
     }
 
     return groups;
-  }, [sortedRooms, sexOverrides]);
+  }, [filteredRooms, sexOverrides]);
 
-  const totalOccupants = rooms.reduce((s, r) => s + r.occupantCount, 0);
-  const totalCapacity = rooms.reduce((s, r) => s + r.capacity, 0);
-  const fullCount = rooms.filter((r) => r.occupantCount >= r.capacity).length;
+  const totalOccupants = filteredRooms.reduce((s, r) => s + r.occupantCount, 0);
+  const totalCapacity = filteredRooms.reduce((s, r) => s + r.capacity, 0);
+  const fullCount = filteredRooms.filter((r) => r.occupantCount >= r.capacity).length;
 
   const refYear = TOUR_REFERENCE_DATE.getFullYear();
   const refMonth = TOUR_REFERENCE_DATE.toLocaleString("es", { month: "long" });
@@ -603,7 +645,7 @@ export default function RoomListPanel({
         <div>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Habitaciones</p>
           <p className="text-[10px] text-gray-400 mt-0.5">
-            {rooms.length} hab · {totalOccupants}/{totalCapacity} ocupados · {fullCount} completas
+            {filteredRooms.length} hab · {totalOccupants}/{totalCapacity} ocupados · {fullCount} completas
           </p>
           <p className="text-[10px] text-gray-300 mt-0.5">
             Edades al {refMonth} {refYear} · ordenadas de menor a mayor edad
@@ -630,7 +672,32 @@ export default function RoomListPanel({
 
       {rooms.length > 0 && (
         <>
+          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto">
+            {ROOM_TYPE_FILTERS.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => setRoomTypeFilter(item.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  roomTypeFilter === item.value
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {filteredRooms.length === 0 && (
+            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
+              <p className="text-xs font-semibold text-gray-500">
+                No hay habitaciones para la denominacion seleccionada.
+              </p>
+            </div>
+          )}
+
           <RoomSection
+            sectionKey="men"
             title="Habitaciones de hombres"
             subtitle="solo hombres"
             badge="M"
@@ -648,9 +715,12 @@ export default function RoomListPanel({
             onSetResponsible={onSetResponsible}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
+            collapsed={collapsedSections.men}
+            onToggleCollapse={handleToggleCollapse}
           />
 
           <RoomSection
+            sectionKey="women"
             title="Habitaciones de mujeres"
             subtitle="solo mujeres"
             badge="F"
@@ -668,9 +738,12 @@ export default function RoomListPanel({
             onSetResponsible={onSetResponsible}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
+            collapsed={collapsedSections.women}
+            onToggleCollapse={handleToggleCollapse}
           />
 
           <RoomSection
+            sectionKey="mixed_staff"
             title="Habitaciones mixtas / staff"
             subtitle="mixtas o con staff"
             badge="±"
@@ -688,9 +761,12 @@ export default function RoomListPanel({
             onSetResponsible={onSetResponsible}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
+            collapsed={collapsedSections.mixed_staff}
+            onToggleCollapse={handleToggleCollapse}
           />
 
           <RoomSection
+            sectionKey="unassigned"
             title="Habitaciones vacías / sin clasificar"
             subtitle="vacías o con sexo no definido"
             badge="?"
@@ -708,6 +784,8 @@ export default function RoomListPanel({
             onSetResponsible={onSetResponsible}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
+            collapsed={collapsedSections.unassigned}
+            onToggleCollapse={handleToggleCollapse}
           />
         </>
       )}
