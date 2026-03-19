@@ -1028,6 +1028,8 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   const userRole = userData?.getUser?.role;
   const isAdmin = FORMATION_ADMIN_ROLES.has(userRole);
 
+  const canExport = userRole === "Admin";
+
   const { sections, unmapped, loading: loadingUsers, loadUsers } = useFormationUsers();
   const {
     handleCreate,
@@ -1094,8 +1096,9 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   }, []);
 
   // Excluded user IDs for this formation
-  const [excluded, setExcluded] = useState(() => new Set(existingFormation?.excludedUserIds || []));
-
+  const [excluded, setExcluded] = useState(
+    () => new Set((existingFormation?.excludedUserIds || []).map(String))
+  );
   // Computed slots
   const [slots, setSlots] = useState(existingFormation?.slots || []);
 
@@ -1184,10 +1187,11 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   // ── Exclusions ────────────────────────────────────────────────────────────
 
   const handleToggleExclude = (userId) => {
+    const id = String(userId);
     setExcluded((prev) => {
       const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -1283,6 +1287,18 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     }
   };
 
+  const handleExport = useCallback(() => {
+    if (!canExport) return;
+
+    openFormationPrint({
+      slots,
+      columns,
+      zoneColumns,
+      formName,
+      formType,
+    });
+  }, [canExport, slots, columns, zoneColumns, formName, formType]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   const STEPS = [
@@ -1319,14 +1335,15 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
           </div>
           {step === 4 && (
             <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  openFormationPrint({ slots, columns, zoneColumns, formName, formType })
-                }
-                className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-100"
-              >
-                ↗ Exportar
-              </button>
+              {canExport && (
+                <button
+                  onClick={handleExport}
+                  className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-100"
+                >
+                  ↗ Exportar
+                </button>
+              )}
+
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -1481,7 +1498,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                 />
               </div>
 
-              <div className="border border-slate-100 rounded-xl overflow-hidden">
+              <div className=" overflow-hidden">
                 <FormationGrid
                   slots={slots}
                   columns={columns}

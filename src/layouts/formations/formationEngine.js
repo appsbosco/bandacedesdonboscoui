@@ -1,19 +1,33 @@
 /**
  * formationEngine.js — Pure computation, no React, no side effects.
  *
- * Layout model:
- *   - 5 zones in vertical depth order:
- *       FRENTE_ESPECIAL → BLOQUE_FRENTE → PERCUSION → BLOQUE_ATRAS → FINAL
- *   - SINGLE:  FRENTE_ESPECIAL + BLOQUE_FRENTE + PERCUSION + FINAL
- *   - DOUBLE:  all 5 zones — members of BLOQUE_FRENTE/ATRAS are split per
- *              section: ceil(n/2) to FRENTE, floor(n/2) to ATRAS
- *   - One global `columns` value for every zone.
- *   - Within each zone, sections flow continuously left→right, top→bottom.
- *     If a section doesn't fill a row, the next section continues from the
- *     same row — no mini-grids per section.
- *   - Last row of every zone is padded with empty filler slots.
- *   - Slot key = zone|row|col (section is metadata for color-coding only).
- *   - Section order per zone is fully configurable — not hardcoded.
+ * FIXES vs previous versions:
+ *
+ *  1. buildZones — sección en una sola zona no pierde miembros (bug TUBAS):
+ *     El algoritmo anterior forzaba un split 50/50 frente/atrás para CUALQUIER
+ *     sección que detectara como "de bloque", aunque solo estuviera configurada
+ *     en UNA de las dos zonas. La mitad trasera quedaba en un chunk que nunca
+ *     se consumía → músicos perdidos silenciosamente.
+ *
+ *     Ahora:
+ *       - Se cuenta cuántas veces aparece la sección en BLOQUE_FRENTE (fc) y en
+ *         BLOQUE_ATRAS (bc) según el zoneOrder real del usuario.
+ *       - Si fc=1, bc=0 → todos van al frente, nadie al back.
+ *       - Si fc=1, bc=1 → split 50/50.
+ *       - Si fc=2, bc=1 → 2/3 al frente (en 2 chunks), 1/3 atrás.
+ *       - Cualquier combinación funciona, incluyendo la misma sección 3 veces
+ *         en la misma zona (3 filas).
+ *
+ *  2. applyLocks — ya no descarta músicos:
+ *     La versión anterior filtraba `floating` excluyendo userIds que estuvieran
+ *     en `lockedUserIds`, pero ese set se construía desde los nuevos slots —
+ *     no los viejos — causando que músicos después del N-ésimo lock se perdieran.
+ *     Ahora: floating = todos los miembros no bloqueados en orden; se asignan
+ *     posición a posición sin filtros extra.
+ *
+ *  3. excludedIds — type safety:
+ *     Todos los userId se normalizan a String antes de cualquier comparación de
+ *     Set, para evitar que IDs numéricos del API escapen el filtro de exclusión.
  */
 
 // ── Zone catalog ──────────────────────────────────────────────────────────────
@@ -28,11 +42,6 @@ export const ZONE_LABEL = {
   FINAL: "Final",
 };
 
-/**
- * Which sections can belong to each zone (default pool).
- * The actual per-formation order is stored in zoneOrders and is fully
- * configurable by the user.
- */
 export const ZONE_POOL_SECTIONS = {
   FRENTE_ESPECIAL: ["DANZA", "DRUM_MAJOR"],
   BLOQUE_FRENTE: [
@@ -63,10 +72,6 @@ export const ZONE_POOL_SECTIONS = {
   FINAL: ["COLOR_GUARD"],
 };
 
-/**
- * Default section order for each zone — used when creating a new formation.
- * Users can freely reorder sections within any zone/block.
- */
 export const DEFAULT_ZONE_ORDERS = {
   FRENTE_ESPECIAL: ["DANZA", "DRUM_MAJOR"],
   BLOQUE_FRENTE: [
@@ -101,30 +106,18 @@ const FRONT_SECTION_HINTS = ["DANZA", "DANCE", "DRUM_MAJOR", "MAJOR"];
 const PERCUSSION_SECTION_HINTS = ["PERCUSION", "PERCUSSION", "DRUMLINE", "BATTERY", "MALLETS"];
 const FINAL_SECTION_HINTS = ["COLOR_GUARD", "COLORS", "COLOR", "GUARD", "FLAGS", "BANDERA"];
 
-/**
- * Zones that use their own independent column count instead of the global wind columns.
- * FRENTE_ESPECIAL = Danza, PERCUSION = Percusión + Mallets, FINAL = Color Guard.
- */
 export const INDEPENDENT_COLUMN_ZONES = ["FRENTE_ESPECIAL", "PERCUSION", "FINAL"];
 
-/**
- * Default column counts for the independent zones.
- * Wind blocks (BLOQUE_FRENTE, BLOQUE_ATRAS) always use the global `columns`.
- */
 export const DEFAULT_ZONE_COLUMNS = {
   FRENTE_ESPECIAL: 4,
-  PERCUSION:       6,
-  FINAL:           4,
+  PERCUSION: 6,
+  FINAL: 4,
 };
 
-/**
- * Default row counts for the independent zones.
- * null = auto (rows are calculated from member count).
- */
 export const DEFAULT_ZONE_ROWS = {
   FRENTE_ESPECIAL: null,
-  PERCUSION:       null,
-  FINAL:           null,
+  PERCUSION: null,
+  FINAL: null,
 };
 
 // ── Section catalog ───────────────────────────────────────────────────────────
@@ -135,7 +128,7 @@ export const SECTION_LABEL = {
   TROMBONES: "Trombones",
   FLAUTAS: "Flautas",
   CLARINETES: "Clarinetes",
-  SAXOFONES_ALTO: "Saxofón Alto",
+  SAXOFONES_ALTO: "Saxofón",
   SAXOFON_TENOR: "Saxofón Tenor",
   MELOFONOS: "Melófonos",
   SAXOFON_BARITONO: "Saxofón Barítono",
@@ -151,7 +144,7 @@ function prettifySectionToken(section) {
   return String(section || "")
     .split("_")
     .filter(Boolean)
-    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .map((p) => p.charAt(0) + p.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -165,8 +158,8 @@ function normalizeSectionToken(section) {
 }
 
 function includesSectionHint(section, hints) {
-  const normalized = normalizeSectionToken(section);
-  return hints.some((hint) => normalized.includes(hint));
+  const n = normalizeSectionToken(section);
+  return hints.some((h) => n.includes(h));
 }
 
 export function getSectionLabel(section) {
@@ -181,23 +174,10 @@ export function inferZonesForSection(section, type = "SINGLE") {
 }
 
 export function buildDynamicZonePools({ sections = [], zoneOrders = {}, type = "SINGLE" }) {
-  const knownSections = new Set();
-
-  sections.forEach((group) => {
-    if (group?.section) knownSections.add(group.section);
-  });
-
-  Object.values(zoneOrders || {}).forEach((order) => {
-    (order || []).forEach((section) => {
-      if (section) knownSections.add(section);
-    });
-  });
-
-  Object.values(DEFAULT_ZONE_ORDERS).forEach((order) => {
-    (order || []).forEach((section) => {
-      if (section) knownSections.add(section);
-    });
-  });
+  const known = new Set();
+  sections.forEach((g) => g?.section && known.add(g.section));
+  Object.values(zoneOrders || {}).forEach((o) => (o || []).forEach((s) => s && known.add(s)));
+  Object.values(DEFAULT_ZONE_ORDERS).forEach((o) => o.forEach((s) => known.add(s)));
 
   const pools = {
     FRENTE_ESPECIAL: [],
@@ -206,67 +186,321 @@ export function buildDynamicZonePools({ sections = [], zoneOrders = {}, type = "
     BLOQUE_ATRAS: [],
     FINAL: [],
   };
-
-  [...knownSections].forEach((section) => {
-    inferZonesForSection(section, type).forEach((zone) => {
-      if (!pools[zone].includes(section)) pools[zone].push(section);
+  [...known].forEach((sec) => {
+    inferZonesForSection(sec, type).forEach((zone) => {
+      if (!pools[zone].includes(sec)) pools[zone].push(sec);
     });
   });
-
-  Object.entries(DEFAULT_ZONE_ORDERS).forEach(([zone, defaults]) => {
-    defaults.forEach((section) => {
-      if (!pools[zone].includes(section)) pools[zone].push(section);
+  Object.entries(DEFAULT_ZONE_ORDERS).forEach(([zone, defs]) => {
+    defs.forEach((sec) => {
+      if (!pools[zone].includes(sec)) pools[zone].push(sec);
     });
   });
-
   return pools;
 }
 
 export function mergeZoneOrdersWithPools(zoneOrders = {}, zonePools = {}) {
   const next = {};
-
   Object.keys({ ...DEFAULT_ZONE_ORDERS, ...zonePools, ...zoneOrders }).forEach((zone) => {
     const current = zoneOrders[zone] || [];
-    const pool = zonePools[zone] || [];
     const merged = [...current];
-
-    pool.forEach((section) => {
-      if (section && !current.includes(section)) merged.push(section);
+    (zonePools[zone] || []).forEach((s) => {
+      if (s && !current.includes(s)) merged.push(s);
     });
-
     next[zone] = merged;
   });
-
   return next;
 }
 
+// ── Internal helpers ──────────────────────────────────────────────────────────
+
+/** Coerce userId to string — prevents numeric vs string Set mismatches. */
+function uid(id) {
+  return id == null ? null : String(id);
+}
+
+/**
+ * Split `members` into `occurrences` even chunks.
+ * First `remainder` chunks get ceil size, the rest get floor.
+ */
 function splitMembersEvenly(members, occurrences) {
   if (occurrences <= 1) return [members];
-
   const result = [];
+  const base = Math.floor(members.length / occurrences);
+  const rem = members.length % occurrences;
   let start = 0;
-  const baseSize = Math.floor(members.length / occurrences);
-  const remainder = members.length % occurrences;
-
-  for (let index = 0; index < occurrences; index++) {
-    const extra = index < remainder ? 1 : 0;
-    const end = start + baseSize + extra;
+  for (let i = 0; i < occurrences; i++) {
+    const end = start + base + (i < rem ? 1 : 0);
     result.push(members.slice(start, end));
     start = end;
+  }
+  return result;
+}
+
+// ── Grid fill ─────────────────────────────────────────────────────────────────
+
+function fillGrid(zone, members, columns, explicitRows = null) {
+  if (!members.length && !explicitRows) return [];
+  const autoRows = members.length ? Math.ceil(members.length / columns) : 1;
+  const rows = explicitRows != null ? Math.max(1, explicitRows) : autoRows;
+  const totalCells = rows * columns;
+  const slots = [];
+
+  for (let pos = 0; pos < totalCells; pos++) {
+    const row = Math.floor(pos / columns);
+    const col = pos % columns;
+    if (pos < members.length) {
+      const m = members[pos];
+      slots.push({
+        zone,
+        row,
+        col,
+        section: m.section || null,
+        userId: uid(m.userId) || null,
+        displayName: m.name || null,
+        avatar: m.avatar || null,
+        locked: false,
+      });
+    } else {
+      slots.push({
+        zone,
+        row,
+        col,
+        section: null,
+        userId: null,
+        displayName: null,
+        avatar: null,
+        locked: false,
+      });
+    }
+  }
+  return slots;
+}
+
+// ── buildZones ────────────────────────────────────────────────────────────────
+
+/**
+ * Build the ordered zone data array from React state.
+ *
+ * Member distribution for DOUBLE type:
+ *   For each section, count how many times it appears in BLOQUE_FRENTE (fc)
+ *   and BLOQUE_ATRAS (bc) in the user's actual zoneOrders.
+ *
+ *   Members are distributed proportionally:
+ *     frontTotal = round(totalMembers * fc / (fc + bc))
+ *     backTotal  = totalMembers - frontTotal
+ *
+ *   Then frontTotal is split into fc equal chunks (one per BLOQUE_FRENTE occurrence),
+ *   and backTotal into bc chunks (one per BLOQUE_ATRAS occurrence).
+ *
+ *   Examples:
+ *     TUBAS: fc=1, bc=0  → all 10 go to front in 1 chunk. Back gets nothing.
+ *     TUBAS: fc=1, bc=1  → 5 front, 5 back.
+ *     TUBAS: fc=2, bc=1  → 7 front (in 2 chunks of 4/3), 3 back (1 chunk).
+ *     TUBAS: fc=2, bc=0  → all 10 go to front in 2 chunks of 5 each.
+ */
+export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
+  const activeZones =
+    type === "DOUBLE"
+      ? ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "BLOQUE_ATRAS", "FINAL"]
+      : ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "FINAL"];
+
+  // Normalise to string Set — handles numeric IDs from GraphQL
+  const excludedSet = new Set([...(excludedIds || [])].map(uid));
+
+  // All sections referenced in this formation's zone orders
+  const seenSections = new Set(Object.values(zoneOrders).flat().filter(Boolean));
+
+  // ── Pre-build member chunks per section ────────────────────────────────────
+  // Key format:
+  //   Block sections (DOUBLE):  "SEC__BLOQUE_FRENTE" / "SEC__BLOQUE_ATRAS"
+  //   Everything else:          "SEC"
+  const sectionChunks = {};
+  const sectionChunkIndex = {};
+
+  for (const sec of seenSections) {
+    const grp = sectionGroups.find((g) => g.section === sec);
+    const eligible = (grp?.members || [])
+      .filter((m) => !excludedSet.has(uid(m.userId)))
+      .map((m) => ({ ...m, userId: uid(m.userId), section: sec }));
+
+    if (type === "DOUBLE") {
+      const fc = (zoneOrders["BLOQUE_FRENTE"] || []).filter((s) => s === sec).length;
+      const bc = (zoneOrders["BLOQUE_ATRAS"] || []).filter((s) => s === sec).length;
+
+      if (fc + bc > 0) {
+        // Distribute proportionally to actual occurrence ratio
+        const total = eligible.length;
+        const frontTotal = fc > 0 ? Math.round((total * fc) / (fc + bc)) : 0;
+        const backTotal = total - frontTotal;
+
+        if (fc > 0) {
+          sectionChunks[`${sec}__BLOQUE_FRENTE`] = splitMembersEvenly(
+            eligible.slice(0, frontTotal),
+            fc
+          );
+          sectionChunkIndex[`${sec}__BLOQUE_FRENTE`] = 0;
+        }
+        if (bc > 0) {
+          sectionChunks[`${sec}__BLOQUE_ATRAS`] = splitMembersEvenly(
+            eligible.slice(frontTotal),
+            bc
+          );
+          sectionChunkIndex[`${sec}__BLOQUE_ATRAS`] = 0;
+        }
+        continue; // handled as block section
+      }
+    }
+
+    // Non-block section or SINGLE type:
+    // chunk by total occurrences across ALL zones so repeated entries work
+    const totalOcc =
+      Object.values(zoneOrders)
+        .flat()
+        .filter((s) => s === sec).length || 1;
+    sectionChunks[sec] = splitMembersEvenly(eligible, totalOcc);
+    sectionChunkIndex[sec] = 0;
+  }
+
+  // ── Assemble per-zone member arrays ────────────────────────────────────────
+  const result = [];
+  for (const zone of activeZones) {
+    const isBlock = zone === "BLOQUE_FRENTE" || zone === "BLOQUE_ATRAS";
+
+    const members = (zoneOrders[zone] || []).flatMap((sec) => {
+      const blockKey = `${sec}__${zone}`;
+      const key = type === "DOUBLE" && isBlock && sectionChunks[blockKey] ? blockKey : sec;
+
+      const chunks = sectionChunks[key];
+      if (!chunks) return [];
+
+      const idx = sectionChunkIndex[key] ?? 0;
+      const chunk = chunks[idx] || [];
+      sectionChunkIndex[key] = idx + 1;
+      return chunk;
+    });
+
+    if (members.length > 0) result.push({ zone, members });
   }
 
   return result;
 }
 
+// ── computeFormation ──────────────────────────────────────────────────────────
+
+export function computeFormation({
+  zoneData,
+  columns,
+  zoneColumns = {},
+  zoneRows = {},
+  existingSlots = [],
+}) {
+  const lockedByKey = {};
+  for (const s of existingSlots) {
+    if (s.locked) lockedByKey[slotKey(s)] = s;
+  }
+
+  const result = [];
+  for (const { zone, members } of zoneData) {
+    const effectiveCols = zoneColumns[zone] != null ? zoneColumns[zone] : columns;
+    const effectiveRows = zoneRows[zone] != null ? zoneRows[zone] : null;
+    const grid = fillGrid(zone, members, effectiveCols, effectiveRows);
+    result.push(...applyLocks(grid, lockedByKey));
+  }
+  return result;
+}
+
 /**
- * Rich color tokens per section.
- *   cell  — Tailwind classes for the grid cell background + border
- *   text  — Tailwind class for the name text inside the cell
- *   badge — Tailwind classes for the section legend badge
- *   dark  — true when the cell bg is dark (text must be light)
+ * Merge locked positions from existing save into freshly computed slots.
  *
- * Palette spans the full color wheel so every section is clearly distinct.
+ * Algorithm:
+ *  1. Walk newSlots in order; collect all non-locked members into `floating[]`.
+ *  2. Walk newSlots again:
+ *     - Locked key  → restore exact old locked slot.
+ *     - Member slot → assign next floating member.
+ *     - Empty slot  → leave empty.
  */
+function applyLocks(newSlots, lockedByKey) {
+  const floating = newSlots
+    .filter((s) => !lockedByKey[slotKey(s)] && s.userId !== null)
+    .map((s) => ({
+      userId: s.userId,
+      name: s.displayName,
+      avatar: s.avatar || null,
+      section: s.section,
+    }));
+
+  let fi = 0;
+  return newSlots.map((slot) => {
+    const key = slotKey(slot);
+    const locked = lockedByKey[key];
+
+    if (locked) return { ...locked };
+
+    if (slot.userId !== null) {
+      const m = floating[fi++];
+      if (!m)
+        return {
+          ...slot,
+          section: null,
+          userId: null,
+          displayName: null,
+          avatar: null,
+          locked: false,
+        };
+      return {
+        ...slot,
+        section: m.section || null,
+        userId: m.userId || null,
+        displayName: m.name || null,
+        avatar: m.avatar || null,
+        locked: false,
+      };
+    }
+
+    return { ...slot }; // empty filler
+  });
+}
+
+// ── Slot key ──────────────────────────────────────────────────────────────────
+
+export function slotKey(slot) {
+  return `${slot.zone}|${slot.row}|${slot.col}`;
+}
+
+// ── Manual editing helpers ────────────────────────────────────────────────────
+
+export function swapSlots(slots, keyA, keyB) {
+  const idxA = slots.findIndex((s) => slotKey(s) === keyA);
+  const idxB = slots.findIndex((s) => slotKey(s) === keyB);
+  if (idxA === -1 || idxB === -1) return slots;
+  const a = slots[idxA],
+    b = slots[idxB];
+  if (a.locked || b.locked) return slots;
+  const next = slots.slice();
+  next[idxA] = {
+    ...a,
+    section: b.section,
+    userId: b.userId,
+    displayName: b.displayName,
+    avatar: b.avatar || null,
+  };
+  next[idxB] = {
+    ...b,
+    section: a.section,
+    userId: a.userId,
+    displayName: a.displayName,
+    avatar: a.avatar || null,
+  };
+  return next;
+}
+
+export function toggleLock(slots, key) {
+  return slots.map((s) => (slotKey(s) === key ? { ...s, locked: !s.locked } : s));
+}
+
+// ── Section colors ────────────────────────────────────────────────────────────
+
 export const SECTION_COLORS = {
   DRUM_MAJOR: {
     cell: "bg-indigo-800   border-indigo-900",
@@ -360,242 +594,6 @@ export const SECTION_COLORS = {
   },
 };
 
-/** Legacy flat map (bg+border only) kept for any external consumers. */
 export const SECTION_COLOR_CLASS = Object.fromEntries(
   Object.entries(SECTION_COLORS).map(([k, v]) => [k, v.cell])
 );
-
-// ── Core helpers ──────────────────────────────────────────────────────────────
-
-/** Unique key for a slot position. */
-export function slotKey(slot) {
-  return `${slot.zone}|${slot.row}|${slot.col}`;
-}
-
-// ── Grid fill algorithm ───────────────────────────────────────────────────────
-
-/**
- * Fill a grid of `columns` columns with `members` (in order),
- * padding the last row with empty filler slots.
- * If `explicitRows` is provided, the grid has exactly that many rows regardless
- * of member count (members that exceed the grid are silently dropped; extra
- * cells beyond member count are empty fillers).
- * Returns a flat slot array for this zone.
- */
-function fillGrid(zone, members, columns, explicitRows = null) {
-  const slots = [];
-  if (!members.length && !explicitRows) return slots;
-
-  const autoRows = members.length ? Math.ceil(members.length / columns) : 1;
-  const rows = explicitRows != null ? Math.max(1, explicitRows) : autoRows;
-  const totalCells = rows * columns; // may exceed memberCount (last-row padding)
-
-  for (let pos = 0; pos < totalCells; pos++) {
-    const row = Math.floor(pos / columns);
-    const col = pos % columns;
-
-    if (pos < members.length) {
-      const m = members[pos];
-      slots.push({
-        zone,
-        row,
-        col,
-        section: m.section || null,
-        userId: m.userId || null,
-        displayName: m.name || null,
-        avatar: m.avatar || null,
-        locked: false,
-      });
-    } else {
-      // Empty filler — completes the last row
-      slots.push({
-        zone,
-        row,
-        col,
-        section: null,
-        userId: null,
-        displayName: null,
-        avatar: null,
-        locked: false,
-      });
-    }
-  }
-
-  return slots;
-}
-
-// ── buildZones ────────────────────────────────────────────────────────────────
-
-/**
- * Build the ordered zone data array from React state — ready for computeFormation.
- *
- * For DOUBLE type, members of BLOQUE_FRENTE and BLOQUE_ATRAS are split per
- * section: ceil(n/2) go to FRENTE, floor(n/2) go to ATRAS.
- *
- * @param {Object} params
- * @param {Object} params.zoneOrders    { [zone]: string[] } — section order per zone
- * @param {Array}  params.sectionGroups [{ section, members: [{userId,name,instrument}] }]
- * @param {Set}    params.excludedIds   Set of user IDs to exclude client-side
- * @param {String} params.type          "SINGLE" | "DOUBLE"
- * @returns {Array} [{ zone, members }] in display order
- */
-export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
-  const activeZones =
-    type === "DOUBLE"
-      ? ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "BLOQUE_ATRAS", "FINAL"]
-      : ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "FINAL"];
-
-  const result = [];
-
-  for (const zone of activeZones) {
-    const sectionOrder = zoneOrders[zone] || [];
-    const sectionOccurrences = sectionOrder.reduce((acc, sec) => {
-      acc[sec] = (acc[sec] || 0) + 1;
-      return acc;
-    }, {});
-    const sectionChunks = {};
-    const sectionChunkIndex = {};
-
-    const members = sectionOrder.flatMap((sec) => {
-      const grp = sectionGroups.find((g) => g.section === sec);
-      let eligible = (grp?.members || [])
-        .filter((m) => !excludedIds.has(m.userId))
-        .map((m) => ({ ...m, section: sec }));
-
-      // Split members between front and back blocks for DOUBLE
-      if (type === "DOUBLE" && (zone === "BLOQUE_FRENTE" || zone === "BLOQUE_ATRAS")) {
-        const half = Math.ceil(eligible.length / 2);
-        eligible = zone === "BLOQUE_FRENTE" ? eligible.slice(0, half) : eligible.slice(half);
-      }
-
-      if (!sectionChunks[sec]) {
-        sectionChunks[sec] = splitMembersEvenly(eligible, sectionOccurrences[sec] || 1);
-        sectionChunkIndex[sec] = 0;
-      }
-
-      const chunk = sectionChunks[sec][sectionChunkIndex[sec]] || [];
-      sectionChunkIndex[sec] += 1;
-      return chunk;
-    });
-
-    if (members.length > 0) result.push({ zone, members });
-  }
-
-  return result;
-}
-
-// ── computeFormation ──────────────────────────────────────────────────────────
-
-/**
- * Compute the full flat slot list for a formation.
- *
- * @param {Object} params
- * @param {Array}  params.zoneData      [{zone, members:[{userId,name,section}]}]
- *   Zones in display order, pre-built by buildZones.
- * @param {Number} params.columns       Global column count.
- * @param {Array}  params.existingSlots Previously saved slots (for lock preservation).
- *
- * @returns {Array} Flat slot list.
- */
-export function computeFormation({ zoneData, columns, zoneColumns = {}, zoneRows = {}, existingSlots = [] }) {
-  // Build lookup of locked positions from existing slots
-  const lockedByKey = {};
-  const lockedUserIds = new Set();
-  for (const s of existingSlots) {
-    if (s.locked) {
-      lockedByKey[slotKey(s)] = s;
-      if (s.userId) lockedUserIds.add(String(s.userId));
-    }
-  }
-
-  const result = [];
-  for (const { zone, members } of zoneData) {
-    const effectiveCols = (zoneColumns[zone] != null) ? zoneColumns[zone] : columns;
-    const effectiveRows = (zoneRows[zone] != null) ? zoneRows[zone] : null;
-    const grid = fillGrid(zone, members, effectiveCols, effectiveRows);
-    result.push(...applyLocks(grid, lockedByKey, lockedUserIds));
-  }
-
-  return result;
-}
-
-/**
- * Merge locked positions from the previous save into freshly computed slots.
- */
-function applyLocks(newSlots, lockedByKey, lockedUserIds) {
-  // Members that were NOT locked — they fill the free positions
-  const floating = newSlots
-    .filter((s) => {
-      const key = slotKey(s);
-      return !lockedByKey[key] && s.userId && !lockedUserIds.has(String(s.userId));
-    })
-    .map((s) => ({
-      userId: s.userId,
-      name: s.displayName,
-      avatar: s.avatar || null,
-      section: s.section,
-    }));
-
-  let floatIdx = 0;
-  return newSlots.map((slot) => {
-    const key = slotKey(slot);
-    const locked = lockedByKey[key];
-
-    if (locked) {
-      return { ...locked };
-    } else if (slot.userId !== null) {
-      const member = floating[floatIdx++];
-      return {
-        ...slot,
-        section: member?.section || null,
-        userId: member?.userId || null,
-        displayName: member?.name || null,
-        avatar: member?.avatar || null,
-        locked: false,
-      };
-    } else {
-      return { ...slot }; // empty filler
-    }
-  });
-}
-
-// ── Manual editing helpers ────────────────────────────────────────────────────
-
-/**
- * Swap the user assignments of two slots (by their keys).
- * Returns new slots array (immutable). Locked slots cannot be moved.
- */
-export function swapSlots(slots, keyA, keyB) {
-  const idxA = slots.findIndex((s) => slotKey(s) === keyA);
-  const idxB = slots.findIndex((s) => slotKey(s) === keyB);
-  if (idxA === -1 || idxB === -1) return slots;
-
-  const slotA = slots[idxA];
-  const slotB = slots[idxB];
-  if (slotA.locked || slotB.locked) return slots;
-
-  const next = slots.slice();
-  next[idxA] = {
-    ...slotA,
-    section: slotB.section,
-    userId: slotB.userId,
-    displayName: slotB.displayName,
-    avatar: slotB.avatar || null,
-  };
-  next[idxB] = {
-    ...slotB,
-    section: slotA.section,
-    userId: slotA.userId,
-    displayName: slotA.displayName,
-    avatar: slotA.avatar || null,
-  };
-  return next;
-}
-
-/**
- * Toggle the locked state of a single slot.
- * Returns new slots array (immutable).
- */
-export function toggleLock(slots, key) {
-  return slots.map((s) => (slotKey(s) === key ? { ...s, locked: !s.locked } : s));
-}
