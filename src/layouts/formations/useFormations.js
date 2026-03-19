@@ -152,6 +152,11 @@ export function useFormationUsers() {
 export function useFormationBuilder() {
   const [toast, setToast] = useState(null);
   const showToast = (message, type = "success") => setToast({ message, type });
+  const isConflictError = (error) =>
+    error?.graphQLErrors?.some((graphQLError) => graphQLError?.extensions?.code === "CONFLICT") ||
+    error?.networkError?.result?.errors?.some(
+      (graphQLError) => graphQLError?.extensions?.code === "CONFLICT"
+    );
 
   const [createFormation, { loading: creating }] = useMutation(CREATE_FORMATION, {
     onError: (e) => showToast(e.message, "error"),
@@ -173,6 +178,7 @@ export function useFormationBuilder() {
         const { data } = await updateFormation({ variables: { id, input } });
         return data?.updateFormation;
       } catch (e) {
+        if (isConflictError(e)) throw e;
         showToast(e.message || "No se pudo actualizar la formación", "error");
         return null;
       }

@@ -83,6 +83,35 @@ function StepBadge({ n, active, done }) {
   );
 }
 
+function ConflictModal({ open, onReload }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Conflicto de edición</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Otro usuario guardó cambios mientras usted estaba editando. Debe recargar la
+              formación para continuar y evitar sobrescribir trabajo ajeno.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onReload}
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Recargar formación
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Paso 2 helpers ────────────────────────────────────────────────────────────
 
 /**
@@ -1022,6 +1051,11 @@ function StepExclude({ sections, excluded, onToggle, onNext }) {
 export default function FormationBuilderPage({ formation: existingFormation }) {
   const navigate = useNavigate();
   const isEdit = !!existingFormation;
+  const isConflictError = (error) =>
+    error?.graphQLErrors?.some((graphQLError) => graphQLError?.extensions?.code === "CONFLICT") ||
+    error?.networkError?.result?.errors?.some(
+      (graphQLError) => graphQLError?.extensions?.code === "CONFLICT"
+    );
 
   // Role-based access: only admins can navigate between steps
   const { data: userData } = useQuery(GET_USERS_BY_ID);
@@ -1053,6 +1087,8 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   const [formType, setFormType] = useState(existingFormation?.type || "SINGLE");
   const [columns, setColumns] = useState(existingFormation?.columns ?? 8);
   const [formNotes, setFormNotes] = useState(existingFormation?.notes || "");
+  const [latestUpdatedAt, setLatestUpdatedAt] = useState(existingFormation?.updatedAt ?? null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   // Section order per zone — fully configurable
   const [zoneOrders, setZoneOrders] = useState(() => {
@@ -1216,6 +1252,61 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     setStep(4);
   }, [zoneOrders, sections, excluded, formType, columns, zoneColumns, zoneRows, slots]);
 
+  const buildZoneMemberCounts = useCallback(() => {
+    const countMap = {};
+    for (const s of slots) {
+      if (s.userId) countMap[s.zone] = (countMap[s.zone] || 0) + 1;
+    }
+    return Object.entries(countMap).map(([zone, count]) => ({ zone, count }));
+  }, [slots]);
+
+  const buildZoneOrdersInput = useCallback(
+    () =>
+      Object.entries(zoneOrders).map(([zone, sectionOrder]) => ({
+        zone,
+        sectionOrder,
+      })),
+    [zoneOrders]
+  );
+
+  const buildZoneColumnsInput = useCallback(
+    () =>
+      Object.entries(zoneColumns).map(([zone, cols]) => ({
+        zone,
+        columns: cols,
+        ...(zoneRows[zone] != null ? { rows: zoneRows[zone] } : {}),
+      })),
+    [zoneColumns, zoneRows]
+  );
+
+  const buildSlotInput = useCallback(
+    () =>
+      slots.map((s) => ({
+        zone: s.zone,
+        row: s.row,
+        col: s.col,
+        section: s.section || null,
+        userId: s.userId || null,
+        displayName: s.displayName || null,
+        avatar: s.avatar || null,
+        locked: s.locked ?? false,
+      })),
+    [slots]
+  );
+
+  const saveExistingFormation = useCallback(
+    async (input) => {
+      const updated = await handleUpdate(existingFormation.id, input);
+      if (updated) {
+        setLatestUpdatedAt(updated.updatedAt ?? null);
+        setShowConflictModal(false);
+        setSaveToast({ message: "Formación actualizada", type: "success" });
+      }
+      return updated;
+    },
+    [existingFormation?.id, handleUpdate, setSaveToast]
+  );
+
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
@@ -1223,49 +1314,25 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       setSaveToast({ message: "Ingresá un nombre", type: "error" });
       return;
     }
-
-    // Zone member counts snapshot (real members only, no empty fillers)
-    const countMap = {};
-    for (const s of slots) {
-      if (s.userId) countMap[s.zone] = (countMap[s.zone] || 0) + 1;
-    }
-    const zoneMemberCounts = Object.entries(countMap).map(([zone, count]) => ({ zone, count }));
-
-    const zoneOrdersInput = Object.entries(zoneOrders).map(([zone, sectionOrder]) => ({
-      zone,
-      sectionOrder,
-    }));
-
-    const zoneColumnsInput = Object.entries(zoneColumns).map(([zone, cols]) => ({
-      zone,
-      columns: cols,
-      ...(zoneRows[zone] != null ? { rows: zoneRows[zone] } : {}),
-    }));
-
-    const slotInput = slots.map((s) => ({
-      zone: s.zone,
-      row: s.row,
-      col: s.col,
-      section: s.section || null,
-      userId: s.userId || null,
-      displayName: s.displayName || null,
-      avatar: s.avatar || null,
-      locked: s.locked ?? false,
-    }));
+    const zoneMemberCounts = buildZoneMemberCounts();
+    const zoneOrdersInput = buildZoneOrdersInput();
+    const zoneColumnsInput = buildZoneColumnsInput();
+    const slotInput = buildSlotInput();
 
     try {
       if (isEdit) {
-        const updated = await handleUpdate(existingFormation.id, {
+        const updateInput = {
           name: formName.trim(),
           notes: formNotes.trim() || null,
           columns,
+          expectedUpdatedAt: latestUpdatedAt ?? null,
           excludedUserIds: [...excluded],
           zoneOrders: zoneOrdersInput,
           zoneColumns: zoneColumnsInput,
           slots: slotInput,
           zoneMemberCounts,
-        });
-        if (updated) setSaveToast({ message: "Formación actualizada", type: "success" });
+        };
+        await saveExistingFormation(updateInput);
       } else {
         const created = await handleCreate({
           name: formName.trim(),
@@ -1282,8 +1349,10 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
         });
         if (created?.id) navigate("/formations");
       }
-    } catch {
-      /* errors shown via toast from hook */
+    } catch (e) {
+      if (isConflictError(e) && isEdit) {
+        setShowConflictModal(true);
+      }
     }
   };
 
@@ -1312,6 +1381,10 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     <DashboardLayout>
       <DashboardNavbar />
       <div className="space-y-5 pb-16">
+        <ConflictModal
+          open={showConflictModal}
+          onReload={() => window.location.reload()}
+        />
         {saveToast && (
           <Toast
             message={saveToast.message}
