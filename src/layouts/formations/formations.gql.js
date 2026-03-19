@@ -40,6 +40,7 @@ export const FORMATION_DETAIL = gql`
         section
         userId
         displayName
+        avatar
         locked
       }
       zoneMemberCounts { zone count }
@@ -100,9 +101,9 @@ export const FORMATION_USERS_BY_SECTION = gql`
       sections {
         section
         count
-        members { userId name instrument }
+        members { userId name instrument avatar }
       }
-      unmapped { userId name instrument }
+      unmapped { userId name instrument avatar }
     }
   }
 `;

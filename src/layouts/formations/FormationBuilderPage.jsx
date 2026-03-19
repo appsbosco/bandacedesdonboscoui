@@ -8,7 +8,7 @@
  * Paso 2 — Orden por zona
  *   Configura el orden de secciones en cada zona/bloque.
  *   Muestra conteos de músicos en tiempo real.
- *   Secciones reordenables con botones ↑↓.
+ *   Secciones reordenables con drag & drop dentro y entre zonas.
  *
  * Paso 3 — Excluir
  *   Checkbox por músico para quitarlo de esta formación concreta.
@@ -23,19 +23,19 @@
  *   - DOUBLE: miembros de BLOQUE_FRENTE/ATRAS se dividen por sección
  */
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@apollo/client";
 import FormationGrid from "./FormationGrid.jsx";
 import { useFormationUsers, useFormationBuilder, useFormationTemplates } from "./useFormations.js";
 import {
-  ZONE_LABEL,
-  ZONE_POOL_SECTIONS,
   DEFAULT_ZONE_ORDERS,
   DEFAULT_ZONE_COLUMNS,
   DEFAULT_ZONE_ROWS,
   INDEPENDENT_COLUMN_ZONES,
-  SECTION_LABEL,
+  getSectionLabel,
+  buildDynamicZonePools,
+  mergeZoneOrdersWithPools,
   buildZones,
   computeFormation,
 } from "./formationEngine.js";
@@ -83,14 +83,79 @@ function StepBadge({ n, active, done }) {
   );
 }
 
+// ── Paso 2 helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Sections that belong only in the PERCUSION zone.
+ * Keys must match exactly what formationEngine.js uses in ZONE_POOL_SECTIONS.
+ */
+const PERCUSSION_SECTIONS = new Set([
+  "MALLETS",
+  "PERCUSION", // engine key (sin H)
+  "PERCUSSION", // alias por si el backend manda con H
+  "DRUMLINE",
+  "BATTERY",
+  "TENORS",
+  "BASSES",
+  "SNARES",
+  "CYMBALS",
+  "PIT",
+  "FRONT_ENSEMBLE",
+]);
+
+function isPercussion(sec) {
+  return PERCUSSION_SECTIONS.has(sec);
+}
+
+/**
+ * For each zone, compute how many active members each section contributes.
+ * If a section appears N times across all zones, its members are split equally.
+ */
+function buildMemberCounts(zoneOrders, sections, excluded) {
+  const safeZoneOrders = zoneOrders ?? {};
+  const safeSections = sections ?? [];
+  const safeExcluded = excluded ?? new Set();
+
+  // Count total appearances of each section across ALL zones
+  const globalAppearances = {};
+  for (const order of Object.values(safeZoneOrders)) {
+    for (const sec of order) {
+      globalAppearances[sec] = (globalAppearances[sec] || 0) + 1;
+    }
+  }
+
+  // Active member count per section
+  const activeCounts = {};
+  for (const grp of safeSections) {
+    activeCounts[grp.section] = grp.members.filter((m) => !safeExcluded.has(m.userId)).length;
+  }
+
+  // Per-zone, per-section counts
+  const result = {};
+  for (const [zone, order] of Object.entries(safeZoneOrders)) {
+    const zoneAppearances = {};
+    for (const sec of order) {
+      zoneAppearances[sec] = (zoneAppearances[sec] || 0) + 1;
+    }
+    result[zone] = {};
+    for (const [sec, localCount] of Object.entries(zoneAppearances)) {
+      const total = activeCounts[sec] || 0;
+      const global = globalAppearances[sec] || 1;
+      result[zone][sec] = Math.round((total * localCount) / global);
+    }
+  }
+  return result;
+}
+
 // ── SectionOrderEditor ────────────────────────────────────────────────────────
 
 /**
- * Renders a sortable list of sections for one zone.
- * - ↑↓ buttons to reorder enabled sections
+ * Renders a drag-and-drop sortable list of sections for one zone.
+ * - Drag handle to reorder within zone
  * - ✕ to remove from this zone's order
- * - "+ Section" chips to re-add
- * - fixed=true: informational only (PERCUSION, FINAL)
+ * - "+ Section" chips to add (from compatible pool)
+ * - Accepts cross-zone drops if section is compatible
+ * - Pool semi-flexible: percussion only in PERCUSION zone, winds/guards elsewhere
  */
 function SectionOrderEditor({
   zone,
@@ -101,14 +166,60 @@ function SectionOrderEditor({
   excluded,
   poolSections,
   fixed = false,
+  // Drag & drop cross-zone
+  draggingInfo,
+  onDragStart,
+  onDragEnd,
+  onCrossZoneDrop,
 }) {
+  const safeExcluded = excluded ?? new Set();
+  const listRef = useRef(null);
+  const [isOver, setIsOver] = useState(false);
+  const [overIndex, setOverIndex] = useState(null);
+
+  const isPercZone = zone === "PERCUSION";
+
+  const canAccept = useCallback(
+    (sec) => (isPercZone ? isPercussion(sec) : !isPercussion(sec)),
+    [isPercZone]
+  );
+
+  const isDraggingCompatible = draggingInfo
+    ? canAccept(draggingInfo.section) && draggingInfo.fromZone !== zone
+    : false;
+
   const getCount = (sec) => {
-    const grp = sections.find((g) => g.section === sec);
+    const grp = (sections ?? []).find((g) => g.section === sec);
     if (!grp) return 0;
-    return grp.members.filter((m) => !excluded.has(m.userId)).length;
+    return grp.members.filter((m) => !safeExcluded.has(m.userId)).length;
   };
 
-  const total = order.reduce((s, sec) => s + getCount(sec), 0);
+  // Build occurrence maps for distributed count display
+  const occurrenceMap = order.reduce((acc, sec) => {
+    acc[sec] = (acc[sec] || 0) + 1;
+    return acc;
+  }, {});
+
+  const getDistributedCount = (sec) => {
+    const totalMembers = getCount(sec);
+    const occurrences = occurrenceMap[sec] || 1;
+    return Math.ceil(totalMembers / occurrences);
+  };
+
+  const total = Object.keys(occurrenceMap).reduce((sum, sec) => sum + getCount(sec), 0);
+
+  // Per-chip occurrence index (for "(1/2)" labels when section appears multiple times)
+  const totalOccurrencesMap = {};
+  for (const sec of order) {
+    totalOccurrencesMap[sec] = (totalOccurrencesMap[sec] || 0) + 1;
+  }
+  const seenCount = {};
+  const chipOccurrences = order.map((sec) => {
+    seenCount[sec] = (seenCount[sec] || 0) + 1;
+    return { occurrenceIdx: seenCount[sec], totalOccurrences: totalOccurrencesMap[sec] };
+  });
+
+  // ── Reorder within zone ───────────────────────────────────────────────────
 
   const moveUp = (idx) => {
     if (idx <= 0) return;
@@ -124,17 +235,97 @@ function SectionOrderEditor({
     onChangeOrder(zone, next);
   };
 
-  const remove = (sec) =>
+  const remove = (idx) =>
     onChangeOrder(
       zone,
-      order.filter((s) => s !== sec)
+      order.filter((_, index) => index !== idx)
     );
   const add = (sec) => onChangeOrder(zone, [...order, sec]);
 
-  const unselected = poolSections.filter((s) => !order.includes(s));
+  // ── Drag handlers ─────────────────────────────────────────────────────────
+
+  const handleRowDragStart = (e, idx) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData(
+      "application/x-section",
+      JSON.stringify({ section: order[idx], fromZone: zone, fromIndex: idx })
+    );
+    onDragStart?.({ section: order[idx], fromZone: zone, fromIndex: idx });
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    if (!draggingInfo) return;
+
+    if (draggingInfo.fromZone === zone) {
+      // Reorder within zone
+      e.dataTransfer.dropEffect = "move";
+      setIsOver(true);
+      const items = listRef.current?.querySelectorAll("[data-chip-index]");
+      if (items) {
+        let nearest = order.length;
+        for (const item of items) {
+          const rect = item.getBoundingClientRect();
+          if (e.clientY < rect.top + rect.height / 2) {
+            nearest = parseInt(item.dataset.chipIndex, 10);
+            break;
+          }
+        }
+        setOverIndex(nearest);
+      }
+    } else if (canAccept(draggingInfo.section)) {
+      e.dataTransfer.dropEffect = "move";
+      setIsOver(true);
+    } else {
+      e.dataTransfer.dropEffect = "none";
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsOver(false);
+      setOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsOver(false);
+    setOverIndex(null);
+    const raw = e.dataTransfer.getData("application/x-section");
+    if (!raw) return;
+    const { section, fromZone, fromIndex } = JSON.parse(raw);
+
+    if (fromZone === zone) {
+      // Reorder within zone
+      if (fromIndex === overIndex || fromIndex === overIndex - 1) return;
+      const arr = [...order];
+      const [item] = arr.splice(fromIndex, 1);
+      const insertAt =
+        overIndex != null ? (overIndex > fromIndex ? overIndex - 1 : overIndex) : arr.length;
+      arr.splice(insertAt, 0, item);
+      onChangeOrder(zone, arr);
+    } else {
+      // Cross-zone drop
+      if (!canAccept(section)) return;
+      onCrossZoneDrop?.({ section, fromZone, fromIndex, toZone: zone });
+    }
+  };
+
+  const availableSections = [...new Set(poolSections ?? [])].filter((s) =>
+    isPercZone ? isPercussion(s) : !isPercussion(s)
+  );
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <div
+      className={[
+        "border rounded-xl overflow-hidden transition-all duration-150",
+        isOver ? "border-indigo-400 shadow-md" : "border-slate-200",
+      ].join(" ")}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
         <span className="font-semibold text-sm text-slate-700">{label}</span>
         <span className="text-xs font-bold text-indigo-600">
@@ -142,13 +333,20 @@ function SectionOrderEditor({
         </span>
       </div>
 
+      {/* Cross-zone drop hint */}
+      {isDraggingCompatible && (
+        <div className="mx-3 mt-2 px-3 py-1.5 rounded-lg text-xs text-center font-medium border border-dashed border-indigo-300 text-indigo-500 bg-indigo-50">
+          ↓ Soltar para <strong>copiar</strong> {getSectionLabel(draggingInfo.section)} a {label}{" "}
+          (queda también en la zona de origen)
+        </div>
+      )}
+
       {fixed ? (
-        /* Fixed zones: just show info, no reorder controls */
         <div className="px-4 py-3 flex flex-wrap gap-3">
-          {order.map((sec) => (
-            <span key={sec} className="text-sm text-slate-600">
-              {SECTION_LABEL[sec] || sec}:
-              <strong className="ml-1 text-slate-800">{getCount(sec)}</strong>
+          {order.map((sec, idx) => (
+            <span key={`${sec}-${idx}`} className="text-sm text-slate-600">
+              {getSectionLabel(sec)}:
+              <strong className="ml-1 text-slate-800">{getDistributedCount(sec)}</strong>
             </span>
           ))}
           {order.length === 0 && (
@@ -157,66 +355,101 @@ function SectionOrderEditor({
         </div>
       ) : (
         <>
-          {order.length === 0 && (
+          {order.length === 0 && !isDraggingCompatible && (
             <div className="px-4 py-3 text-sm text-slate-400 italic">
               Sin secciones seleccionadas.
             </div>
           )}
 
-          {order.map((sec, idx) => (
-            <div
-              key={sec}
-              className="flex items-center gap-2 px-4 py-2 border-b border-slate-50 last:border-b-0 hover:bg-slate-50 transition-colors"
-            >
-              <span className="text-xs text-slate-300 w-5 text-center font-mono shrink-0">
-                {idx + 1}
-              </span>
-              <span className="flex-1 text-sm text-slate-700">{SECTION_LABEL[sec] || sec}</span>
-              <span className="text-xs text-slate-400 w-16 text-right tabular-nums shrink-0">
-                {getCount(sec)} mús.
-              </span>
-              <div className="flex gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => moveUp(idx)}
-                  disabled={idx === 0}
-                  className="w-6 h-6 text-xs flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-25 transition-colors"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveDown(idx)}
-                  disabled={idx === order.length - 1}
-                  className="w-6 h-6 text-xs flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-25 transition-colors"
-                >
-                  ↓
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => remove(sec)}
-                className="text-xs text-slate-300 hover:text-red-400 transition-colors px-1 shrink-0"
-                title="Quitar del bloque"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+          <div ref={listRef}>
+            {order.map((sec, idx) => {
+              const showInsertLine = isOver && draggingInfo?.fromZone === zone && overIndex === idx;
+              const isDraggingThis =
+                draggingInfo?.fromZone === zone && draggingInfo?.fromIndex === idx;
 
-          {unselected.length > 0 && (
+              return (
+                <React.Fragment key={`${sec}-${idx}`}>
+                  {showInsertLine && <div className="h-0.5 bg-indigo-400 rounded-full mx-4" />}
+                  <div
+                    data-chip-index={idx}
+                    draggable
+                    onDragStart={(e) => handleRowDragStart(e, idx)}
+                    onDragEnd={onDragEnd}
+                    className={[
+                      "flex items-center gap-2 px-4 py-2 border-b border-slate-50 last:border-b-0 hover:bg-slate-50 transition-colors cursor-grab active:cursor-grabbing select-none",
+                      isDraggingThis ? "opacity-30" : "",
+                    ].join(" ")}
+                  >
+                    {/* Drag handle */}
+                    <span className="text-slate-300 text-xs shrink-0">⠿</span>
+
+                    <span className="text-xs text-slate-300 w-5 text-center font-mono shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="flex-1 text-sm text-slate-700">
+                      {getSectionLabel(sec)}
+                      {chipOccurrences[idx].totalOccurrences > 1 && (
+                        <span className="ml-1 text-xs text-slate-400">
+                          ({chipOccurrences[idx].occurrenceIdx}/
+                          {chipOccurrences[idx].totalOccurrences})
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-400 w-16 text-right tabular-nums shrink-0">
+                      ~{getDistributedCount(sec)} mús.
+                    </span>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveUp(idx)}
+                        disabled={idx === 0}
+                        className="w-6 h-6 text-xs flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-25 transition-colors"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveDown(idx)}
+                        disabled={idx === order.length - 1}
+                        className="w-6 h-6 text-xs flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-25 transition-colors"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => remove(idx)}
+                      className="text-xs text-slate-300 hover:text-red-400 transition-colors px-1 shrink-0"
+                      title="Quitar del bloque"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+
+            {/* Insert line at end */}
+            {isOver && draggingInfo?.fromZone === zone && overIndex === order.length && (
+              <div className="h-0.5 bg-indigo-400 rounded-full mx-4" />
+            )}
+          </div>
+
+          {availableSections.length > 0 && (
             <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-1.5">
               <span className="text-xs text-slate-400 self-center mr-1">Agregar:</span>
-              {unselected.map((sec) => (
+              {availableSections.map((sec) => (
                 <button
                   key={sec}
                   type="button"
                   onClick={() => add(sec)}
                   className="text-xs px-2 py-0.5 border border-slate-300 rounded-full hover:bg-indigo-50 hover:border-indigo-300 transition-colors text-slate-600"
                 >
-                  + {SECTION_LABEL[sec] || sec}
+                  + {getSectionLabel(sec)}
                   {getCount(sec) > 0 && (
-                    <span className="ml-1 text-slate-400">({getCount(sec)})</span>
+                    <span className="ml-1 text-slate-400">
+                      ({getCount(sec)} total · {occurrenceMap[sec] || 0}x)
+                    </span>
                   )}
                 </button>
               ))}
@@ -353,8 +586,11 @@ function StepConfig({
       {/* Name */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-slate-500 mb-1">Nombre *</label>
+          <label htmlFor="formation-name" className="block text-xs font-medium text-slate-500 mb-1">
+            Nombre *
+          </label>
           <input
+            id="formation-name"
             type="text"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
@@ -367,7 +603,7 @@ function StepConfig({
       {/* Type + wind columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-2">Tipo de desfile</label>
+          <div className="block text-xs font-medium text-slate-500 mb-2">Tipo de desfile</div>
           <div className="flex gap-3">
             {[
               { v: "SINGLE", label: "Bloque único" },
@@ -401,10 +637,10 @@ function StepConfig({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-2">
+          <div className="block text-xs font-medium text-slate-500 mb-2">
             Columnas de vientos *
             <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
-          </label>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             {[5, 6, 7, 8, 9, 10].map((n) => (
               <button
@@ -435,12 +671,12 @@ function StepConfig({
 
       {/* Independent zone layout (columns + rows) */}
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-2">
+        <div className="block text-xs font-medium text-slate-500 mb-2">
           Grilla independiente
           <span className="ml-1 font-normal text-slate-400">
             — Danza, Percusión y Color Guard tienen columnas y filas propias
           </span>
-        </label>
+        </div>
         <div className="border border-slate-200 rounded-xl overflow-hidden">
           <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
             <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
@@ -465,10 +701,14 @@ function StepConfig({
       {/* Template loader */}
       {templates.length > 0 && (
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">
+          <label
+            htmlFor="formation-template"
+            className="block text-xs font-medium text-slate-500 mb-1"
+          >
             Cargar desde plantilla (opcional)
           </label>
           <select
+            id="formation-template"
             defaultValue=""
             onChange={(e) => {
               if (e.target.value) onLoadTemplate(e.target.value);
@@ -500,34 +740,126 @@ function StepConfig({
 
 function StepZoneOrder({
   formType,
-  zoneOrders,
+  zoneOrders: zoneOrdersProp,
+  zonePools,
   onChangeOrder,
-  sections,
+  sections: sectionsProp,
   loading,
-  excluded,
+  excluded: excludedProp,
   onNext,
 }) {
+  const sections = sectionsProp ?? [];
+  const zoneOrders = zoneOrdersProp ?? {};
+  const excluded = excludedProp ?? new Set();
+
+  // Shared dragging state — lifted here so all editors can see it
+  const [draggingInfo, setDraggingInfo] = useState(null);
+
+  const handleDragStart = useCallback((info) => setDraggingInfo(info), []);
+  const handleDragEnd = useCallback(() => setDraggingInfo(null), []);
+
+  // Cross-zone drop: COPY to target (keep in source) so a section can appear in multiple zones.
+  // If user wants to truly move it, they can ✕ it from the source zone manually.
+  const handleCrossZoneDrop = useCallback(
+    ({ section, fromZone, fromIndex, toZone }) => {
+      // Only append to target — do NOT remove from source
+      const newTo = [...(zoneOrders[toZone] || []), section];
+      onChangeOrder(toZone, newTo);
+      setDraggingInfo(null);
+    },
+    [zoneOrders, onChangeOrder]
+  );
+
+  // All section keys that exist in the data
+  const allSections = useMemo(() => sections.map((g) => g.section), [sections]);
+
+  // Sections not placed in any zone (warning)
+  const unplacedSections = useMemo(() => {
+    const placed = new Set(Object.values(zoneOrders).flat());
+    return allSections.filter((s) => !placed.has(s));
+  }, [allSections, zoneOrders]);
+
+  // Build live member counts per zone
+  const memberCountsByZone = useMemo(
+    () => buildMemberCounts(zoneOrders, sections, excluded),
+    [zoneOrders, sections, excluded]
+  );
+
+  // Total active musicians
+  const totalActive = useMemo(() => {
+    const unique = new Set();
+    for (const grp of sections) {
+      for (const m of grp.members) {
+        if (!excluded.has(m.userId)) unique.add(m.userId);
+      }
+    }
+    return unique.size;
+  }, [sections, excluded]);
+
+  // Pool for each zone: all compatible sections from data
+  const getPoolForZone = (zoneKey) => {
+    const isPercZone = zoneKey === "PERCUSION";
+    return allSections.filter((s) => (isPercZone ? isPercussion(s) : !isPercussion(s)));
+  };
+
+  const sharedEditorProps = {
+    sections,
+    excluded,
+    draggingInfo,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+    onCrossZoneDrop: handleCrossZoneDrop,
+  };
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Configurá el orden de las secciones en cada zona o bloque. Usá <strong>↑↓</strong> para
-        reordenar o <strong>✕</strong> para quitar una sección.
-        <br />
-        Los conteos muestran músicos activos de la Banda de Marcha.
+        Configurá el orden de las secciones en cada zona o bloque. <strong>Arrastrá</strong> una
+        sección a otra zona para <strong>copiarla</strong> — quedará en ambas y los músicos se
+        dividen automáticamente. Usá <strong>↑↓</strong> para reordenar dentro de la zona, o{" "}
+        <strong>✕</strong> para quitarla. También podés agregar desde los chips de abajo.
       </p>
 
       {loading && <div className="text-slate-400 text-sm text-center py-4">Cargando músicos…</div>}
 
-      {!loading && (
+      {!loading && sections.length === 0 && (
+        <div className="text-slate-400 text-sm text-center py-4">
+          No se encontraron músicos. Verificá la configuración de secciones.
+        </div>
+      )}
+
+      {!loading && sections.length > 0 && (
         <>
+          {/* Summary bar */}
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-mono flex-wrap">
+            <span className="text-slate-400 uppercase tracking-wider text-[10px]">
+              Total activos
+            </span>
+            <span className="font-bold">{totalActive}</span>
+            {[
+              "FRENTE_ESPECIAL",
+              "BLOQUE_FRENTE",
+              "PERCUSION",
+              ...(formType === "DOUBLE" ? ["BLOQUE_ATRAS"] : []),
+              "FINAL",
+            ].map((zk) => {
+              const count = Object.values(memberCountsByZone[zk] || {}).reduce((a, b) => a + b, 0);
+              if (!count) return null;
+              return (
+                <span key={zk} className="text-slate-300">
+                  {zk.replace("_", " ")}: <strong className="text-white">{count}</strong>
+                </span>
+              );
+            })}
+          </div>
+
           <SectionOrderEditor
             zone="FRENTE_ESPECIAL"
             label="Frente"
             order={zoneOrders.FRENTE_ESPECIAL || []}
             onChangeOrder={onChangeOrder}
-            sections={sections}
-            excluded={excluded}
-            poolSections={ZONE_POOL_SECTIONS.FRENTE_ESPECIAL}
+            poolSections={getPoolForZone("FRENTE_ESPECIAL")}
+            {...sharedEditorProps}
           />
 
           <SectionOrderEditor
@@ -535,9 +867,8 @@ function StepZoneOrder({
             label={formType === "DOUBLE" ? "Bloque del Frente" : "Bloque Principal"}
             order={zoneOrders.BLOQUE_FRENTE || []}
             onChangeOrder={onChangeOrder}
-            sections={sections}
-            excluded={excluded}
-            poolSections={ZONE_POOL_SECTIONS.BLOQUE_FRENTE}
+            poolSections={getPoolForZone("BLOQUE_FRENTE")}
+            {...sharedEditorProps}
           />
 
           <SectionOrderEditor
@@ -545,9 +876,8 @@ function StepZoneOrder({
             label="Percusión (Centro)"
             order={zoneOrders.PERCUSION || []}
             onChangeOrder={onChangeOrder}
-            sections={sections}
-            excluded={excluded}
-            poolSections={ZONE_POOL_SECTIONS.PERCUSION}
+            poolSections={getPoolForZone("PERCUSION")}
+            {...sharedEditorProps}
           />
 
           {formType === "DOUBLE" && (
@@ -556,9 +886,8 @@ function StepZoneOrder({
               label="Bloque de Atrás"
               order={zoneOrders.BLOQUE_ATRAS || []}
               onChangeOrder={onChangeOrder}
-              sections={sections}
-              excluded={excluded}
-              poolSections={ZONE_POOL_SECTIONS.BLOQUE_ATRAS}
+              poolSections={getPoolForZone("BLOQUE_ATRAS")}
+              {...sharedEditorProps}
             />
           )}
 
@@ -567,11 +896,28 @@ function StepZoneOrder({
             label="Final"
             order={zoneOrders.FINAL || []}
             onChangeOrder={onChangeOrder}
-            sections={sections}
-            excluded={excluded}
-            poolSections={ZONE_POOL_SECTIONS.FINAL}
-            fixed
+            poolSections={getPoolForZone("FINAL")}
+            {...sharedEditorProps}
           />
+
+          {/* Unplaced sections warning */}
+          {unplacedSections.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
+              <div className="text-xs font-semibold text-amber-700 mb-1.5">
+                ⚠ {unplacedSections.length} sección(es) sin zona — no aparecerán en la formación
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {unplacedSections.map((sec) => (
+                  <span
+                    key={sec}
+                    className="text-xs bg-white border border-amber-200 rounded-full px-2.5 py-0.5 text-amber-700 font-medium"
+                  >
+                    {getSectionLabel(sec)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             onClick={onNext}
@@ -601,7 +947,7 @@ function StepExclude({ sections, excluded, onToggle, onNext }) {
           <div key={grp.section} className="overflow-hidden">
             <div className=" px-4 py-2 flex items-center justify-between border-b">
               <span className="text-sm font-semibold text-slate-700">
-                {SECTION_LABEL[grp.section] || grp.section}
+                {getSectionLabel(grp.section)}
               </span>
               <span className="text-xs text-slate-400">
                 {included.length}/{grp.members.length}
@@ -629,6 +975,24 @@ function StepExclude({ sections, excluded, onToggle, onNext }) {
                       onChange={() => onToggle(m.userId)}
                       className="accent-black w-4 h-4 shrink-0"
                     />
+                    {m.avatar ? (
+                      <img
+                        src={m.avatar}
+                        alt={m.name}
+                        loading="lazy"
+                        className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 border border-slate-200 shrink-0 flex items-center justify-center text-[10px] font-bold">
+                        {m.name
+                          ?.split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part[0])
+                          .join("")
+                          .toUpperCase() || "?"}
+                      </div>
+                    )}
                     <span className="text-sm text-slate-700 flex-1">{m.name}</span>
                     {m.instrument && <span className="text-xs text-slate-400">{m.instrument}</span>}
                   </label>
@@ -753,6 +1117,40 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     setZoneOrders((prev) => ({ ...prev, [zone]: newOrder }));
   }, []);
 
+  const zonePools = useMemo(
+    () =>
+      buildDynamicZonePools({
+        sections,
+        zoneOrders,
+        type: formType,
+      }),
+    [sections, zoneOrders, formType]
+  );
+
+  useEffect(() => {
+    // Only auto-populate zones that are completely empty.
+    // Once a user has configured a zone (even with 1 section), don't touch it.
+    setZoneOrders((prev) => {
+      const next = mergeZoneOrdersWithPools(prev, zonePools);
+      // Only apply changes where the previous order was empty
+      const merged = { ...prev };
+      for (const zone of Object.keys(next)) {
+        if (!prev[zone] || prev[zone].length === 0) {
+          merged[zone] = next[zone];
+        }
+      }
+      const changed = Object.keys(merged).some((zone) => {
+        const prevOrder = prev[zone] || [];
+        const nextOrder = merged[zone] || [];
+        return (
+          prevOrder.length !== nextOrder.length ||
+          prevOrder.some((section, index) => section !== nextOrder[index])
+        );
+      });
+      return changed ? merged : prev;
+    });
+  }, [zonePools]);
+
   const handleLoadTemplate = useCallback(
     (tplId) => {
       const tpl = templates.find((t) => t.id === tplId);
@@ -847,6 +1245,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       section: s.section || null,
       userId: s.userId || null,
       displayName: s.displayName || null,
+      avatar: s.avatar || null,
       locked: s.locked ?? false,
     }));
 
@@ -941,14 +1340,14 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
         {/* Step progress — only admins see the full wizard stepper */}
         {isAdmin && (
-        <div className="max-w-6xl mx-auto mb-8 px-1">
-          <div className="flex items-center gap-0">
-            {STEPS.map(({ n, label }, idx) => (
-              <React.Fragment key={n}>
-                <div className="flex items-center gap-2.5 group">
-                  {/* Dot / number */}
-                  <div
-                    className={`
+          <div className="max-w-6xl mx-auto mb-8 px-1">
+            <div className="flex items-center gap-0">
+              {STEPS.map(({ n, label }, idx) => (
+                <React.Fragment key={n}>
+                  <div className="flex items-center gap-2.5 group">
+                    {/* Dot / number */}
+                    <div
+                      className={`
               w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight transition-all duration-300
               ${
                 step > n
@@ -958,44 +1357,44 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                   : "bg-transparent border border-slate-300 text-slate-400"
               }
             `}
-                  >
-                    {step > n ? (
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path
-                          d="M1.5 4L3.2 5.7L6.5 2.3"
-                          stroke="white"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : (
-                      n
-                    )}
-                  </div>
+                    >
+                      {step > n ? (
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                          <path
+                            d="M1.5 4L3.2 5.7L6.5 2.3"
+                            stroke="white"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      ) : (
+                        n
+                      )}
+                    </div>
 
-                  {/* Label */}
-                  <span
-                    className={`text-[11px] font-medium tracking-wide uppercase transition-colors duration-200 whitespace-nowrap
+                    {/* Label */}
+                    <span
+                      className={`text-[11px] font-medium tracking-wide uppercase transition-colors duration-200 whitespace-nowrap
               ${step === n ? "text-black" : step > n ? "text-slate-400" : "text-slate-300"}
             `}
-                  >
-                    {label}
-                  </span>
-                </div>
+                    >
+                      {label}
+                    </span>
+                  </div>
 
-                {/* Separator */}
-                {idx < STEPS.length - 1 && (
-                  <div
-                    className={`flex-1 h-px mx-3 min-w-6 transition-colors duration-300 ${
-                      step > n ? "bg-black" : "bg-slate-200"
-                    }`}
-                  />
-                )}
-              </React.Fragment>
-            ))}
+                  {/* Separator */}
+                  {idx < STEPS.length - 1 && (
+                    <div
+                      className={`flex-1 h-px mx-3 min-w-6 transition-colors duration-300 ${
+                        step > n ? "bg-black" : "bg-slate-200"
+                      }`}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Step content */}
@@ -1027,6 +1426,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
               <StepZoneOrder
                 formType={formType}
                 zoneOrders={zoneOrders}
+                zonePools={zonePools}
                 onChangeOrder={handleZoneOrderChange}
                 sections={sections}
                 loading={loadingUsers}
@@ -1065,10 +1465,14 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
               {/* Notes */}
               <div className="mb-4 max-w-sm">
-                <label className="block text-xs font-medium text-slate-500 mb-1">
+                <label
+                  htmlFor="formation-notes"
+                  className="block text-xs font-medium text-slate-500 mb-1"
+                >
                   Notas (opcional)
                 </label>
                 <input
+                  id="formation-notes"
                   type="text"
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
@@ -1076,32 +1480,6 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
-
-              {/* Unmapped warning */}
-              {/* {unmapped.length > 0 && (
-              <div className="mb-4 border border-amber-200 bg-amber-50 rounded-xl p-3">
-                <div className="text-xs font-semibold text-amber-700 mb-1">
-                  ⚠ {unmapped.length} músico(s) sin sección mapeada — no aparecen en la formación
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {unmapped.slice(0, 10).map((u) => (
-                    <span
-                      key={u.userId}
-                      className="text-xs bg-white border border-amber-200 rounded-full px-2 py-0.5 text-amber-700"
-                      title={`Instrumento: ${u.instrument || "sin instrumento"}`}
-                    >
-                      {u.name}
-                      {u.instrument ? ` (${u.instrument})` : ""}
-                    </span>
-                  ))}
-                  {unmapped.length > 10 && (
-                    <span className="text-xs text-amber-500">
-                      +{unmapped.length - 10} más…
-                    </span>
-                  )}
-                </div>
-              </div>
-            )} */}
 
               <div className="border border-slate-100 rounded-xl overflow-hidden">
                 <FormationGrid

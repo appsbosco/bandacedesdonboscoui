@@ -15,6 +15,8 @@
  *   openFormationPrint({ slots, columns, zoneColumns, formName, formType })
  */
 
+import { getSectionLabel } from "./formationEngine.js";
+
 // ── Color tokens (raw CSS values, mirroring SECTION_COLORS in formationEngine) ─
 
 const PRINT_COLORS = {
@@ -41,24 +43,6 @@ const PRINT_ZONE_LABELS = {
   PERCUSION:       "Percusión",
   BLOQUE_ATRAS:    "Bloque de Atrás",
   FINAL:           "Final",
-};
-
-const PRINT_SECTION_LABELS = {
-  DRUM_MAJOR:       "Drum Major",
-  DANZA:            "Danza",
-  TROMBONES:        "Trombones",
-  FLAUTAS:          "Flautas",
-  CLARINETES:       "Clarinetes",
-  SAXOFONES_ALTO:   "Saxofón Alto",
-  SAXOFON_TENOR:    "Saxofón Tenor",
-  MELOFONOS:        "Melófonos",
-  SAXOFON_BARITONO: "Saxofón Barítono",
-  EUFONIOS:         "Eufonios",
-  TROMPETAS:        "Trompetas",
-  TUBAS:            "Tubas",
-  MALLETS:          "Mallets",
-  PERCUSION:        "Percusión",
-  COLOR_GUARD:      "Color Guard",
 };
 
 // ── Shared cell HTML ───────────────────────────────────────────────────────────
@@ -167,7 +151,7 @@ function buildSectionLegendHTML(slots) {
   return sections
     .map((sec) => {
       const c = PRINT_COLORS[sec] || { bg: "#f1f5f9", border: "#94a3b8", text: "#1e293b" };
-      const label = PRINT_SECTION_LABELS[sec] || sec;
+      const label = getSectionLabel(sec);
       return `<span style="font-size:8px;font-weight:600;padding:2px 8px;border-radius:99px;
       border:1px solid ${c.border};background:${c.bg};color:${c.text};white-space:nowrap;">${label}</span>`;
     })
@@ -216,7 +200,7 @@ function buildPercussionZoneHTML(slots, columns) {
       if (!secSlots.length) return "";
 
       const c = PRINT_COLORS[sec] || { bg: "#f1f5f9", border: "#94a3b8", text: "#1e293b" };
-      const label = PRINT_SECTION_LABELS[sec] || sec;
+      const label = getSectionLabel(sec);
 
       // Re-index rows within this sub-group so row numbers are dense (0,1,2,…)
       // This ensures buildRowsHTML groups them correctly even if rows overlap with

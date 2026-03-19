@@ -97,6 +97,10 @@ export const DEFAULT_ZONE_ORDERS = {
   FINAL: ["COLOR_GUARD"],
 };
 
+const FRONT_SECTION_HINTS = ["DANZA", "DANCE", "DRUM_MAJOR", "MAJOR"];
+const PERCUSSION_SECTION_HINTS = ["PERCUSION", "PERCUSSION", "DRUMLINE", "BATTERY", "MALLETS"];
+const FINAL_SECTION_HINTS = ["COLOR_GUARD", "COLORS", "COLOR", "GUARD", "FLAGS", "BANDERA"];
+
 /**
  * Zones that use their own independent column count instead of the global wind columns.
  * FRENTE_ESPECIAL = Danza, PERCUSION = Percusión + Mallets, FINAL = Color Guard.
@@ -142,6 +146,117 @@ export const SECTION_LABEL = {
   PERCUSION: "Percusión",
   COLOR_GUARD: "Color Guard",
 };
+
+function prettifySectionToken(section) {
+  return String(section || "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function normalizeSectionToken(section) {
+  return String(section || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function includesSectionHint(section, hints) {
+  const normalized = normalizeSectionToken(section);
+  return hints.some((hint) => normalized.includes(hint));
+}
+
+export function getSectionLabel(section) {
+  return SECTION_LABEL[section] || prettifySectionToken(section) || "Sección";
+}
+
+export function inferZonesForSection(section, type = "SINGLE") {
+  if (includesSectionHint(section, FRONT_SECTION_HINTS)) return ["FRENTE_ESPECIAL"];
+  if (includesSectionHint(section, PERCUSSION_SECTION_HINTS)) return ["PERCUSION"];
+  if (includesSectionHint(section, FINAL_SECTION_HINTS)) return ["FINAL"];
+  return type === "DOUBLE" ? ["BLOQUE_FRENTE", "BLOQUE_ATRAS"] : ["BLOQUE_FRENTE"];
+}
+
+export function buildDynamicZonePools({ sections = [], zoneOrders = {}, type = "SINGLE" }) {
+  const knownSections = new Set();
+
+  sections.forEach((group) => {
+    if (group?.section) knownSections.add(group.section);
+  });
+
+  Object.values(zoneOrders || {}).forEach((order) => {
+    (order || []).forEach((section) => {
+      if (section) knownSections.add(section);
+    });
+  });
+
+  Object.values(DEFAULT_ZONE_ORDERS).forEach((order) => {
+    (order || []).forEach((section) => {
+      if (section) knownSections.add(section);
+    });
+  });
+
+  const pools = {
+    FRENTE_ESPECIAL: [],
+    BLOQUE_FRENTE: [],
+    PERCUSION: [],
+    BLOQUE_ATRAS: [],
+    FINAL: [],
+  };
+
+  [...knownSections].forEach((section) => {
+    inferZonesForSection(section, type).forEach((zone) => {
+      if (!pools[zone].includes(section)) pools[zone].push(section);
+    });
+  });
+
+  Object.entries(DEFAULT_ZONE_ORDERS).forEach(([zone, defaults]) => {
+    defaults.forEach((section) => {
+      if (!pools[zone].includes(section)) pools[zone].push(section);
+    });
+  });
+
+  return pools;
+}
+
+export function mergeZoneOrdersWithPools(zoneOrders = {}, zonePools = {}) {
+  const next = {};
+
+  Object.keys({ ...DEFAULT_ZONE_ORDERS, ...zonePools, ...zoneOrders }).forEach((zone) => {
+    const current = zoneOrders[zone] || [];
+    const pool = zonePools[zone] || [];
+    const merged = [...current];
+
+    pool.forEach((section) => {
+      if (section && !current.includes(section)) merged.push(section);
+    });
+
+    next[zone] = merged;
+  });
+
+  return next;
+}
+
+function splitMembersEvenly(members, occurrences) {
+  if (occurrences <= 1) return [members];
+
+  const result = [];
+  let start = 0;
+  const baseSize = Math.floor(members.length / occurrences);
+  const remainder = members.length % occurrences;
+
+  for (let index = 0; index < occurrences; index++) {
+    const extra = index < remainder ? 1 : 0;
+    const end = start + baseSize + extra;
+    result.push(members.slice(start, end));
+    start = end;
+  }
+
+  return result;
+}
 
 /**
  * Rich color tokens per section.
@@ -288,11 +403,21 @@ function fillGrid(zone, members, columns, explicitRows = null) {
         section: m.section || null,
         userId: m.userId || null,
         displayName: m.name || null,
+        avatar: m.avatar || null,
         locked: false,
       });
     } else {
       // Empty filler — completes the last row
-      slots.push({ zone, row, col, section: null, userId: null, displayName: null, locked: false });
+      slots.push({
+        zone,
+        row,
+        col,
+        section: null,
+        userId: null,
+        displayName: null,
+        avatar: null,
+        locked: false,
+      });
     }
   }
 
@@ -324,20 +449,33 @@ export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
 
   for (const zone of activeZones) {
     const sectionOrder = zoneOrders[zone] || [];
+    const sectionOccurrences = sectionOrder.reduce((acc, sec) => {
+      acc[sec] = (acc[sec] || 0) + 1;
+      return acc;
+    }, {});
+    const sectionChunks = {};
+    const sectionChunkIndex = {};
 
     const members = sectionOrder.flatMap((sec) => {
       const grp = sectionGroups.find((g) => g.section === sec);
-      const eligible = (grp?.members || [])
+      let eligible = (grp?.members || [])
         .filter((m) => !excludedIds.has(m.userId))
         .map((m) => ({ ...m, section: sec }));
 
       // Split members between front and back blocks for DOUBLE
       if (type === "DOUBLE" && (zone === "BLOQUE_FRENTE" || zone === "BLOQUE_ATRAS")) {
         const half = Math.ceil(eligible.length / 2);
-        return zone === "BLOQUE_FRENTE" ? eligible.slice(0, half) : eligible.slice(half);
+        eligible = zone === "BLOQUE_FRENTE" ? eligible.slice(0, half) : eligible.slice(half);
       }
 
-      return eligible;
+      if (!sectionChunks[sec]) {
+        sectionChunks[sec] = splitMembersEvenly(eligible, sectionOccurrences[sec] || 1);
+        sectionChunkIndex[sec] = 0;
+      }
+
+      const chunk = sectionChunks[sec][sectionChunkIndex[sec]] || [];
+      sectionChunkIndex[sec] += 1;
+      return chunk;
     });
 
     if (members.length > 0) result.push({ zone, members });
@@ -391,7 +529,12 @@ function applyLocks(newSlots, lockedByKey, lockedUserIds) {
       const key = slotKey(s);
       return !lockedByKey[key] && s.userId && !lockedUserIds.has(String(s.userId));
     })
-    .map((s) => ({ userId: s.userId, name: s.displayName, section: s.section }));
+    .map((s) => ({
+      userId: s.userId,
+      name: s.displayName,
+      avatar: s.avatar || null,
+      section: s.section,
+    }));
 
   let floatIdx = 0;
   return newSlots.map((slot) => {
@@ -407,6 +550,7 @@ function applyLocks(newSlots, lockedByKey, lockedUserIds) {
         section: member?.section || null,
         userId: member?.userId || null,
         displayName: member?.name || null,
+        avatar: member?.avatar || null,
         locked: false,
       };
     } else {
@@ -436,12 +580,14 @@ export function swapSlots(slots, keyA, keyB) {
     section: slotB.section,
     userId: slotB.userId,
     displayName: slotB.displayName,
+    avatar: slotB.avatar || null,
   };
   next[idxB] = {
     ...slotB,
     section: slotA.section,
     userId: slotA.userId,
     displayName: slotA.displayName,
+    avatar: slotA.avatar || null,
   };
   return next;
 }

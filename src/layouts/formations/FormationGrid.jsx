@@ -20,7 +20,7 @@ import React, { useState } from "react";
 import {
   ZONES,
   ZONE_LABEL,
-  SECTION_LABEL,
+  getSectionLabel,
   SECTION_COLORS,
   DEFAULT_ZONE_ORDERS,
   slotKey,
@@ -47,6 +47,17 @@ function splitName(fullName) {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return { first: parts[0], last: null };
   return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+function getInitials(fullName) {
+  return String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 // ── Zone accent config ─────────────────────────────────────────────────────────
@@ -191,15 +202,38 @@ function SlotCell({
       {isEmpty ? (
         <span className="text-slate-300 text-[11px] leading-none select-none">·</span>
       ) : (
-        <div className="w-full px-0.5 leading-snug">
-          <div className={`text-[10px] font-semibold truncate ${nameTextClass}`}>
-            {first || "—"}
-          </div>
-          {last && (
-            <div className={`text-[9px] font-medium truncate opacity-80 ${nameTextClass}`}>
-              {last}
+        <div className="w-full px-0.5 leading-snug flex flex-col items-center gap-1">
+          {slot.avatar ? (
+            <img
+              src={slot.avatar}
+              alt={slot.displayName || "Miembro"}
+              loading="lazy"
+              className="w-7 h-7 rounded-full object-cover border border-white/70 shadow-sm"
+            />
+          ) : (
+            <div
+              className={[
+                "w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold border shadow-sm",
+                slot.locked
+                  ? "bg-amber-100 border-amber-200 text-amber-800"
+                  : colors?.dark
+                  ? "bg-white/15 border-white/20 text-white"
+                  : "bg-white/70 border-white/80 text-slate-700",
+              ].join(" ")}
+            >
+              {getInitials(slot.displayName) || "?"}
             </div>
           )}
+          <div className="w-full">
+            <div className={`text-[10px] font-semibold truncate ${nameTextClass}`}>
+              {first || "—"}
+            </div>
+            {last && (
+              <div className={`text-[9px] font-medium truncate opacity-80 ${nameTextClass}`}>
+                {last}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -303,7 +337,7 @@ function SectionLegend({ slots }) {
               c ? c.badge : "bg-slate-100 border-slate-200 text-slate-600"
             }`}
           >
-            {SECTION_LABEL[sec] || sec}
+            {getSectionLabel(sec)}
           </span>
         );
       })}
@@ -363,7 +397,7 @@ function PercussionZoneGrid({
                   c ? c.badge : "bg-slate-50 border-slate-200 text-slate-500"
                 }`}
               >
-                {SECTION_LABEL[sec] || sec}
+                {getSectionLabel(sec)}
               </span>
               <div className="flex-1 h-px bg-slate-100" />
             </div>
