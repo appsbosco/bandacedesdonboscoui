@@ -12,6 +12,30 @@ import Card from "@mui/material/Card";
 import SoftBox from "components/SoftBox";
 import PropTypes from "prop-types";
 
+function mergeDocumentsResult(previousResult, fetchMoreResult, resultKey) {
+  if (!fetchMoreResult?.[resultKey]) return previousResult;
+
+  const previousDocuments = previousResult?.[resultKey]?.documents || [];
+  const nextDocuments = fetchMoreResult[resultKey].documents || [];
+  const seen = new Set(previousDocuments.map((doc) => doc.id || doc._id));
+  const mergedDocuments = [...previousDocuments];
+
+  nextDocuments.forEach((doc) => {
+    const docId = doc.id || doc._id;
+    if (seen.has(docId)) return;
+    seen.add(docId);
+    mergedDocuments.push(doc);
+  });
+
+  return {
+    ...fetchMoreResult,
+    [resultKey]: {
+      ...fetchMoreResult[resultKey],
+      documents: mergedDocuments,
+    },
+  };
+}
+
 function isAdmin(user) {
   if (!user) return false;
 
@@ -76,8 +100,15 @@ function MyDocumentsView() {
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore) return;
-    fetchMore({ variables: { pagination: { limit: 20, skip: documents.length } } });
-  }, [hasMore, documents.length, fetchMore]);
+    fetchMore({
+      variables: {
+        filters: Object.keys(filters).length > 0 ? filters : undefined,
+        pagination: { limit: 20, skip: documents.length },
+      },
+      updateQuery: (previousResult, { fetchMoreResult }) =>
+        mergeDocumentsResult(previousResult, fetchMoreResult, "myDocuments"),
+    });
+  }, [hasMore, documents.length, fetchMore, filters]);
 
   return (
     <div className="space-y-4">
@@ -117,20 +148,23 @@ const TYPE_OPTIONS = [
 ];
 
 function AdminDocumentsView() {
-  const [filters, setFilters] = useState({});
   const [pagination, setPagination] = useState({ limit: 20, skip: 0 });
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [ownerInput, setOwnerInput] = useState("");
 
-  const buildFilters = () => {
+  const buildFilters = useCallback((overrides = {}) => {
     const f = {};
-    if (statusFilter) f.status = statusFilter;
-    if (typeFilter) f.type = typeFilter;
-    if (ownerName) f.ownerName = ownerName;
+    const nextStatus = overrides.statusFilter ?? statusFilter;
+    const nextType = overrides.typeFilter ?? typeFilter;
+    const nextOwnerName = overrides.ownerName ?? ownerName;
+
+    if (nextStatus) f.status = nextStatus;
+    if (nextType) f.type = nextType;
+    if (nextOwnerName) f.ownerName = nextOwnerName;
     return Object.keys(f).length > 0 ? f : undefined;
-  };
+  }, [statusFilter, typeFilter, ownerName]);
 
   const { data, loading, error, fetchMore, refetch } = useQuery(ALL_DOCUMENTS, {
     variables: { filters: buildFilters(), pagination },
@@ -145,17 +179,29 @@ function AdminDocumentsView() {
   const applyFilters = useCallback(() => {
     setPagination({ limit: 20, skip: 0 });
     refetch({ filters: buildFilters(), pagination: { limit: 20, skip: 0 } });
-  }, [statusFilter, typeFilter, ownerName]); // eslint-disable-line
+  }, [buildFilters, refetch]);
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore) return;
-    fetchMore({ variables: { pagination: { limit: 20, skip: documents.length } } });
-  }, [hasMore, documents.length, fetchMore]);
+    fetchMore({
+      variables: {
+        filters: buildFilters(),
+        pagination: { limit: 20, skip: documents.length },
+      },
+      updateQuery: (previousResult, { fetchMoreResult }) =>
+        mergeDocumentsResult(previousResult, fetchMoreResult, "allDocuments"),
+    });
+  }, [hasMore, documents.length, fetchMore, statusFilter, typeFilter, ownerName]);
 
   const handleOwnerSearch = (e) => {
     e.preventDefault();
-    setOwnerName(ownerInput.trim());
-    applyFilters();
+    const trimmedOwnerName = ownerInput.trim();
+    setOwnerName(trimmedOwnerName);
+    setPagination({ limit: 20, skip: 0 });
+    refetch({
+      filters: buildFilters({ ownerName: trimmedOwnerName }),
+      pagination: { limit: 20, skip: 0 },
+    });
   };
 
   const clearFilters = () => {
@@ -256,7 +302,11 @@ function AdminDocumentsView() {
                 onClick={() => {
                   setOwnerName("");
                   setOwnerInput("");
-                  applyFilters();
+                  setPagination({ limit: 20, skip: 0 });
+                  refetch({
+                    filters: buildFilters({ ownerName: "" }),
+                    pagination: { limit: 20, skip: 0 },
+                  });
                 }}
                 className="text-xs text-red-400 hover:text-red-600"
               >

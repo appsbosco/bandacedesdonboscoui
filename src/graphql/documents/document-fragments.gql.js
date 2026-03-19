@@ -7,6 +7,12 @@ export const DOCUMENT_FRAGMENT = gql`
     type
     source
     status
+    owner {
+      name
+      firstSurName
+      secondSurName
+      email
+    }
     notes
     images {
       kind

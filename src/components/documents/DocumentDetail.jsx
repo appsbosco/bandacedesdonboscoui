@@ -6,6 +6,8 @@ import {
   DELETE_DOCUMENT,
   ENQUEUE_DOCUMENT_OCR,
   MY_DOCUMENTS,
+  ALL_DOCUMENTS,
+  SET_DOCUMENT_STATUS,
 } from "../../graphql/documents/documents.gql";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { Badge } from "../ui/Badge";
@@ -220,6 +222,7 @@ export function DocumentDetail() {
 
   const [deleteModal, setDeleteModal] = useState(false);
   const [imageModal, setImageModal] = useState({ isOpen: false, image: null, index: 0 });
+  const [imageZoom, setImageZoom] = useState(1);
   const [pollTimedOut, setPollTimedOut] = useState(false);
   const pollStartRef = useRef(null);
 
@@ -257,9 +260,21 @@ export function DocumentDetail() {
     onError: (err) => addToast(`Error al encolar OCR: ${err.message}`, "error"),
   });
 
+  const [setDocumentStatus, { loading: updatingStatus }] = useMutation(SET_DOCUMENT_STATUS, {
+    refetchQueries: [
+      { query: DOCUMENT_BY_ID, variables: { id } },
+      { query: MY_DOCUMENTS },
+      { query: ALL_DOCUMENTS },
+    ],
+    awaitRefetchQueries: true,
+    onCompleted: () => addToast("Documento marcado como revisado", "success"),
+    onError: (err) => addToast(`Error al actualizar estado: ${err.message}`, "error"),
+  });
+
   const document = data?.documentById;
   const status = document?.status;
   const isOtherType = document?.type ? NON_OCR_TYPES.has(document.type) : false;
+  const canMarkAsReviewed = userIsAdmin && isOtherType && status !== "VERIFIED";
 
   // Polling — skip entirely for non-OCR types
   useEffect(() => {
@@ -295,8 +310,32 @@ export function DocumentDetail() {
     enqueueOcr({ variables: { input: { documentId: id } } });
   }, [enqueueOcr, id]);
 
-  const openImageModal = (image, index) => setImageModal({ isOpen: true, image, index });
-  const closeImageModal = () => setImageModal({ isOpen: false, image: null, index: 0 });
+  const handleMarkReviewed = useCallback(() => {
+    if (!id) return;
+    setDocumentStatus({ variables: { documentId: id, status: "VERIFIED" } });
+  }, [id, setDocumentStatus]);
+
+  const openImageModal = (image, index) => {
+    setImageZoom(1);
+    setImageModal({ isOpen: true, image, index });
+  };
+
+  const closeImageModal = () => {
+    setImageZoom(1);
+    setImageModal({ isOpen: false, image: null, index: 0 });
+  };
+
+  const handleZoomOut = useCallback(() => {
+    setImageZoom((current) => Math.max(1, Number((current - 0.25).toFixed(2))));
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    setImageZoom((current) => Math.min(3, Number((current + 0.25).toFixed(2))));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setImageZoom(1);
+  }, []);
 
   if (!id) return null;
 
@@ -585,6 +624,15 @@ export function DocumentDetail() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Acciones</h3>
             <div className="space-y-2">
+              {canMarkAsReviewed && (
+                <button
+                  onClick={handleMarkReviewed}
+                  disabled={updatingStatus}
+                  className="w-full inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold bg-emerald-600 text-white hover:opacity-90 transition active:scale-[0.98] disabled:opacity-50"
+                >
+                  {updatingStatus ? "Marcando..." : "Marcar como revisado"}
+                </button>
+              )}
               {!isOtherType && status === "OCR_SUCCESS" && !document.extracted?.mrzValid && (
                 <button
                   onClick={handleRetryOcr}
@@ -801,15 +849,67 @@ export function DocumentDetail() {
 
       {/* Image Modal */}
       <Modal isOpen={imageModal.isOpen} onClose={closeImageModal} size="full">
-        <div className="relative">
-          {imageModal.image && (
-            <DocumentFilePreview
-              image={imageModal.image}
-              alt="Vista ampliada"
-              className="w-full h-auto max-h-[80vh] object-contain"
-              frameClassName="h-[80vh]"
-            />
-          )}
+        <div className="relative space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Vista del documento
+              </p>
+              <p className="text-xs text-slate-400">
+                {imageModal.image?.mimeType && !isPdfMimeType(imageModal.image.mimeType)
+                  ? "Usá zoom y scroll para revisar el archivo"
+                  : "Vista ajustada al contenedor"}
+              </p>
+            </div>
+
+            {imageModal.image && !isPdfMimeType(imageModal.image.mimeType) && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleZoomOut}
+                  disabled={imageZoom <= 1}
+                  className="inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-semibold border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 transition disabled:opacity-50"
+                >
+                  -
+                </button>
+                <button
+                  onClick={handleZoomReset}
+                  className="inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-semibold border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 transition"
+                >
+                  {Math.round(imageZoom * 100)}%
+                </button>
+                <button
+                  onClick={handleZoomIn}
+                  disabled={imageZoom >= 3}
+                  className="inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-semibold border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 transition disabled:opacity-50"
+                >
+                  +
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="relative h-[75vh] overflow-auto rounded-2xl border border-slate-700 bg-slate-950">
+            {imageModal.image && isPdfMimeType(imageModal.image.mimeType) && (
+              <DocumentFilePreview
+                image={imageModal.image}
+                alt="Vista ampliada"
+                className="w-full h-full"
+                frameClassName="h-[75vh]"
+              />
+            )}
+
+            {imageModal.image && !isPdfMimeType(imageModal.image.mimeType) && (
+              <div className="flex min-h-full min-w-full items-start justify-center p-4">
+                <img
+                  src={imageModal.image.url}
+                  alt="Vista ampliada"
+                  className="block h-auto max-w-none rounded-xl"
+                  style={{ width: `${imageZoom * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+
           {imageModal.image?.url && (
             <div className="mt-4 flex justify-center">
               <a
