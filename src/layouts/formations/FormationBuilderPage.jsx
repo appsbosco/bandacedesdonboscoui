@@ -1,26 +1,6 @@
 /* eslint-disable react/prop-types */
 /**
  * FormationBuilderPage.jsx — 4-step wizard
- *
- * Paso 1 — Configurar
- *   nombre · fecha · tipo (SINGLE/DOUBLE) · columnas globales · plantilla opcional
- *
- * Paso 2 — Orden por zona
- *   Configura el orden de secciones en cada zona/bloque.
- *   Muestra conteos de músicos en tiempo real.
- *   Secciones reordenables con drag & drop dentro y entre zonas.
- *
- * Paso 3 — Excluir
- *   Checkbox por músico para quitarlo de esta formación concreta.
- *
- * Paso 4 — Formación
- *   Grid visual por zonas · drag & drop · lock · recalcular · guardar.
- *
- * Layout model:
- *   - Vertical por profundidad: Frente → Percusión → Atrás
- *   - Una columna global para toda la formación
- *   - Secciones configurables por zona (no hardcodeadas)
- *   - DOUBLE: miembros de BLOQUE_FRENTE/ATRAS se dividen por sección
  */
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -38,6 +18,7 @@ import {
   mergeZoneOrdersWithPools,
   buildZones,
   computeFormation,
+  slotKey,
 } from "./formationEngine.js";
 import { openFormationPrint } from "./formationPrint.js";
 import { GET_USERS_BY_ID } from "graphql/queries";
@@ -45,6 +26,269 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 const FORMATION_ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector", "Dirección Logística"]);
+
+// ── Smart exclude-and-compact ──────────────────────────────────────────────────
+/**
+ * Remove excluded users from the current slot grid and compact each zone
+ * upward — filling vacated positions with the next person in the same zone,
+ * leaving empty slots at the bottom. Locks are fully respected:
+ *   - A locked slot is never moved.
+ *   - If a locked musician is now excluded, that slot is simply cleared.
+ *
+ * This avoids a full recompute and preserves every other position.
+ */
+/**
+ * Remove excluded musicians with COLUMN CASCADE within each zone.
+ *
+ * When a musician is removed from position (row, col):
+ *   - Everyone below them in the SAME COLUMN shifts up one row.
+ *   - The last slot in that column becomes empty.
+ *   - Other columns are untouched.
+ *   - Locked slots are never moved (locked slot in the cascade path = cascade stops there).
+ *
+ * Example (6 cols, remove C at row=0 col=2):
+ *   Before:          After:
+ *   a b [C] d e f    a b  i  d e f
+ *   g h  i  j k l   g h  n  j k l
+ *   m n  o  p q r   m n  o  p q r  ← wait, o stays, only i and n cascade
+ *
+ * Corrected example — only the column cascades upward:
+ *   col2 before: C, i, o  →  after: i, o, _
+ *   result row0col2=i, row1col2=o, row2col2=empty
+ */
+function removeAndCompact(slots, newExcluded) {
+  const excluded = new Set([...newExcluded].map(String));
+
+  // Group by zone
+  const byZone = {};
+  for (const s of slots) {
+    if (!byZone[s.zone]) byZone[s.zone] = [];
+    byZone[s.zone].push(s);
+  }
+
+  const result = [];
+
+  for (const [, zoneSlots] of Object.entries(byZone)) {
+    // Build a mutable map: key -> slot data (so we can update in place)
+    const slotMap = {};
+    for (const s of zoneSlots) slotMap[`${s.row}|${s.col}`] = { ...s };
+
+    // Find all rows and cols present
+    const rows = [...new Set(zoneSlots.map((s) => s.row))].sort((a, b) => a - b);
+    const cols = [...new Set(zoneSlots.map((s) => s.col))].sort((a, b) => a - b);
+
+    // For each excluded musician, cascade their column upward
+    for (const s of zoneSlots) {
+      if (!s.userId || !excluded.has(String(s.userId))) continue;
+
+      const col = s.col;
+      // Collect all slots in this column sorted by row
+      const colSlots = rows
+        .map((r) => slotMap[`${r}|${col}`])
+        .filter(Boolean)
+        .sort((a, b) => a.row - b.row);
+
+      // Find the index of the excluded slot in this column
+      const excludedIdx = colSlots.findIndex(
+        (slot) =>
+          slot.userId && excluded.has(String(slot.userId)) && slot.col === col && slot.row === s.row
+      );
+      if (excludedIdx === -1) continue;
+
+      // Cascade: shift unlocked slots from excludedIdx+1 onward up by one
+      // Locked slots act as a wall — cascade stops there
+      let writeIdx = excludedIdx;
+      for (let readIdx = excludedIdx + 1; readIdx < colSlots.length; readIdx++) {
+        const readSlot = colSlots[readIdx];
+        const writeSlot = colSlots[writeIdx];
+        if (readSlot.locked) break; // locked slot = wall, stop cascade
+        if (writeSlot.locked) {
+          writeIdx++;
+          continue;
+        } // skip locked write target
+
+        // Move readSlot's content into writeSlot's position
+        slotMap[`${writeSlot.row}|${writeSlot.col}`] = {
+          ...writeSlot,
+          userId: readSlot.userId,
+          displayName: readSlot.displayName,
+          avatar: readSlot.avatar || null,
+          section: readSlot.section,
+          locked: false,
+        };
+        writeIdx++;
+      }
+
+      // Clear the last slot that was shifted from (the tail becomes empty)
+      if (writeIdx < colSlots.length) {
+        const tailSlot = colSlots[writeIdx];
+        if (!tailSlot.locked) {
+          slotMap[`${tailSlot.row}|${tailSlot.col}`] = {
+            ...tailSlot,
+            userId: null,
+            displayName: null,
+            avatar: null,
+            section: null,
+            locked: false,
+          };
+        }
+      }
+
+      // Handle locked excluded slot: just clear in place, no cascade
+      if (s.locked) {
+        slotMap[`${s.row}|${s.col}`] = {
+          ...s,
+          userId: null,
+          displayName: null,
+          avatar: null,
+          section: null,
+          locked: false,
+        };
+      }
+    }
+
+    result.push(...Object.values(slotMap));
+  }
+
+  return result;
+}
+
+/**
+ * Re-insert a musician with COLUMN CASCADE (upward) within their zone.
+ *
+ * Strategy: find the first empty slot in the zone (reading order).
+ * That empty slot was created by removeAndCompact. Insert the musician
+ * by cascading UPWARD in that column: the musician goes into the top
+ * of the column's "gap stack" — specifically, the empty slot gets filled
+ * with the musician, and everyone above who was shifted down gets restored.
+ *
+ * Simpler mental model: we just INSERT at the position right before the
+ * first empty slot in reading order, then shift that column DOWN so the
+ * musician ends up at the right spot.
+ *
+ * Actually the cleanest approach: treat the column containing the empty slot
+ * as a list. Find the empty position. Shift everyone FROM the insert position
+ * DOWN by one, filling the empty at the bottom. Place musician at insert pos.
+ *
+ * The insert position = right after the last musician of the same section
+ * in that column. If no section peers in that column, use the empty slot itself.
+ *
+ * Example: col2 = [i, o, _]. We want to insert C before i → [C, i, o].
+ * Steps:
+ *   1. Find empty slot: row2,col2
+ *   2. In col2, find insert position: right after last member of same section
+ *      (or at the empty if unknown) = row0 (because C belonged at row0)
+ *   3. Shift col2 DOWN from row0: row2←o, row1←i, row0←C
+ *
+ * Since we don't know the original row, we use the first empty slot's column
+ * and insert at the TOP of the contiguous occupied block in that column,
+ * or right after the section peers.
+ */
+function includeAndExpand(slots, musician, zoneOrders, zoneColumns, defaultCols) {
+  const userId = String(musician.userId);
+  const section = musician.section;
+
+  // Find target zone
+  let targetZone = null;
+  for (const [zone, order] of Object.entries(zoneOrders || {})) {
+    if ((order || []).includes(section)) {
+      targetZone = zone;
+      break;
+    }
+  }
+  if (!targetZone) {
+    const found = slots.find((s) => s.section === section);
+    targetZone = found?.zone || null;
+  }
+  if (!targetZone) {
+    targetZone = [...new Set(slots.map((s) => s.zone))][0] || null;
+  }
+  if (!targetZone) return slots;
+
+  const zoneSlots = slots.filter((s) => s.zone === targetZone);
+  const slotMap = {};
+  for (const s of zoneSlots) slotMap[`${s.row}|${s.col}`] = { ...s };
+
+  const rows = [...new Set(zoneSlots.map((s) => s.row))].sort((a, b) => a - b);
+  const sorted = [...zoneSlots].sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+  // Find the first empty, unlocked slot in reading order
+  const emptySlot = sorted.find((s) => !s.userId && !s.locked);
+
+  if (!emptySlot) {
+    // No empty slot — append a new slot at end of section's column
+    const lastMember =
+      sorted.filter((s) => s.section === section && s.userId).pop() || sorted[sorted.length - 1];
+    const newRow = (rows[rows.length - 1] ?? 0) + 1;
+    slotMap[`${newRow}|${lastMember.col}`] = {
+      zone: targetZone,
+      row: newRow,
+      col: lastMember.col,
+      userId,
+      displayName: musician.displayName || musician.name || null,
+      avatar: musician.avatar || null,
+      section,
+      locked: false,
+    };
+    return [...slots.filter((s) => s.zone !== targetZone), ...Object.values(slotMap)];
+  }
+
+  // The column containing the empty slot is where we cascade
+  const targetCol = emptySlot.col;
+
+  // Get all slots in this column sorted top→bottom
+  const colSlots = rows
+    .map((r) => slotMap[`${r}|${targetCol}`])
+    .filter(Boolean)
+    .sort((a, b) => a.row - b.row);
+
+  // Find where to insert in this column:
+  // = right after the last existing musician of the same section in this column,
+  //   OR at the very top of the column if no section peers exist here.
+  // Find the empty slot index in this column
+  const emptyColIdx = colSlots.findIndex((s) => s.row === emptySlot.row && !s.userId);
+
+  // Insert at top of column (idx 0) and cascade DOWN to the empty slot.
+  // This is the exact inverse of removeAndCompact's upward cascade.
+  // Skip locked slots from the top.
+  let insertColIdx = 0;
+  while (insertColIdx < emptyColIdx && colSlots[insertColIdx]?.locked) insertColIdx++;
+
+  // Cascade: shift everything DOWN from emptyColIdx-1 to insertColIdx,
+  // freeing up insertColIdx for the new musician.
+  // Example: col=[i,o,_], insert at 0, empty at 2
+  //   i=2: row2 ← o (from row1)
+  //   i=1: row1 ← i (from row0)
+  //   place C at row0
+  for (let i = emptyColIdx; i > insertColIdx; i--) {
+    const from = colSlots[i - 1];
+    const to = colSlots[i];
+    if (from.locked || to.locked) break;
+    slotMap[`${to.row}|${to.col}`] = {
+      ...to,
+      userId: from.userId,
+      displayName: from.displayName,
+      avatar: from.avatar || null,
+      section: from.section,
+      locked: false,
+    };
+  }
+
+  // Place the new musician at insertColIdx
+  const targetSlot = colSlots[insertColIdx];
+  if (targetSlot && !targetSlot.locked) {
+    slotMap[`${targetSlot.row}|${targetSlot.col}`] = {
+      ...targetSlot,
+      userId,
+      displayName: musician.displayName || musician.name || null,
+      avatar: musician.avatar || null,
+      section,
+      locked: false,
+    };
+  }
+
+  return [...slots.filter((s) => s.zone !== targetZone), ...Object.values(slotMap)];
+}
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
@@ -85,7 +329,6 @@ function StepBadge({ n, active, done }) {
 
 function ConflictModal({ open, onReload }) {
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
@@ -93,8 +336,8 @@ function ConflictModal({ open, onReload }) {
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Conflicto de edición</h3>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Otro usuario guardó cambios mientras usted estaba editando. Debe recargar la
-              formación para continuar y evitar sobrescribir trabajo ajeno.
+              Otro usuario guardó cambios mientras usted estaba editando. Debe recargar la formación
+              para continuar y evitar sobrescribir trabajo ajeno.
             </p>
           </div>
           <div className="flex justify-end">
@@ -114,14 +357,10 @@ function ConflictModal({ open, onReload }) {
 
 // ── Paso 2 helpers ────────────────────────────────────────────────────────────
 
-/**
- * Sections that belong only in the PERCUSION zone.
- * Keys must match exactly what formationEngine.js uses in ZONE_POOL_SECTIONS.
- */
 const PERCUSSION_SECTIONS = new Set([
   "MALLETS",
-  "PERCUSION", // engine key (sin H)
-  "PERCUSSION", // alias por si el backend manda con H
+  "PERCUSION",
+  "PERCUSSION",
   "DRUMLINE",
   "BATTERY",
   "TENORS",
@@ -136,16 +375,11 @@ function isPercussion(sec) {
   return PERCUSSION_SECTIONS.has(sec);
 }
 
-/**
- * For each zone, compute how many active members each section contributes.
- * If a section appears N times across all zones, its members are split equally.
- */
 function buildMemberCounts(zoneOrders, sections, excluded) {
   const safeZoneOrders = zoneOrders ?? {};
   const safeSections = sections ?? [];
   const safeExcluded = excluded ?? new Set();
 
-  // Count total appearances of each section across ALL zones
   const globalAppearances = {};
   for (const order of Object.values(safeZoneOrders)) {
     for (const sec of order) {
@@ -153,13 +387,11 @@ function buildMemberCounts(zoneOrders, sections, excluded) {
     }
   }
 
-  // Active member count per section
   const activeCounts = {};
   for (const grp of safeSections) {
     activeCounts[grp.section] = grp.members.filter((m) => !safeExcluded.has(m.userId)).length;
   }
 
-  // Per-zone, per-section counts
   const result = {};
   for (const [zone, order] of Object.entries(safeZoneOrders)) {
     const zoneAppearances = {};
@@ -178,14 +410,6 @@ function buildMemberCounts(zoneOrders, sections, excluded) {
 
 // ── SectionOrderEditor ────────────────────────────────────────────────────────
 
-/**
- * Renders a drag-and-drop sortable list of sections for one zone.
- * - Drag handle to reorder within zone
- * - ✕ to remove from this zone's order
- * - "+ Section" chips to add (from compatible pool)
- * - Accepts cross-zone drops if section is compatible
- * - Pool semi-flexible: percussion only in PERCUSION zone, winds/guards elsewhere
- */
 function SectionOrderEditor({
   zone,
   label,
@@ -195,7 +419,6 @@ function SectionOrderEditor({
   excluded,
   poolSections,
   fixed = false,
-  // Drag & drop cross-zone
   draggingInfo,
   onDragStart,
   onDragEnd,
@@ -223,7 +446,6 @@ function SectionOrderEditor({
     return grp.members.filter((m) => !safeExcluded.has(m.userId)).length;
   };
 
-  // Build occurrence maps for distributed count display
   const occurrenceMap = order.reduce((acc, sec) => {
     acc[sec] = (acc[sec] || 0) + 1;
     return acc;
@@ -237,7 +459,6 @@ function SectionOrderEditor({
 
   const total = Object.keys(occurrenceMap).reduce((sum, sec) => sum + getCount(sec), 0);
 
-  // Per-chip occurrence index (for "(1/2)" labels when section appears multiple times)
   const totalOccurrencesMap = {};
   for (const sec of order) {
     totalOccurrencesMap[sec] = (totalOccurrencesMap[sec] || 0) + 1;
@@ -247,8 +468,6 @@ function SectionOrderEditor({
     seenCount[sec] = (seenCount[sec] || 0) + 1;
     return { occurrenceIdx: seenCount[sec], totalOccurrences: totalOccurrencesMap[sec] };
   });
-
-  // ── Reorder within zone ───────────────────────────────────────────────────
 
   const moveUp = (idx) => {
     if (idx <= 0) return;
@@ -271,8 +490,6 @@ function SectionOrderEditor({
     );
   const add = (sec) => onChangeOrder(zone, [...order, sec]);
 
-  // ── Drag handlers ─────────────────────────────────────────────────────────
-
   const handleRowDragStart = (e, idx) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData(
@@ -287,7 +504,6 @@ function SectionOrderEditor({
     if (!draggingInfo) return;
 
     if (draggingInfo.fromZone === zone) {
-      // Reorder within zone
       e.dataTransfer.dropEffect = "move";
       setIsOver(true);
       const items = listRef.current?.querySelectorAll("[data-chip-index]");
@@ -326,7 +542,6 @@ function SectionOrderEditor({
     const { section, fromZone, fromIndex } = JSON.parse(raw);
 
     if (fromZone === zone) {
-      // Reorder within zone
       if (fromIndex === overIndex || fromIndex === overIndex - 1) return;
       const arr = [...order];
       const [item] = arr.splice(fromIndex, 1);
@@ -335,7 +550,6 @@ function SectionOrderEditor({
       arr.splice(insertAt, 0, item);
       onChangeOrder(zone, arr);
     } else {
-      // Cross-zone drop
       if (!canAccept(section)) return;
       onCrossZoneDrop?.({ section, fromZone, fromIndex, toZone: zone });
     }
@@ -362,7 +576,6 @@ function SectionOrderEditor({
         </span>
       </div>
 
-      {/* Cross-zone drop hint */}
       {isDraggingCompatible && (
         <div className="mx-3 mt-2 px-3 py-1.5 rounded-lg text-xs text-center font-medium border border-dashed border-indigo-300 text-indigo-500 bg-indigo-50">
           ↓ Soltar para <strong>copiar</strong> {getSectionLabel(draggingInfo.section)} a {label}{" "}
@@ -409,9 +622,7 @@ function SectionOrderEditor({
                       isDraggingThis ? "opacity-30" : "",
                     ].join(" ")}
                   >
-                    {/* Drag handle */}
                     <span className="text-slate-300 text-xs shrink-0">⠿</span>
-
                     <span className="text-xs text-slate-300 w-5 text-center font-mono shrink-0">
                       {idx + 1}
                     </span>
@@ -458,7 +669,6 @@ function SectionOrderEditor({
               );
             })}
 
-            {/* Insert line at end */}
             {isOver && draggingInfo?.fromZone === zone && overIndex === order.length && (
               <div className="h-0.5 bg-indigo-400 rounded-full mx-4" />
             )}
@@ -490,9 +700,7 @@ function SectionOrderEditor({
   );
 }
 
-// ── Paso 1 — Configurar ───────────────────────────────────────────────────────
-
-// ── ZoneColumnsRow — inline component for per-zone column picker ──────────────
+// ── Zone column presets ───────────────────────────────────────────────────────
 
 const ZONE_COLUMN_PRESETS = {
   FRENTE_ESPECIAL: [2, 3, 4, 5, 6],
@@ -612,7 +820,6 @@ function StepConfig({
 
   return (
     <div className="space-y-6">
-      {/* Name */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sm:col-span-2">
           <label htmlFor="formation-name" className="block text-xs font-medium text-slate-500 mb-1">
@@ -629,7 +836,6 @@ function StepConfig({
         </div>
       </div>
 
-      {/* Type + wind columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <div className="block text-xs font-medium text-slate-500 mb-2">Tipo de desfile</div>
@@ -698,7 +904,6 @@ function StepConfig({
         </div>
       </div>
 
-      {/* Independent zone layout (columns + rows) */}
       <div>
         <div className="block text-xs font-medium text-slate-500 mb-2">
           Grilla independiente
@@ -727,7 +932,6 @@ function StepConfig({
         </div>
       </div>
 
-      {/* Template loader */}
       {templates.length > 0 && (
         <div>
           <label
@@ -781,17 +985,13 @@ function StepZoneOrder({
   const zoneOrders = zoneOrdersProp ?? {};
   const excluded = excludedProp ?? new Set();
 
-  // Shared dragging state — lifted here so all editors can see it
   const [draggingInfo, setDraggingInfo] = useState(null);
 
   const handleDragStart = useCallback((info) => setDraggingInfo(info), []);
   const handleDragEnd = useCallback(() => setDraggingInfo(null), []);
 
-  // Cross-zone drop: COPY to target (keep in source) so a section can appear in multiple zones.
-  // If user wants to truly move it, they can ✕ it from the source zone manually.
   const handleCrossZoneDrop = useCallback(
     ({ section, fromZone, fromIndex, toZone }) => {
-      // Only append to target — do NOT remove from source
       const newTo = [...(zoneOrders[toZone] || []), section];
       onChangeOrder(toZone, newTo);
       setDraggingInfo(null);
@@ -799,22 +999,18 @@ function StepZoneOrder({
     [zoneOrders, onChangeOrder]
   );
 
-  // All section keys that exist in the data
   const allSections = useMemo(() => sections.map((g) => g.section), [sections]);
 
-  // Sections not placed in any zone (warning)
   const unplacedSections = useMemo(() => {
     const placed = new Set(Object.values(zoneOrders).flat());
     return allSections.filter((s) => !placed.has(s));
   }, [allSections, zoneOrders]);
 
-  // Build live member counts per zone
   const memberCountsByZone = useMemo(
     () => buildMemberCounts(zoneOrders, sections, excluded),
     [zoneOrders, sections, excluded]
   );
 
-  // Total active musicians
   const totalActive = useMemo(() => {
     const unique = new Set();
     for (const grp of sections) {
@@ -825,7 +1021,6 @@ function StepZoneOrder({
     return unique.size;
   }, [sections, excluded]);
 
-  // Pool for each zone: all compatible sections from data
   const getPoolForZone = (zoneKey) => {
     const isPercZone = zoneKey === "PERCUSION";
     return allSections.filter((s) => (isPercZone ? isPercussion(s) : !isPercussion(s)));
@@ -845,8 +1040,7 @@ function StepZoneOrder({
       <p className="text-sm text-slate-500">
         Configurá el orden de las secciones en cada zona o bloque. <strong>Arrastrá</strong> una
         sección a otra zona para <strong>copiarla</strong> — quedará en ambas y los músicos se
-        dividen automáticamente. Usá <strong>↑↓</strong> para reordenar dentro de la zona, o{" "}
-        <strong>✕</strong> para quitarla. También podés agregar desde los chips de abajo.
+        dividen automáticamente.
       </p>
 
       {loading && <div className="text-slate-400 text-sm text-center py-4">Cargando músicos…</div>}
@@ -859,7 +1053,6 @@ function StepZoneOrder({
 
       {!loading && sections.length > 0 && (
         <>
-          {/* Summary bar */}
           <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-mono flex-wrap">
             <span className="text-slate-400 uppercase tracking-wider text-[10px]">
               Total activos
@@ -890,7 +1083,6 @@ function StepZoneOrder({
             poolSections={getPoolForZone("FRENTE_ESPECIAL")}
             {...sharedEditorProps}
           />
-
           <SectionOrderEditor
             zone="BLOQUE_FRENTE"
             label={formType === "DOUBLE" ? "Bloque del Frente" : "Bloque Principal"}
@@ -899,7 +1091,6 @@ function StepZoneOrder({
             poolSections={getPoolForZone("BLOQUE_FRENTE")}
             {...sharedEditorProps}
           />
-
           <SectionOrderEditor
             zone="PERCUSION"
             label="Percusión (Centro)"
@@ -908,7 +1099,6 @@ function StepZoneOrder({
             poolSections={getPoolForZone("PERCUSION")}
             {...sharedEditorProps}
           />
-
           {formType === "DOUBLE" && (
             <SectionOrderEditor
               zone="BLOQUE_ATRAS"
@@ -919,7 +1109,6 @@ function StepZoneOrder({
               {...sharedEditorProps}
             />
           )}
-
           <SectionOrderEditor
             zone="FINAL"
             label="Final"
@@ -929,7 +1118,6 @@ function StepZoneOrder({
             {...sharedEditorProps}
           />
 
-          {/* Unplaced sections warning */}
           {unplacedSections.length > 0 && (
             <div className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
               <div className="text-xs font-semibold text-amber-700 mb-1.5">
@@ -966,15 +1154,14 @@ function StepExclude({ sections, excluded, onToggle, onNext }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Desmarcá los músicos que <strong>no participarán</strong> en este desfile. El conteo de cada
-        sección se actualiza en tiempo real.
+        Desmarcá los músicos que <strong>no participarán</strong> en este desfile.
       </p>
       {sections.map((grp) => {
         const included = grp.members.filter((m) => !excluded.has(m.userId));
         const excludedN = grp.members.length - included.length;
         return (
           <div key={grp.section} className="overflow-hidden">
-            <div className=" px-4 py-2 flex items-center justify-between border-b">
+            <div className="px-4 py-2 flex items-center justify-between border-b">
               <span className="text-sm font-semibold text-slate-700">
                 {getSectionLabel(grp.section)}
               </span>
@@ -1046,6 +1233,160 @@ function StepExclude({ sections, excluded, onToggle, onNext }) {
   );
 }
 
+// ── ExcludedModal ─────────────────────────────────────────────────────────────
+
+function initials(name) {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * Modal listing all excluded musicians. Each row has an "+ Incluir" button
+ * that cascades the musician back into the grid right after their section peers.
+ */
+function ExcludedModal({ open, onClose, excluded, sections, existingFormationSlots, onInclude }) {
+  const excludedMusicians = useMemo(() => {
+    const result = [];
+    const seen = new Set();
+    for (const userId of excluded) {
+      if (seen.has(userId)) continue;
+      seen.add(userId);
+      let found = null;
+      for (const grp of sections || []) {
+        const m = grp.members.find((mb) => String(mb.userId) === String(userId));
+        if (m) {
+          found = { userId, name: m.name, avatar: m.avatar || null, section: grp.section };
+          break;
+        }
+      }
+      if (!found && existingFormationSlots) {
+        const s = existingFormationSlots.find((sl) => String(sl.userId) === String(userId));
+        if (s)
+          found = { userId, name: s.displayName, avatar: s.avatar || null, section: s.section };
+      }
+      result.push(found || { userId, name: `ID ${userId}`, avatar: null, section: null });
+    }
+    result.sort((a, b) => {
+      const sa = a.section || "ZZZ",
+        sb = b.section || "ZZZ";
+      return sa.localeCompare(sb) || (a.name || "").localeCompare(b.name || "");
+    });
+    return result;
+  }, [excluded, sections, existingFormationSlots]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  // Group by section
+  const bySec = {};
+  for (const m of excludedMusicians) {
+    const key = m.section || "__none__";
+    if (!bySec[key]) bySec[key] = [];
+    bySec[key].push(m);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[80vh]">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Músicos excluidos</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {excludedMusicians.length} excluido{excludedMusicians.length !== 1 ? "s" : ""} ·
+              Presioná + Incluir para reincorporar
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* List */}
+        <div className="overflow-y-auto flex-1 px-2 py-2">
+          {Object.entries(bySec).map(([sec, members]) => (
+            <div key={sec} className="mb-1">
+              {/* Section label */}
+              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {sec === "__none__" ? "Sin sección" : getSectionLabel(sec)}
+              </div>
+              {/* Musician rows */}
+              {members.map((m) => (
+                <div
+                  key={m.userId}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  {m.avatar ? (
+                    <img
+                      src={m.avatar}
+                      alt={m.name}
+                      loading="lazy"
+                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-600 shrink-0 flex items-center justify-center text-[10px] font-bold">
+                      {initials(m.name)}
+                    </div>
+                  )}
+                  <span className="flex-1 text-sm text-slate-800 font-medium">{m.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onInclude(m.userId);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shrink-0"
+                  >
+                    + Incluir
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+          {excludedMusicians.length === 0 && (
+            <div className="py-10 text-center text-sm text-slate-400">
+              No hay músicos excluidos.
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-slate-100 shrink-0 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function FormationBuilderPage({ formation: existingFormation }) {
@@ -1057,11 +1398,9 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       (graphQLError) => graphQLError?.extensions?.code === "CONFLICT"
     );
 
-  // Role-based access: only admins can navigate between steps
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const userRole = userData?.getUser?.role;
   const isAdmin = FORMATION_ADMIN_ROLES.has(userRole);
-
   const canExport = userRole === "Admin";
 
   const { sections, unmapped, loading: loadingUsers, loadUsers } = useFormationUsers();
@@ -1078,7 +1417,6 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
   const [step, setStep] = useState(isEdit ? 4 : 1);
 
-  // Once role resolves, restrict non-admins to step 4 only
   useEffect(() => {
     if (userRole && !isAdmin) setStep(4);
   }, [userRole, isAdmin]);
@@ -1089,8 +1427,8 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   const [formNotes, setFormNotes] = useState(existingFormation?.notes || "");
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(existingFormation?.updatedAt ?? null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const [showExcludedModal, setShowExcludedModal] = useState(false);
 
-  // Section order per zone — fully configurable
   const [zoneOrders, setZoneOrders] = useState(() => {
     const base = { ...DEFAULT_ZONE_ORDERS };
     if (isEdit && existingFormation.zoneOrders?.length) {
@@ -1101,7 +1439,6 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     return base;
   });
 
-  // Per-zone column overrides for Danza, Percusión, Color Guard
   const [zoneColumns, setZoneColumns] = useState(() => {
     const base = { ...DEFAULT_ZONE_COLUMNS };
     if (isEdit && existingFormation?.zoneColumns?.length) {
@@ -1116,7 +1453,6 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     setZoneColumns((prev) => ({ ...prev, [zone]: value }));
   }, []);
 
-  // Per-zone row overrides for Danza, Percusión, Color Guard (null = auto)
   const [zoneRows, setZoneRows] = useState(() => {
     const base = { ...DEFAULT_ZONE_ROWS };
     if (isEdit && existingFormation?.zoneColumns?.length) {
@@ -1131,16 +1467,13 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     setZoneRows((prev) => ({ ...prev, [zone]: value }));
   }, []);
 
-  // Excluded user IDs for this formation
   const [excluded, setExcluded] = useState(
     () => new Set((existingFormation?.excludedUserIds || []).map(String))
   );
-  // Computed slots
   const [slots, setSlots] = useState(existingFormation?.slots || []);
 
   // ── Load users ────────────────────────────────────────────────────────────
 
-  // For edit mode: load users on mount so Recalcular works
   useEffect(() => {
     if (isEdit) loadUsers({ excludedIds: [], instrumentMappings: [] });
   }, []); // eslint-disable-line
@@ -1167,11 +1500,8 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   );
 
   useEffect(() => {
-    // Only auto-populate zones that are completely empty.
-    // Once a user has configured a zone (even with 1 section), don't touch it.
     setZoneOrders((prev) => {
       const next = mergeZoneOrdersWithPools(prev, zonePools);
-      // Only apply changes where the previous order was empty
       const merged = { ...prev };
       for (const zone of Object.keys(next)) {
         if (!prev[zone] || prev[zone].length === 0) {
@@ -1222,7 +1552,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
   // ── Exclusions ────────────────────────────────────────────────────────────
 
-  const handleToggleExclude = (userId) => {
+  const handleToggleExclude = useCallback((userId) => {
     const id = String(userId);
     setExcluded((prev) => {
       const next = new Set(prev);
@@ -1230,9 +1560,79 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
-  // ── Compute grid ──────────────────────────────────────────────────────────
+  /**
+   * Called from the grid (step 4): exclude a musician directly and compact
+   * the grid in-place — no full recompute, all positions preserved.
+   */
+  /**
+   * Called from the grid (step 4): exclude a musician directly and compact
+   * the grid in-place — no full recompute, all positions preserved.
+   */
+  const handleExcludeFromGrid = useCallback((userId) => {
+    const id = String(userId);
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      setSlots((currentSlots) => removeAndCompact(currentSlots, next));
+      return next;
+    });
+  }, []);
+
+  /**
+   * Called from the excluded-musicians panel (step 4): re-insert a musician
+   * into the grid, pushing everyone after them one position back.
+   */
+  const handleIncludeToGrid = useCallback(
+    (userId) => {
+      const id = String(userId);
+
+      // Find musician info from sections (loaded users)
+      let musicianInfo = null;
+      for (const grp of sections) {
+        const m = grp.members.find((mb) => String(mb.userId) === id);
+        if (m) {
+          musicianInfo = {
+            userId: id,
+            displayName: m.name,
+            avatar: m.avatar || null,
+            section: grp.section,
+          };
+          break;
+        }
+      }
+
+      // Fallback: scan existing excluded slot data stored on the formation
+      if (!musicianInfo) {
+        // sections may not be loaded yet in pure edit mode — try from existingFormation slots
+        if (existingFormation?.slots) {
+          const s = existingFormation.slots.find((sl) => String(sl.userId) === id);
+          if (s)
+            musicianInfo = {
+              userId: id,
+              displayName: s.displayName,
+              avatar: s.avatar || null,
+              section: s.section,
+            };
+        }
+      }
+
+      if (!musicianInfo) return;
+
+      setExcluded((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        setSlots((currentSlots) =>
+          includeAndExpand(currentSlots, musicianInfo, zoneOrders, zoneColumns, columns)
+        );
+        return next;
+      });
+    },
+    [sections, existingFormation, zoneOrders, zoneColumns, columns]
+  );
+
+  // ── Compute grid (full recompute — used in step 3 → 4) ───────────────────
 
   const handleComputeGrid = useCallback(() => {
     const zoneData = buildZones({
@@ -1246,11 +1646,13 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
       columns,
       zoneColumns,
       zoneRows,
-      existingSlots: slots, // always preserve locks regardless of isEdit
+      existingSlots: slots,
     });
     setSlots(computed);
     setStep(4);
   }, [zoneOrders, sections, excluded, formType, columns, zoneColumns, zoneRows, slots]);
+
+  // ── Build inputs ──────────────────────────────────────────────────────────
 
   const buildZoneMemberCounts = useCallback(() => {
     const countMap = {};
@@ -1358,14 +1760,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
   const handleExport = useCallback(() => {
     if (!canExport) return;
-
-    openFormationPrint({
-      slots,
-      columns,
-      zoneColumns,
-      formName,
-      formType,
-    });
+    openFormationPrint({ slots, columns, zoneColumns, formName, formType });
   }, [canExport, slots, columns, zoneColumns, formName, formType]);
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -1381,10 +1776,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     <DashboardLayout>
       <DashboardNavbar />
       <div className="space-y-5 pb-16">
-        <ConflictModal
-          open={showConflictModal}
-          onReload={() => window.location.reload()}
-        />
+        <ConflictModal open={showConflictModal} onReload={() => window.location.reload()} />
         {saveToast && (
           <Toast
             message={saveToast.message}
@@ -1416,7 +1808,6 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                   ↗ Exportar
                 </button>
               )}
-
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -1428,25 +1819,24 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
           )}
         </div>
 
-        {/* Step progress — only admins see the full wizard stepper */}
+        {/* Step progress */}
         {isAdmin && (
           <div className="max-w-6xl mx-auto mb-8 px-1">
             <div className="flex items-center gap-0">
               {STEPS.map(({ n, label }, idx) => (
                 <React.Fragment key={n}>
                   <div className="flex items-center gap-2.5 group">
-                    {/* Dot / number */}
                     <div
                       className={`
-              w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight transition-all duration-300
-              ${
-                step > n
-                  ? "bg-black text-white"
-                  : step === n
-                  ? "bg-black text-white ring-4 ring-black/10"
-                  : "bg-transparent border border-slate-300 text-slate-400"
-              }
-            `}
+                        w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight transition-all duration-300
+                        ${
+                          step > n
+                            ? "bg-black text-white"
+                            : step === n
+                            ? "bg-black text-white ring-4 ring-black/10"
+                            : "bg-transparent border border-slate-300 text-slate-400"
+                        }
+                      `}
                     >
                       {step > n ? (
                         <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -1462,18 +1852,16 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                         n
                       )}
                     </div>
-
-                    {/* Label */}
                     <span
                       className={`text-[11px] font-medium tracking-wide uppercase transition-colors duration-200 whitespace-nowrap
-              ${step === n ? "text-black" : step > n ? "text-slate-400" : "text-slate-300"}
-            `}
+                        ${
+                          step === n ? "text-black" : step > n ? "text-slate-400" : "text-slate-300"
+                        }
+                      `}
                     >
                       {label}
                     </span>
                   </div>
-
-                  {/* Separator */}
                   {idx < STEPS.length - 1 && (
                     <div
                       className={`flex-1 h-px mx-3 min-w-6 transition-colors duration-300 ${
@@ -1543,14 +1931,35 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
 
           {step === 4 && (
             <>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4 flex-wrap">
                 <StepBadge n={4} active done={false} />
                 <h2 className="font-semibold text-slate-700">Formación</h2>
-                <span className="ml-auto text-xs text-slate-400">
+                <span className="text-xs text-slate-400 hidden sm:inline">
                   {columns} cols
                   {formType === "DOUBLE" ? " · Doble hacia atrás" : " · Bloque único"}
-                  {" · Arrastrá para mover · 🔓 para bloquear"}
+                  {" · Arrastrá para mover · 🔒 para bloquear · Clic derecho para opciones"}
                 </span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowExcludedModal(true)}
+                    className={[
+                      "ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors",
+                      excluded.size > 0
+                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-slate-200 text-slate-400 cursor-default",
+                    ].join(" ")}
+                    disabled={excluded.size === 0}
+                    title={
+                      excluded.size === 0 ? "No hay músicos excluidos" : "Ver músicos excluidos"
+                    }
+                  >
+                    <span>{excluded.size > 0 ? "⚠" : "✓"}</span>
+                    {excluded.size > 0
+                      ? `${excluded.size} excluido${excluded.size !== 1 ? "s" : ""}`
+                      : "Todos incluidos"}
+                  </button>
+                )}
               </div>
 
               {/* Notes */}
@@ -1571,13 +1980,24 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                 />
               </div>
 
-              <div className=" overflow-hidden">
+              <ExcludedModal
+                open={showExcludedModal}
+                onClose={() => setShowExcludedModal(false)}
+                excluded={excluded}
+                sections={sections}
+                existingFormationSlots={existingFormation?.slots}
+                onInclude={handleIncludeToGrid}
+              />
+
+              <div className="overflow-hidden">
                 <FormationGrid
                   slots={slots}
                   columns={columns}
                   zoneColumns={zoneColumns}
                   onChange={setSlots}
                   zoneOrders={zoneOrders}
+                  canExclude={isAdmin}
+                  onExclude={handleExcludeFromGrid}
                 />
               </div>
 
