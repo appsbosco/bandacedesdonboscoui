@@ -29,6 +29,8 @@ import {
   buildZones,
   computeFormation,
   slotKey,
+  inferZonesForSection,
+  canSectionOccupyZone,
 } from "./formationEngine.js";
 import { openFormationPrint } from "./formationPrint.js";
 import { GET_USERS_BY_ID } from "graphql/queries";
@@ -259,16 +261,16 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, de
   const section = musician.section;
   let targetZone = null;
   for (const [zone, order] of Object.entries(zoneOrders || {})) {
-    if ((order || []).includes(section)) {
+    if ((order || []).includes(section) && canSectionOccupyZone(section, zone)) {
       targetZone = zone;
       break;
     }
   }
   if (!targetZone) {
-    const found = slots.find((s) => s.section === section);
+    const found = slots.find((s) => s.section === section && canSectionOccupyZone(section, s.zone));
     targetZone = found?.zone || null;
   }
-  if (!targetZone) targetZone = [...new Set(slots.map((s) => s.zone))][0] || null;
+  if (!targetZone) targetZone = inferZonesForSection(section)[0] || null;
   if (!targetZone) return slots;
 
   const zoneSlots = slots.filter((s) => s.zone === targetZone);
@@ -410,23 +412,6 @@ function ConflictModal({ open, onReload }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 2 helpers  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-const PERCUSSION_SECTIONS = new Set([
-  "MALLETS",
-  "PERCUSION",
-  "PERCUSSION",
-  "DRUMLINE",
-  "BATTERY",
-  "TENORS",
-  "BASSES",
-  "SNARES",
-  "CYMBALS",
-  "PIT",
-  "FRONT_ENSEMBLE",
-]);
-function isPercussion(sec) {
-  return PERCUSSION_SECTIONS.has(sec);
-}
-
 function buildMemberCounts(zoneOrders, sections, excluded) {
   const safeZoneOrders = zoneOrders ?? {};
   const safeSections = sections ?? [];
@@ -472,11 +457,7 @@ function SectionOrderEditor({
   const listRef = useRef(null);
   const [isOver, setIsOver] = useState(false);
   const [overIndex, setOverIndex] = useState(null);
-  const isPercZone = zone === "PERCUSION";
-  const canAccept = useCallback(
-    (sec) => (isPercZone ? isPercussion(sec) : !isPercussion(sec)),
-    [isPercZone]
-  );
+  const canAccept = useCallback((sec) => canSectionOccupyZone(sec, zone), [zone]);
   const isDraggingCompatible = draggingInfo
     ? canAccept(draggingInfo.section) && draggingInfo.fromZone !== zone
     : false;
@@ -583,7 +564,7 @@ function SectionOrderEditor({
     }
   };
   const availableSections = [...new Set(poolSections ?? [])].filter((s) =>
-    isPercZone ? isPercussion(s) : !isPercussion(s)
+    canAccept(s)
   );
   return (
     <div
@@ -1006,11 +987,15 @@ function StepZoneOrder({
   const handleDragEnd = useCallback(() => setDraggingInfo(null), []);
   const handleCrossZoneDrop = useCallback(
     ({ section, fromZone, fromIndex, toZone }) => {
+      if (!canSectionOccupyZone(section, toZone, formType)) {
+        setDraggingInfo(null);
+        return;
+      }
       const newTo = [...(zoneOrders[toZone] || []), section];
       onChangeOrder(toZone, newTo);
       setDraggingInfo(null);
     },
-    [zoneOrders, onChangeOrder]
+    [zoneOrders, onChangeOrder, formType]
   );
   const allSections = useMemo(() => sections.map((g) => g.section), [sections]);
   const unplacedSections = useMemo(() => {
@@ -1028,8 +1013,7 @@ function StepZoneOrder({
     return unique.size;
   }, [sections, excluded]);
   const getPoolForZone = (zoneKey) => {
-    const isPercZone = zoneKey === "PERCUSION";
-    return allSections.filter((s) => (isPercZone ? isPercussion(s) : !isPercussion(s)));
+    return allSections.filter((section) => canSectionOccupyZone(section, zoneKey, formType));
   };
   const sharedEditorProps = {
     sections,
@@ -1555,6 +1539,7 @@ function FormationRoomContent({
           columns={columns}
           zoneColumns={zoneColumns}
           onChange={handleGridChange}
+          formType={formation?.type || "DOUBLE"}
           zoneOrders={zoneOrders}
           canExclude={canExclude}
           onExclude={onExclude}
@@ -2241,6 +2226,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                       columns={columns}
                       zoneColumns={zoneColumns}
                       onChange={setSlots}
+                      formType={formType}
                       zoneOrders={zoneOrders}
                       canExclude={isAdmin}
                       onExclude={handleExcludeFromGrid}

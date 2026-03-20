@@ -24,6 +24,7 @@ import {
   slotKey,
   swapSlots,
   toggleLock,
+  canSwapSlotContents,
 } from "./formationEngine.js";
 
 import { SlotCollaboratorOverlay } from "./SlotCollaboratorOverlay.jsx";
@@ -211,6 +212,11 @@ const ContextMenu = memo(function ContextMenu({
   );
 });
 
+function showInvalidDropFeedback(setInvalidDrop, targetKey) {
+  setInvalidDrop(targetKey);
+  setTimeout(() => setInvalidDrop(null), 600);
+}
+
 // ─── SlotCell ─────────────────────────────────────────────────────────────────
 
 const SlotCell = memo(function SlotCell({
@@ -228,6 +234,7 @@ const SlotCell = memo(function SlotCell({
   onToggleLock,
   registerSlotNode,
   onContextMenu,
+  onKeyboardMove,
 }) {
   const key = slotKey(slot);
 
@@ -264,7 +271,7 @@ const SlotCell = memo(function SlotCell({
   } else if (isInvalidDrop) {
     stateStyle = { filter: "brightness(0.95)" };
     stateRing = "ring-2 ring-red-400 ring-offset-1 fg-shake";
-  } else if (isTouch && isSelected) {
+  } else if (isSelected) {
     stateStyle = {
       transform: "scale(1.05) translateY(-2px)",
       boxShadow: "0 8px 20px rgba(99,102,241,0.2)",
@@ -273,7 +280,7 @@ const SlotCell = memo(function SlotCell({
   }
 
   // Hover lift only when idle
-  const isIdle = !isDragging && !isDropTarget && !isInvalidDrop && !(isTouch && isSelected);
+  const isIdle = !isDragging && !isDropTarget && !isInvalidDrop && !isSelected;
   const hoverLift =
     isIdle && !isEmpty && !slot.locked
       ? "hover:[transform:translateY(-2px)] hover:[box-shadow:0_6px_16px_rgba(0,0,0,0.10)]"
@@ -304,6 +311,7 @@ const SlotCell = memo(function SlotCell({
     : {
         role: "gridcell",
         "aria-label": slot.displayName || "Celda vacía",
+        tabIndex: 0,
         draggable: !slot.locked && !isEmpty,
         onDragStart: (e) => {
           if (slot.locked || isEmpty) return;
@@ -327,6 +335,14 @@ const SlotCell = memo(function SlotCell({
         onDrop: (e) => {
           e.preventDefault();
           onDrop(key);
+        },
+        onClick: () => {
+          if (!isEmpty && !slot.locked) onTap?.(key, slot);
+        },
+        onKeyDown: (e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          if (!isEmpty && !slot.locked) onKeyboardMove?.(key, slot);
         },
         onContextMenu: (e) => {
           if (!isEmpty) {
@@ -540,6 +556,7 @@ const ZoneGrid = memo(function ZoneGrid({
   onTap,
   registerSlotNode,
   onContextMenu,
+  onKeyboardMove,
 }) {
   const zoneSlots = useMemo(
     () =>
@@ -568,7 +585,7 @@ const ZoneGrid = memo(function ZoneGrid({
             isDragging={!isTouch && dragging === key}
             isDropTarget={!isTouch && dropTarget === key}
             isInvalidDrop={!isTouch && invalidDrop === key}
-            isSelected={isTouch && selected === key}
+            isSelected={selected === key}
             onDragStart={onDragStart}
             onDragEnter={onDragEnter}
             onDragLeave={onDragLeave}
@@ -577,6 +594,7 @@ const ZoneGrid = memo(function ZoneGrid({
             onTap={onTap}
             registerSlotNode={registerSlotNode}
             onContextMenu={onContextMenu}
+            onKeyboardMove={onKeyboardMove}
           />
         );
       })}
@@ -603,6 +621,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
   onTap,
   registerSlotNode,
   onContextMenu,
+  onKeyboardMove,
 }) {
   const { grouped, presentSections } = useMemo(() => {
     const zoneSlots = slots
@@ -662,7 +681,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                     isDragging={!isTouch && dragging === key}
                     isDropTarget={!isTouch && dropTarget === key}
                     isInvalidDrop={!isTouch && invalidDrop === key}
-                    isSelected={isTouch && selected === key}
+                    isSelected={selected === key}
                     onDragStart={onDragStart}
                     onDragEnter={onDragEnter}
                     onDragLeave={onDragLeave}
@@ -671,6 +690,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                     onTap={onTap}
                     registerSlotNode={registerSlotNode}
                     onContextMenu={onContextMenu}
+                    onKeyboardMove={onKeyboardMove}
                   />
                 );
               })}
@@ -684,7 +704,12 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
 
 // ─── TouchSelectionBanner ────────────────────────────────────────────────────
 
-const TouchSelectionBanner = memo(function TouchSelectionBanner({ selectedKey, slots, onCancel }) {
+const SelectionBanner = memo(function SelectionBanner({
+  selectedKey,
+  slots,
+  onCancel,
+  isTouch,
+}) {
   if (!selectedKey) return null;
   const slot = slots.find((s) => slotKey(s) === selectedKey);
   if (!slot) return null;
@@ -692,7 +717,10 @@ const TouchSelectionBanner = memo(function TouchSelectionBanner({ selectedKey, s
     <div className="flex items-center gap-3 px-3 py-2 mb-4 rounded-xl bg-indigo-50 border border-indigo-200 shadow-sm">
       <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0" />
       <span className="text-xs text-indigo-700 font-medium flex-1 truncate">
-        <strong>{slot.displayName}</strong> — tocá otra celda para mover
+        <strong>{slot.displayName}</strong>
+        {isTouch
+          ? " — tocá otra celda para mover"
+          : " — hacé click o presioná Enter/Espacio en otra celda para mover"}
       </span>
       <button
         type="button"
@@ -714,6 +742,7 @@ export default function FormationGrid({
   onChange,
   readOnly = false,
   zoneOrders = null,
+  formType = "DOUBLE",
   collaboratorsBySlot = {},
   onDragBegin,
   onDragComplete,
@@ -796,17 +825,23 @@ export default function FormationGrid({
       }
       const targetSlot = slots.find((s) => slotKey(s) === targetKey);
       if (targetSlot?.locked) {
-        setInvalidDrop(targetKey);
+        showInvalidDropFeedback(setInvalidDrop, targetKey);
         setDragging(null);
         setDropTarget(null);
-        setTimeout(() => setInvalidDrop(null), 600);
+        return;
+      }
+      const sourceSlot = slots.find((s) => slotKey(s) === dragging);
+      if (!canSwapSlotContents(sourceSlot, targetSlot, formType)) {
+        showInvalidDropFeedback(setInvalidDrop, targetKey);
+        setDragging(null);
+        setDropTarget(null);
         return;
       }
       onChange?.(swapSlots(slots, dragging, targetKey));
       setDragging(null);
       setDropTarget(null);
     },
-    [dragging, slots, onChange, readOnly]
+    [dragging, slots, onChange, readOnly, formType]
   );
 
   const handleTap = useCallback(
@@ -817,11 +852,30 @@ export default function FormationGrid({
       } else if (selected === key) {
         setSelected(null);
       } else {
+        const targetSlot = slots.find((s) => slotKey(s) === key);
+        if (targetSlot?.locked) {
+          showInvalidDropFeedback(setInvalidDrop, key);
+          setSelected(null);
+          return;
+        }
+        const sourceSlot = slots.find((s) => slotKey(s) === selected);
+        if (!canSwapSlotContents(sourceSlot, targetSlot, formType)) {
+          showInvalidDropFeedback(setInvalidDrop, key);
+          setSelected(null);
+          return;
+        }
         onChange?.(swapSlots(slots, selected, key));
         setSelected(null);
       }
     },
-    [readOnly, selected, slots, onChange]
+    [readOnly, selected, slots, onChange, formType]
+  );
+
+  const handleKeyboardMove = useCallback(
+    (key, slot) => {
+      handleTap(key, slot);
+    },
+    [handleTap]
   );
 
   const handleToggleLock = useCallback(
@@ -858,6 +912,7 @@ export default function FormationGrid({
       onDrop: handleDrop,
       onToggleLock: handleToggleLock,
       onTap: handleTap,
+      onKeyboardMove: handleKeyboardMove,
       registerSlotNode,
     }),
     [
@@ -875,6 +930,7 @@ export default function FormationGrid({
       handleDrop,
       handleToggleLock,
       handleTap,
+      handleKeyboardMove,
       registerSlotNode,
     ]
   );
@@ -929,11 +985,12 @@ export default function FormationGrid({
         <SlotCollaboratorOverlay items={overlayItems} />
         <SectionLegend slots={slots} />
 
-        {isTouch && !readOnly && (
-          <TouchSelectionBanner
+        {selected && !readOnly && (
+          <SelectionBanner
             selectedKey={selected}
             slots={slots}
             onCancel={() => setSelected(null)}
+            isTouch={isTouch}
           />
         )}
 
@@ -966,7 +1023,7 @@ export default function FormationGrid({
           <p className="text-center text-[9px] text-slate-400 pt-5 tracking-wide">
             {isTouch
               ? "Tocá una celda para seleccionarla · Tocá otra para mover · 🔒 para bloquear"
-              : "Arrastrá para mover · Soltá sobre otra celda para intercambiar · 🔒 para bloquear"}
+              : "Arrastrá para mover · O hacé click para seleccionar y luego click/Enter/Espacio en otra celda · 🔒 para bloquear"}
           </p>
         )}
       </div>

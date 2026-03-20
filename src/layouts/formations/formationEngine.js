@@ -173,6 +173,18 @@ export function inferZonesForSection(section, type = "SINGLE") {
   return type === "DOUBLE" ? ["BLOQUE_FRENTE", "BLOQUE_ATRAS"] : ["BLOQUE_FRENTE"];
 }
 
+export function canSectionOccupyZone(section, zone, type = "DOUBLE") {
+  if (!section || !zone) return true;
+  return inferZonesForSection(section, type).includes(zone);
+}
+
+export function canSwapSlotContents(slotA, slotB, type = "DOUBLE") {
+  if (!slotA || !slotB) return false;
+  const aFitsInB = !slotA.userId || canSectionOccupyZone(slotA.section, slotB.zone, type);
+  const bFitsInA = !slotB.userId || canSectionOccupyZone(slotB.section, slotA.zone, type);
+  return aFitsInB && bFitsInA;
+}
+
 export function buildDynamicZonePools({ sections = [], zoneOrders = {}, type = "SINGLE" }) {
   const known = new Set();
   sections.forEach((g) => g?.section && known.add(g.section));
