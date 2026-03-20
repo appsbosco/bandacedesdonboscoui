@@ -45,6 +45,10 @@ function ensureStyles() {
   80%      { transform: translateX(3px) rotate(0.5deg); }
 }
 .fg-shake { animation: fg-shake 0.42s ease !important; }
+@keyframes fg-menu-in {
+  from { opacity: 0; transform: scale(0.92) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
 `;
   document.head.appendChild(el);
 }
@@ -124,6 +128,89 @@ const ZONE_ACCENT = {
   },
 };
 
+// ─── ContextMenu ──────────────────────────────────────────────────────────────
+
+const ContextMenu = memo(function ContextMenu({
+  x,
+  y,
+  slot,
+  onClose,
+  onToggleLock,
+  onExclude,
+  canExclude,
+}) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
+
+  const [pos, setPos] = useState({ top: y, left: x });
+  useEffect(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setPos({
+      top: Math.min(y, window.innerHeight - rect.height - 8),
+      left: Math.min(x, window.innerWidth - rect.width - 8),
+    });
+  }, [x, y]);
+
+  const { first, last } = splitName(slot.displayName);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-[9999] min-w-[180px] rounded-xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+      style={{ top: pos.top, left: pos.left, animation: "fg-menu-in 0.14s ease-out forwards" }}
+    >
+      <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50">
+        <div className="text-xs font-bold text-slate-800 truncate">{first}</div>
+        {last && <div className="text-[10px] text-slate-400 truncate">{last}</div>}
+      </div>
+      <div className="py-1">
+        <button
+          type="button"
+          onClick={() => {
+            onToggleLock(slotKey(slot));
+            onClose();
+          }}
+          className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
+        >
+          <span className="text-base leading-none">{slot.locked ? "🔓" : "🔒"}</span>
+          {slot.locked ? "Desbloquear posición" : "Bloquear posición"}
+        </button>
+        {canExclude && (
+          <>
+            <div className="mx-3 my-1 h-px bg-slate-100" />
+            <button
+              type="button"
+              onClick={() => {
+                onExclude(slot.userId);
+                onClose();
+              }}
+              className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+            >
+              <span className="text-base leading-none">✕</span>
+              Excluir de la formación
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
 // ─── SlotCell ─────────────────────────────────────────────────────────────────
 
 const SlotCell = memo(function SlotCell({
@@ -140,6 +227,7 @@ const SlotCell = memo(function SlotCell({
   onTap,
   onToggleLock,
   registerSlotNode,
+  onContextMenu,
 }) {
   const key = slotKey(slot);
 
@@ -206,6 +294,12 @@ const SlotCell = memo(function SlotCell({
         onClick: () => {
           if (!isEmpty && !slot.locked) onTap?.(key, slot);
         },
+        onContextMenu: (e) => {
+          if (!isEmpty) {
+            e.preventDefault();
+            onContextMenu?.(e, slot);
+          }
+        },
       }
     : {
         role: "gridcell",
@@ -233,6 +327,12 @@ const SlotCell = memo(function SlotCell({
         onDrop: (e) => {
           e.preventDefault();
           onDrop(key);
+        },
+        onContextMenu: (e) => {
+          if (!isEmpty) {
+            e.preventDefault();
+            onContextMenu?.(e, slot);
+          }
         },
       };
 
@@ -439,6 +539,7 @@ const ZoneGrid = memo(function ZoneGrid({
   onToggleLock,
   onTap,
   registerSlotNode,
+  onContextMenu,
 }) {
   const zoneSlots = useMemo(
     () =>
@@ -475,6 +576,7 @@ const ZoneGrid = memo(function ZoneGrid({
             onToggleLock={onToggleLock}
             onTap={onTap}
             registerSlotNode={registerSlotNode}
+            onContextMenu={onContextMenu}
           />
         );
       })}
@@ -500,6 +602,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
   onToggleLock,
   onTap,
   registerSlotNode,
+  onContextMenu,
 }) {
   const { grouped, presentSections } = useMemo(() => {
     const zoneSlots = slots
@@ -567,6 +670,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                     onToggleLock={onToggleLock}
                     onTap={onTap}
                     registerSlotNode={registerSlotNode}
+                    onContextMenu={onContextMenu}
                   />
                 );
               })}
@@ -613,11 +717,15 @@ export default function FormationGrid({
   collaboratorsBySlot = {},
   onDragBegin,
   onDragComplete,
+  canExclude = false,
+  onExclude = null,
   onDragOver,
 }) {
   useMemo(ensureStyles, []);
 
   const [isTouch] = useState(detectTouchPointer);
+  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, slot }
+
   const [dragging, setDragging] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [invalidDrop, setInvalidDrop] = useState(null);
@@ -625,6 +733,16 @@ export default function FormationGrid({
   const [overlayVersion, setOverlayVersion] = useState(0);
   const contentRef = useRef(null);
   const slotNodeMapRef = useRef(new Map());
+
+  const handleContextMenu = useCallback(
+    (e, slot) => {
+      if (readOnly) return;
+      setCtxMenu({ x: e.clientX + 4, y: e.clientY + 4, slot });
+    },
+    [readOnly]
+  );
+
+  const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
   const registerSlotNode = useCallback((key, node) => {
     if (node) {
@@ -734,6 +852,7 @@ export default function FormationGrid({
       invalidDrop,
       selected,
       onDragStart: handleDragStart,
+      onContextMenu: handleContextMenu,
       onDragEnter: handleDragEnter,
       onDragLeave: handleDragLeave,
       onDrop: handleDrop,
@@ -749,6 +868,7 @@ export default function FormationGrid({
       invalidDrop,
       selected,
       collaboratorsBySlot,
+      handleContextMenu,
       handleDragStart,
       handleDragEnter,
       handleDragLeave,
@@ -850,6 +970,18 @@ export default function FormationGrid({
           </p>
         )}
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          slot={ctxMenu.slot}
+          onClose={closeCtxMenu}
+          onToggleLock={handleToggleLock}
+          onExclude={onExclude}
+          canExclude={canExclude}
+        />
+      )}
     </div>
   );
 }
