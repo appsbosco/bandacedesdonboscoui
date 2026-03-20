@@ -54,7 +54,7 @@ export function useFormationDetail(id) {
   const { data, loading } = useQuery(FORMATION_DETAIL, {
     variables: { id },
     skip: !id,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only",
   });
   return {
     formation: data?.formation || null,

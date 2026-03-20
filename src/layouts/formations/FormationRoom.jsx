@@ -20,8 +20,7 @@ export default function FormationRoom({ formationId, initialSlots, children }) {
         (initialSlots || []).map((slot) => [`${slot.zone}:${slot.row}:${slot.col}`, slot])
       ),
     }),
-
-    []
+    [formationId, initialSlots]
   );
 
   return (

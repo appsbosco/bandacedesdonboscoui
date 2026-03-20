@@ -1671,6 +1671,43 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   const [slots, setSlots] = useState(existingFormation?.slots || []);
   const [externalSlotsSeq, setExternalSlotsSeq] = useState(0);
 
+  useEffect(() => {
+    if (!isEdit || !existingFormation) return;
+
+    setFormName(existingFormation.name || "");
+    setFormType(existingFormation.type || "SINGLE");
+    setColumns(existingFormation.columns ?? 8);
+    setFormNotes(existingFormation.notes || "");
+    setLatestUpdatedAt(existingFormation.updatedAt ?? null);
+    setExcluded(new Set((existingFormation.excludedUserIds || []).map(String)));
+
+    setZoneOrders(() => {
+      const base = { ...DEFAULT_ZONE_ORDERS };
+      if (existingFormation.zoneOrders?.length) {
+        for (const zo of existingFormation.zoneOrders) base[zo.zone] = zo.sectionOrder;
+      }
+      return base;
+    });
+
+    setZoneColumns(() => {
+      const base = { ...DEFAULT_ZONE_COLUMNS };
+      if (existingFormation.zoneColumns?.length) {
+        for (const zc of existingFormation.zoneColumns) base[zc.zone] = zc.columns;
+      }
+      return base;
+    });
+
+    setZoneRows(() => {
+      const base = { ...DEFAULT_ZONE_ROWS };
+      if (existingFormation.zoneColumns?.length) {
+        for (const zc of existingFormation.zoneColumns) {
+          if (zc.rows != null) base[zc.zone] = zc.rows;
+        }
+      }
+      return base;
+    });
+  }, [isEdit, existingFormation]);
+
   // Called by FormationRoomContent whenever live slots change.
   // Keeps parent's `slots` in sync for handleSave / handleExport.
   const handleLiveSlotsChange = useCallback((liveSlots) => {
