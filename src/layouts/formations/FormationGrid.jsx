@@ -607,7 +607,6 @@ const ZoneGrid = memo(function ZoneGrid({
 const PercussionZoneGrid = memo(function PercussionZoneGrid({
   slots,
   columns,
-  sectionOrder,
   isTouch,
   dragging,
   dropTarget,
@@ -623,47 +622,53 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
   onContextMenu,
   onKeyboardMove,
 }) {
-  const { grouped, presentSections } = useMemo(() => {
+  const rows = useMemo(() => {
     const zoneSlots = slots
       .filter((s) => s.zone === "PERCUSION")
       .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
-    const present = sectionOrder.filter((sec) => zoneSlots.some((s) => s.section === sec));
-    const grp = {};
-    for (const sec of present) grp[sec] = [];
-    const fillers = [];
-    for (const slot of zoneSlots) {
-      if (slot.section && grp[slot.section] !== undefined) grp[slot.section].push(slot);
-      else if (!slot.section) fillers.push(slot);
-    }
-    if (present.length > 0 && fillers.length > 0) {
-      const last = present[present.length - 1];
-      grp[last].push(...fillers);
-      grp[last].sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
-    }
-    return { grouped: grp, presentSections: present };
-  }, [slots, sectionOrder]);
 
-  if (!presentSections.length) return null;
+    const byRow = new Map();
+    for (const slot of zoneSlots) {
+      if (!byRow.has(slot.row)) byRow.set(slot.row, []);
+      byRow.get(slot.row).push(slot);
+    }
+
+    return Array.from(byRow.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([row, rowSlots]) => {
+        const orderedSlots = rowSlots.sort((a, b) => a.col - b.col);
+        const rowSection = orderedSlots.find((slot) => slot.section)?.section || null;
+        return {
+          row,
+          section: rowSection,
+          slots: orderedSlots,
+        };
+      });
+  }, [slots]);
+
+  if (!rows.length) return null;
 
   return (
     <div className="space-y-4">
-      {presentSections.map((sec, idx) => {
-        const secSlots = grouped[sec];
-        if (!secSlots?.length) return null;
-        const c = SECTION_COLORS[sec];
+      {rows.map((rowData, idx) => {
+        const c = rowData.section ? SECTION_COLORS[rowData.section] : null;
+        const prevSection = idx > 0 ? rows[idx - 1].section : null;
+        const showSectionLabel = rowData.section && rowData.section !== prevSection;
         return (
-          <div key={sec}>
-            <div className="flex items-center gap-2 mb-2">
-              {idx > 0 && <div className="flex-1 h-px bg-slate-100" />}
-              <span
-                className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                  c ? c.badge : "bg-slate-50 border-slate-200 text-slate-500"
-                }`}
-              >
-                {getSectionLabel(sec)}
-              </span>
-              <div className="flex-1 h-px bg-slate-100" />
-            </div>
+          <div key={rowData.row}>
+            {showSectionLabel && (
+              <div className="flex items-center gap-2 mb-2">
+                {idx > 0 && <div className="flex-1 h-px bg-slate-100" />}
+                <span
+                  className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                    c ? c.badge : "bg-slate-50 border-slate-200 text-slate-500"
+                  }`}
+                >
+                  {getSectionLabel(rowData.section)}
+                </span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+            )}
             <div
               style={{
                 display: "grid",
@@ -671,7 +676,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                 gap: "6px",
               }}
             >
-              {secSlots.map((slot) => {
+              {rowData.slots.map((slot) => {
                 const key = slotKey(slot);
                 return (
                   <SlotCell
