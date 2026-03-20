@@ -42,6 +42,21 @@ import FormationPresenceBar from "./FormationPresenceBar.jsx";
 
 const FORMATION_ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector", "Dirección Logística"]);
 
+function getSlotsSignature(slots = []) {
+  return slots
+    .map((slot) =>
+      [
+        slotKey(slot),
+        slot.userId || "",
+        slot.displayName || "",
+        slot.section || "",
+        slot.locked ? "1" : "0",
+      ].join("|")
+    )
+    .sort()
+    .join("||");
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // removeAndCompact  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1262,25 +1277,31 @@ function FormationRoomContent({
     toggleSlotLock,
     startDragging,
     stopDragging,
+    notifyDragOver,
     persistToMongo,
     connectedUsers,
     draggingStates,
+    collaboratorsBySlot,
     connectionStatus,
-    isLoading, // ← nuevo: true mientras el LiveMap carga
+    isLoading,
   } = useFormationRoom({
     formationId: formation.id,
     currentUser,
-    initialSlots: formation.slots, // ← nuevo: slots de Mongo como fallback
+    initialSlots: formation.slots, // slots de Mongo como fallback
   });
 
   // ── Sync live slots → parent (para handleSave / handleExport) ──────────────
+  const lastSyncedSlotsRef = useRef("");
   useEffect(() => {
-    if (slots.length > 0) {
-      onSlotsChange(slots);
-      persistToMongo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots]);
+    if (slots.length === 0) return;
+
+    const nextSignature = getSlotsSignature(slots);
+    if (nextSignature === lastSyncedSlotsRef.current) return;
+
+    lastSyncedSlotsRef.current = nextSignature;
+    onSlotsChange(slots);
+    persistToMongo();
+  }, [slots, onSlotsChange, persistToMongo]);
 
   // ── Push external write (computeGrid / exclude / include) → LiveMap ────────
   const prevSeqRef = useRef(0);
@@ -1353,6 +1374,11 @@ function FormationRoomContent({
         draggingStates={draggingStates}
       />
 
+      {/* <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        Los movimientos y bloqueos se guardan automaticamente.
+      </div> */}
+
       {/* Notes */}
       <div className="mb-4 max-w-sm">
         <label htmlFor="formation-notes" className="block text-xs font-medium text-slate-500 mb-1">
@@ -1377,7 +1403,7 @@ function FormationRoomContent({
         onInclude={onInclude}
       />
 
-      <div className="overflow-hidden">
+      <div className="overflow-visible">
         <FormationGrid
           slots={slots}
           columns={columns}
@@ -1388,6 +1414,8 @@ function FormationRoomContent({
           onExclude={onExclude}
           onDragBegin={startDragging}
           onDragComplete={stopDragging}
+          onDragOver={notifyDragOver}
+          collaboratorsBySlot={collaboratorsBySlot}
         />
       </div>
     </>
@@ -1411,7 +1439,7 @@ function FormationRoomWrapper(props) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ── MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FormationBuilderPage({ formation: existingFormation }) {
+export default function FormationBuilderPage({ formation: existingFormation = null } = {}) {
   const navigate = useNavigate();
   const isEdit = !!existingFormation;
 
@@ -1432,6 +1460,7 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
             id: userData.getUser.id,
             name: userData.getUser.name,
             role: userData.getUser.role,
+            avatar: userData.getUser.avatar || null,
           }
         : null,
     [userData]
@@ -1514,7 +1543,10 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
   // Called by FormationRoomContent whenever live slots change.
   // Keeps parent's `slots` in sync for handleSave / handleExport.
   const handleLiveSlotsChange = useCallback((liveSlots) => {
-    setSlots(liveSlots);
+    const nextSignature = getSlotsSignature(liveSlots);
+    setSlots((prevSlots) =>
+      getSlotsSignature(prevSlots) === nextSignature ? prevSlots : liveSlots
+    );
   }, []);
 
   // Push a new slot array into the LiveMap from outside the room
@@ -1853,13 +1885,15 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                   ↗ Exportar
                 </button>
               )}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {saving ? "Guardando…" : "Guardar"}
-              </button>
+              {!isEdit && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-5 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saving ? "Guardando…" : "Guardar"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2091,13 +2125,15 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
                     ↺ Recalcular (respeta bloqueos)
                   </button>
                 )}
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-5 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-700 disabled:opacity-50"
-                >
-                  {saving ? "Guardando…" : "Guardar formación"}
-                </button>
+                {!isEdit && (
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-5 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    {saving ? "Guardando…" : "Guardar formación"}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -2106,5 +2142,3 @@ export default function FormationBuilderPage({ formation: existingFormation }) {
     </DashboardLayout>
   );
 }
-
-FormationBuilderPage.defaultProps = { formation: null };

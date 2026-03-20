@@ -7012,3 +7012,7 @@ select {
 .animate-scan-line {
   animation: scan-line 2s ease-in-out infinite;
 }
+a[href="https://lblcks.io/badge"]
+{
+  display: none !important;
+}

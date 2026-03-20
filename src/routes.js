@@ -567,7 +567,7 @@ export const adminRoutes = [
   title("Calendario", "calendario"),
   items.events(),
 
-  title("Inventario", "inventory"),
+  title("Inventario", "inventory-pages"),
   items.inventory(),
 
   title("Afinador", "tuner-pages"),

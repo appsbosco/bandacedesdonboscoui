@@ -14,7 +14,7 @@
  *   ─ Performance: todo memo / useCallback / useMemo.
  */
 
-import React, { useState, useCallback, useMemo, memo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from "react";
 import {
   ZONES,
   ZONE_LABEL,
@@ -25,6 +25,8 @@ import {
   swapSlots,
   toggleLock,
 } from "./formationEngine.js";
+
+import { SlotCollaboratorOverlay } from "./SlotCollaboratorOverlay.jsx";
 
 // ─── Keyframes (inyectados una sola vez) ──────────────────────────────────────
 
@@ -137,8 +139,10 @@ const SlotCell = memo(function SlotCell({
   isSelected,
   onTap,
   onToggleLock,
+  registerSlotNode,
 }) {
   const key = slotKey(slot);
+
   const isEmpty = !slot.userId;
   const colors = SECTION_COLORS[slot.section];
   const { first, last } = splitName(slot.displayName);
@@ -235,6 +239,7 @@ const SlotCell = memo(function SlotCell({
   return (
     <div
       {...interactionProps}
+      ref={(node) => registerSlotNode?.(key, node)}
       title={slot.displayName || ""}
       style={stateStyle}
       className={[
@@ -242,6 +247,7 @@ const SlotCell = memo(function SlotCell({
         "rounded-xl border select-none",
         "transition-[transform,box-shadow,opacity,filter] duration-200 ease-out",
         "px-1 py-2",
+        "overflow-visible",
         cellBase,
         cursor,
         hoverLift,
@@ -345,11 +351,7 @@ const SlotCell = memo(function SlotCell({
 
 const ZoneTray = memo(function ZoneTray({ zone, children }) {
   const accent = ZONE_ACCENT[zone] || ZONE_ACCENT.BLOQUE_FRENTE;
-  return (
-    <div className={["rounded-2xl border px-4 pt-3 pb-4", "shadow-sm", accent.tray].join(" ")}>
-      {children}
-    </div>
-  );
+  return <div className={[" pt-3 pb-4", "shadow-sm", accent.tray].join(" ")}>{children}</div>;
 });
 
 // ─── ZoneHeader ───────────────────────────────────────────────────────────────
@@ -436,6 +438,7 @@ const ZoneGrid = memo(function ZoneGrid({
   onDrop,
   onToggleLock,
   onTap,
+  registerSlotNode,
 }) {
   const zoneSlots = useMemo(
     () =>
@@ -471,6 +474,7 @@ const ZoneGrid = memo(function ZoneGrid({
             onDrop={onDrop}
             onToggleLock={onToggleLock}
             onTap={onTap}
+            registerSlotNode={registerSlotNode}
           />
         );
       })}
@@ -495,6 +499,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
   onDrop,
   onToggleLock,
   onTap,
+  registerSlotNode,
 }) {
   const { grouped, presentSections } = useMemo(() => {
     const zoneSlots = slots
@@ -561,6 +566,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                     onDrop={onDrop}
                     onToggleLock={onToggleLock}
                     onTap={onTap}
+                    registerSlotNode={registerSlotNode}
                   />
                 );
               })}
@@ -598,12 +604,16 @@ const TouchSelectionBanner = memo(function TouchSelectionBanner({ selectedKey, s
 // ─── FormationGrid ────────────────────────────────────────────────────────────
 
 export default function FormationGrid({
-  slots,
+  slots = [],
   columns,
-  zoneColumns,
+  zoneColumns = null,
   onChange,
-  readOnly,
-  zoneOrders,
+  readOnly = false,
+  zoneOrders = null,
+  collaboratorsBySlot = {},
+  onDragBegin,
+  onDragComplete,
+  onDragOver,
 }) {
   useMemo(ensureStyles, []);
 
@@ -612,6 +622,28 @@ export default function FormationGrid({
   const [dropTarget, setDropTarget] = useState(null);
   const [invalidDrop, setInvalidDrop] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [overlayVersion, setOverlayVersion] = useState(0);
+  const contentRef = useRef(null);
+  const slotNodeMapRef = useRef(new Map());
+
+  const registerSlotNode = useCallback((key, node) => {
+    if (node) {
+      slotNodeMapRef.current.set(key, node);
+      return;
+    }
+    slotNodeMapRef.current.delete(key);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleResize = () => setOverlayVersion((v) => v + 1);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    setOverlayVersion((v) => v + 1);
+  }, [slots, collaboratorsBySlot, dragging, dropTarget, invalidDrop, selected]);
 
   const handleDragStart = useCallback((key) => {
     setDragging(key);
@@ -620,9 +652,12 @@ export default function FormationGrid({
 
   const handleDragEnter = useCallback(
     (key) => {
-      if (key !== dragging) setDropTarget(key);
+      if (key !== dragging) {
+        setDropTarget(key);
+        onDragOver?.(key);
+      }
     },
-    [dragging]
+    [dragging, onDragOver]
   );
 
   const handleDragLeave = useCallback((key) => {
@@ -704,6 +739,7 @@ export default function FormationGrid({
       onDrop: handleDrop,
       onToggleLock: handleToggleLock,
       onTap: handleTap,
+      registerSlotNode,
     }),
     [
       slots,
@@ -712,14 +748,49 @@ export default function FormationGrid({
       dropTarget,
       invalidDrop,
       selected,
+      collaboratorsBySlot,
       handleDragStart,
       handleDragEnter,
       handleDragLeave,
       handleDrop,
       handleToggleLock,
       handleTap,
+      registerSlotNode,
     ]
   );
+
+  const overlayItems = useMemo(() => {
+    const contentNode = contentRef.current;
+    if (!contentNode) return [];
+
+    const contentRect = contentNode.getBoundingClientRect();
+    const items = [];
+
+    Object.entries(collaboratorsBySlot || {}).forEach(([key, collaborators]) => {
+      const slotNode = slotNodeMapRef.current.get(key);
+      if (!slotNode || !collaborators?.length) return;
+
+      const slotRect = slotNode.getBoundingClientRect();
+      const rect = {
+        key,
+        top: slotRect.top - contentRect.top,
+        left: slotRect.left - contentRect.left,
+        width: slotRect.width,
+        height: slotRect.height,
+      };
+
+      collaborators.forEach((collaborator, idx) => {
+        items.push({
+          collaborator,
+          rect,
+          pillTop: rect.top - 28 - idx * 26,
+          pillLeft: rect.left - 4,
+        });
+      });
+    });
+
+    return items;
+  }, [collaboratorsBySlot, overlayVersion, slots, dragging, dropTarget, invalidDrop, selected]);
 
   if (!presentZones.length) {
     return (
@@ -734,7 +805,8 @@ export default function FormationGrid({
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-fit p-5">
+      <div ref={contentRef} className="relative min-w-fit">
+        <SlotCollaboratorOverlay items={overlayItems} />
         <SectionLegend slots={slots} />
 
         {isTouch && !readOnly && (
@@ -781,5 +853,3 @@ export default function FormationGrid({
     </div>
   );
 }
-
-FormationGrid.defaultProps = { slots: [], readOnly: false, zoneOrders: null, zoneColumns: null };

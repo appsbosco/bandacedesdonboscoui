@@ -5,13 +5,13 @@
     {
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "./Icons-01.jpg"
+      "type": "image/png"
     },
 
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "./Icons-01.jpg"
+      "type": "image/png"
     }
   ],
   "start_url": ".",

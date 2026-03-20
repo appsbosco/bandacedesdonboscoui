@@ -10,6 +10,7 @@ import {
 const BACKEND_URL = process.env.REACT_APP_GRAPHQL_URL
   ? process.env.REACT_APP_GRAPHQL_URL.replace("/api/graphql", "")
   : "http://localhost:4000";
+
 export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const [myPresence, updateMyPresence] = useMyPresence();
   const others = useOthers();
@@ -19,19 +20,26 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const slotsMap = useStorage((root) => root.slots);
   const slots = slotsMap ? Array.from(slotsMap.values()) : [];
 
-  // Presencia
+  // ── Hidratar presencia ──────────────────────────────────────────────────────
   useEffect(() => {
     if (currentUser) {
       updateMyPresence({
         userId: currentUser.id,
         displayName: currentUser.name || currentUser.displayName,
         role: currentUser.role,
+        avatar: currentUser.avatar || null,
         color: currentUser.color || null,
+        activeSlotKey: null,
+        dragFromKey: null,
+        dragOverKey: null,
+        isDragging: false,
+        dragging: { slotId: null, displayName: null },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
+  // ── Mutaciones de storage ───────────────────────────────────────────────────
   const moveSlot = useLiveMutation(
     ({ storage }, keyA, keyB) => {
       const liveSlots = storage.get("slots");
@@ -75,17 +83,45 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
     }
   }, []);
 
-  const startDragging = useCallback(
-    ({ slotId, displayName }) => {
-      updateMyPresence({ dragging: { slotId, displayName } });
+  // ── Presencia de grid ───────────────────────────────────────────────────────
+  const setActiveSlot = useCallback(
+    (key) => {
+      updateMyPresence({ activeSlotKey: key });
     },
     [updateMyPresence]
   );
 
-  const stopDragging = useCallback(() => {
-    updateMyPresence({ dragging: { slotId: null, displayName: null } });
+  const notifyDragStart = useCallback(
+    ({ slotId, displayName }) => {
+      updateMyPresence({
+        isDragging: true,
+        dragFromKey: slotId,
+        dragOverKey: slotId,
+        activeSlotKey: slotId,
+        dragging: { slotId, displayName },
+      });
+    },
+    [updateMyPresence]
+  );
+
+  const notifyDragOver = useCallback(
+    (key) => {
+      updateMyPresence({ dragOverKey: key });
+    },
+    [updateMyPresence]
+  );
+
+  const notifyDragEnd = useCallback(() => {
+    updateMyPresence({
+      isDragging: false,
+      dragFromKey: null,
+      dragOverKey: null,
+      activeSlotKey: null,
+      dragging: { slotId: null, displayName: null },
+    });
   }, [updateMyPresence]);
 
+  // ── Persistencia ────────────────────────────────────────────────────────────
   const persistToMongo = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -120,35 +156,81 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [slotsMap, formationId]);
 
+  // ── Derived: presencia de otros usuarios ────────────────────────────────────
   const connectedUsers = others
     .map((other) => ({
+      connectionId: other.connectionId ?? other.presence.userId,
       userId: other.presence.userId,
       displayName: other.presence.displayName,
       role: other.presence.role,
+      avatar: other.presence.avatar || null,
       color: other.presence.color,
+      activeSlotKey: other.presence.activeSlotKey,
+      dragFromKey: other.presence.dragFromKey,
+      dragOverKey: other.presence.dragOverKey,
+      isDragging: other.presence.isDragging,
+      dragging: other.presence.dragging,
     }))
     .filter((u) => u.userId);
 
-  const draggingStates = others
-    .map((other) => ({
-      userId: other.presence.userId,
-      displayName: other.presence.displayName,
-      color: other.presence.color,
-      dragging: other.presence.dragging,
-    }))
-    .filter((o) => o.dragging?.slotId);
+  const draggingStates = connectedUsers.filter((u) => u.dragging?.slotId);
 
+  // ── Derived: colaboradores agrupados por slot (para overlays del grid) ──────
+  const collaboratorsBySlot = {};
+  for (const user of connectedUsers) {
+    // Prioridad: dragOver > activeSlot > dragFrom
+    const targetKey =
+      user.isDragging && user.dragOverKey
+        ? user.dragOverKey
+        : user.activeSlotKey || user.dragFromKey;
+
+    if (targetKey) {
+      if (!collaboratorsBySlot[targetKey]) collaboratorsBySlot[targetKey] = [];
+      collaboratorsBySlot[targetKey].push({
+        ...user,
+        isDragTarget: user.isDragging && user.dragOverKey === targetKey,
+        isDragSource:
+          user.isDragging && user.dragFromKey === targetKey && user.dragOverKey !== targetKey,
+      });
+    }
+
+    // Si está arrastrando, también marca el slot origen con estado secundario
+    if (user.isDragging && user.dragFromKey && user.dragFromKey !== user.dragOverKey) {
+      const fromKey = user.dragFromKey;
+      if (!collaboratorsBySlot[fromKey]) collaboratorsBySlot[fromKey] = [];
+      // Solo agregar si no está ya (evitar duplicados)
+      const alreadyAdded = collaboratorsBySlot[fromKey].some(
+        (c) => c.connectionId === user.connectionId && c.isDragSource
+      );
+      if (!alreadyAdded) {
+        collaboratorsBySlot[fromKey].push({
+          ...user,
+          isDragTarget: false,
+          isDragSource: true,
+        });
+      }
+    }
+  }
+
+  // ── Return ──────────────────────────────────────────────────────────────────
   return {
     slots,
     slotsMap,
     setSlots,
     moveSlot,
     toggleSlotLock,
-    startDragging,
-    stopDragging,
+    // Presencia básica (compatibilidad)
+    startDragging: notifyDragStart,
+    stopDragging: notifyDragEnd,
+    // Presencia de grid (nuevas)
+    notifyDragOver,
+    setActiveSlot,
+    // Persistencia
     persistToMongo,
+    // Datos de presencia
     connectedUsers,
     draggingStates,
+    collaboratorsBySlot,
     myPresence,
     connectionStatus: status,
     isConnected: status === "connected",

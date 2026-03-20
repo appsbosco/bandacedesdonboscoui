@@ -31,7 +31,12 @@ export default function FormationRoom({ formationId, initialSlots, children }) {
         userId: null,
         displayName: null,
         role: null,
+        avatar: null,
         color: null,
+        activeSlotKey: null,
+        dragFromKey: null,
+        dragOverKey: null,
+        isDragging: false,
         dragging: { slotId: null, displayName: null },
         selectedSlotId: null,
       }}

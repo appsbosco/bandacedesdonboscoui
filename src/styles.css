@@ -8,4 +8,11 @@
   font-family: "Open Sans", sans-serif;
 }
 
+@layer utilities {
+  a[href="https://lblcks.io/badge"]
+  {
+    @apply hidden;
+  }
+}
+
 /* ... */

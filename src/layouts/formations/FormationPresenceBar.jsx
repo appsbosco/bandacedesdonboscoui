@@ -2,6 +2,14 @@
 import React from "react";
 
 export default function FormationPresenceBar({ connectedUsers, connectionStatus, draggingStates }) {
+  const getInitials = (name) =>
+    String(name || "?")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "?";
+
   const statusColor =
     {
       connected: "bg-emerald-500",
@@ -33,12 +41,28 @@ export default function FormationPresenceBar({ connectedUsers, connectionStatus,
           <div className="flex -space-x-1.5">
             {connectedUsers.map((u) => (
               <div
-                key={u.userId}
+                key={u.connectionId || u.userId}
+                className="relative group"
                 title={`${u.displayName} (${u.role})`}
-                style={{ background: u.color || "#6366f1" }}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-sm"
               >
-                {(u.displayName || "?").charAt(0).toUpperCase()}
+                {u.avatar ? (
+                  <img
+                    src={u.avatar}
+                    alt={u.displayName || "Usuario"}
+                    loading="lazy"
+                    className="w-7 h-7 rounded-full object-cover border-2 border-white shadow-sm bg-slate-200"
+                  />
+                ) : (
+                  <div
+                    style={{ background: u.color || "#6366f1" }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-sm"
+                  >
+                    {getInitials(u.displayName)}
+                  </div>
+                )}
+                <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white shadow-lg opacity-0 transition-opacity duration-150 group-hover:opacity-100 whitespace-nowrap">
+                  {u.displayName || "Usuario"}
+                </div>
               </div>
             ))}
           </div>
@@ -47,7 +71,10 @@ export default function FormationPresenceBar({ connectedUsers, connectionStatus,
 
       {/* "X está moviendo a Y" */}
       {draggingStates.map((d) => (
-        <div key={d.userId} className="flex items-center gap-1.5">
+        <div
+          key={`${d.connectionId || d.userId}:${d.dragging?.slotId || "idle"}`}
+          className="flex items-center gap-1.5"
+        >
           <span
             style={{ background: d.color || "#6366f1" }}
             className="w-2 h-2 rounded-full animate-pulse"
