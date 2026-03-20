@@ -1,15 +1,20 @@
 /* eslint-disable react/prop-types */
 /**
- * FormationGrid.jsx — v4
+ * FormationGrid.jsx — v3
  *
- * Novedades vs v3:
- *   ─ Menú contextual (clic derecho / long-press) en celdas con músico:
- *     muestra nombre + opciones "Bloquear / Desbloquear" y "Excluir de formación".
- *   ─ onExclude / canExclude props nuevas (solo Admins).
- *   ─ Todo lo demás igual que v3.
+ * Mejoras sobre v2:
+ *   ─ Card levantada al arrastrar: se clona el nodo real, se escala 1.08×
+ *     + rotate(2deg) + sombra profunda como drag image. La fuente queda
+ *     "hundida" (opacity 0.25 + scale 0.95).
+ *   ─ Drop target expresivo: scale(1.07) + ring indigo + sombra fuerte.
+ *   ─ Hover micro-lift: -translateY(2px) + shadow en hover normal.
+ *   ─ Invalid drop: shake keyframe + ring rojo.
+ *   ─ Separación de bloques: cada zona tiene su propia ZoneTray con fondo
+ *     tintado por zona + border + shadow. Los dividers son más amplios.
+ *   ─ Performance: todo memo / useCallback / useMemo.
  */
 
-import React, { useState, useCallback, useMemo, memo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import {
   ZONES,
   ZONE_LABEL,
@@ -21,7 +26,7 @@ import {
   toggleLock,
 } from "./formationEngine.js";
 
-// ─── Keyframes ────────────────────────────────────────────────────────────────
+// ─── Keyframes (inyectados una sola vez) ──────────────────────────────────────
 
 const STYLE_ID = "__fg_styles__";
 function ensureStyles() {
@@ -38,11 +43,6 @@ function ensureStyles() {
   80%      { transform: translateX(3px) rotate(0.5deg); }
 }
 .fg-shake { animation: fg-shake 0.42s ease !important; }
-@keyframes fg-menu-in {
-  from { opacity: 0; transform: scale(0.92) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-.fg-menu-in { animation: fg-menu-in 0.14s ease-out forwards; }
 `;
   document.head.appendChild(el);
 }
@@ -69,6 +69,8 @@ function buildDragGhost(sourceEl) {
   setTimeout(() => clone.remove(), 0);
   return clone;
 }
+
+// ─── Touch pointer ────────────────────────────────────────────────────────────
 
 function detectTouchPointer() {
   if (typeof window === "undefined") return false;
@@ -120,104 +122,6 @@ const ZONE_ACCENT = {
   },
 };
 
-// ─── ContextMenu ──────────────────────────────────────────────────────────────
-
-/**
- * Floating context menu anchored to a screen position.
- * Dismissed on outside click or Escape.
- */
-const ContextMenu = memo(function ContextMenu({
-  x,
-  y,
-  slot,
-  onClose,
-  onToggleLock,
-  onExclude,
-  canExclude,
-}) {
-  const ref = useRef(null);
-
-  // Close on outside click or Escape
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    };
-    const handleKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [onClose]);
-
-  // Clamp to viewport
-  const [pos, setPos] = useState({ top: y, left: x });
-  useEffect(() => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    setPos({
-      top: Math.min(y, vh - rect.height - 8),
-      left: Math.min(x, vw - rect.width - 8),
-    });
-  }, [x, y]);
-
-  const { first, last } = splitName(slot.displayName);
-
-  return (
-    <div
-      ref={ref}
-      className="fg-menu-in fixed z-[9999] min-w-[180px] rounded-xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
-      style={{ top: pos.top, left: pos.left }}
-    >
-      {/* Header */}
-      <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50">
-        <div className="text-xs font-bold text-slate-800 truncate">{first}</div>
-        {last && <div className="text-[10px] text-slate-400 truncate">{last}</div>}
-        {slot.section && (
-          <div className="text-[10px] text-slate-400 mt-0.5">{getSectionLabel(slot.section)}</div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="py-1">
-        <button
-          type="button"
-          onClick={() => {
-            onToggleLock(slotKey(slot));
-            onClose();
-          }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
-        >
-          <span className="text-base leading-none">{slot.locked ? "🔓" : "🔒"}</span>
-          {slot.locked ? "Desbloquear posición" : "Bloquear posición"}
-        </button>
-
-        {canExclude && (
-          <>
-            <div className="mx-3 my-1 h-px bg-slate-100" />
-            <button
-              type="button"
-              onClick={() => {
-                onExclude(slot.userId);
-                onClose();
-              }}
-              className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors"
-            >
-              <span className="text-base leading-none">✕</span>
-              Excluir de la formación
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-});
-
 // ─── SlotCell ─────────────────────────────────────────────────────────────────
 
 const SlotCell = memo(function SlotCell({
@@ -233,13 +137,13 @@ const SlotCell = memo(function SlotCell({
   isSelected,
   onTap,
   onToggleLock,
-  onContextMenu,
 }) {
   const key = slotKey(slot);
   const isEmpty = !slot.userId;
   const colors = SECTION_COLORS[slot.section];
   const { first, last } = splitName(slot.displayName);
 
+  // Base look
   let cellBase, nameText;
   if (slot.locked) {
     cellBase = "bg-amber-50 border-amber-300";
@@ -252,6 +156,7 @@ const SlotCell = memo(function SlotCell({
     nameText = colors ? colors.text : "text-slate-700";
   }
 
+  // State-driven inline style for transforms (más preciso que clases Tailwind)
   let stateStyle = {};
   let stateRing = "";
 
@@ -275,6 +180,7 @@ const SlotCell = memo(function SlotCell({
     stateRing = "ring-2 ring-indigo-500 ring-offset-2";
   }
 
+  // Hover lift only when idle
   const isIdle = !isDragging && !isDropTarget && !isInvalidDrop && !(isTouch && isSelected);
   const hoverLift =
     isIdle && !isEmpty && !slot.locked
@@ -296,23 +202,11 @@ const SlotCell = memo(function SlotCell({
         onClick: () => {
           if (!isEmpty && !slot.locked) onTap?.(key, slot);
         },
-        onContextMenu: (e) => {
-          if (!isEmpty) {
-            e.preventDefault();
-            onContextMenu?.(e, slot);
-          }
-        },
       }
     : {
         role: "gridcell",
         "aria-label": slot.displayName || "Celda vacía",
         draggable: !slot.locked && !isEmpty,
-        onContextMenu: (e) => {
-          if (!isEmpty) {
-            e.preventDefault();
-            onContextMenu?.(e, slot);
-          }
-        },
         onDragStart: (e) => {
           if (slot.locked || isEmpty) return;
           const ghost = buildDragGhost(e.currentTarget);
@@ -356,6 +250,7 @@ const SlotCell = memo(function SlotCell({
         .filter(Boolean)
         .join(" ")}
     >
+      {/* Glow interior en drop-target */}
       {isDropTarget && !slot.locked && (
         <div className="absolute inset-0 rounded-xl bg-indigo-400/10 pointer-events-none" />
       )}
@@ -394,6 +289,7 @@ const SlotCell = memo(function SlotCell({
         </button>
       )}
 
+      {/* Touch selection dot */}
       {isTouch && isSelected && (
         <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-indigo-500 shadow-sm" />
       )}
@@ -469,9 +365,11 @@ const ZoneHeader = memo(function ZoneHeader({ zone, inline }) {
   );
 
   if (inline) {
+    // Etiqueta dentro del tray (primera zona o dentro del bloque)
     return <div className="flex justify-center mb-3">{chip}</div>;
   }
 
+  // Divider entre zonas
   return (
     <div className="flex items-center gap-3 my-2">
       <div className="flex-1 h-px bg-slate-200/60" />
@@ -538,7 +436,6 @@ const ZoneGrid = memo(function ZoneGrid({
   onDrop,
   onToggleLock,
   onTap,
-  onContextMenu,
 }) {
   const zoneSlots = useMemo(
     () =>
@@ -574,7 +471,6 @@ const ZoneGrid = memo(function ZoneGrid({
             onDrop={onDrop}
             onToggleLock={onToggleLock}
             onTap={onTap}
-            onContextMenu={onContextMenu}
           />
         );
       })}
@@ -599,7 +495,6 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
   onDrop,
   onToggleLock,
   onTap,
-  onContextMenu,
 }) {
   const { grouped, presentSections } = useMemo(() => {
     const zoneSlots = slots
@@ -666,7 +561,6 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
                     onDrop={onDrop}
                     onToggleLock={onToggleLock}
                     onTap={onTap}
-                    onContextMenu={onContextMenu}
                   />
                 );
               })}
@@ -710,8 +604,6 @@ export default function FormationGrid({
   onChange,
   readOnly,
   zoneOrders,
-  canExclude,
-  onExclude,
 }) {
   useMemo(ensureStyles, []);
 
@@ -720,9 +612,6 @@ export default function FormationGrid({
   const [dropTarget, setDropTarget] = useState(null);
   const [invalidDrop, setInvalidDrop] = useState(null);
   const [selected, setSelected] = useState(null);
-
-  // Context menu state
-  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, slot }
 
   const handleDragStart = useCallback((key) => {
     setDragging(key);
@@ -789,17 +678,6 @@ export default function FormationGrid({
     [readOnly, slots, onChange]
   );
 
-  // Right-click handler — opens context menu
-  const handleContextMenu = useCallback(
-    (e, slot) => {
-      if (readOnly) return;
-      setCtxMenu({ x: e.clientX + 4, y: e.clientY + 4, slot });
-    },
-    [readOnly]
-  );
-
-  const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
-
   const presentZones = useMemo(() => ZONES.filter((z) => slots.some((s) => s.zone === z)), [slots]);
 
   const percussionOrder = useMemo(
@@ -826,7 +704,6 @@ export default function FormationGrid({
       onDrop: handleDrop,
       onToggleLock: handleToggleLock,
       onTap: handleTap,
-      onContextMenu: handleContextMenu,
     }),
     [
       slots,
@@ -841,7 +718,6 @@ export default function FormationGrid({
       handleDrop,
       handleToggleLock,
       handleTap,
-      handleContextMenu,
     ]
   );
 
@@ -869,10 +745,15 @@ export default function FormationGrid({
           />
         )}
 
+        {/* Zonas: cada una en su propia bandeja */}
         <div className="flex flex-col gap-3">
-          {presentZones.map((zone) => (
+          {presentZones.map((zone, idx) => (
             <div key={zone}>
+              {/* Divider entre bloques */}
+              {/* {idx > 0 && <ZoneHeader zone={zone} inline={false} />} */}
+
               <ZoneTray zone={zone}>
+                {/* Label dentro del tray */}
                 <ZoneHeader zone={zone} inline={true} />
 
                 {zone === "PERCUSION" ? (
@@ -892,33 +773,13 @@ export default function FormationGrid({
         {!readOnly && (
           <p className="text-center text-[9px] text-slate-400 pt-5 tracking-wide">
             {isTouch
-              ? "Tocá una celda para seleccionarla · Tocá otra para mover · Mantené presionado para más opciones"
-              : "Arrastrá para mover · Clic derecho para opciones · 🔒 para bloquear"}
+              ? "Tocá una celda para seleccionarla · Tocá otra para mover · 🔒 para bloquear"
+              : "Arrastrá para mover · Soltá sobre otra celda para intercambiar · 🔒 para bloquear"}
           </p>
         )}
       </div>
-
-      {/* Context menu portal */}
-      {ctxMenu && (
-        <ContextMenu
-          x={ctxMenu.x}
-          y={ctxMenu.y}
-          slot={ctxMenu.slot}
-          onClose={closeCtxMenu}
-          onToggleLock={handleToggleLock}
-          onExclude={onExclude}
-          canExclude={canExclude}
-        />
-      )}
     </div>
   );
 }
 
-FormationGrid.defaultProps = {
-  slots: [],
-  readOnly: false,
-  zoneOrders: null,
-  zoneColumns: null,
-  canExclude: false,
-  onExclude: null,
-};
+FormationGrid.defaultProps = { slots: [], readOnly: false, zoneOrders: null, zoneColumns: null };
