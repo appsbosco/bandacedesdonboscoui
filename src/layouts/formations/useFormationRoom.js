@@ -7,8 +7,9 @@ import {
   useStatus,
 } from "./liveblocks.config.js";
 
-const BACKEND_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:4000";
-
+const BACKEND_URL = process.env.REACT_APP_GRAPHQL_URL
+  ? process.env.REACT_APP_GRAPHQL_URL.replace("/api/graphql", "")
+  : "http://localhost:4000";
 export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const [myPresence, updateMyPresence] = useMyPresence();
   const others = useOthers();

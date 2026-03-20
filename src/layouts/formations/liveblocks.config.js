@@ -1,7 +1,9 @@
 import { createClient } from "@liveblocks/client";
 import { createRoomContext } from "@liveblocks/react";
 
-const BACKEND_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:4000";
+const BACKEND_URL = process.env.REACT_APP_GRAPHQL_URL
+  ? process.env.REACT_APP_GRAPHQL_URL.replace("/api/graphql", "")
+  : "http://localhost:4000";
 
 const client = createClient({
   authEndpoint: async (room) => {
