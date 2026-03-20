@@ -9,7 +9,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { createPortal } from "react-dom";
 
 // ============================================================================
 // CONSTANTS & UTILS
@@ -50,6 +49,21 @@ const STATUS_KEYS = [
   "JUSTIFIED_WITHDRAWAL",
   "UNJUSTIFIED_WITHDRAWAL",
 ];
+
+const WEIGHTS = {
+  ATTENDANCE: {
+    PRESENT: 1,
+    LATE: 1,
+    ABSENT_JUSTIFIED: 0.5,
+    JUSTIFIED_WITHDRAWAL: 0.75,
+  },
+  EQUIVALENT_ABSENCE: {
+    ABSENT_UNJUSTIFIED: 1,
+    UNJUSTIFIED_WITHDRAWAL: 1,
+    ABSENT_JUSTIFIED: 0.5,
+    JUSTIFIED_WITHDRAWAL: 0.25,
+  },
+};
 
 const parseToDate = (value) => {
   if (!value) return null;
@@ -114,7 +128,6 @@ const getPickerYmd = (pickerDate) => {
   return `${y}-${m}-${d}`;
 };
 
-// Devuelve startDate/endDate en formato YYYY-MM-DD para el rango de un día (o null si no hay fecha)
 const getDateRangeFromPicker = (pickerDate) => {
   if (!pickerDate) return { startDate: null, endDate: null };
   const ymd = getPickerYmd(pickerDate);
@@ -131,10 +144,12 @@ const getAttendanceConfig = (status) =>
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const getMoodConfig = (percentage) => {
-  if (percentage >= 80)
+  if (percentage >= 80) {
     return { icon: "😊", color: "text-green-600", bgColor: "bg-green-50", label: "Excelente" };
-  if (percentage >= 60)
+  }
+  if (percentage >= 60) {
     return { icon: "😐", color: "text-orange-600", bgColor: "bg-orange-50", label: "Regular" };
+  }
   return { icon: "😞", color: "text-red-600", bgColor: "bg-red-50", label: "Necesita mejorar" };
 };
 
@@ -151,22 +166,20 @@ const getSortDateValue = (attendance) => {
 
 // ── Helpers de riesgo ────────────────────────────────────────────────────────
 
-/**
- * Construye los badges de alerta para una fila/modal.
- * Recibe los stats del backend (cuando están disponibles) o un objeto local.
- */
 const getRiskBadges = ({ hasThreeUnjustified, exceedsLimit } = {}) => {
   const badges = [];
-  if (hasThreeUnjustified)
+  if (hasThreeUnjustified) {
     badges.push({
       label: "⚠ 3+ injustificadas",
       className: "bg-red-100 text-red-700 border border-red-300",
     });
-  if (exceedsLimit)
+  }
+  if (exceedsLimit) {
     badges.push({
       label: "🚨 Excede límite",
       className: "bg-red-200 text-red-800 border border-red-400 font-bold",
     });
+  }
   return badges;
 };
 
@@ -177,16 +190,22 @@ const buildUserStatsMap = (records) => {
   for (const r of records) {
     const userId = r?.user?.id ? String(r.user.id) : null;
     if (!userId) continue;
+
     const user = r.user;
     const entry = map.get(userId) || {
       userId,
       user,
       total: 0,
-      counts: STATUS_KEYS.reduce((acc, k) => ((acc[k] = 0), acc), {}),
+      counts: STATUS_KEYS.reduce((acc, k) => {
+        acc[k] = 0;
+        return acc;
+      }, {}),
       records: [],
     };
+
     const st = r?.status || null;
     if (st && entry.counts[st] !== undefined) entry.counts[st] += 1;
+
     entry.total += 1;
     entry.records.push(r);
     map.set(userId, entry);
@@ -196,16 +215,35 @@ const buildUserStatsMap = (records) => {
   map.forEach((entry, userId) => {
     entry.records.sort((a, b) => getSortDateValue(b) - getSortDateValue(a));
 
-    // Porcentaje LOCAL (sin "missing" → limitación conocida, se aclara en UI)
     const presentLike = (entry.counts.PRESENT || 0) + (entry.counts.LATE || 0);
-    const justifiedLike =
-      ((entry.counts.ABSENT_JUSTIFIED || 0) + (entry.counts.JUSTIFIED_WITHDRAWAL || 0)) / 2;
-    const attendanceCreditsLocal = presentLike + justifiedLike;
+    const unjustifiedCountLocal =
+      (entry.counts.ABSENT_UNJUSTIFIED || 0) + (entry.counts.UNJUSTIFIED_WITHDRAWAL || 0);
+
+    const attendanceCreditsLocal =
+      (entry.counts.PRESENT || 0) * WEIGHTS.ATTENDANCE.PRESENT +
+      (entry.counts.LATE || 0) * WEIGHTS.ATTENDANCE.LATE +
+      (entry.counts.ABSENT_JUSTIFIED || 0) * WEIGHTS.ATTENDANCE.ABSENT_JUSTIFIED +
+      (entry.counts.JUSTIFIED_WITHDRAWAL || 0) * WEIGHTS.ATTENDANCE.JUSTIFIED_WITHDRAWAL;
+
+    const equivalentAbsencesLocal =
+      (entry.counts.ABSENT_UNJUSTIFIED || 0) * WEIGHTS.EQUIVALENT_ABSENCE.ABSENT_UNJUSTIFIED +
+      (entry.counts.UNJUSTIFIED_WITHDRAWAL || 0) *
+        WEIGHTS.EQUIVALENT_ABSENCE.UNJUSTIFIED_WITHDRAWAL +
+      (entry.counts.ABSENT_JUSTIFIED || 0) * WEIGHTS.EQUIVALENT_ABSENCE.ABSENT_JUSTIFIED +
+      (entry.counts.JUSTIFIED_WITHDRAWAL || 0) * WEIGHTS.EQUIVALENT_ABSENCE.JUSTIFIED_WITHDRAWAL;
+
     const percentage = entry.total > 0 ? (attendanceCreditsLocal / entry.total) * 100 : 0;
+    const hasThreeUnjustifiedLocal = unjustifiedCountLocal >= 3;
+    const exceedsLimitLocal = equivalentAbsencesLocal > 6;
 
     out[userId] = {
       ...entry,
       presentLike,
+      attendanceCreditsLocal,
+      equivalentAbsencesLocal,
+      unjustifiedCountLocal,
+      hasThreeUnjustifiedLocal,
+      exceedsLimitLocal,
       percentage,
       mood: getMoodConfig(percentage),
     };
@@ -218,10 +256,6 @@ const buildUserStatsMap = (records) => {
 // CUSTOM HOOK: useUserAttendanceStats
 // ============================================================================
 
-/**
- * Dispara GET_USER_ATTENDANCE_STATS cuando se provee un userId.
- * Soporta filtrado por rango de fecha (pickerDate opcional).
- */
 const useUserAttendanceStats = (userId, pickerDate) => {
   const { startDate, endDate } = getDateRangeFromPicker(pickerDate);
 
@@ -250,14 +284,6 @@ const useUserAttendanceStats = (userId, pickerDate) => {
 // SUBCOMPONENT: WorstAttendancePanel
 // ============================================================================
 
-/**
- * Muestra el top N de usuarios con peor asistencia calculado localmente.
- *
- * ⚠ LIMITACIÓN CONOCIDA: este cálculo usa solo los registros cargados en
- * GET_ALL_ATTENDANCES_REHEARSAL. No incluye sesiones sin registro ("missing"),
- * por lo que el % puede estar sobreestimado respecto al backend.
- * Para datos exactos, implementar query `getWorstAttendanceReport` en el backend.
- */
 const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
   const [expanded, setExpanded] = useState(false);
 
@@ -265,9 +291,7 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
     return Object.values(statsByUserId)
       .sort((a, b) => {
         if (a.percentage !== b.percentage) return a.percentage - b.percentage;
-        const aUnj = (a.counts.ABSENT_UNJUSTIFIED || 0) + (a.counts.UNJUSTIFIED_WITHDRAWAL || 0);
-        const bUnj = (b.counts.ABSENT_UNJUSTIFIED || 0) + (b.counts.UNJUSTIFIED_WITHDRAWAL || 0);
-        return bUnj - aUnj;
+        return b.unjustifiedCountLocal - a.unjustifiedCountLocal;
       })
       .slice(0, topN);
   }, [statsByUserId, topN]);
@@ -290,51 +314,58 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
 
       {expanded && (
         <div className="divide-y divide-gray-100">
-          {sorted.map(({ userId, user, percentage, counts, total }) => {
-            const fullName = `${user?.name || ""} ${user?.firstSurName || ""} ${
-              user?.secondSurName || ""
-            }`.trim();
-            const mood = getMoodConfig(percentage);
-            const unjustified =
-              (counts.ABSENT_UNJUSTIFIED || 0) + (counts.UNJUSTIFIED_WITHDRAWAL || 0);
-            const justified = (counts.ABSENT_JUSTIFIED || 0) + (counts.JUSTIFIED_WITHDRAWAL || 0);
-            const equivalent = unjustified + justified / 2;
-            const hasThreeLocal = unjustified >= 3;
+          {sorted.map(
+            ({
+              userId,
+              user,
+              percentage,
+              unjustifiedCountLocal,
+              equivalentAbsencesLocal,
+              hasThreeUnjustifiedLocal,
+            }) => {
+              const fullName = `${user?.name || ""} ${user?.firstSurName || ""} ${
+                user?.secondSurName || ""
+              }`.trim();
+              const mood = getMoodConfig(percentage);
 
-            return (
-              <div key={userId} className="px-4 py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
-                  <p className="text-xs text-gray-500">{user?.instrument || "—"}</p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                  <div
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${mood.bgColor} ${mood.color}`}
-                  >
-                    <span>{mood.icon}</span>
-                    <span>{percentage.toFixed(1)}%</span>
+              return (
+                <div key={userId} className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
+                    <p className="text-xs text-gray-500">{user?.instrument || "—"}</p>
                   </div>
 
-                  <div className="text-xs text-gray-500 text-right leading-tight">
-                    <p>
-                      Inj: <span className="font-semibold text-red-600">{unjustified}</span>
-                    </p>
-                    <p>
-                      Equiv:{" "}
-                      <span className="font-semibold text-orange-600">{equivalent.toFixed(1)}</span>
-                    </p>
-                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                    <div
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${mood.bgColor} ${mood.color}`}
+                    >
+                      <span>{mood.icon}</span>
+                      <span>{percentage.toFixed(1)}%</span>
+                    </div>
 
-                  {hasThreeLocal && (
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300 whitespace-nowrap">
-                      ⚠ 3+ inj.
-                    </span>
-                  )}
+                    <div className="text-xs text-gray-500 text-right leading-tight">
+                      <p>
+                        Inj:{" "}
+                        <span className="font-semibold text-red-600">{unjustifiedCountLocal}</span>
+                      </p>
+                      <p>
+                        Equiv:{" "}
+                        <span className="font-semibold text-orange-600">
+                          {equivalentAbsencesLocal.toFixed(1)}
+                        </span>
+                      </p>
+                    </div>
+
+                    {hasThreeUnjustifiedLocal && (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300 whitespace-nowrap">
+                        ⚠ 3+ inj.
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            }
+          )}
 
           <p className="px-4 py-2 text-[11px] text-gray-400 bg-gray-50">
             * No incluye sesiones sin registro. Para datos exactos, consultar panel de
@@ -347,13 +378,12 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
 };
 
 // ============================================================================
-// SUBCOMPONENT: AttendanceDetailModal (mejorado)
+// SUBCOMPONENT: AttendanceDetailModal
 // ============================================================================
 
 const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => {
   const panelRef = useRef(null);
 
-  // Query al backend con stats reales
   const { stats: backendStats, loading: statsLoading } = useUserAttendanceStats(
     isOpen ? userStats?.userId : null,
     selectedDate
@@ -379,16 +409,31 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
 
   if (!isOpen || !userStats) return null;
 
-  const { user, total, counts, percentage, presentLike, mood, records } = userStats;
+  const {
+    user,
+    total,
+    counts,
+    percentage,
+    attendanceCreditsLocal,
+    hasThreeUnjustifiedLocal,
+    exceedsLimitLocal,
+    records,
+  } = userStats;
 
   const fullName = `${user?.name || ""} ${user?.firstSurName || ""} ${
     user?.secondSurName || ""
   }`.trim();
 
-  // Stats a mostrar: preferir backend si ya cargó
   const displayPercentage = backendStats?.attendancePercentage ?? percentage;
   const displayMood = getMoodConfig(displayPercentage);
-  const riskBadges = getRiskBadges(backendStats ?? {});
+  const riskBadges = getRiskBadges(
+    backendStats ?? {
+      hasThreeUnjustified: hasThreeUnjustifiedLocal,
+      exceedsLimit: exceedsLimitLocal,
+    }
+  );
+
+  const displayCredits = backendStats?.attendanceCredits ?? attendanceCreditsLocal ?? 0;
 
   return (
     <div className="fixed inset-0 z-[1300] bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -396,7 +441,6 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
         ref={panelRef}
         className="w-full sm:max-w-3xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
       >
-        {/* Header */}
         <div className="px-4 sm:px-6 py-4 border-b bg-white">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -407,7 +451,6 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
                 {user?.instrument ? `Instrumento: ${user.instrument}` : "—"}
               </p>
 
-              {/* Risk badges */}
               {riskBadges.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {riskBadges.map((b) => (
@@ -431,7 +474,6 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
             </button>
           </div>
 
-          {/* Summary pills */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
               <span className="text-xs font-medium text-gray-600">Registros:</span>
@@ -440,8 +482,10 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg">
               <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-              <span className="text-xs font-medium text-emerald-700">Efectivos:</span>
-              <span className="text-sm font-bold text-emerald-900">{presentLike}</span>
+              <span className="text-xs font-medium text-emerald-700">Créditos:</span>
+              <span className="text-sm font-bold text-emerald-900">
+                {Number(displayCredits).toFixed(2)}
+              </span>
             </div>
 
             <div
@@ -457,9 +501,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
           </div>
         </div>
 
-        {/* Body */}
         <div className="px-4 sm:px-6 py-4 max-h-[70vh] sm:max-h-[75vh] overflow-auto bg-gray-50">
-          {/* ── Bloque métricas backend ──────────────────────────────────── */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
             <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -502,7 +544,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
                 <MetricCard
                   label="% Ponderado"
                   value={`${backendStats.attendancePercentage.toFixed(1)}%`}
-                  sub="LATE y Justif. × 0.5"
+                  sub="Pres/Late=1 • Aus.just.=0.5 • Ret.just.=0.75"
                   highlight={
                     backendStats.attendancePercentage < 60
                       ? "red"
@@ -530,7 +572,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
                 <MetricCard
                   label="Faltas equiv."
                   value={backendStats.equivalentAbsences.toFixed(1)}
-                  sub="inj. + justif./2"
+                  sub="inj. + aus.just.*0.5 + ret.just.*0.25"
                   highlight={
                     backendStats.exceedsLimit
                       ? "red"
@@ -549,7 +591,6 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
             )}
           </div>
 
-          {/* Breakdown por estado */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -579,7 +620,6 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
             </div>
           </div>
 
-          {/* Recent records */}
           <div className="mt-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -592,6 +632,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
               {(records || []).slice(0, 50).map((r) => {
                 const cfg = getAttendanceConfig(r.status);
                 const date = getDisplayDateFromRecord(r);
+
                 return (
                   <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -629,14 +670,19 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
   );
 };
 
-// Pequeño helper visual para métricas
+// ============================================================================
+// SUBCOMPONENT: MetricCard
+// ============================================================================
+
 const MetricCard = ({ label, value, sub, highlight }) => {
   const colorMap = {
     red: "text-red-700 bg-red-50 border-red-200",
     orange: "text-orange-700 bg-orange-50 border-orange-200",
     green: "text-green-700 bg-green-50 border-green-200",
   };
+
   const cls = highlight ? colorMap[highlight] : "text-gray-900 bg-white border-gray-100";
+
   return (
     <div className={`border rounded-lg p-3 ${cls}`}>
       <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
@@ -647,7 +693,7 @@ const MetricCard = ({ label, value, sub, highlight }) => {
 };
 
 // ============================================================================
-// SUBCOMPONENT: AttendanceRow (mejorado)
+// SUBCOMPONENT: AttendanceRow
 // ============================================================================
 
 const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
@@ -661,7 +707,6 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
   const percentageValue = typeof record.percentage === "number" ? record.percentage : 0;
   const moodConfig = getMoodConfig(percentageValue);
 
-  // Alerta local de 3+ injustificadas (basada en counts del mapa local)
   const localUnjustified =
     (record._localCounts?.ABSENT_UNJUSTIFIED || 0) +
     (record._localCounts?.UNJUSTIFIED_WITHDRAWAL || 0);
@@ -691,7 +736,6 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
       }}
       aria-label={`Ver estadísticas de ${userName}`}
     >
-      {/* Mobile Layout */}
       <div className="block min-[1024px]:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
@@ -740,7 +784,6 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
         <p className="text-[11px] text-gray-400">Toque para ver estadísticas completas</p>
       </div>
 
-      {/* Desktop Layout */}
       <div className="hidden min-[1024px]:grid min-[1024px]:grid-cols-12 gap-4 px-4 py-3 items-center">
         <div className="col-span-3 flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
@@ -792,7 +835,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
 };
 
 // ============================================================================
-// SUBCOMPONENT: AttendanceHeader (sin cambios)
+// SUBCOMPONENT: AttendanceHeader
 // ============================================================================
 
 const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilterChange }) => {
@@ -887,11 +930,12 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
 };
 
 // ============================================================================
-// SUBCOMPONENT: SearchAndFilters (sin cambios)
+// SUBCOMPONENT: SearchAndFilters
 // ============================================================================
 
 const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
   const inputRef = useRef(null);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -927,6 +971,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
           </div>
         )}
       </div>
+
       {searchTerm && (
         <p className="mt-2 text-xs sm:text-sm text-gray-600">
           {totalResults} resultado{totalResults !== 1 ? "s" : ""} encontrado
@@ -980,6 +1025,7 @@ const AttendanceHistoryTable = () => {
       const uniqueSections = [
         ...new Set(validAttendances.map((a) => a.session?.section).filter(Boolean)),
       ];
+
       setFilters((prev) => ({
         ...prev,
         instruments: uniqueInstruments.sort(),
@@ -1025,7 +1071,6 @@ const AttendanceHistoryTable = () => {
         userName,
         percentage,
         displayDate,
-        // Pasamos counts locales para el badge de fila
         _localCounts: userStat?.counts ?? {},
       };
     });
@@ -1130,7 +1175,6 @@ const AttendanceHistoryTable = () => {
         totalResults={filteredRecords.length}
       />
 
-      {/* ── Peor asistencia ── */}
       <div className="px-0 sm:px-4 pt-4">
         <WorstAttendancePanel statsByUserId={statsByUserId} topN={5} />
       </div>
@@ -1297,6 +1341,11 @@ AttendanceDetailModal.propTypes = {
     user: PropTypes.object,
     total: PropTypes.number,
     presentLike: PropTypes.number,
+    attendanceCreditsLocal: PropTypes.number,
+    equivalentAbsencesLocal: PropTypes.number,
+    unjustifiedCountLocal: PropTypes.number,
+    hasThreeUnjustifiedLocal: PropTypes.bool,
+    exceedsLimitLocal: PropTypes.bool,
     percentage: PropTypes.number,
     mood: PropTypes.shape({
       icon: PropTypes.string,

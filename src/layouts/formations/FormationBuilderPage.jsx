@@ -57,6 +57,125 @@ function getSlotsSignature(slots = []) {
     .join("||");
 }
 
+function sortSlotsByPosition(a, b) {
+  if (a.zone !== b.zone) return String(a.zone).localeCompare(String(b.zone));
+  if (a.row !== b.row) return a.row - b.row;
+  return a.col - b.col;
+}
+
+function dedupeSlotsByUserId(slots = []) {
+  const seen = new Set();
+
+  return [...slots].sort(sortSlotsByPosition).map((slot) => {
+    const userId = slot.userId != null ? String(slot.userId) : null;
+    if (!userId) return slot;
+    if (seen.has(userId)) {
+      return {
+        ...slot,
+        userId: null,
+        displayName: null,
+        avatar: null,
+        section: null,
+        locked: false,
+      };
+    }
+    seen.add(userId);
+    return slot;
+  });
+}
+
+function reshapeZoneSlotsPreservingLayout(slots, zone, columns, rows = null) {
+  const zoneSlots = slots
+    .filter((s) => s.zone === zone)
+    .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+  if (!zoneSlots.length || !columns) return slots;
+
+  const movableSlots = zoneSlots.filter((slot) => slot.userId || slot.locked);
+  const explicitRows = rows != null ? Math.max(1, rows) : null;
+
+  if (explicitRows != null && movableSlots.length > columns * explicitRows) {
+    return slots;
+  }
+
+  const targetRows =
+    explicitRows ?? Math.max(1, Math.ceil(Math.max(zoneSlots.length, movableSlots.length, 1) / columns));
+  const fixedMap = new Map();
+  const overflow = [];
+
+  for (const slot of movableSlots) {
+    if (slot.row < targetRows && slot.col < columns) {
+      fixedMap.set(`${slot.row}|${slot.col}`, { ...slot });
+    } else {
+      overflow.push(slot);
+    }
+  }
+
+  const freeCells = [];
+  for (let row = 0; row < targetRows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const key = `${row}|${col}`;
+      if (!fixedMap.has(key)) freeCells.push({ row, col });
+    }
+  }
+
+  if (overflow.length > freeCells.length) {
+    return slots;
+  }
+
+  for (const slot of overflow) {
+    const nextCell = freeCells.shift();
+    if (!nextCell) return slots;
+    fixedMap.set(`${nextCell.row}|${nextCell.col}`, {
+      ...slot,
+      row: nextCell.row,
+      col: nextCell.col,
+    });
+  }
+
+  const reshapedZoneSlots = [];
+  for (let row = 0; row < targetRows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const key = `${row}|${col}`;
+      const slot = fixedMap.get(key);
+      if (slot) {
+        reshapedZoneSlots.push(slot);
+      } else {
+        reshapedZoneSlots.push({
+          zone,
+          row,
+          col,
+          section: null,
+          userId: null,
+          displayName: null,
+          avatar: null,
+          locked: false,
+        });
+      }
+    }
+  }
+
+  return [...slots.filter((s) => s.zone !== zone), ...reshapedZoneSlots].sort(sortSlotsByPosition);
+}
+
+function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows) {
+  const zones = [...new Set((slots || []).map((slot) => slot.zone).filter(Boolean))];
+  let nextSlots = dedupeSlotsByUserId(slots);
+
+  for (const zone of zones) {
+    const zoneCols =
+      zoneColumns?.[zone] != null
+        ? zoneColumns[zone]
+        : INDEPENDENT_COLUMN_ZONES.includes(zone)
+        ? DEFAULT_ZONE_COLUMNS[zone]
+        : columns;
+    const zoneExplicitRows = zoneRows?.[zone] != null ? zoneRows[zone] : null;
+    nextSlots = reshapeZoneSlotsPreservingLayout(nextSlots, zone, zoneCols, zoneExplicitRows);
+  }
+
+  return nextSlots;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // removeAndCompact  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,7 +254,7 @@ function removeAndCompact(slots, newExcluded) {
 // ─────────────────────────────────────────────────────────────────────────────
 // includeAndExpand  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function includeAndExpand(slots, musician, zoneOrders, zoneColumns, defaultCols) {
+function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, defaultCols) {
   const userId = String(musician.userId);
   const section = musician.section;
   let targetZone = null;
@@ -153,6 +272,9 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, defaultCols)
   if (!targetZone) return slots;
 
   const zoneSlots = slots.filter((s) => s.zone === targetZone);
+  const effectiveCols = zoneColumns?.[targetZone] ?? defaultCols ?? 1;
+  const explicitRows = zoneRows?.[targetZone] ?? null;
+  const maxCells = explicitRows != null ? effectiveCols * explicitRows : null;
   const slotMap = {};
   for (const s of zoneSlots) slotMap[`${s.row}|${s.col}`] = { ...s };
   const rows = [...new Set(zoneSlots.map((s) => s.row))].sort((a, b) => a - b);
@@ -160,13 +282,20 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, defaultCols)
   const emptySlot = sorted.find((s) => !s.userId && !s.locked);
 
   if (!emptySlot) {
+    if (maxCells != null && zoneSlots.length >= maxCells) return slots;
+
     const lastMember =
       sorted.filter((s) => s.section === section && s.userId).pop() || sorted[sorted.length - 1];
-    const newRow = (rows[rows.length - 1] ?? 0) + 1;
-    slotMap[`${newRow}|${lastMember.col}`] = {
+    const nextIndex = zoneSlots.length;
+    const newRow = Math.floor(nextIndex / effectiveCols);
+    const newCol = lastMember?.col != null ? Math.min(lastMember.col, effectiveCols - 1) : nextIndex % effectiveCols;
+
+    if (explicitRows != null && newRow >= explicitRows) return slots;
+
+    slotMap[`${newRow}|${newCol}`] = {
       zone: targetZone,
       row: newRow,
-      col: lastMember.col,
+      col: newCol,
       userId,
       displayName: musician.displayName || musician.name || null,
       avatar: musician.avatar || null,
@@ -596,7 +725,7 @@ function SectionOrderEditor({
 // ─────────────────────────────────────────────────────────────────────────────
 const ZONE_COLUMN_PRESETS = {
   FRENTE_ESPECIAL: [2, 3, 4, 5, 6],
-  PERCUSION: [4, 5, 6, 7, 8],
+  PERCUSION: [4, 5, 6, 7, 8, 9],
   FINAL: [2, 3, 4, 5, 6],
 };
 const ZONE_ROW_PRESETS = {
@@ -1258,6 +1387,7 @@ function FormationRoomContent({
   externalSlotsSeq,
   columns,
   zoneColumns,
+  zoneRows,
   zoneOrders,
   canExclude,
   onExclude,
@@ -1312,6 +1442,22 @@ function FormationRoomContent({
     setSlots(externalSlots);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalSlotsSeq]);
+
+  const normalizedLayoutRef = useRef("");
+  useEffect(() => {
+    if (isLoading || !slots.length) return;
+
+    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows);
+    const normalizedSignature = getSlotsSignature(normalized);
+    if (normalizedSignature === getSlotsSignature(slots)) {
+      normalizedLayoutRef.current = normalizedSignature;
+      return;
+    }
+    if (normalizedLayoutRef.current === normalizedSignature) return;
+
+    normalizedLayoutRef.current = normalizedSignature;
+    setSlots(normalized);
+  }, [isLoading, slots, columns, zoneColumns, zoneRows, setSlots]);
 
   // ── Intercept FormationGrid onChange → targeted LiveMap mutations ───────────
   const handleGridChange = useCallback(
@@ -1690,6 +1836,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
             musicianInfo,
             zoneOrders,
             zoneColumns,
+            zoneRows,
             columns
           );
           if (isEdit) {
@@ -1701,7 +1848,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
         return next;
       });
     },
-    [sections, existingFormation, zoneOrders, zoneColumns, columns, isEdit]
+    [sections, existingFormation, zoneOrders, zoneColumns, zoneRows, columns, isEdit]
   );
 
   // ── Compute grid ────────────────────────────────────────────────────────────
@@ -1842,12 +1989,14 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   }, [canExport, slots, columns, zoneColumns, formName, formType]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  const STEPS = [
-    { n: 1, label: "Configurar" },
-    { n: 2, label: "Orden" },
-    { n: 3, label: "Excluir" },
-    { n: 4, label: "Formación" },
-  ];
+  const STEPS = isEdit
+    ? [{ n: 4, label: "Formación" }]
+    : [
+        { n: 1, label: "Configurar" },
+        { n: 2, label: "Orden" },
+        { n: 3, label: "Excluir" },
+        { n: 4, label: "Formación" },
+      ];
 
   return (
     <DashboardLayout>
@@ -1899,7 +2048,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
         </div>
 
         {/* Step progress */}
-        {isAdmin && (
+        {isAdmin && !isEdit && (
           <div className="max-w-6xl mx-auto mb-8 px-1">
             <div className="flex items-center gap-0">
               {STEPS.map(({ n, label }, idx) => (
@@ -2046,6 +2195,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   externalSlotsSeq={externalSlotsSeq}
                   columns={columns}
                   zoneColumns={zoneColumns}
+                  zoneRows={zoneRows}
                   zoneOrders={zoneOrders}
                   canExclude={isAdmin}
                   onExclude={handleExcludeFromGrid}
@@ -2109,7 +2259,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ← Exclusiones
                   </button>
                 )}
-                {isAdmin && (
+                {isAdmin && !isEdit && (
                   <button
                     onClick={() => setStep(2)}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
@@ -2117,7 +2267,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ← Orden de zonas
                   </button>
                 )}
-                {isAdmin && sections.length > 0 && (
+                {isAdmin && !isEdit && sections.length > 0 && (
                   <button
                     onClick={handleComputeGrid}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
