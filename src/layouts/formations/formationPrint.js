@@ -45,6 +45,26 @@ const PRINT_ZONE_LABELS = {
   FINAL:           "Final",
 };
 
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getInitials(fullName) {
+  return String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
 // ── Shared cell HTML ───────────────────────────────────────────────────────────
 
 /**
@@ -54,10 +74,7 @@ const PRINT_ZONE_LABELS = {
 function buildCellHTML(slot) {
   let style, nameColor;
 
-  if (slot.locked) {
-    style = "background:#fffbeb;border-color:#fbbf24;";
-    nameColor = "#92400e";
-  } else if (!slot.userId) {
+  if (!slot.userId) {
     style = "background:#f8fafc;border:1px dashed #e2e8f0;opacity:0.55;";
     nameColor = "#94a3b8";
   } else {
@@ -69,19 +86,29 @@ function buildCellHTML(slot) {
   const parts = (slot.displayName || "").trim().split(/\s+/);
   const line1 = parts[0] || "·";
   const line2 = parts.length > 1 ? parts.slice(1).join(" ") : null;
-  const lockDot = slot.locked
-    ? `<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f59e0b;"></div>`
-    : "";
+  const avatarHTML = !slot.userId
+    ? ""
+    : slot.avatar
+    ? `<img
+  src="${escapeHTML(slot.avatar)}"
+  alt="${escapeHTML(slot.displayName || "Miembro")}"
+  style="width:26px;height:26px;border-radius:999px;object-fit:cover;border:1.5px solid rgba(255,255,255,0.85);box-shadow:0 1px 2px rgba(15,23,42,0.12);"
+/>`
+    : `<div style="width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:800;letter-spacing:0.04em;background:rgba(255,255,255,0.55);
+  color:${nameColor};border:1.5px solid rgba(255,255,255,0.75);">
+  ${escapeHTML(getInitials(slot.displayName) || "?")}
+</div>`;
 
   return `<div style="position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;border:1px solid;border-radius:6px;
   min-height:50px;padding:4px 3px;break-inside:avoid;page-break-inside:avoid;${style}">
-  ${lockDot}
+  ${avatarHTML ? `<div style="margin-bottom:4px;display:flex;align-items:center;justify-content:center;">${avatarHTML}</div>` : ""}
   <span style="font-size:9px;font-weight:700;line-height:1.3;color:${nameColor};
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line1}</span>
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(line1)}</span>
   ${line2
     ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
-    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${line2}</span>`
+    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(line2)}</span>`
     : ""}
 </div>`;
 }

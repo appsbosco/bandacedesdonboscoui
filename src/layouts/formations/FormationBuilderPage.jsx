@@ -179,78 +179,21 @@ function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// removeAndCompact  (unchanged)
+// removeExcludedFromSlots
 // ─────────────────────────────────────────────────────────────────────────────
 function removeAndCompact(slots, newExcluded) {
   const excluded = new Set([...newExcluded].map(String));
-  const byZone = {};
-  for (const s of slots) {
-    if (!byZone[s.zone]) byZone[s.zone] = [];
-    byZone[s.zone].push(s);
-  }
-  const result = [];
-  for (const [, zoneSlots] of Object.entries(byZone)) {
-    const slotMap = {};
-    for (const s of zoneSlots) slotMap[`${s.row}|${s.col}`] = { ...s };
-    const rows = [...new Set(zoneSlots.map((s) => s.row))].sort((a, b) => a - b);
-    for (const s of zoneSlots) {
-      if (!s.userId || !excluded.has(String(s.userId))) continue;
-      const col = s.col;
-      const colSlots = rows
-        .map((r) => slotMap[`${r}|${col}`])
-        .filter(Boolean)
-        .sort((a, b) => a.row - b.row);
-      const excludedIdx = colSlots.findIndex(
-        (slot) =>
-          slot.userId && excluded.has(String(slot.userId)) && slot.col === col && slot.row === s.row
-      );
-      if (excludedIdx === -1) continue;
-      let writeIdx = excludedIdx;
-      for (let readIdx = excludedIdx + 1; readIdx < colSlots.length; readIdx++) {
-        const readSlot = colSlots[readIdx];
-        const writeSlot = colSlots[writeIdx];
-        if (readSlot.locked) break;
-        if (writeSlot.locked) {
-          writeIdx++;
-          continue;
-        }
-        slotMap[`${writeSlot.row}|${writeSlot.col}`] = {
-          ...writeSlot,
-          userId: readSlot.userId,
-          displayName: readSlot.displayName,
-          avatar: readSlot.avatar || null,
-          section: readSlot.section,
-          locked: false,
-        };
-        writeIdx++;
-      }
-      if (writeIdx < colSlots.length) {
-        const tailSlot = colSlots[writeIdx];
-        if (!tailSlot.locked) {
-          slotMap[`${tailSlot.row}|${tailSlot.col}`] = {
-            ...tailSlot,
-            userId: null,
-            displayName: null,
-            avatar: null,
-            section: null,
-            locked: false,
-          };
-        }
-      }
-      if (s.locked) {
-        slotMap[`${s.row}|${s.col}`] = {
-          ...s,
-          userId: null,
-          displayName: null,
-          avatar: null,
-          section: null,
-          locked: false,
-        };
-      }
-    }
-    result.push(...Object.values(slotMap));
-  }
-  return result;
+  return slots.map((slot) => {
+    if (!slot.userId || !excluded.has(String(slot.userId))) return slot;
+    return {
+      ...slot,
+      userId: null,
+      displayName: null,
+      avatar: null,
+      section: null,
+      locked: false,
+    };
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
