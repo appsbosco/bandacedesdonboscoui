@@ -1173,10 +1173,26 @@ function initials(name) {
     .toUpperCase();
 }
 
-function ExcludedModal({ open, onClose, excluded, sections, existingFormationSlots, onInclude }) {
+function ExcludedModal({
+  open,
+  onClose,
+  excluded,
+  sections,
+  unmapped,
+  currentSlots,
+  existingFormationSlots,
+  onInclude,
+}) {
   const excludedMusicians = useMemo(() => {
     const result = [];
     const seen = new Set();
+    const unmappedIds = new Set((unmapped || []).map((member) => String(member.userId)));
+    const assignedIds = new Set(
+      (currentSlots || [])
+        .map((slot) => (slot.userId != null ? String(slot.userId) : null))
+        .filter(Boolean)
+    );
+
     for (const userId of excluded) {
       if (seen.has(userId)) continue;
       seen.add(userId);
@@ -1184,24 +1200,80 @@ function ExcludedModal({ open, onClose, excluded, sections, existingFormationSlo
       for (const grp of sections || []) {
         const m = grp.members.find((mb) => String(mb.userId) === String(userId));
         if (m) {
-          found = { userId, name: m.name, avatar: m.avatar || null, section: grp.section };
+          found = {
+            userId,
+            name: m.name,
+            avatar: m.avatar || null,
+            section: grp.section,
+            instrument: m.instrument || null,
+            source: "excluded",
+          };
           break;
         }
       }
       if (!found && existingFormationSlots) {
         const s = existingFormationSlots.find((sl) => String(sl.userId) === String(userId));
         if (s)
-          found = { userId, name: s.displayName, avatar: s.avatar || null, section: s.section };
+          found = {
+            userId,
+            name: s.displayName,
+            avatar: s.avatar || null,
+            section: s.section,
+            instrument: null,
+            source: "excluded",
+          };
       }
-      result.push(found || { userId, name: `ID ${userId}`, avatar: null, section: null });
+      result.push(
+        found || {
+          userId,
+          name: `ID ${userId}`,
+          avatar: null,
+          section: null,
+          instrument: null,
+          source: "excluded",
+        }
+      );
     }
+
+    for (const member of unmapped || []) {
+      const userId = String(member.userId);
+      if (seen.has(userId)) continue;
+      seen.add(userId);
+      result.push({
+        userId,
+        name: member.name,
+        avatar: member.avatar || null,
+        section: null,
+        instrument: member.instrument || null,
+        source: "unmapped",
+      });
+    }
+
+    for (const grp of sections || []) {
+      for (const member of grp.members || []) {
+        const userId = String(member.userId);
+        if (seen.has(userId) || excluded.has(userId) || unmappedIds.has(userId) || assignedIds.has(userId)) {
+          continue;
+        }
+        seen.add(userId);
+        result.push({
+          userId,
+          name: member.name,
+          avatar: member.avatar || null,
+          section: grp.section,
+          instrument: member.instrument || null,
+          source: "pending",
+        });
+      }
+    }
+
     result.sort((a, b) => {
       const sa = a.section || "ZZZ",
         sb = b.section || "ZZZ";
       return sa.localeCompare(sb) || (a.name || "").localeCompare(b.name || "");
     });
     return result;
-  }, [excluded, sections, existingFormationSlots]);
+  }, [excluded, sections, unmapped, currentSlots, existingFormationSlots]);
 
   useEffect(() => {
     if (!open) return;
@@ -1215,80 +1287,177 @@ function ExcludedModal({ open, onClose, excluded, sections, existingFormationSlo
   if (!open) return null;
   const bySec = {};
   for (const m of excludedMusicians) {
-    const key = m.section || "__none__";
+    const key =
+      m.source === "unmapped"
+        ? "__unmapped__"
+        : m.source === "pending"
+        ? "__pending__"
+        : m.section || "__none__";
     if (!bySec[key]) bySec[key] = [];
     bySec[key].push(m);
   }
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4 overflow-y-auto"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      role="button"
+      tabIndex={0}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Escape") onClose();
+      }}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[80vh]">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Músicos excluidos</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {excludedMusicians.length} excluido{excludedMusicians.length !== 1 ? "s" : ""} ·
-              Presioná + Incluir para reincorporar
-            </p>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="formations-excluded-modal-title"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] min-h-0"
+      >
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 id="formations-excluded-modal-title" className="text-base font-bold text-slate-900">
+                Músicos excluidos
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {excludedMusicians.length} pendiente
+                {excludedMusicians.length !== 1 ? "s" : ""} de la formación
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all flex-shrink-0"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          >
-            ✕
-          </button>
+
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              {excluded.size} excluido{excluded.size !== 1 ? "s" : ""}
+            </span>
+            {excludedMusicians.filter((m) => m.source === "pending").length > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                {excludedMusicians.filter((m) => m.source === "pending").length} pendiente
+                {excludedMusicians.filter((m) => m.source === "pending").length !== 1 ? "s" : ""} por agregar
+              </span>
+            )}
+            {(unmapped || []).length > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                {(unmapped || []).length} sin mapear
+              </span>
+            )}
+          </div>
+
+          {(unmapped || []).length > 0 && (
+            <div className="mt-3 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-700 font-medium">
+              Los músicos sin mapear aparecen aquí porque no tienen una sección reconocida para
+              entrar a la formación.
+            </div>
+          )}
         </div>
-        <div className="overflow-y-auto flex-1 px-2 py-2">
+
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-5">
           {Object.entries(bySec).map(([sec, members]) => (
-            <div key={sec} className="mb-1">
-              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {sec === "__none__" ? "Sin sección" : getSectionLabel(sec)}
+            <section key={sec}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  {sec === "__unmapped__"
+                    ? "Sin mapear"
+                    : sec === "__pending__"
+                    ? "Pendientes por agregar"
+                    : sec === "__none__"
+                    ? "Sin sección"
+                    : getSectionLabel(sec)}
+                </div>
+                <span className="text-[11px] text-slate-400 font-semibold">
+                  {members.length}
+                </span>
               </div>
-              {members.map((m) => (
+
+              <div className="space-y-2">
+                {members.map((m) => (
                 <div
                   key={m.userId}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl"
                 >
                   {m.avatar ? (
                     <img
                       src={m.avatar}
                       alt={m.name}
                       loading="lazy"
-                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                      className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-600 shrink-0 flex items-center justify-center text-[10px] font-bold">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-600 shrink-0 flex items-center justify-center text-[10px] font-bold">
                       {initials(m.name)}
                     </div>
                   )}
-                  <span className="flex-1 text-sm text-slate-800 font-medium">{m.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => onInclude(m.userId)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shrink-0"
-                  >
-                    + Incluir
-                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{m.name}</div>
+                    <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                      {m.instrument && (
+                        <span className="text-xs text-slate-500">{m.instrument}</span>
+                      )}
+                      <span
+                        className={[
+                          "px-2 py-0.5 rounded-lg text-[11px] font-semibold border",
+                          m.source === "unmapped"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : m.source === "pending"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200",
+                        ].join(" ")}
+                      >
+                        {m.source === "unmapped"
+                          ? "Sin mapear"
+                          : m.source === "pending"
+                          ? "Pendiente"
+                          : "Excluido"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {m.source === "unmapped" ? (
+                    <span className="sm:ml-auto text-xs font-semibold text-rose-700 bg-rose-100 rounded-xl px-3 py-1.5 shrink-0">
+                      Revisar instrumento
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onInclude(m.userId)}
+                      className={[
+                        "sm:ml-auto flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-white text-xs font-semibold transition-colors shrink-0 w-full sm:w-auto",
+                        m.source === "pending"
+                          ? "bg-blue-600 hover:bg-blue-500"
+                          : "bg-emerald-600 hover:bg-emerald-500",
+                      ].join(" ")}
+                    >
+                      {m.source === "pending" ? "+ Agregar" : "+ Incluir"}
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </section>
           ))}
           {excludedMusicians.length === 0 && (
-            <div className="py-10 text-center text-sm text-slate-400">
-              No hay músicos excluidos.
+            <div className="py-12 text-center text-sm text-slate-400">
+              No hay músicos excluidos ni sin mapear.
             </div>
           )}
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 shrink-0 flex justify-end">
+
+        <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+            className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors w-full sm:w-auto"
           >
             Cerrar
           </button>
@@ -1320,6 +1489,7 @@ function FormationRoomContent({
   onExclude,
   onInclude,
   excluded,
+  unmapped,
   sections,
   showExcludedModal,
   setShowExcludedModal,
@@ -1472,6 +1642,8 @@ function FormationRoomContent({
         onClose={() => setShowExcludedModal(false)}
         excluded={excluded}
         sections={sections}
+        unmapped={unmapped}
+        currentSlots={slots}
         existingFormationSlots={formation.slots}
         onInclude={onInclude}
       />
@@ -1540,7 +1712,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     [userData]
   );
 
-  const { sections, loading: loadingUsers, loadUsers } = useFormationUsers();
+  const { sections, unmapped, loading: loadingUsers, loadUsers } = useFormationUsers();
   const {
     handleCreate,
     handleUpdate,
@@ -2134,18 +2306,22 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     onClick={() => setShowExcludedModal(true)}
                     className={[
                       "ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors",
-                      excluded.size > 0
+                      excluded.size + unmapped.length > 0
                         ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         : "border-slate-200 text-slate-400 cursor-default",
                     ].join(" ")}
-                    disabled={excluded.size === 0}
+                    disabled={excluded.size + unmapped.length === 0}
                     title={
-                      excluded.size === 0 ? "No hay músicos excluidos" : "Ver músicos excluidos"
+                      excluded.size + unmapped.length === 0
+                        ? "No hay músicos excluidos"
+                        : "Ver músicos excluidos"
                     }
                   >
-                    <span>{excluded.size > 0 ? "⚠" : "✓"}</span>
-                    {excluded.size > 0
-                      ? `${excluded.size} excluido${excluded.size !== 1 ? "s" : ""}`
+                    <span>{excluded.size + unmapped.length > 0 ? "⚠" : "✓"}</span>
+                    {excluded.size + unmapped.length > 0
+                      ? `${excluded.size + unmapped.length} pendiente${
+                          excluded.size + unmapped.length !== 1 ? "s" : ""
+                        }`
                       : "Todos incluidos"}
                   </button>
                 )}
@@ -2166,6 +2342,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   onExclude={handleExcludeFromGrid}
                   onInclude={handleIncludeToGrid}
                   excluded={excluded}
+                  unmapped={unmapped}
                   sections={sections}
                   showExcludedModal={showExcludedModal}
                   setShowExcludedModal={setShowExcludedModal}
@@ -2197,6 +2374,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     onClose={() => setShowExcludedModal(false)}
                     excluded={excluded}
                     sections={sections}
+                    unmapped={unmapped}
+                    currentSlots={slots}
                     existingFormationSlots={null}
                     onInclude={handleIncludeToGrid}
                   />
