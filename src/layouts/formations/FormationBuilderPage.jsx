@@ -289,9 +289,19 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
 
   if (!zoneSlots.length) return slots;
 
+  const rowSectionMap = new Map();
+  const rows = [...new Set(zoneSlots.map((slot) => slot.row))].sort((a, b) => a - b);
+  let activeSection = "MALLETS";
+  for (const row of rows) {
+    const rowSlots = zoneSlots.filter((slot) => slot.row === row);
+    const explicitSection = rowSlots.find((slot) => slot.section)?.section || null;
+    if (explicitSection) activeSection = getPercussionLayoutSection(explicitSection);
+    rowSectionMap.set(row, activeSection);
+  }
+
   const groups = ["MALLETS", "PERCUSION"].filter(
     (section) =>
-      zoneSlots.some((slot) => getPercussionLayoutSection(slot.section) === section) ||
+      zoneSlots.some((slot) => rowSectionMap.get(slot.row) === section) ||
       zoneColumns?.[PERCUSSION_LAYOUT_KEYS[section]] != null ||
       zoneRows?.[PERCUSSION_LAYOUT_KEYS[section]] != null
   );
@@ -305,7 +315,10 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
     const cols = getZoneLayoutColumns("PERCUSION", columns, zoneColumns, section);
     const rows = getZoneLayoutRows("PERCUSION", zoneRows, section);
     const result = reshapePercussionGroupSlotsPreservingLayout(
-      zoneSlots,
+      zoneSlots.map((slot) => ({
+        ...slot,
+        section: slot.section || rowSectionMap.get(slot.row) || section,
+      })),
       section,
       cols,
       rows,
@@ -2534,7 +2547,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   ↗ Exportar
                 </button>
               )}
-              {!isEdit && (
+              {isAdmin && (
                 <button
                   onClick={handleSave}
                   disabled={saving}
@@ -2804,7 +2817,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ↺ Recalcular (respeta bloqueos)
                   </button>
                 )}
-                {!isEdit && (
+                {isAdmin && (
                   <button
                     onClick={handleSave}
                     disabled={saving}
