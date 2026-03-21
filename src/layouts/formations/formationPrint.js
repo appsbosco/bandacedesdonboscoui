@@ -187,7 +187,7 @@ function buildSectionLegendHTML(slots) {
 
 // ── Percussion zone HTML (sub-grouped by section) ─────────────────────────────
 
-function buildPercussionZoneHTML(slots, columns) {
+function buildPercussionZoneHTML(slots, defaultColumns, zoneColumns) {
   const zoneSlots = slots
     .filter((s) => s.zone === "PERCUSION")
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
@@ -229,13 +229,20 @@ function buildPercussionZoneHTML(slots, columns) {
       const c = PRINT_COLORS[sec] || { bg: "#f1f5f9", border: "#94a3b8", text: "#1e293b" };
       const label = getSectionLabel(sec);
 
-      // Re-index rows within this sub-group so row numbers are dense (0,1,2,…)
-      // This ensures buildRowsHTML groups them correctly even if rows overlap with
-      // another sub-section's row numbers.
-      const reIndexed = secSlots.map((slot, i) => ({
+      // Use per-section columns from zoneColumns (key: PERCUSION__MALLETS, etc.)
+      const sectionKey = `PERCUSION__${sec}`;
+      const secCols = zoneColumns[sectionKey] ?? defaultColumns;
+
+      // Normalize rows within this sub-group relative to the sub-section's own
+      // row origin.  Slots already carry correct row/col from the grid engine,
+      // but they are absolute within the PERCUSION zone.  We need dense local
+      // rows (0,1,2…) so buildRowsHTML groups them correctly.
+      const rowSet = [...new Set(secSlots.map((s) => s.row))].sort((a, b) => a - b);
+      const rowRemap = new Map(rowSet.map((r, i) => [r, i]));
+      const reIndexed = secSlots.map((slot) => ({
         ...slot,
-        row: Math.floor(i / columns),
-        col: i % columns,
+        row: rowRemap.get(slot.row) ?? 0,
+        col: slot.col < secCols ? slot.col : slot.col % secCols,
       }));
 
       const subLabel = `<div style="display:flex;align-items:center;gap:8px;margin:${
@@ -266,7 +273,7 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
     .map((zone, idx) => {
       const gridHTML =
         zone === "PERCUSION"
-          ? buildPercussionZoneHTML(slots, getZoneCols("PERCUSION"))
+          ? buildPercussionZoneHTML(slots, getZoneCols("PERCUSION"), zoneColumns)
           : buildZoneHTML(zone, slots, getZoneCols(zone));
       const zoneLabel = PRINT_ZONE_LABELS[zone] || zone;
 
