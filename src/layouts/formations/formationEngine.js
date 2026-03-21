@@ -120,6 +120,11 @@ export const DEFAULT_ZONE_ROWS = {
   FINAL: null,
 };
 
+const PERCUSSION_LAYOUT_KEYS = {
+  MALLETS: "PERCUSION__MALLETS",
+  PERCUSION: "PERCUSION__PERCUSION",
+};
+
 // ── Section catalog ───────────────────────────────────────────────────────────
 
 export const SECTION_LABEL = {
@@ -251,7 +256,7 @@ function splitMembersEvenly(members, occurrences) {
 
 // ── Grid fill ─────────────────────────────────────────────────────────────────
 
-function fillGrid(zone, members, columns, explicitRows = null) {
+function fillGrid(zone, members, columns, explicitRows = null, emptySection = null) {
   if (!members.length && !explicitRows) return [];
   const autoRows = members.length ? Math.ceil(members.length / columns) : 1;
   const rows = explicitRows != null ? Math.max(1, explicitRows) : autoRows;
@@ -278,7 +283,7 @@ function fillGrid(zone, members, columns, explicitRows = null) {
         zone,
         row,
         col,
-        section: null,
+        section: emptySection,
         userId: null,
         displayName: null,
         avatar: null,
@@ -286,6 +291,54 @@ function fillGrid(zone, members, columns, explicitRows = null) {
       });
     }
   }
+  return slots;
+}
+
+function getPercussionLayoutSection(section) {
+  return section === "MALLETS" ? "MALLETS" : "PERCUSION";
+}
+
+function getPercussionLayoutKey(section) {
+  return PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(section)];
+}
+
+function getPercussionColumns(zoneColumns, fallbackColumns, section) {
+  return zoneColumns[getPercussionLayoutKey(section)] ?? zoneColumns.PERCUSION ?? fallbackColumns;
+}
+
+function getPercussionRows(zoneRows, section) {
+  return zoneRows[getPercussionLayoutKey(section)] ?? zoneRows.PERCUSION ?? null;
+}
+
+function fillPercussionGrid(members, zoneColumns, zoneRows, fallbackColumns) {
+  const groups = [];
+
+  for (const member of members) {
+    const layoutSection = getPercussionLayoutSection(member.section);
+    const last = groups[groups.length - 1];
+    if (last?.section === layoutSection) {
+      last.members.push(member);
+    } else {
+      groups.push({ section: layoutSection, members: [member] });
+    }
+  }
+
+  const slots = [];
+  let rowOffset = 0;
+
+  for (const group of groups) {
+    const cols = getPercussionColumns(zoneColumns, fallbackColumns, group.section);
+    const rows = getPercussionRows(zoneRows, group.section);
+    const groupRows =
+      rows != null ? Math.max(1, rows) : Math.max(1, Math.ceil(group.members.length / cols));
+    const groupSlots = fillGrid("PERCUSION", group.members, cols, rows, group.section).map((slot) => ({
+      ...slot,
+      row: slot.row + rowOffset,
+    }));
+    slots.push(...groupSlots);
+    rowOffset += groupRows;
+  }
+
   return slots;
 }
 
@@ -416,7 +469,10 @@ export function computeFormation({
   for (const { zone, members } of zoneData) {
     const effectiveCols = zoneColumns[zone] != null ? zoneColumns[zone] : columns;
     const effectiveRows = zoneRows[zone] != null ? zoneRows[zone] : null;
-    const grid = fillGrid(zone, members, effectiveCols, effectiveRows);
+    const grid =
+      zone === "PERCUSION"
+        ? fillPercussionGrid(members, zoneColumns, zoneRows, effectiveCols)
+        : fillGrid(zone, members, effectiveCols, effectiveRows);
     result.push(...applyLocks(grid, lockedByKey));
   }
   return result;

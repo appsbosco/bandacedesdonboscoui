@@ -43,6 +43,40 @@ import { useFormationRoom } from "./useFormationRoom.js";
 import FormationPresenceBar from "./FormationPresenceBar.jsx";
 
 const FORMATION_ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector", "Dirección Logística"]);
+const PERCUSSION_LAYOUT_KEYS = {
+  MALLETS: "PERCUSION__MALLETS",
+  PERCUSION: "PERCUSION__PERCUSION",
+};
+
+function getPercussionLayoutSection(section) {
+  return section === "MALLETS" ? "MALLETS" : "PERCUSION";
+}
+
+function getZoneLayoutColumns(zone, columns, zoneColumns, section = null) {
+  if (zone !== "PERCUSION") {
+    return zoneColumns?.[zone] != null ? zoneColumns[zone] : columns;
+  }
+
+  if (!section) {
+    return zoneColumns?.PERCUSION != null ? zoneColumns.PERCUSION : columns;
+  }
+
+  const layoutKey = PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(section)];
+  return zoneColumns?.[layoutKey] ?? zoneColumns?.PERCUSION ?? columns;
+}
+
+function getZoneLayoutRows(zone, zoneRows, section = null) {
+  if (zone !== "PERCUSION") {
+    return zoneRows?.[zone] != null ? zoneRows[zone] : null;
+  }
+
+  if (!section) {
+    return zoneRows?.PERCUSION != null ? zoneRows.PERCUSION : null;
+  }
+
+  const layoutKey = PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(section)];
+  return zoneRows?.[layoutKey] ?? zoneRows?.PERCUSION ?? null;
+}
 
 function getSlotsSignature(slots = []) {
   return slots
@@ -160,18 +194,143 @@ function reshapeZoneSlotsPreservingLayout(slots, zone, columns, rows = null) {
   return [...slots.filter((s) => s.zone !== zone), ...reshapedZoneSlots].sort(sortSlotsByPosition);
 }
 
+function reshapePercussionGroupSlotsPreservingLayout(
+  zoneSlots,
+  section,
+  columns,
+  rows = null,
+  rowOffset = 0
+) {
+  const sectionSlots = zoneSlots
+    .filter((slot) => getPercussionLayoutSection(slot.section) === section)
+    .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+  const movableSlots = sectionSlots.filter((slot) => slot.userId || slot.locked);
+  const explicitRows = rows != null ? Math.max(1, rows) : null;
+
+  if (!sectionSlots.length && explicitRows == null && movableSlots.length === 0) {
+    return { slots: [], rowCount: 0 };
+  }
+
+  if (explicitRows != null && movableSlots.length > columns * explicitRows) {
+    return null;
+  }
+
+  const existingRows = [...new Set(sectionSlots.map((slot) => slot.row))].sort((a, b) => a - b);
+  const rowIndexMap = new Map(existingRows.map((row, index) => [row, index]));
+  const targetRows =
+    explicitRows ?? Math.max(1, Math.ceil(Math.max(sectionSlots.length, movableSlots.length, 1) / columns));
+
+  const fixedMap = new Map();
+  const overflow = [];
+
+  for (const slot of movableSlots) {
+    const localRow = rowIndexMap.get(slot.row) ?? Math.max(0, slot.row - rowOffset);
+    if (localRow < targetRows && slot.col < columns) {
+      fixedMap.set(`${localRow}|${slot.col}`, {
+        ...slot,
+        row: rowOffset + localRow,
+        col: slot.col,
+      });
+    } else {
+      overflow.push({ ...slot, _localRow: localRow });
+    }
+  }
+
+  const freeCells = [];
+  for (let row = 0; row < targetRows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const key = `${row}|${col}`;
+      if (!fixedMap.has(key)) freeCells.push({ row, col });
+    }
+  }
+
+  if (overflow.length > freeCells.length) return null;
+
+  for (const slot of overflow) {
+    const nextCell = freeCells.shift();
+    if (!nextCell) return null;
+    fixedMap.set(`${nextCell.row}|${nextCell.col}`, {
+      ...slot,
+      row: rowOffset + nextCell.row,
+      col: nextCell.col,
+    });
+  }
+
+  const reshapedSlots = [];
+  for (let row = 0; row < targetRows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const key = `${row}|${col}`;
+      const slot = fixedMap.get(key);
+      if (slot) {
+        reshapedSlots.push(slot);
+      } else {
+        reshapedSlots.push({
+          zone: "PERCUSION",
+          row: rowOffset + row,
+          col,
+          section,
+          userId: null,
+          displayName: null,
+          avatar: null,
+          locked: false,
+        });
+      }
+    }
+  }
+
+  return { slots: reshapedSlots, rowCount: targetRows };
+}
+
+function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zoneRows) {
+  const zoneSlots = slots
+    .filter((slot) => slot.zone === "PERCUSION")
+    .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+  if (!zoneSlots.length) return slots;
+
+  const groups = ["MALLETS", "PERCUSION"].filter(
+    (section) =>
+      zoneSlots.some((slot) => getPercussionLayoutSection(slot.section) === section) ||
+      zoneColumns?.[PERCUSSION_LAYOUT_KEYS[section]] != null ||
+      zoneRows?.[PERCUSSION_LAYOUT_KEYS[section]] != null
+  );
+
+  if (!groups.length) return slots;
+
+  let rowOffset = 0;
+  const reshaped = [];
+
+  for (const section of groups) {
+    const cols = getZoneLayoutColumns("PERCUSION", columns, zoneColumns, section);
+    const rows = getZoneLayoutRows("PERCUSION", zoneRows, section);
+    const result = reshapePercussionGroupSlotsPreservingLayout(
+      zoneSlots,
+      section,
+      cols,
+      rows,
+      rowOffset
+    );
+    if (!result) return slots;
+    reshaped.push(...result.slots);
+    rowOffset += result.rowCount;
+  }
+
+  return [...slots.filter((slot) => slot.zone !== "PERCUSION"), ...reshaped].sort(sortSlotsByPosition);
+}
+
 function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows) {
   const zones = [...new Set((slots || []).map((slot) => slot.zone).filter(Boolean))];
   let nextSlots = dedupeSlotsByUserId(slots);
 
   for (const zone of zones) {
-    const zoneCols =
-      zoneColumns?.[zone] != null
-        ? zoneColumns[zone]
-        : INDEPENDENT_COLUMN_ZONES.includes(zone)
-        ? DEFAULT_ZONE_COLUMNS[zone]
-        : columns;
-    const zoneExplicitRows = zoneRows?.[zone] != null ? zoneRows[zone] : null;
+    if (zone === "PERCUSION") {
+      nextSlots = reshapePercussionSlotsPreservingLayout(nextSlots, columns, zoneColumns, zoneRows);
+      continue;
+    }
+
+    const zoneCols = getZoneLayoutColumns(zone, columns, zoneColumns);
+    const zoneExplicitRows = getZoneLayoutRows(zone, zoneRows);
     nextSlots = reshapeZoneSlotsPreservingLayout(nextSlots, zone, zoneCols, zoneExplicitRows);
   }
 
@@ -216,9 +375,16 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, de
   if (!targetZone) targetZone = inferZonesForSection(section)[0] || null;
   if (!targetZone) return slots;
 
-  const zoneSlots = slots.filter((s) => s.zone === targetZone);
-  const effectiveCols = zoneColumns?.[targetZone] ?? defaultCols ?? 1;
-  const explicitRows = zoneRows?.[targetZone] ?? null;
+  const percussionSection =
+    targetZone === "PERCUSION" ? getPercussionLayoutSection(section) : null;
+  const zoneSlots = slots.filter(
+    (s) =>
+      s.zone === targetZone &&
+      (targetZone !== "PERCUSION" ||
+        getPercussionLayoutSection(s.section) === percussionSection)
+  );
+  const effectiveCols = getZoneLayoutColumns(targetZone, defaultCols ?? 1, zoneColumns, section);
+  const explicitRows = getZoneLayoutRows(targetZone, zoneRows, section);
   const maxCells = explicitRows != null ? effectiveCols * explicitRows : null;
   const slotMap = {};
   for (const s of zoneSlots) slotMap[`${s.row}|${s.col}`] = { ...s };
@@ -237,9 +403,20 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, de
 
     if (explicitRows != null && newRow >= explicitRows) return slots;
 
+    const rowOffset =
+      targetZone === "PERCUSION" && percussionSection === "PERCUSION"
+        ? reshapePercussionGroupSlotsPreservingLayout(
+            slots.filter((s) => s.zone === "PERCUSION"),
+            "MALLETS",
+            getZoneLayoutColumns("PERCUSION", defaultCols ?? 1, zoneColumns, "MALLETS"),
+            getZoneLayoutRows("PERCUSION", zoneRows, "MALLETS"),
+            0
+          )?.rowCount || 0
+        : 0;
+
     slotMap[`${newRow}|${newCol}`] = {
       zone: targetZone,
-      row: newRow,
+      row: newRow + rowOffset,
       col: newCol,
       userId,
       displayName: musician.displayName || musician.name || null,
@@ -649,19 +826,32 @@ function SectionOrderEditor({
 // ─────────────────────────────────────────────────────────────────────────────
 const ZONE_COLUMN_PRESETS = {
   FRENTE_ESPECIAL: [2, 3, 4, 5, 6],
+  [PERCUSSION_LAYOUT_KEYS.MALLETS]: [2, 3, 4, 5, 6],
+  [PERCUSSION_LAYOUT_KEYS.PERCUSION]: [4, 5, 6, 7, 8, 9],
   PERCUSION: [4, 5, 6, 7, 8, 9],
   FINAL: [2, 3, 4, 5, 6],
 };
 const ZONE_ROW_PRESETS = {
   FRENTE_ESPECIAL: [1, 2, 3, 4],
+  [PERCUSSION_LAYOUT_KEYS.MALLETS]: [1, 2, 3, 4],
+  [PERCUSSION_LAYOUT_KEYS.PERCUSION]: [2, 3, 4, 5, 6],
   PERCUSION: [2, 3, 4, 5, 6],
   FINAL: [1, 2, 3, 4],
 };
 const ZONE_COLUMNS_LABEL = {
   FRENTE_ESPECIAL: "Danza",
+  [PERCUSSION_LAYOUT_KEYS.MALLETS]: "Mallets",
+  [PERCUSSION_LAYOUT_KEYS.PERCUSION]: "Percusión",
   PERCUSION: "Percusión",
   FINAL: "Color Guard",
 };
+
+const LIVE_LAYOUT_ROWS = [
+  { key: "FRENTE_ESPECIAL", section: null },
+  { key: PERCUSSION_LAYOUT_KEYS.MALLETS, section: "MALLETS" },
+  { key: PERCUSSION_LAYOUT_KEYS.PERCUSION, section: "PERCUSION" },
+  { key: "FINAL", section: null },
+];
 
 function ZoneLayoutRow({ zone, cols, rows, onChangeCols, onChangeRows }) {
   const colPresets = ZONE_COLUMN_PRESETS[zone] || [2, 3, 4, 5, 6];
@@ -860,12 +1050,17 @@ function StepConfig({
             </span>
           </div>
           <div className="px-4">
-            {INDEPENDENT_COLUMN_ZONES.map((zone) => (
+            {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
               <ZoneLayoutRow
-                key={zone}
-                zone={zone}
-                cols={zoneColumns[zone] ?? DEFAULT_ZONE_COLUMNS[zone]}
-                rows={zoneRows[zone] ?? DEFAULT_ZONE_ROWS[zone]}
+                key={key}
+                zone={key}
+                cols={getZoneLayoutColumns(
+                  section ? "PERCUSION" : key,
+                  columns,
+                  zoneColumns,
+                  section
+                )}
+                rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
                 onChangeCols={onChangeZoneColumns}
                 onChangeRows={onChangeZoneRows}
               />
@@ -905,6 +1100,173 @@ function StepConfig({
       >
         Configurar orden de secciones →
       </button>
+    </div>
+  );
+}
+
+function StepLiveLayoutControls({
+  columns,
+  setColumns,
+  zoneColumns,
+  onChangeZoneColumns,
+  zoneRows,
+  onChangeZoneRows,
+}) {
+  return (
+    <div className="mb-4 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60">
+      <div className="px-4 py-3 border-b border-slate-200 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800">Layout de la formación</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Ajustá columnas y filas de cada zona sin recalcular toda la formación.
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div>
+          <div className="block text-xs font-medium text-slate-500 mb-2">
+            Columnas de vientos
+            <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {[5, 6, 7, 8, 9, 10].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setColumns(n)}
+                className={[
+                  "w-9 h-9 rounded-lg border text-sm font-semibold transition-colors",
+                  columns === n
+                    ? "bg-black border-indigo-600 text-white"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400",
+                ].join(" ")}
+              >
+                {n}
+              </button>
+            ))}
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={columns}
+              onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
+              className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+            <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
+              Zona · Columnas · Filas
+            </span>
+          </div>
+          <div className="px-4">
+            {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
+              <ZoneLayoutRow
+                key={key}
+                zone={key}
+                cols={getZoneLayoutColumns(
+                  section ? "PERCUSION" : key,
+                  columns,
+                  zoneColumns,
+                  section
+                )}
+                rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
+                onChangeCols={onChangeZoneColumns}
+                onChangeRows={onChangeZoneRows}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LayoutSettingsModal({
+  open,
+  onClose,
+  columns,
+  setColumns,
+  zoneColumns,
+  onChangeZoneColumns,
+  zoneRows,
+  onChangeZoneRows,
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4 overflow-y-auto"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Escape") onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="formations-layout-modal-title"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] min-h-0"
+      >
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 id="formations-layout-modal-title" className="text-base font-bold text-slate-900">
+                Layout de la formación
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Ajustá columnas y filas de cada zona sin recalcular toda la formación.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all flex-shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto min-h-0 p-6">
+          <StepLiveLayoutControls
+            columns={columns}
+            setColumns={setColumns}
+            zoneColumns={zoneColumns}
+            onChangeZoneColumns={onChangeZoneColumns}
+            zoneRows={zoneRows}
+            onChangeZoneRows={onChangeZoneRows}
+          />
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors w-full sm:w-auto"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1735,6 +2097,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(existingFormation?.updatedAt ?? null);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [showExcludedModal, setShowExcludedModal] = useState(false);
+  const [showLayoutModal, setShowLayoutModal] = useState(false);
 
   const [zoneOrders, setZoneOrders] = useState(() => {
     const base = { ...DEFAULT_ZONE_ORDERS };
@@ -2303,9 +2666,19 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                 {isAdmin && (
                   <button
                     type="button"
+                    onClick={() => setShowLayoutModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                  >
+                    ≡ Layout
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
                     onClick={() => setShowExcludedModal(true)}
                     className={[
-                      "ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors",
+                      "sm:ml-auto",
                       excluded.size + unmapped.length > 0
                         ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         : "border-slate-200 text-slate-400 cursor-default",
@@ -2326,6 +2699,17 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   </button>
                 )}
               </div>
+
+              <LayoutSettingsModal
+                open={showLayoutModal}
+                onClose={() => setShowLayoutModal(false)}
+                columns={columns}
+                setColumns={setColumns}
+                zoneColumns={zoneColumns}
+                onChangeZoneColumns={handleZoneColumnsChange}
+                zoneRows={zoneRows}
+                onChangeZoneRows={handleZoneRowsChange}
+              />
 
               {/* ── EDIT: grid lives inside the Liveblocks room ── */}
               {isEdit ? (

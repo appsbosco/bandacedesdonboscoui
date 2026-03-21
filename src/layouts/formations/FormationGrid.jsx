@@ -129,6 +129,15 @@ const ZONE_ACCENT = {
   },
 };
 
+const PERCUSSION_LAYOUT_KEYS = {
+  MALLETS: "PERCUSION__MALLETS",
+  PERCUSION: "PERCUSION__PERCUSION",
+};
+
+function getPercussionLayoutSection(section) {
+  return section === "MALLETS" ? "MALLETS" : "PERCUSION";
+}
+
 // ─── ContextMenu ──────────────────────────────────────────────────────────────
 
 const ContextMenu = memo(function ContextMenu({
@@ -607,6 +616,7 @@ const ZoneGrid = memo(function ZoneGrid({
 const PercussionZoneGrid = memo(function PercussionZoneGrid({
   slots,
   columns,
+  zoneColumns,
   isTouch,
   dragging,
   dropTarget,
@@ -654,6 +664,10 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
         const c = rowData.section ? SECTION_COLORS[rowData.section] : null;
         const prevSection = idx > 0 ? rows[idx - 1].section : null;
         const showSectionLabel = rowData.section && rowData.section !== prevSection;
+        const rowCols =
+          zoneColumns?.[PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(rowData.section)]]
+            ?? zoneColumns?.PERCUSION
+            ?? columns;
         return (
           <div key={rowData.row}>
             {showSectionLabel && (
@@ -672,7 +686,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: `repeat(${columns}, minmax(64px, 1fr))`,
+                gridTemplateColumns: `repeat(${rowCols}, minmax(64px, 1fr))`,
                 gap: "6px",
               }}
             >
@@ -796,6 +810,14 @@ export default function FormationGrid({
   useEffect(() => {
     setOverlayVersion((v) => v + 1);
   }, [slots, collaboratorsBySlot, dragging, dropTarget, invalidDrop, selected]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const selectedSlot = slots.find((slot) => slotKey(slot) === selected);
+    if (!selectedSlot || !selectedSlot.userId || selectedSlot.locked) {
+      setSelected(null);
+    }
+  }, [selected, slots]);
 
   const handleDragStart = useCallback((key) => {
     setDragging(key);
@@ -1013,6 +1035,7 @@ export default function FormationGrid({
                 {zone === "PERCUSION" ? (
                   <PercussionZoneGrid
                     columns={getZoneCols("PERCUSION")}
+                    zoneColumns={zoneColumns}
                     sectionOrder={percussionOrder}
                     {...handlers}
                   />
