@@ -114,6 +114,25 @@ function getSlotsSignature(slots = []) {
     .join("||");
 }
 
+// Overlay fresh avatar URLs onto slots for display.  The stored slot.avatar
+// is a denormalized copy that goes stale when a user updates their profile.
+// This function produces a NEW array only when at least one avatar differs,
+// so React can still skip re-renders via reference equality when nothing changed.
+function enrichSlotsWithFreshAvatars(slots, avatarMap) {
+  if (!slots?.length || !avatarMap || !Object.keys(avatarMap).length) return slots;
+  let changed = false;
+  const enriched = slots.map((slot) => {
+    if (!slot.userId) return slot;
+    const freshAvatar = avatarMap[String(slot.userId)];
+    if (freshAvatar !== undefined && freshAvatar !== slot.avatar) {
+      changed = true;
+      return { ...slot, avatar: freshAvatar };
+    }
+    return slot;
+  });
+  return changed ? enriched : slots;
+}
+
 function sortSlotsByPosition(a, b) {
   if (a.zone !== b.zone) return String(a.zone).localeCompare(String(b.zone));
   if (a.row !== b.row) return a.row - b.row;
@@ -151,12 +170,11 @@ function reshapeZoneSlotsPreservingLayout(slots, zone, columns, rows = null) {
   const movableSlots = zoneSlots.filter((slot) => slot.userId || slot.locked);
   const explicitRows = rows != null ? Math.max(1, rows) : null;
 
-  if (explicitRows != null && movableSlots.length > columns * explicitRows) {
-    return slots;
-  }
-
+  // When explicit rows can't fit all members, expand to minimum needed rows
+  // so the layout change always takes effect visually.
+  const minRowsForMembers = Math.max(1, Math.ceil(movableSlots.length / columns));
   const targetRows =
-    explicitRows ?? Math.max(1, Math.ceil(Math.max(zoneSlots.length, movableSlots.length, 1) / columns));
+    explicitRows != null ? Math.max(explicitRows, minRowsForMembers) : Math.max(1, Math.ceil(Math.max(zoneSlots.length, movableSlots.length, 1) / columns));
   const fixedMap = new Map();
   const overflow = [];
 
@@ -271,14 +289,13 @@ function reshapePercussionGroupSlotsPreservingLayout(
     return { slots: [], rowCount: 0 };
   }
 
-  if (explicitRows != null && movableSlots.length > columns * explicitRows) {
-    return null;
-  }
-
+  // When explicit rows can't fit all members, expand to minimum needed rows
+  // so the layout change always takes effect visually.
+  const minRowsNeeded = Math.max(1, Math.ceil(movableSlots.length / columns));
   const existingRows = [...new Set(sectionSlots.map((slot) => slot.row))].sort((a, b) => a - b);
   const rowIndexMap = new Map(existingRows.map((row, index) => [row, index]));
   const targetRows =
-    explicitRows ?? Math.max(1, Math.ceil(Math.max(sectionSlots.length, movableSlots.length, 1) / columns));
+    explicitRows != null ? Math.max(explicitRows, minRowsNeeded) : Math.max(1, Math.ceil(Math.max(sectionSlots.length, movableSlots.length, 1) / columns));
 
   const fixedMap = new Map();
   const overflow = [];
@@ -2043,6 +2060,7 @@ function FormationRoomContent({
   formNotes,
   setFormNotes,
   currentUser,
+  freshAvatarMap = {},
 }) {
   const {
     slots,
@@ -2197,7 +2215,7 @@ function FormationRoomContent({
 
       <div className="overflow-visible">
         <FormationGrid
-          slots={slots}
+          slots={enrichSlotsWithFreshAvatars(slots, freshAvatarMap)}
           columns={columns}
           zoneColumns={zoneColumns}
           onChange={handleGridChange}
@@ -2268,6 +2286,23 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     setToast: setSaveToast,
   } = useFormationBuilder();
   const { templates } = useFormationTemplates();
+
+  // ── Fresh avatar map: userId → latest avatar URL from backend ─────────────
+  // Slots store avatar as a denormalized copy at assignment time. When a user
+  // updates their profile photo the slots become stale.  This map lets us
+  // overlay the latest avatar at render time without mutating the stored slots.
+  const freshAvatarMap = useMemo(() => {
+    const map = {};
+    for (const grp of sections || []) {
+      for (const m of grp.members || []) {
+        if (m.userId) map[String(m.userId)] = m.avatar || null;
+      }
+    }
+    for (const m of unmapped || []) {
+      if (m.userId) map[String(m.userId)] = m.avatar || null;
+    }
+    return map;
+  }, [sections, unmapped]);
 
   // ── Wizard state ────────────────────────────────────────────────────────────
   const [step, setStep] = useState(isEdit ? 4 : 1);
@@ -2413,6 +2448,26 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     setSlots(newSlots);
     setExternalSlotsSeq((prev) => prev + 1);
   }, []);
+
+  // ── CREATE mode: normalize slots when layout params change ─────────────────
+  // In EDIT mode this runs inside FormationRoomContent; in CREATE mode we need
+  // it here so that changing rows/columns in the LayoutSettingsModal immediately
+  // reshapes the grid without requiring "Recalcular".
+  const createNormalizedRef = useRef("");
+  useEffect(() => {
+    if (isEdit || step !== 4 || !slots.length) return;
+
+    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
+    const normalizedSig = getSlotsSignature(normalized);
+    if (normalizedSig === getSlotsSignature(slots)) {
+      createNormalizedRef.current = normalizedSig;
+      return;
+    }
+    if (createNormalizedRef.current === normalizedSig) return;
+
+    createNormalizedRef.current = normalizedSig;
+    setSlots(normalized);
+  }, [isEdit, step, slots, columns, zoneColumns, zoneRows, zonePatterns]);
 
   // ── Load users ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -2963,6 +3018,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   formNotes={formNotes}
                   setFormNotes={setFormNotes}
                   currentUser={currentUser}
+                  freshAvatarMap={freshAvatarMap}
                 />
               ) : (
                 /* ── CREATE: plain local state, no room ── */
@@ -2995,7 +3051,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   />
                   <div className="overflow-hidden">
                     <FormationGrid
-                      slots={slots}
+                      slots={enrichSlotsWithFreshAvatars(slots, freshAvatarMap)}
                       columns={columns}
                       zoneColumns={zoneColumns}
                       onChange={setSlots}

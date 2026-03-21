@@ -118,7 +118,17 @@ export const CREATE_FORMATION = gql`
 
 export const UPDATE_FORMATION = gql`
   mutation UpdateFormation($id: ID!, $input: UpdateFormationInput!) {
-    updateFormation(id: $id, input: $input) { id name updatedAt }
+    updateFormation(id: $id, input: $input) {
+      id
+      name
+      columns
+      zoneOrders { zone sectionOrder }
+      zoneColumns { zone columns rows pattern }
+      excludedUserIds
+      zoneMemberCounts { zone count }
+      notes
+      updatedAt
+    }
   }
 `;
 
