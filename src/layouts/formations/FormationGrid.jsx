@@ -664,10 +664,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
         const c = rowData.section ? SECTION_COLORS[rowData.section] : null;
         const prevSection = idx > 0 ? rows[idx - 1].section : null;
         const showSectionLabel = rowData.section && rowData.section !== prevSection;
-        const rowCols =
-          zoneColumns?.[PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(rowData.section)]]
-            ?? zoneColumns?.PERCUSION
-            ?? columns;
+        const rowCols = Math.max(1, rowData.slots.length);
         return (
           <div key={rowData.row}>
             {showSectionLabel && (

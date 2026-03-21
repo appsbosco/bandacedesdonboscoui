@@ -294,6 +294,57 @@ function fillGrid(zone, members, columns, explicitRows = null, emptySection = nu
   return slots;
 }
 
+function parseRowPattern(pattern) {
+  return String(pattern || "")
+    .split(/[,\s]+/)
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.max(1, Math.floor(value)));
+}
+
+function fillPatternGrid(zone, members, pattern, emptySection = null) {
+  const rowPattern = parseRowPattern(pattern);
+  if (!rowPattern.length) return fillGrid(zone, members, 1, null, emptySection);
+
+  const slots = [];
+  let memberIndex = 0;
+  let row = 0;
+
+  while (memberIndex < members.length || row < rowPattern.length) {
+    const cols = rowPattern[row] ?? rowPattern[rowPattern.length - 1];
+    for (let col = 0; col < cols; col++) {
+      const member = members[memberIndex] || null;
+      if (member) {
+        slots.push({
+          zone,
+          row,
+          col,
+          section: member.section || null,
+          userId: uid(member.userId) || null,
+          displayName: member.name || null,
+          avatar: member.avatar || null,
+          locked: false,
+        });
+        memberIndex += 1;
+      } else {
+        slots.push({
+          zone,
+          row,
+          col,
+          section: emptySection,
+          userId: null,
+          displayName: null,
+          avatar: null,
+          locked: false,
+        });
+      }
+    }
+    row += 1;
+  }
+
+  return slots;
+}
+
 function getPercussionLayoutSection(section) {
   return section === "MALLETS" ? "MALLETS" : "PERCUSION";
 }
@@ -310,7 +361,11 @@ function getPercussionRows(zoneRows, section) {
   return zoneRows[getPercussionLayoutKey(section)] ?? zoneRows.PERCUSION ?? null;
 }
 
-function fillPercussionGrid(members, zoneColumns, zoneRows, fallbackColumns) {
+function getPercussionPattern(zonePatterns, section) {
+  return zonePatterns[getPercussionLayoutKey(section)] ?? zonePatterns.PERCUSION ?? null;
+}
+
+function fillPercussionGrid(members, zoneColumns, zoneRows, zonePatterns, fallbackColumns) {
   const groups = [];
 
   for (const member of members) {
@@ -329,9 +384,13 @@ function fillPercussionGrid(members, zoneColumns, zoneRows, fallbackColumns) {
   for (const group of groups) {
     const cols = getPercussionColumns(zoneColumns, fallbackColumns, group.section);
     const rows = getPercussionRows(zoneRows, group.section);
+    const pattern = getPercussionPattern(zonePatterns, group.section);
+    const baseSlots = pattern
+      ? fillPatternGrid("PERCUSION", group.members, pattern, group.section)
+      : fillGrid("PERCUSION", group.members, cols, rows, group.section);
     const groupRows =
-      rows != null ? Math.max(1, rows) : Math.max(1, Math.ceil(group.members.length / cols));
-    const groupSlots = fillGrid("PERCUSION", group.members, cols, rows, group.section).map((slot) => ({
+      baseSlots.length > 0 ? Math.max(...baseSlots.map((slot) => slot.row)) + 1 : 0;
+    const groupSlots = baseSlots.map((slot) => ({
       ...slot,
       row: slot.row + rowOffset,
     }));
@@ -458,6 +517,7 @@ export function computeFormation({
   columns,
   zoneColumns = {},
   zoneRows = {},
+  zonePatterns = {},
   existingSlots = [],
 }) {
   const lockedByKey = {};
@@ -471,7 +531,7 @@ export function computeFormation({
     const effectiveRows = zoneRows[zone] != null ? zoneRows[zone] : null;
     const grid =
       zone === "PERCUSION"
-        ? fillPercussionGrid(members, zoneColumns, zoneRows, effectiveCols)
+        ? fillPercussionGrid(members, zoneColumns, zoneRows, zonePatterns, effectiveCols)
         : fillGrid(zone, members, effectiveCols, effectiveRows);
     result.push(...applyLocks(grid, lockedByKey));
   }

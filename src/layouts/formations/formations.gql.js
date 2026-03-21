@@ -30,7 +30,7 @@ export const FORMATION_DETAIL = gql`
       columns
       templateId
       zoneOrders { zone sectionOrder }
-      zoneColumns { zone columns rows }
+      zoneColumns { zone columns rows pattern }
       instrumentMappings { instrument section }
       excludedUserIds
       slots {
@@ -61,7 +61,7 @@ export const FORMATION_TEMPLATES = gql`
       name
       defaultColumns
       zoneOrders { zone sectionOrder }
-      zoneColumns { zone columns rows }
+      zoneColumns { zone columns rows pattern }
       instrumentMappings { instrument section }
       notes
       createdAt
@@ -112,7 +112,7 @@ export const FORMATION_USERS_BY_SECTION = gql`
 
 export const CREATE_FORMATION = gql`
   mutation CreateFormation($input: CreateFormationInput!) {
-    createFormation(input: $input) { id name date type columns zoneColumns { zone columns } }
+    createFormation(input: $input) { id name date type columns zoneColumns { zone columns rows pattern } }
   }
 `;
 

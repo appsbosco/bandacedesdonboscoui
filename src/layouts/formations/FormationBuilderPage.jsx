@@ -78,6 +78,27 @@ function getZoneLayoutRows(zone, zoneRows, section = null) {
   return zoneRows?.[layoutKey] ?? zoneRows?.PERCUSION ?? null;
 }
 
+function getZoneLayoutPattern(zone, zonePatterns, section = null) {
+  if (zone !== "PERCUSION") {
+    return zonePatterns?.[zone] ?? "";
+  }
+
+  if (!section) {
+    return zonePatterns?.PERCUSION ?? "";
+  }
+
+  const layoutKey = PERCUSSION_LAYOUT_KEYS[getPercussionLayoutSection(section)];
+  return zonePatterns?.[layoutKey] ?? zonePatterns?.PERCUSION ?? "";
+}
+
+function parsePatternValues(pattern) {
+  return String(pattern || "")
+    .split(/[,\s]+/)
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.max(1, Math.floor(value)));
+}
+
 function getSlotsSignature(slots = []) {
   return slots
     .map((slot) =>
@@ -199,6 +220,7 @@ function reshapePercussionGroupSlotsPreservingLayout(
   section,
   columns,
   rows = null,
+  pattern = "",
   rowOffset = 0
 ) {
   const sectionSlots = zoneSlots
@@ -206,7 +228,44 @@ function reshapePercussionGroupSlotsPreservingLayout(
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
 
   const movableSlots = sectionSlots.filter((slot) => slot.userId || slot.locked);
+  const patternValues = parsePatternValues(pattern);
   const explicitRows = rows != null ? Math.max(1, rows) : null;
+
+  if (patternValues.length) {
+    const rowPattern = [...patternValues];
+    while (movableSlots.length > rowPattern.reduce((sum, value) => sum + value, 0)) {
+      rowPattern.push(rowPattern[rowPattern.length - 1]);
+    }
+
+    const reshapedSlots = [];
+    let slotIndex = 0;
+    for (let row = 0; row < rowPattern.length; row++) {
+      for (let col = 0; col < rowPattern[row]; col++) {
+        const slot = movableSlots[slotIndex] || null;
+        if (slot) {
+          reshapedSlots.push({
+            ...slot,
+            row: rowOffset + row,
+            col,
+          });
+          slotIndex += 1;
+        } else {
+          reshapedSlots.push({
+            zone: "PERCUSION",
+            row: rowOffset + row,
+            col,
+            section,
+            userId: null,
+            displayName: null,
+            avatar: null,
+            locked: false,
+          });
+        }
+      }
+    }
+
+    return { slots: reshapedSlots, rowCount: rowPattern.length };
+  }
 
   if (!sectionSlots.length && explicitRows == null && movableSlots.length === 0) {
     return { slots: [], rowCount: 0 };
@@ -282,7 +341,7 @@ function reshapePercussionGroupSlotsPreservingLayout(
   return { slots: reshapedSlots, rowCount: targetRows };
 }
 
-function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zoneRows) {
+function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zoneRows, zonePatterns = {}) {
   const zoneSlots = slots
     .filter((slot) => slot.zone === "PERCUSION")
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
@@ -291,7 +350,7 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
 
   const rowSectionMap = new Map();
   const rows = [...new Set(zoneSlots.map((slot) => slot.row))].sort((a, b) => a - b);
-  let activeSection = "MALLETS";
+  let activeSection = null;
   for (const row of rows) {
     const rowSlots = zoneSlots.filter((slot) => slot.row === row);
     const explicitSection = rowSlots.find((slot) => slot.section)?.section || null;
@@ -303,7 +362,8 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
     (section) =>
       zoneSlots.some((slot) => rowSectionMap.get(slot.row) === section) ||
       zoneColumns?.[PERCUSSION_LAYOUT_KEYS[section]] != null ||
-      zoneRows?.[PERCUSSION_LAYOUT_KEYS[section]] != null
+      zoneRows?.[PERCUSSION_LAYOUT_KEYS[section]] != null ||
+      zonePatterns?.[PERCUSSION_LAYOUT_KEYS[section]]
   );
 
   if (!groups.length) return slots;
@@ -314,6 +374,7 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
   for (const section of groups) {
     const cols = getZoneLayoutColumns("PERCUSION", columns, zoneColumns, section);
     const rows = getZoneLayoutRows("PERCUSION", zoneRows, section);
+    const pattern = getZoneLayoutPattern("PERCUSION", zonePatterns, section);
     const result = reshapePercussionGroupSlotsPreservingLayout(
       zoneSlots.map((slot) => ({
         ...slot,
@@ -322,6 +383,7 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
       section,
       cols,
       rows,
+      pattern,
       rowOffset
     );
     if (!result) return slots;
@@ -332,13 +394,13 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
   return [...slots.filter((slot) => slot.zone !== "PERCUSION"), ...reshaped].sort(sortSlotsByPosition);
 }
 
-function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows) {
+function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns = {}) {
   const zones = [...new Set((slots || []).map((slot) => slot.zone).filter(Boolean))];
   let nextSlots = dedupeSlotsByUserId(slots);
 
   for (const zone of zones) {
     if (zone === "PERCUSION") {
-      nextSlots = reshapePercussionSlotsPreservingLayout(nextSlots, columns, zoneColumns, zoneRows);
+      nextSlots = reshapePercussionSlotsPreservingLayout(nextSlots, columns, zoneColumns, zoneRows, zonePatterns);
       continue;
     }
 
@@ -371,7 +433,7 @@ function removeAndCompact(slots, newExcluded) {
 // ─────────────────────────────────────────────────────────────────────────────
 // includeAndExpand  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, defaultCols) {
+function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zonePatterns, defaultCols) {
   const userId = String(musician.userId);
   const section = musician.section;
   let targetZone = null;
@@ -387,6 +449,88 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, de
   }
   if (!targetZone) targetZone = inferZonesForSection(section)[0] || null;
   if (!targetZone) return slots;
+
+  if (targetZone === "PERCUSION") {
+    const layoutSection = getPercussionLayoutSection(section);
+    const normalized = reshapePercussionSlotsPreservingLayout(
+      slots,
+      defaultCols,
+      zoneColumns,
+      zoneRows,
+      zonePatterns
+    );
+    const percussionSlots = normalized
+      .filter((slot) => slot.zone === "PERCUSION")
+      .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+    const rowSectionMap = new Map();
+    let activeSection = null;
+    for (const row of [...new Set(percussionSlots.map((slot) => slot.row))].sort((a, b) => a - b)) {
+      const rowSlots = percussionSlots.filter((slot) => slot.row === row);
+      const explicitSection = rowSlots.find((slot) => slot.section)?.section || null;
+      if (explicitSection) activeSection = getPercussionLayoutSection(explicitSection);
+      rowSectionMap.set(row, activeSection);
+    }
+
+    const targetSlots = percussionSlots.filter(
+      (slot) => (slot.section ? getPercussionLayoutSection(slot.section) : rowSectionMap.get(slot.row)) === layoutSection
+    );
+
+    const targetEmpty = targetSlots.find((slot) => !slot.userId && !slot.locked);
+    const nextSlots = normalized.map((slot) => ({ ...slot }));
+
+    if (targetEmpty) {
+      const targetKey = slotKey(targetEmpty);
+      return nextSlots.map((slot) =>
+        slotKey(slot) === targetKey
+          ? {
+              ...slot,
+              userId,
+              displayName: musician.displayName || musician.name || null,
+              avatar: musician.avatar || null,
+              section,
+              locked: false,
+            }
+          : slot
+      );
+    }
+
+    const targetCols = getZoneLayoutColumns("PERCUSION", defaultCols ?? 1, zoneColumns, layoutSection);
+    const targetRows = targetSlots.map((slot) => slot.row);
+    const startRow = targetRows.length ? Math.min(...targetRows) : 0;
+    const nextRow =
+      targetRows.length > 0
+        ? Math.floor(targetSlots.length / targetCols) + startRow
+        : layoutSection === "PERCUSION"
+        ? percussionSlots.filter(
+            (slot) =>
+              (slot.section ? getPercussionLayoutSection(slot.section) : rowSectionMap.get(slot.row)) === "MALLETS"
+          ).reduce((maxRow, slot) => Math.max(maxRow, slot.row), -1) + 1
+        : 0;
+    const nextCol = targetSlots.length % targetCols;
+
+    const extended = [
+      ...nextSlots,
+      {
+        zone: "PERCUSION",
+        row: nextRow,
+        col: nextCol,
+        userId,
+        displayName: musician.displayName || musician.name || null,
+        avatar: musician.avatar || null,
+        section,
+        locked: false,
+      },
+    ];
+
+    return reshapePercussionSlotsPreservingLayout(
+      extended,
+      defaultCols,
+      zoneColumns,
+      zoneRows,
+      zonePatterns
+    );
+  }
 
   const percussionSection =
     targetZone === "PERCUSION" ? getPercussionLayoutSection(section) : null;
@@ -866,7 +1010,7 @@ const LIVE_LAYOUT_ROWS = [
   { key: "FINAL", section: null },
 ];
 
-function ZoneLayoutRow({ zone, cols, rows, onChangeCols, onChangeRows }) {
+function ZoneLayoutRow({ zone, cols, rows, pattern = "", onChangeCols, onChangeRows, onChangePattern }) {
   const colPresets = ZONE_COLUMN_PRESETS[zone] || [2, 3, 4, 5, 6];
   const rowPresets = ZONE_ROW_PRESETS[zone] || [1, 2, 3, 4];
   const label = ZONE_COLUMNS_LABEL[zone] || zone;
@@ -943,6 +1087,19 @@ function ZoneLayoutRow({ zone, cols, rows, onChangeCols, onChangeRows }) {
           />
         </div>
       </div>
+      {onChangePattern && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 w-14 shrink-0">Patrón</span>
+          <input
+            type="text"
+            value={pattern}
+            onChange={(e) => onChangePattern(zone, e.target.value)}
+            placeholder="Ej: 9,4,8,5"
+            className="w-full sm:w-56 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+          <span className="text-[11px] text-slate-400">Columnas por fila</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -961,6 +1118,8 @@ function StepConfig({
   onChangeZoneColumns,
   zoneRows,
   onChangeZoneRows,
+  zonePatterns,
+  onChangeZonePattern,
   templates,
   onLoadTemplate,
   onNext,
@@ -1074,8 +1233,12 @@ function StepConfig({
                   section
                 )}
                 rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
+                pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
                 onChangeCols={onChangeZoneColumns}
                 onChangeRows={onChangeZoneRows}
+                onChangePattern={
+                  section ? onChangeZonePattern : null
+                }
               />
             ))}
           </div>
@@ -1124,6 +1287,8 @@ function StepLiveLayoutControls({
   onChangeZoneColumns,
   zoneRows,
   onChangeZoneRows,
+  zonePatterns,
+  onChangeZonePattern,
 }) {
   return (
     <div className="mb-4 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60">
@@ -1187,8 +1352,10 @@ function StepLiveLayoutControls({
                   section
                 )}
                 rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
+                pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
                 onChangeCols={onChangeZoneColumns}
                 onChangeRows={onChangeZoneRows}
+                onChangePattern={section ? onChangeZonePattern : null}
               />
             ))}
           </div>
@@ -1207,6 +1374,8 @@ function LayoutSettingsModal({
   onChangeZoneColumns,
   zoneRows,
   onChangeZoneRows,
+  zonePatterns,
+  onChangeZonePattern,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -1267,6 +1436,8 @@ function LayoutSettingsModal({
             onChangeZoneColumns={onChangeZoneColumns}
             zoneRows={zoneRows}
             onChangeZoneRows={onChangeZoneRows}
+            zonePatterns={zonePatterns}
+            onChangeZonePattern={onChangeZonePattern}
           />
         </div>
 
@@ -1859,6 +2030,7 @@ function FormationRoomContent({
   columns,
   zoneColumns,
   zoneRows,
+  zonePatterns,
   zoneOrders,
   canExclude,
   onExclude,
@@ -1919,7 +2091,7 @@ function FormationRoomContent({
   useEffect(() => {
     if (isLoading || !slots.length) return;
 
-    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows);
+    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
     const normalizedSignature = getSlotsSignature(normalized);
     if (normalizedSignature === getSlotsSignature(slots)) {
       normalizedLayoutRef.current = normalizedSignature;
@@ -1929,7 +2101,7 @@ function FormationRoomContent({
 
     normalizedLayoutRef.current = normalizedSignature;
     setSlots(normalized);
-  }, [isLoading, slots, columns, zoneColumns, zoneRows, setSlots]);
+  }, [isLoading, slots, columns, zoneColumns, zoneRows, zonePatterns, setSlots]);
 
   // ── Intercept FormationGrid onChange → targeted LiveMap mutations ───────────
   const handleGridChange = useCallback(
@@ -2143,6 +2315,24 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     []
   );
 
+  const [zonePatterns, setZonePatterns] = useState(() => {
+    const base = {};
+    if (isEdit && existingFormation?.zoneColumns?.length)
+      for (const zc of existingFormation.zoneColumns) if (zc.pattern) base[zc.zone] = zc.pattern;
+    return base;
+  });
+
+  const handleZonePatternChange = useCallback(
+    (zone, value) =>
+      setZonePatterns((prev) => {
+        const next = { ...prev };
+        if (String(value || "").trim()) next[zone] = value;
+        else delete next[zone];
+        return next;
+      }),
+    []
+  );
+
   const [excluded, setExcluded] = useState(
     () => new Set((existingFormation?.excludedUserIds || []).map(String))
   );
@@ -2193,6 +2383,16 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
       if (existingFormation.zoneColumns?.length) {
         for (const zc of existingFormation.zoneColumns) {
           if (zc.rows != null) base[zc.zone] = zc.rows;
+        }
+      }
+      return base;
+    });
+
+    setZonePatterns(() => {
+      const base = {};
+      if (existingFormation.zoneColumns?.length) {
+        for (const zc of existingFormation.zoneColumns) {
+          if (zc.pattern) base[zc.zone] = zc.pattern;
         }
       }
       return base;
@@ -2275,6 +2475,14 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
           for (const zc of tpl.zoneColumns) if (zc.rows != null) next[zc.zone] = zc.rows;
           return next;
         });
+        setZonePatterns((prev) => {
+          const next = { ...prev };
+          for (const zc of tpl.zoneColumns) {
+            if (zc.pattern) next[zc.zone] = zc.pattern;
+            else delete next[zc.zone];
+          }
+          return next;
+        });
       }
     },
     [templates]
@@ -2350,6 +2558,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
             zoneOrders,
             zoneColumns,
             zoneRows,
+            zonePatterns,
             columns
           );
           if (isEdit) {
@@ -2361,7 +2570,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
         return next;
       });
     },
-    [sections, existingFormation, zoneOrders, zoneColumns, zoneRows, columns, isEdit]
+    [sections, existingFormation, zoneOrders, zoneColumns, zoneRows, zonePatterns, columns, isEdit]
   );
 
   // ── Compute grid ────────────────────────────────────────────────────────────
@@ -2377,6 +2586,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
       columns,
       zoneColumns,
       zoneRows,
+      zonePatterns,
       existingSlots: slots,
     });
     if (isEdit) {
@@ -2393,6 +2603,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     columns,
     zoneColumns,
     zoneRows,
+    zonePatterns,
     slots,
     isEdit,
     pushSlotsToRoom,
@@ -2412,12 +2623,13 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
 
   const buildZoneColumnsInput = useCallback(
     () =>
-      Object.entries(zoneColumns).map(([zone, cols]) => ({
+      [...new Set([...Object.keys(zoneColumns), ...Object.keys(zoneRows), ...Object.keys(zonePatterns)])].map((zone) => ({
         zone,
-        columns: cols,
+        columns: zoneColumns[zone] ?? (zone === "FRENTE_ESPECIAL" ? DEFAULT_ZONE_COLUMNS.FRENTE_ESPECIAL : zone === "FINAL" ? DEFAULT_ZONE_COLUMNS.FINAL : zone.includes("PERCUSION") ? DEFAULT_ZONE_COLUMNS.PERCUSION : columns),
         ...(zoneRows[zone] != null ? { rows: zoneRows[zone] } : {}),
+        ...(zonePatterns[zone] ? { pattern: zonePatterns[zone].trim() } : {}),
       })),
-    [zoneColumns, zoneRows]
+    [zoneColumns, zoneRows, zonePatterns, columns]
   );
 
   const buildSlotInput = useCallback(
@@ -2625,6 +2837,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
               onChangeZoneColumns={handleZoneColumnsChange}
               zoneRows={zoneRows}
               onChangeZoneRows={handleZoneRowsChange}
+              zonePatterns={zonePatterns}
+              onChangeZonePattern={handleZonePatternChange}
               templates={templates}
               onLoadTemplate={handleLoadTemplate}
               onNext={handleGoToStep2}
@@ -2722,6 +2936,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                 onChangeZoneColumns={handleZoneColumnsChange}
                 zoneRows={zoneRows}
                 onChangeZoneRows={handleZoneRowsChange}
+                zonePatterns={zonePatterns}
+                onChangeZonePattern={handleZonePatternChange}
               />
 
               {/* ── EDIT: grid lives inside the Liveblocks room ── */}
@@ -2734,6 +2950,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   columns={columns}
                   zoneColumns={zoneColumns}
                   zoneRows={zoneRows}
+                  zonePatterns={zonePatterns}
                   zoneOrders={zoneOrders}
                   canExclude={isAdmin}
                   onExclude={handleExcludeFromGrid}
