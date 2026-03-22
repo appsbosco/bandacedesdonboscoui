@@ -104,6 +104,7 @@ const GET_EVENT_ROSTER = gql`
         instrument
         role
         state
+        avatar
       }
     }
   }
@@ -129,6 +130,7 @@ const GET_EVENT_BUS_SUMMARY = gql`
             name
             firstSurName
             secondSurName
+            avatar
           }
         }
       }
@@ -140,6 +142,7 @@ const GET_EVENT_BUS_SUMMARY = gql`
           name
           firstSurName
           secondSurName
+          avatar
         }
       }
       unassignedCount
@@ -228,6 +231,17 @@ const SET_MEMBER_BUS = gql`
       id
       busNumber
       plannedBusNumbers
+    }
+  }
+`;
+
+const CLEAR_GROUP_BUS = gql`
+  mutation ClearGroupBus($eventId: ID!, $assignmentGroup: String!) {
+    clearGroupBus(eventId: $eventId, assignmentGroup: $assignmentGroup) {
+      id
+      busNumber
+      plannedBusNumbers
+      assignmentGroup
     }
   }
 `;
@@ -648,15 +662,29 @@ EventPickerCard.propTypes = {
 
 // Avatar con iniciales — mismo gradiente azul que AttendancePage
 const UserAvatar = ({ user, size = "md", busNumber }) => {
+  const [imgError, setImgError] = useState(false);
   const sizes = { sm: "w-8 h-8 text-xs", md: "w-10 h-10 text-sm", lg: "w-12 h-12 text-base" };
   const bp = busNumber ? BUS_PALETTE[busNumber] : null;
+  const ringClass = bp ? `ring-2 ${bp.ring}` : "";
+
+  if (user?.avatar && !imgError) {
+    return (
+      <img
+        src={user.avatar}
+        alt={initials(user)}
+        className={`flex-shrink-0 ${sizes[size]} rounded-full object-cover ${ringClass}`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
   return (
     <div
       className={`
       flex-shrink-0 ${sizes[size]} rounded-full
       bg-gradient-to-br from-blue-400 to-blue-600
       flex items-center justify-center text-white font-bold
-      ${bp ? `ring-2 ${bp.ring}` : ""}
+      ${ringClass}
     `}
     >
       {initials(user)}
@@ -1049,6 +1077,26 @@ const SplitSectionModal = ({
     }
   };
 
+  const handleUndivide = async () => {
+    if (!existingPlan) return;
+    setLoading(true);
+    try {
+      await assignBusMut({
+        variables: {
+          eventId,
+          assignmentGroup: group,
+          busNumber: existingPlan.primaryBus,
+          options: null,
+        },
+      });
+      onSaved?.();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       title={
@@ -1065,6 +1113,15 @@ const SplitSectionModal = ({
           >
             Cancelar
           </button>
+          {existingPlan && (
+            <button
+              onClick={handleUndivide}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {loading ? <Spinner size="sm" /> : "Quitar división"}
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={!canSave || loading}
@@ -1731,7 +1788,9 @@ const SectionInBusRow = ({
   eventId,
   isAdmin,
   reassigning,
+  clearing,
   onReassign,
+  onClear,
   onSplit,
   onRefetch,
 }) => {
@@ -1803,6 +1862,29 @@ const SectionInBusRow = ({
             </button>
           )}
 
+          {/* Quitar del bus */}
+          {isAdmin && busNum && onClear && (
+            <button
+              onClick={onClear}
+              disabled={clearing}
+              title="Quitar sección del bus"
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-40"
+            >
+              {clearing ? (
+                <Spinner size="sm" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Selector de bus */}
           {isAdmin &&
             (reassigning ? (
@@ -1852,7 +1934,9 @@ SectionInBusRow.propTypes = {
   eventId: PropTypes.string.isRequired,
   isAdmin: PropTypes.bool,
   reassigning: PropTypes.bool,
+  clearing: PropTypes.bool,
   onReassign: PropTypes.func.isRequired,
+  onClear: PropTypes.func,
   onSplit: PropTypes.func,
   onRefetch: PropTypes.func,
 };
@@ -1860,7 +1944,9 @@ SectionInBusRow.propTypes = {
 const BusAssignmentPanel = ({ eventId, roster, eventDetails, isAdmin, onRefetch }) => {
   const [splitTarget, setSplitTarget] = useState(null); // { group, busNumber }
   const [reassigningGroup, setReassigningGroup] = useState(null);
+  const [clearingGroup, setClearingGroup] = useState(null);
   const [assignBusMut] = useMutation(ASSIGN_BUS_TO_GROUP);
+  const [clearGroupBusMut] = useMutation(CLEAR_GROUP_BUS);
 
   // Compute per-group planning data — solo roles elegibles
   const groupData = useMemo(() => {
@@ -1931,6 +2017,18 @@ const BusAssignmentPanel = ({ eventId, roster, eventDetails, isAdmin, onRefetch 
     }
   };
 
+  const handleClear = async (group) => {
+    setClearingGroup(group);
+    try {
+      await clearGroupBusMut({ variables: { eventId, assignmentGroup: group } });
+      onRefetch?.();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setClearingGroup(null);
+    }
+  };
+
   const activeBuses = BUSES.filter((b) => busMap[b]?.length > 0);
   const sortSections = (sections) =>
     [...sections].sort((a, b) => SECTIONS_ORDER.indexOf(a.group) - SECTIONS_ORDER.indexOf(b.group));
@@ -1995,7 +2093,9 @@ const BusAssignmentPanel = ({ eventId, roster, eventDetails, isAdmin, onRefetch 
                   eventId={eventId}
                   isAdmin={isAdmin}
                   reassigning={reassigningGroup === gd.group}
+                  clearing={clearingGroup === gd.group}
                   onReassign={(newBus) => handleReassign(gd.group, newBus)}
+                  onClear={() => handleClear(gd.group)}
                   onSplit={() =>
                     setSplitTarget({
                       group: gd.group,
