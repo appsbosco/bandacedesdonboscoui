@@ -42,13 +42,16 @@ export const GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT = gql`
       paymentPlan {
         id
         name
-        installments {
-          id
-          order
-          dueDate
-          amount
-          concept
-        }
+      }
+      installments {
+        id
+        order
+        dueDate
+        amount
+        concept
+        paidAmount
+        remainingAmount
+        status
       }
     }
   }

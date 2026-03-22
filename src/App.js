@@ -55,6 +55,7 @@ const VeladaTickets = lazy(() => import("layouts/tickets/BuyTickets"));
 const ColorGuardCamp = lazy(() => import("layouts/ColorGuardCamp/ColorGuardCamp"));
 const Jacks = lazy(() => import("layouts/sponsors/Jacks"));
 const INS = lazy(() => import("layouts/sponsors/INS"));
+import PerformanceAttendance from "layouts/PerformanceAttendance/PerformanceAttendance";
 const DocumentDetail = lazy(() =>
   import("components/documents/DocumentDetail").then((m) => ({ default: m.DocumentDetail }))
 );
@@ -172,6 +173,8 @@ export default function App() {
           <Route path="/:lang/calendario" element={<CalendarListing />} />
 
           {renderedRouteElements}
+
+          <Route path="/performance-attendance/:eventId" element={<PerformanceAttendance />} />
 
           {canAccessDocuments && <Route path="/documents/:id" element={<DocumentDetail />} />}
 

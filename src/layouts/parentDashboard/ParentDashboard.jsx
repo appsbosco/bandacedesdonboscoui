@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client";
 import PropTypes from "prop-types";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { GET_PARENT_DASHBOARD } from "graphql/queries/parents";
 import ChildSelector from "./components/ChildSelector";
 import MetricsCards from "./components/MetricsCards";
@@ -40,6 +40,7 @@ DateRangeSelector.propTypes = {
 const ParentDashboard = () => {
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [datePreset, setDatePreset] = useState("LAST_90_DAYS");
+  const [allChildren, setAllChildren] = useState([]);
 
   const { loading, error, data, refetch } = useQuery(GET_PARENT_DASHBOARD, {
     variables: {
@@ -52,10 +53,28 @@ const ParentDashboard = () => {
 
   const dashboard = data?.getParentDashboard;
 
+  useEffect(() => {
+    if (!dashboard?.children?.length) return;
+
+    if (!selectedChildId) {
+      setAllChildren(dashboard.children);
+      return;
+    }
+
+    setAllChildren((prev) => {
+      if (prev.length === 0 || dashboard.children.length > prev.length) {
+        return dashboard.children;
+      }
+      return prev;
+    });
+  }, [dashboard, selectedChildId]);
+
   const childrenToDisplay = useMemo(() => {
     if (!dashboard) return [];
     return dashboard.children;
   }, [dashboard]);
+
+  const childrenForSelector = allChildren.length > 0 ? allChildren : dashboard?.children || [];
 
   if (error) {
     return (
@@ -156,7 +175,7 @@ const ParentDashboard = () => {
         <DateRangeSelector selectedPreset={datePreset} onPresetChange={setDatePreset} />
 
         <ChildSelector
-          childrenData={dashboard.children}
+          childrenData={childrenForSelector}
           selectedChildId={selectedChildId}
           onSelectChild={setSelectedChildId}
         />

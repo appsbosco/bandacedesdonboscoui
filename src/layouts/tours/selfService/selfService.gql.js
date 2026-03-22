@@ -22,13 +22,16 @@ export const GET_MY_TOUR_PAYMENT_ACCOUNT = gql`
         id
         name
         totalAmount
-        installments {
-          id
-          order
-          dueDate
-          amount
-          concept
-        }
+      }
+      installments {
+        id
+        order
+        dueDate
+        amount
+        concept
+        paidAmount
+        remainingAmount
+        status
       }
     }
   }

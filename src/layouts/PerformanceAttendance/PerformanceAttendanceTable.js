@@ -549,7 +549,9 @@ const PerformanceAttendancePage = () => {
     ? users.filter((user) => user.instrument === userInstrument)
     : users;
 
-  const events = eventsData?.getEvents || [];
+  const events = (eventsData?.getEvents || []).filter(
+    (event) => String(event?.category || "").toLowerCase() === "presentation"
+  );
   const hotels = hotelsData?.getHotels || [];
 
   // Initialize attendance data

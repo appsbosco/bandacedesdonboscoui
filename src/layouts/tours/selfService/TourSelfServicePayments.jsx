@@ -108,11 +108,11 @@ export default function TourSelfServicePayments({ paymentAccount }) {
     balance = 0,
     financialStatus,
     paymentPlan,
+    installments = [],
   } = paymentAccount;
 
   const cfg = FINANCIAL_STATUS_CONFIG[financialStatus] || FINANCIAL_STATUS_CONFIG.PENDING;
   const pct = finalAmount > 0 ? Math.min(100, (totalPaid / finalAmount) * 100) : 0;
-  const installments = paymentPlan?.installments ?? [];
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
