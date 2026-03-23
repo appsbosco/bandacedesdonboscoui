@@ -25,9 +25,15 @@ const EMPTY_FORM = {
 
 function toInputDate(dateVal) {
   if (!dateVal) return "";
+  if (typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) return dateVal;
   const d = new Date(Number(dateVal) || dateVal);
   if (isNaN(d.getTime())) return "";
-  return d.toISOString().split("T")[0];
+  return d.toISOString().slice(0, 10);
+}
+
+function dateInputToUtcIso(dateStr) {
+  if (!dateStr) return "";
+  return `${dateStr}T00:00:00.000Z`;
 }
 
 export default function TourFormModal({ isOpen, mode, tour, onClose, onSubmit, loading }) {
@@ -101,8 +107,8 @@ export default function TourFormModal({ isOpen, mode, tour, onClose, onSubmit, l
       name: form.name.trim(),
       destination: form.destination.trim(),
       country: form.country.trim(),
-      startDate: new Date(form.startDate).toISOString(),
-      endDate: new Date(form.endDate).toISOString(),
+      startDate: dateInputToUtcIso(form.startDate),
+      endDate: dateInputToUtcIso(form.endDate),
       status: form.status,
       description: form.description.trim() || undefined,
     });

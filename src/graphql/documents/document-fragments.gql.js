@@ -63,6 +63,8 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
     images {
       kind
       url
+      publicId
+      mimeType
     }
     extracted {
       fullName

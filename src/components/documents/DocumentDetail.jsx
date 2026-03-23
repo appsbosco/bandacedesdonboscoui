@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { useParams, useNavigate } from "react-router-dom";
@@ -169,21 +171,13 @@ DataField.propTypes = {
 
 DataField.defaultProps = { sensitive: false };
 
-function DocumentFilePreview({
-  image,
-  alt,
-  className = "",
-  frameClassName = "",
-  compact = false,
-}) {
+function DocumentFilePreview({ image, alt, className = "", frameClassName = "", compact = false }) {
   if (!image?.url) return null;
 
   if (isPdfMimeType(image.mimeType)) {
     const pdfUrl = getCloudinaryPdfUrl(image);
     return (
-      <div
-        className={`bg-slate-50 ${className}`.trim()}
-      >
+      <div className={`bg-slate-50 ${className}`.trim()}>
         <iframe
           src={buildPdfPreviewUrl(pdfUrl, image.publicId)}
           title={alt || "Vista previa PDF"}
@@ -193,13 +187,7 @@ function DocumentFilePreview({
     );
   }
 
-  return (
-    <img
-      src={image.url}
-      alt={alt}
-      className={className || "w-full block"}
-    />
-  );
+  return <img src={image.url} alt={alt} className={className || "w-full block"} />;
 }
 
 DocumentFilePreview.propTypes = {
@@ -315,15 +303,15 @@ export function DocumentDetail() {
     setDocumentStatus({ variables: { documentId: id, status: "VERIFIED" } });
   }, [id, setDocumentStatus]);
 
-  const openImageModal = (image, index) => {
+  const openImageModal = useCallback((image, index) => {
     setImageZoom(1);
     setImageModal({ isOpen: true, image, index });
-  };
+  }, []);
 
-  const closeImageModal = () => {
+  const closeImageModal = useCallback(() => {
     setImageZoom(1);
     setImageModal({ isOpen: false, image: null, index: 0 });
-  };
+  }, []);
 
   const handleZoomOut = useCallback(() => {
     setImageZoom((current) => Math.max(1, Number((current - 0.25).toFixed(2))));
@@ -336,6 +324,18 @@ export function DocumentDetail() {
   const handleZoomReset = useCallback(() => {
     setImageZoom(1);
   }, []);
+
+  const showPreviousImage = useCallback(() => {
+    if (!document?.images?.length) return;
+    const prev = imageModal.index === 0 ? document.images.length - 1 : imageModal.index - 1;
+    openImageModal(document.images[prev], prev);
+  }, [document?.images, imageModal.index, openImageModal]);
+
+  const showNextImage = useCallback(() => {
+    if (!document?.images?.length) return;
+    const next = (imageModal.index + 1) % document.images.length;
+    openImageModal(document.images[next], next);
+  }, [document?.images, imageModal.index, openImageModal]);
 
   if (!id) return null;
 
@@ -813,7 +813,11 @@ export function DocumentDetail() {
               <div className="text-center">
                 {mainImage && (
                   <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 mb-6 max-w-sm mx-auto">
-                    <DocumentFilePreview image={mainImage} alt="Documento" className="w-full block" />
+                    <DocumentFilePreview
+                      image={mainImage}
+                      alt="Documento"
+                      className="w-full block"
+                    />
                   </div>
                 )}
                 <h2 className="text-lg font-semibold text-slate-900 mb-1">
@@ -852,9 +856,7 @@ export function DocumentDetail() {
         <div className="relative space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-white">
-                Vista del documento
-              </p>
+              <p className="text-sm font-semibold text-white">Vista del documento</p>
               <p className="text-xs text-slate-400">
                 {imageModal.image?.mimeType && !isPdfMimeType(imageModal.image.mimeType)
                   ? "Usá zoom y scroll para revisar el archivo"
@@ -899,12 +901,22 @@ export function DocumentDetail() {
             )}
 
             {imageModal.image && !isPdfMimeType(imageModal.image.mimeType) && (
-              <div className="flex min-h-full min-w-full items-start justify-center p-4">
+              <div
+                className={`flex min-h-full p-4 ${
+                  imageZoom > 1
+                    ? "min-w-max items-start justify-start"
+                    : "min-w-full items-center justify-center"
+                }`}
+              >
                 <img
                   src={imageModal.image.url}
                   alt="Vista ampliada"
-                  className="block h-auto max-w-none rounded-xl"
-                  style={{ width: `${imageZoom * 100}%` }}
+                  className="block h-auto rounded-xl"
+                  style={{
+                    width: imageZoom > 1 ? `${imageZoom * 100}%` : "auto",
+                    maxWidth: imageZoom > 1 ? "none" : "100%",
+                    maxHeight: imageZoom > 1 ? "none" : "calc(75vh - 2rem)",
+                  }}
                 />
               </div>
             )}
@@ -917,7 +929,7 @@ export function DocumentDetail() {
                   isPdfMimeType(imageModal.image.mimeType)
                     ? buildPdfPreviewUrl(
                         getCloudinaryPdfUrl(imageModal.image),
-                        imageModal.image.publicId,
+                        imageModal.image.publicId
                       )
                     : imageModal.image.url
                 }
@@ -932,11 +944,7 @@ export function DocumentDetail() {
           {document.images?.length > 1 && (
             <>
               <button
-                onClick={() => {
-                  const prev =
-                    imageModal.index === 0 ? document.images.length - 1 : imageModal.index - 1;
-                  setImageModal({ isOpen: true, image: document.images[prev], index: prev });
-                }}
+                onClick={showPreviousImage}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -949,10 +957,7 @@ export function DocumentDetail() {
                 </svg>
               </button>
               <button
-                onClick={() => {
-                  const next = (imageModal.index + 1) % document.images.length;
-                  setImageModal({ isOpen: true, image: document.images[next], index: next });
-                }}
+                onClick={showNextImage}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -973,41 +978,41 @@ export function DocumentDetail() {
       </Modal>
 
       {/* Delete Modal */}
-    <Modal
-  isOpen={deleteModal}
-  onClose={() => setDeleteModal(false)}
-  title="Confirmar Eliminación"
->
-  <div className="space-y-4">
-    <p className="text-sm text-slate-600">
-      Esta acción eliminará el documento y todas sus imágenes asociadas.
-    </p>
-    <div className="bg-red-50 ring-1 ring-red-200 rounded-xl p-4">
-      <p className="text-sm font-medium text-red-900">Se eliminará:</p>
-      <ul className="text-sm text-red-700 mt-2 list-disc list-inside">
-        <li>{getDocumentTypeLabel(document.type)}</li>
-        <li>{document.extracted?.fullName || document.notes || "Sin nombre"}</li>
-        <li>{document.images?.length || 0} imagen(es)</li>
-      </ul>
-    </div>
+      <Modal
+        isOpen={deleteModal}
+        onClose={() => setDeleteModal(false)}
+        title="Confirmar Eliminación"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Esta acción eliminará el documento y todas sus imágenes asociadas.
+          </p>
+          <div className="bg-red-50 ring-1 ring-red-200 rounded-xl p-4">
+            <p className="text-sm font-medium text-red-900">Se eliminará:</p>
+            <ul className="text-sm text-red-700 mt-2 list-disc list-inside">
+              <li>{getDocumentTypeLabel(document.type)}</li>
+              <li>{document.extracted?.fullName || document.notes || "Sin nombre"}</li>
+              <li>{document.images?.length || 0} imagen(es)</li>
+            </ul>
+          </div>
 
-    {/* Botones aquí dentro, no como footer prop */}
-    <div className="flex gap-3 justify-end pt-2">
-      <button
-        onClick={() => setDeleteModal(false)}
-        className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition"
-      >
-        Cancelar
-      </button>
-      <button
-        onClick={handleDelete}
-        className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition"
-      >
-        Eliminar
-      </button>
-    </div>
-  </div>
-</Modal>
+          {/* Botones aquí dentro, no como footer prop */}
+          <div className="flex gap-3 justify-end pt-2">
+            <button
+              onClick={() => setDeleteModal(false)}
+              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

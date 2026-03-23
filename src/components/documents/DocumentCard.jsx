@@ -100,7 +100,7 @@ function StatusBadge({ status }) {
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 
-export function DocumentCard({ document, showOwner }) {
+export function DocumentCard({ document, showOwner, actions }) {
   const navigate = useNavigate();
 
   const {
@@ -212,14 +212,17 @@ export function DocumentCard({ document, showOwner }) {
               </span>
               <StatusBadge status={status} />
             </div>
-            <svg
-              className="w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <div className="flex items-start gap-2 flex-shrink-0">
+              {actions}
+              <svg
+                className="w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </div>
 
           {/* Document number */}
@@ -346,8 +349,10 @@ DocumentCard.propTypes = {
     owner: OwnerShape,
   }).isRequired,
   showOwner: PropTypes.bool,
+  actions: PropTypes.node,
 };
 
 DocumentCard.defaultProps = {
   showOwner: false,
+  actions: null,
 };

@@ -43,6 +43,7 @@ export function TourStatusBadge({ status }) {
 export function formatTourDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("es-CR", {
+    timeZone: "UTC",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -60,7 +61,6 @@ export function getTourDuration(startDate, endDate) {
 export function formatTourDateRange(startDate, endDate) {
   if (!startDate) return "Sin fecha";
 
-  console.log("Start date", startDate);
   const start = formatTourDate(startDate);
   const end = endDate ? formatTourDate(endDate) : null;
   return end ? `${start} — ${end}` : start;
