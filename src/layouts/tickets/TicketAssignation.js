@@ -21,8 +21,8 @@ import {
 import DropZone from "layouts/tours/tourImports/DropZone";
 
 const GET_USERS = gql`
-  query GetUsers {
-    getUsers {
+  query GetUsers($filter: UserQueryFilterInput) {
+    getUsers(filter: $filter) {
       id
       name
       firstSurName
@@ -35,6 +35,13 @@ const GET_USERS = gql`
     }
   }
 `;
+
+const USER_STATE_OPTIONS = ["Estudiante Activo", "Exalumno"];
+const DEFAULT_BULK_QUANTITY = 2;
+const STATE_PILL_STYLES = {
+  "Estudiante Activo": "bg-emerald-50 text-emerald-700 border-emerald-100",
+  Exalumno: "bg-blue-50 text-blue-600 border-blue-100",
+};
 
 const MODES = [
   { id: "registered", label: "Usuario registrado", icon: "👤" },
@@ -53,6 +60,21 @@ function fileToBase64(file) {
   });
 }
 
+function getUserFullName(user) {
+  return [user?.name, user?.firstSurName, user?.secondSurName].filter(Boolean).join(" ");
+}
+
+function StatePill({ state }) {
+  const cls = STATE_PILL_STYLES[state] || "bg-gray-100 text-gray-500 border-gray-200";
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cls}`}
+    >
+      {state || "Sin estado"}
+    </span>
+  );
+}
+
 export default function TicketAssignation() {
   const [mode, setMode] = useState("registered");
   const [eventId, setEventId] = useState("");
@@ -60,6 +82,7 @@ export default function TicketAssignation() {
   const [ticketType, setTicketType] = useState("assigned");
   const [quantity, setQuantity] = useState(2);
   const [userSearch, setUserSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -69,15 +92,26 @@ export default function TicketAssignation() {
   const [importBuyerEmail, setImportBuyerEmail] = useState("");
   const [importQuantity, setImportQuantity] = useState(1);
   const [importPaymentStatus, setImportPaymentStatus] = useState("assigned");
-  const [bulkRows, setBulkRows] = useState([
-    { name: "", email: "", quantity: 2 },
-    { name: "", email: "", quantity: 2 },
-  ]);
+  const [selectedBulkUsers, setSelectedBulkUsers] = useState({});
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
   const { data: eventsData } = useQuery(GET_EVENTS);
-  const { data: usersData } = useQuery(GET_USERS);
+  const {
+    data: usersData,
+    loading: usersLoading,
+    error: usersError,
+  } = useQuery(GET_USERS, {
+    variables: {
+      filter: {
+        searchText: userSearch.trim() || undefined,
+        state: stateFilter || undefined,
+      },
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
+  });
 
   const refetchOpts = eventId ? [{ query: GET_TICKETS, variables: { eventId } }] : [];
   const onErr = (e) => setError(e.message || "Error al procesar entradas");
@@ -96,10 +130,7 @@ export default function TicketAssignation() {
       r.failed.length
         ? setError(`${r.succeeded.length} ok. ${r.failed.length} fallaron.`)
         : setSuccess(`${r.total} entradas asignadas 🎉`);
-      setBulkRows([
-        { name: "", email: "", quantity: 2 },
-        { name: "", email: "", quantity: 2 },
-      ]);
+      setSelectedBulkUsers({});
     },
     onError: onErr,
   });
@@ -146,23 +177,61 @@ export default function TicketAssignation() {
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
   const selectedEvent = eventsData?.getEventsT?.find((e) => e.id === eventId);
+  const queriedUsers = usersData?.getUsers || [];
+  const bulkSelectedUsers = Object.values(selectedBulkUsers);
+  const bulkSelectedCount = bulkSelectedUsers.length;
+  const bulkTotalQuantity = bulkSelectedUsers.reduce((sum, user) => sum + (user.quantity || 1), 0);
 
   const roles = useMemo(
-    () => [...new Set((usersData?.getUsers || []).map((u) => u.role).filter(Boolean))],
-    [usersData]
+    () => [...new Set(queriedUsers.map((u) => u.role).filter(Boolean))],
+    [queriedUsers]
   );
 
   const filteredUsers = useMemo(() => {
-    return (usersData?.getUsers || []).filter((u) => {
-      const q = userSearch.toLowerCase();
-      return (
-        (!q ||
-          `${u.name} ${u.firstSurName} ${u.secondSurName}`.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q)) &&
-        (!roleFilter || u.role === roleFilter)
-      );
+    return queriedUsers.filter((u) => !roleFilter || u.role === roleFilter);
+  }, [queriedUsers, roleFilter]);
+
+  const toggleBulkUser = (user) => {
+    setSelectedBulkUsers((prev) => {
+      if (prev[user.id]) {
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
+      }
+      return {
+        ...prev,
+        [user.id]: {
+          ...user,
+          quantity: prev[user.id]?.quantity || DEFAULT_BULK_QUANTITY,
+        },
+      };
     });
-  }, [usersData, userSearch, roleFilter]);
+  };
+
+  const handleBulkQuantityChange = (userId, nextQuantity) => {
+    setSelectedBulkUsers((prev) => {
+      if (!prev[userId]) return prev;
+      return {
+        ...prev,
+        [userId]: {
+          ...prev[userId],
+          quantity: Math.max(1, parseInt(nextQuantity, 10) || 1),
+        },
+      };
+    });
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedBulkUsers((prev) => {
+      const next = { ...prev };
+      filteredUsers.forEach((user) => {
+        next[user.id] = next[user.id] || { ...user, quantity: DEFAULT_BULK_QUANTITY };
+      });
+      return next;
+    });
+  };
+
+  const handleClearBulkSelection = () => setSelectedBulkUsers({});
 
   const handleSubmit = async () => {
     setError(null);
@@ -211,9 +280,8 @@ export default function TicketAssignation() {
           },
         });
       } else {
-        const valid = bulkRows.filter((r) => r.name && r.email);
-        if (!valid.length) {
-          setError("Agrega al menos un destinatario válido");
+        if (!bulkSelectedCount) {
+          setError("Selecciona al menos un usuario para la asignación masiva");
           return;
         }
         await assignBulk({
@@ -221,10 +289,9 @@ export default function TicketAssignation() {
             input: {
               eventId,
               type: ticketType,
-              recipients: valid.map((r) => ({
-                name: r.name,
-                email: r.email,
-                quantity: r.quantity,
+              recipients: bulkSelectedUsers.map((user) => ({
+                userId: user.id,
+                quantity: user.quantity || 1,
               })),
             },
           },
@@ -275,16 +342,16 @@ export default function TicketAssignation() {
           {/* Form */}
           <div className="lg:col-span-2 flex flex-col gap-4">
             {/* Mode selector */}
-                <div className="bg-white border border-gray-100 rounded-2xl p-2 shadow-sm grid grid-cols-2 md:grid-cols-5 gap-1">
-                  {MODES.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        setMode(m.id);
-                        setError(null);
-                        setSuccess(null);
-                        setImportSummary(null);
-                      }}
+            <div className="bg-white border border-gray-100 rounded-2xl p-2 shadow-sm grid grid-cols-2 md:grid-cols-5 gap-1">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setMode(m.id);
+                    setError(null);
+                    setSuccess(null);
+                    setImportSummary(null);
+                  }}
                   className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all text-center ${
                     mode === m.id ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-50"
                   }`}
@@ -298,7 +365,6 @@ export default function TicketAssignation() {
             {/* Feedback */}
             {success && (
               <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                <span className="text-lg">🎉</span>
                 <span className="text-sm text-green-700 font-medium flex-1">{success}</span>
                 <button
                   onClick={() => setSuccess(null)}
@@ -384,10 +450,22 @@ export default function TicketAssignation() {
                 <div className="flex gap-2 mb-4">
                   <input
                     className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-                    placeholder="Buscar por nombre…"
+                    placeholder="Buscar por nombre, correo o carnet…"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
+                  <select
+                    value={stateFilter}
+                    onChange={(e) => setStateFilter(e.target.value)}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  >
+                    <option value="">Todos los estados</option>
+                    {USER_STATE_OPTIONS.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
@@ -402,7 +480,13 @@ export default function TicketAssignation() {
                   </select>
                 </div>
                 <div className="max-h-72 overflow-y-auto flex flex-col gap-1.5 pr-1">
-                  {filteredUsers.length === 0 ? (
+                  {usersError ? (
+                    <p className="text-center py-8 text-sm text-red-500">
+                      {usersError.message || "No se pudo cargar la lista de usuarios"}
+                    </p>
+                  ) : usersLoading ? (
+                    <p className="text-center py-8 text-sm text-gray-400">Cargando usuarios…</p>
+                  ) : filteredUsers.length === 0 ? (
                     <p className="text-center py-8 text-sm text-gray-400">Sin resultados</p>
                   ) : (
                     filteredUsers.map((u) => (
@@ -429,7 +513,7 @@ export default function TicketAssignation() {
                               userId === u.id ? "text-white" : "text-gray-800"
                             }`}
                           >
-                            {u.name} {u.firstSurName} {u.secondSurName}
+                            {getUserFullName(u)}
                           </p>
                           <p
                             className={`text-xs truncate ${
@@ -481,67 +565,179 @@ export default function TicketAssignation() {
 
             {mode === "bulk" && (
               <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Destinatarios ({bulkRows.filter((r) => r.name && r.email).length} válidos)
-                  </p>
-                  <button
-                    onClick={() => setBulkRows((p) => [...p, { name: "", email: "", quantity: 2 }])}
-                    className="text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
-                  >
-                    + Agregar fila
-                  </button>
+                <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">Asignación masiva</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Filtra usuarios, selecciónalos y asigna entradas en un solo lote.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSelectAllFiltered}
+                      disabled={!filteredUsers.length || usersLoading}
+                      className="text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Seleccionar filtrados
+                    </button>
+                    <button
+                      onClick={handleClearBulkSelection}
+                      disabled={!bulkSelectedCount}
+                      className="text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Limpiar selección
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col divide-y divide-gray-100 max-h-80 overflow-y-auto">
-                  {bulkRows.map((row, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_60px_36px] gap-2 py-3">
+
+                <div className="grid md:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)] gap-4">
+                  <div className="rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex gap-2 flex-wrap">
                       <input
-                        className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
-                        placeholder="Nombre"
-                        value={row.name}
-                        onChange={(e) =>
-                          setBulkRows((p) =>
-                            p.map((r, idx) => (idx === i ? { ...r, name: e.target.value } : r))
-                          )
-                        }
+                        className="flex-1 min-w-[220px] border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                        placeholder="Buscar por nombre, correo o carnet…"
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
                       />
-                      <input
-                        type="email"
-                        className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
-                        placeholder="Correo"
-                        value={row.email}
-                        onChange={(e) =>
-                          setBulkRows((p) =>
-                            p.map((r, idx) => (idx === i ? { ...r, email: e.target.value } : r))
-                          )
-                        }
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
-                        value={row.quantity}
-                        onChange={(e) =>
-                          setBulkRows((p) =>
-                            p.map((r, idx) =>
-                              idx === i ? { ...r, quantity: parseInt(e.target.value) || 1 } : r
-                            )
-                          )
-                        }
-                      />
-                      <button
-                        onClick={() => setBulkRows((p) => p.filter((_, idx) => idx !== i))}
-                        className="border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors text-sm"
+                      <select
+                        value={stateFilter}
+                        onChange={(e) => setStateFilter(e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                       >
-                        ✕
-                      </button>
+                        <option value="">Todos los estados</option>
+                        {USER_STATE_OPTIONS.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                      >
+                        <option value="">Todos los roles</option>
+                        {roles.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ))}
+
+                    <div className="max-h-96 overflow-y-auto flex flex-col divide-y divide-gray-100">
+                      {usersError ? (
+                        <p className="text-center py-8 text-sm text-red-500 px-4">
+                          {usersError.message || "No se pudo cargar la lista de usuarios"}
+                        </p>
+                      ) : usersLoading ? (
+                        <p className="text-center py-8 text-sm text-gray-400 px-4">
+                          Cargando usuarios…
+                        </p>
+                      ) : filteredUsers.length === 0 ? (
+                        <p className="text-center py-8 text-sm text-gray-400 px-4">
+                          Sin resultados para este filtro
+                        </p>
+                      ) : (
+                        filteredUsers.map((u) => {
+                          const isChecked = Boolean(selectedBulkUsers[u.id]);
+                          return (
+                            <label
+                              key={u.id}
+                              className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                                isChecked ? "bg-blue-50" : "bg-white hover:bg-gray-50"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleBulkUser(u)}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-medium text-gray-800 truncate">
+                                    {getUserFullName(u)}
+                                  </p>
+                                  <StatePill state={u.state} />
+                                </div>
+                                <p className="text-xs text-gray-500 truncate mt-1">{u.email}</p>
+                                <p className="text-xs text-gray-400 truncate mt-1">
+                                  {u.role}
+                                  {u.instrument ? ` · ${u.instrument}` : ""}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <p className="text-sm font-semibold text-gray-800">
+                        Seleccionados ({bulkSelectedCount})
+                      </p>
+                      {bulkSelectedCount > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {bulkTotalQuantity} entrada{bulkTotalQuantity !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+
+                    {bulkSelectedCount === 0 ? (
+                      <p className="text-sm text-gray-400 py-6 text-center">
+                        No hay usuarios seleccionados todavía.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
+                        {bulkSelectedUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="rounded-xl border border-gray-200 bg-white px-3 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">
+                                  {getUserFullName(user)}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate mt-1">{user.email}</p>
+                              </div>
+                              <button
+                                onClick={() => toggleBulkUser(user)}
+                                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <StatePill state={user.state} />
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">Cantidad</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="50"
+                                  value={user.quantity || 1}
+                                  onChange={(e) =>
+                                    handleBulkQuantityChange(user.id, e.target.value)
+                                  }
+                                  className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 {selectedEvent && (
                   <p className="text-xs text-gray-400 mt-3">
-                    Total: {bulkRows.reduce((s, r) => s + (r.quantity || 0), 0)} entradas ·{" "}
-                    {fmt(bulkRows.reduce((s, r) => s + r.quantity * selectedEvent.price, 0))}
+                    Total: {bulkTotalQuantity} entradas ·{" "}
+                    {fmt(bulkTotalQuantity * selectedEvent.price)}
                   </p>
                 )}
               </div>
@@ -554,9 +750,9 @@ export default function TicketAssignation() {
                     Importación agrupada desde Excel
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Sube un Excel con número de entrada, nombre, correo y estado
-                    (`asignada` o `pagada`). El sistema agrupa por persona y solo envía
-                    un correo cuando el grupo queda totalmente pagado.
+                    Sube un Excel con número de entrada, nombre, correo y estado (`asignada` o
+                    `pagada`). El sistema agrupa por persona y solo envía un correo cuando el grupo
+                    queda totalmente pagado.
                   </p>
                 </div>
 
@@ -565,7 +761,8 @@ export default function TicketAssignation() {
                 <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
                   Encabezados aceptados:
                   <span className="font-medium">
-                    {" "}número de entrada, nombre, correo electrónico, estado
+                    {" "}
+                    número de entrada, nombre, correo electrónico, estado
                   </span>
                   . La importación actualiza o crea grupos, pero no elimina tickets existentes.
                 </div>
@@ -577,8 +774,8 @@ export default function TicketAssignation() {
                         Agregar persona manualmente a este evento
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Usa el mismo flujo importado. Se asignan los siguientes números
-                        consecutivos disponibles.
+                        Usa el mismo flujo importado. Se asignan los siguientes números consecutivos
+                        disponibles.
                       </p>
                     </div>
                   </div>
@@ -708,13 +905,25 @@ export default function TicketAssignation() {
                       <span className="font-mono text-gray-900">{quantity}</span>
                     </div>
                   )}
+                  {mode === "bulk" && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Usuarios</span>
+                        <span className="font-mono text-gray-900">{bulkSelectedCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Entradas</span>
+                        <span className="font-mono text-gray-900">{bulkTotalQuantity}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="border-t border-gray-100 pt-3 flex justify-between font-semibold text-gray-900">
                     <span>Total</span>
                     <span className="font-mono">
                       {mode === "courtesy"
                         ? "Gratis 🎁"
                         : mode === "bulk"
-                        ? fmt(bulkRows.reduce((s, r) => s + r.quantity * selectedEvent.price, 0))
+                        ? fmt(bulkTotalQuantity * selectedEvent.price)
                         : fmt(quantity * selectedEvent.price)}
                     </span>
                   </div>
@@ -750,7 +959,7 @@ export default function TicketAssignation() {
               ) : mode === "excel" ? (
                 "📥 Importar Excel"
               ) : mode === "bulk" ? (
-                "📋 Asignar lote"
+                "📋 Asignación masiva"
               ) : (
                 "🎟 Asignar entradas"
               )}

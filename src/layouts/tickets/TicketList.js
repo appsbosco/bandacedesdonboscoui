@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useLazyQuery, useQuery, useMutation } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -11,6 +11,8 @@ import {
   GET_TICKETS,
   GET_EVENT_STATS,
   UPDATE_PAYMENT,
+  CANCEL_TICKET,
+  DELETE_TICKET,
   RESEND_IMPORTED_TICKET_EMAIL,
   StatusBadge,
   StatCard,
@@ -60,6 +62,12 @@ export default function TicketList() {
   const [statusTab, setStatusTab] = useState("");
   const [payingId, setPayingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
+  const openMenuRef = useRef(null);
 
   const { data: eventsData, loading: eventsLoading } = useQuery(GET_EVENTS);
   const { data: currentUserData } = useQuery(GET_USERS_BY_ID);
@@ -90,20 +98,114 @@ export default function TicketList() {
       },
     }
   );
+  const [cancelTicket] = useMutation(CANCEL_TICKET, {
+    onCompleted: () => {
+      setCancellingId(null);
+      setSuccess("Entrada anulada correctamente. El QR quedó inválido.");
+      refetch?.();
+      refetchStats?.();
+    },
+    onError: (mutationError) => {
+      setCancellingId(null);
+      setError(mutationError.message || "No se pudo anular la entrada");
+    },
+  });
+  const [deleteTicket] = useMutation(DELETE_TICKET, {
+    onCompleted: () => {
+      setDeletingId(null);
+      setSuccess("Entrada eliminada permanentemente.");
+      refetch?.();
+      refetchStats?.();
+    },
+    onError: (mutationError) => {
+      setDeletingId(null);
+      setError(mutationError.message || "No se pudo eliminar la entrada");
+    },
+  });
 
   const stats = statsData?.getEventStats;
   const canAdministerTicketEmails = TICKET_ADMIN_ROLES.has(currentUserData?.getUser?.role || "");
+
+  useEffect(() => {
+    if (!openMenuId) return undefined;
+
+    const handleClickOutside = (event) => {
+      if (openMenuRef.current && !openMenuRef.current.contains(event.target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openMenuId]);
 
   const handleEventChange = useCallback(
     (id) => {
       setEventId(id);
       setSearch("");
       setStatusTab("");
+      setOpenMenuId(null);
+      setError(null);
+      setSuccess(null);
       const ev = eventsData?.getEventsT?.find((e) => e.id === id);
       setSelectedEvent(ev || null);
       if (id) loadTickets({ variables: { eventId: id } });
     },
     [eventsData, loadTickets]
+  );
+
+  const handleCancelTicket = useCallback(
+    async (ticket) => {
+      if (!ticket?.id || ticket.status === "cancelled") return;
+
+      const label = getHolderName(ticket);
+      const confirmed = window.confirm(
+        `Se anulará la entrada de ${label}. Esta acción invalidará el QR y la marcará como cancelada.`
+      );
+      if (!confirmed) return;
+
+      const reason =
+        window.prompt("Motivo de anulación (opcional):", "Anulada desde gestión de entradas") ||
+        undefined;
+
+      setOpenMenuId(null);
+      setError(null);
+      setSuccess(null);
+      setCancellingId(ticket.id);
+
+      await cancelTicket({
+        variables: {
+          ticketId: ticket.id,
+          reason,
+          cancelledBy: currentUserData?.getUser?.id || undefined,
+        },
+      });
+    },
+    [cancelTicket, currentUserData]
+  );
+
+  const handleDeleteTicket = useCallback(
+    async (ticket) => {
+      if (!ticket?.id) return;
+
+      const label = getHolderName(ticket);
+      const confirmed = window.confirm(
+        `Vas a eliminar permanentemente la entrada de ${label}. Esta acción sí borra el registro y ajusta el cupo del evento.`
+      );
+      if (!confirmed) return;
+
+      setOpenMenuId(null);
+      setError(null);
+      setSuccess(null);
+      setDeletingId(ticket.id);
+
+      await deleteTicket({
+        variables: {
+          ticketId: ticket.id,
+        },
+      });
+    },
+    [deleteTicket]
   );
 
   const tickets = useMemo(() => {
@@ -184,6 +286,31 @@ export default function TicketList() {
           </div>
         ) : (
           <div className="flex flex-col gap-5">
+            {success && (
+              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <span className="text-lg">✅</span>
+                <span className="text-sm text-green-700 font-medium flex-1">{success}</span>
+                <button
+                  onClick={() => setSuccess(null)}
+                  className="text-green-500 hover:text-green-700 text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <span className="text-lg">⚠️</span>
+                <span className="text-sm text-red-700 flex-1">{error}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-red-400 hover:text-red-600 text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Stats */}
             {stats && (
               <>
@@ -333,6 +460,8 @@ export default function TicketList() {
                         const total = ticket.ticketQuantity * (selectedEvent?.price || 0);
                         const isPaying = payingId === ticket.id && paying;
                         const isResending = resendingId === ticket.id && resending;
+                        const isCancelling = cancellingId === ticket.id;
+                        const isDeleting = deletingId === ticket.id;
                         const tm = TYPE_META[ticket.type] || { label: ticket.type, icon: "🎟" };
                         return (
                           <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
@@ -378,22 +507,63 @@ export default function TicketList() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-2">
-                                {!ticket.paid && ticket.type !== "courtesy" && (
-                                  <button
-                                    onClick={() => {
-                                      const rem = total - ticket.amountPaid;
-                                      if (rem <= 0) return;
-                                      setPayingId(ticket.id);
-                                      updatePayment({
-                                        variables: { ticketId: ticket.id, amountPaid: rem },
-                                      });
-                                    }}
-                                    disabled={isPaying}
-                                    className="flex items-center gap-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                                <div className="flex items-start gap-2">
+                                  {!ticket.paid && ticket.type !== "courtesy" && (
+                                    <button
+                                      onClick={() => {
+                                        const rem = total - ticket.amountPaid;
+                                        if (rem <= 0) return;
+                                        setPayingId(ticket.id);
+                                        updatePayment({
+                                          variables: { ticketId: ticket.id, amountPaid: rem },
+                                        });
+                                      }}
+                                      disabled={isPaying}
+                                      className="flex items-center gap-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                                    >
+                                      {isPaying ? <Spinner /> : "Completar pago"}
+                                    </button>
+                                  )}
+
+                                  <div
+                                    className="relative"
+                                    ref={openMenuId === ticket.id ? openMenuRef : null}
                                   >
-                                    {isPaying ? <Spinner /> : "Completar pago"}
-                                  </button>
-                                )}
+                                    <button
+                                      onClick={() =>
+                                        setOpenMenuId((current) =>
+                                          current === ticket.id ? null : ticket.id
+                                        )
+                                      }
+                                      disabled={isCancelling || isDeleting}
+                                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-50"
+                                      aria-label="Más acciones"
+                                    >
+                                      ⋯
+                                    </button>
+
+                                    {openMenuId === ticket.id && (
+                                      <div className="absolute right-0 top-10 z-20 min-w-[180px] rounded-xl border border-gray-200 bg-white shadow-lg p-1.5">
+                                        {ticket.status !== "cancelled" && (
+                                          <button
+                                            onClick={() => handleCancelTicket(ticket)}
+                                            disabled={isCancelling || isDeleting}
+                                            className="w-full flex items-center rounded-lg px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                          >
+                                            {isCancelling ? "Anulando…" : "Anular entrada"}
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => handleDeleteTicket(ticket)}
+                                          disabled={isDeleting || isCancelling}
+                                          className="w-full flex items-center rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                        >
+                                          {isDeleting ? "Eliminando…" : "Eliminar"}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
 
                                 {canAdministerTicketEmails &&
                                   ticket.source === "excel_import" &&

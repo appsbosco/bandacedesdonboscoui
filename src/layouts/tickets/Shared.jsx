@@ -48,6 +48,34 @@ export const GET_TICKETS = gql`
   }
 `;
 
+export const GET_MY_TICKETS = gql`
+  query GetMyTickets {
+    getMyTickets {
+      id
+      eventId
+      source
+      userId {
+        id
+        name
+        firstSurName
+        secondSurName
+        email
+      }
+      type
+      status
+      paid
+      amountPaid
+      ticketQuantity
+      scans
+      qrCode
+      buyerName
+      buyerEmail
+      raffleNumbers
+      createdAt
+    }
+  }
+`;
+
 export const GET_EVENT_STATS = gql`
   query GetEventStats($eventId: ID!) {
     getEventStats(eventId: $eventId) {
@@ -242,6 +270,34 @@ export const RESEND_IMPORTED_TICKET_EMAIL = gql`
   }
 `;
 
+export const CANCEL_TICKET = gql`
+  mutation CancelTicket($ticketId: ID!, $reason: String, $cancelledBy: ID) {
+    cancelTicket(ticketId: $ticketId, reason: $reason, cancelledBy: $cancelledBy) {
+      id
+      status
+      cancelledAt
+      notes
+      scans
+      ticketQuantity
+      buyerName
+      buyerEmail
+      userId {
+        id
+        name
+        firstSurName
+        secondSurName
+        email
+      }
+    }
+  }
+`;
+
+export const DELETE_TICKET = gql`
+  mutation DeleteTicket($ticketId: ID!) {
+    deleteTicket(ticketId: $ticketId)
+  }
+`;
+
 export const GET_RAFFLE_NUMBERS = gql`
   query GetTicketsNumbers($eventId: ID) {
     getTicketsNumbers(eventId: $eventId) {
@@ -360,12 +416,7 @@ export function StatCard({ icon, label, value, sub }) {
   );
 }
 
-export function ScanResultOverlay({
-  result,
-  onDismiss,
-  onSettlePayment,
-  settlingPayment = false,
-}) {
+export function ScanResultOverlay({ result, onDismiss, onSettlePayment, settlingPayment = false }) {
   if (!result) return null;
   const isOk = result.canEnter;
   const ticket = result.ticket;
@@ -407,7 +458,7 @@ export function ScanResultOverlay({
           <div className="bg-gray-50 rounded-xl p-4 text-left mb-5 border border-gray-100 space-y-1">
             {name && <p className="font-semibold text-gray-900 text-sm">{name}</p>}
             <p className="text-xs text-gray-500">
-              {TYPE_META[ticket.type]?.icon} {TYPE_META[ticket.type]?.label} · {ticket.scans}/
+              {TYPE_META[ticket.type]?.label} · {TYPE_META[ticket.type]?.icon} · {ticket.scans}/
               {ticket.ticketQuantity} ingresos
             </p>
             {result.totalDue > 0 && (
