@@ -451,6 +451,7 @@ export const GET_TICKETS = gql`
   query GetTickets($eventId: ID) {
     getTickets(eventId: $eventId) {
       id
+      status
       userId {
         name
         firstSurName
@@ -463,11 +464,12 @@ export const GET_TICKETS = gql`
       amountPaid
       ticketQuantity
       qrCode
-      scanned
       scans
       buyerName
       buyerEmail
       raffleNumbers
+      notes
+      cancelledAt
     }
   }
 `;
