@@ -113,6 +113,22 @@ export default function App() {
   });
   const userRole = userData?.getUser?.role;
 
+  useEffect(() => {
+    if (!isAuthenticated || !userRole) return;
+    if (userRole !== "Taquilla" && userRole !== "Tickets Admin") return;
+
+    const isTicketPath =
+      pathname.startsWith("/qr-scanner") ||
+      pathname.startsWith("/lista-entradas") ||
+      pathname.startsWith("/asignar-entradas");
+    const isProtectedPath = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+    const defaultPath = userRole === "Tickets Admin" ? "/lista-entradas" : "/qr-scanner";
+
+    if (pathname === "/dashboard" || (isProtectedPath && !isTicketPath)) {
+      navigate(defaultPath, { replace: true });
+    }
+  }, [isAuthenticated, navigate, pathname, userRole]);
+
   const renderedRouteDefs = useMemo(() => resolveRenderedRouteDefs(userRole), [userRole]);
   const renderedRouteElements = useMemo(
     () => buildRouteElements(renderedRouteDefs),

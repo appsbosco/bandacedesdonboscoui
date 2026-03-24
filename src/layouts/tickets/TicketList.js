@@ -5,6 +5,7 @@ import { useLazyQuery, useQuery, useMutation } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import { GET_USERS_BY_ID } from "graphql/queries";
 import {
   GET_EVENTS,
   GET_TICKETS,
@@ -29,6 +30,8 @@ const STATUS_TABS = [
   { value: "fully_used", label: "Usados" },
   { value: "cancelled", label: "Cancelados" },
 ];
+
+const TICKET_ADMIN_ROLES = new Set(["Admin", "Director", "Dirección Logística", "Tickets Admin"]);
 
 function PaymentBar({ amountPaid, total }) {
   const pct = total > 0 ? Math.min(100, (amountPaid / total) * 100) : 0;
@@ -59,6 +62,7 @@ export default function TicketList() {
   const [resendingId, setResendingId] = useState(null);
 
   const { data: eventsData, loading: eventsLoading } = useQuery(GET_EVENTS);
+  const { data: currentUserData } = useQuery(GET_USERS_BY_ID);
   const [loadTickets, { data: ticketsData, loading: ticketsLoading, refetch }] = useLazyQuery(
     GET_TICKETS,
     { fetchPolicy: "cache-and-network" }
@@ -88,6 +92,7 @@ export default function TicketList() {
   );
 
   const stats = statsData?.getEventStats;
+  const canAdministerTicketEmails = TICKET_ADMIN_ROLES.has(currentUserData?.getUser?.role || "");
 
   const handleEventChange = useCallback(
     (id) => {
@@ -221,6 +226,24 @@ export default function TicketList() {
                   />
                   <StatCard icon="⏳" label="Pendientes" value={stats.totalPending} />
                   <StatCard icon="🚪" label="Ingresaron" value={stats.totalCheckedIn} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <StatCard
+                    icon="💵"
+                    label="Recaudado"
+                    value={fmt(stats.totalCollected || 0)}
+                    sub={`Meta teórica ${fmt(
+                      (stats.totalIssued || 0) * (selectedEvent?.price || 0)
+                    )}`}
+                  />
+                  <StatCard
+                    icon="📈"
+                    label="Cobro promedio"
+                    value={fmt(
+                      stats.totalIssued > 0 ? (stats.totalCollected || 0) / stats.totalIssued : 0
+                    )}
+                    sub="Monto promedio por ticket emitido"
+                  />
                 </div>
               </>
             )}
@@ -372,20 +395,22 @@ export default function TicketList() {
                                   </button>
                                 )}
 
-                                {ticket.source === "excel_import" && ticket.paid && (
-                                  <button
-                                    onClick={() => {
-                                      setResendingId(ticket.id);
-                                      resendImportedTicketEmail({
-                                        variables: { ticketId: ticket.id },
-                                      });
-                                    }}
-                                    disabled={isResending}
-                                    className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                                  >
-                                    {isResending ? <Spinner /> : "Reenviar entradas"}
-                                  </button>
-                                )}
+                                {canAdministerTicketEmails &&
+                                  ticket.source === "excel_import" &&
+                                  ticket.paid && (
+                                    <button
+                                      onClick={() => {
+                                        setResendingId(ticket.id);
+                                        resendImportedTicketEmail({
+                                          variables: { ticketId: ticket.id },
+                                        });
+                                      }}
+                                      disabled={isResending}
+                                      className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                                    >
+                                      {isResending ? <Spinner /> : "Reenviar entradas"}
+                                    </button>
+                                  )}
                               </div>
                             </td>
                           </tr>

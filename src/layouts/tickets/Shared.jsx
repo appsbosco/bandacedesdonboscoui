@@ -56,6 +56,7 @@ export const GET_EVENT_STATS = gql`
       capacity
       totalIssued
       totalPaid
+      totalCollected
       totalPending
       totalCheckedIn
       totalPartially
@@ -72,6 +73,9 @@ export const VALIDATE_TICKET = gql`
       result
       canEnter
       message
+      totalDue
+      balanceDue
+      canMarkPaid
       ticket {
         id
         paid
@@ -90,6 +94,19 @@ export const VALIDATE_TICKET = gql`
           email
         }
       }
+    }
+  }
+`;
+
+export const SETTLE_TICKET_PAYMENT = gql`
+  mutation SettleTicketPayment($ticketId: ID!) {
+    settleTicketPayment(ticketId: $ticketId) {
+      id
+      paid
+      amountPaid
+      status
+      scans
+      ticketQuantity
     }
   }
 `;
@@ -343,7 +360,12 @@ export function StatCard({ icon, label, value, sub }) {
   );
 }
 
-export function ScanResultOverlay({ result, onDismiss }) {
+export function ScanResultOverlay({
+  result,
+  onDismiss,
+  onSettlePayment,
+  settlingPayment = false,
+}) {
   if (!result) return null;
   const isOk = result.canEnter;
   const ticket = result.ticket;
@@ -357,10 +379,17 @@ export function ScanResultOverlay({ result, onDismiss }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
       onClick={onDismiss}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onDismiss();
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div
         className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        role="presentation"
       >
         <div
           className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-5 ${
@@ -381,18 +410,36 @@ export function ScanResultOverlay({ result, onDismiss }) {
               {TYPE_META[ticket.type]?.icon} {TYPE_META[ticket.type]?.label} · {ticket.scans}/
               {ticket.ticketQuantity} ingresos
             </p>
+            {result.totalDue > 0 && (
+              <p className="text-xs text-gray-500">
+                Pagado: {fmt(ticket.amountPaid || 0)} de {fmt(result.totalDue)}
+              </p>
+            )}
             {!ticket.paid && ticket.type !== "courtesy" && (
               <p className="text-xs text-amber-600 font-medium">⚠ Pendiente de pago</p>
             )}
           </div>
         )}
 
-        <button
-          onClick={onDismiss}
-          className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-700 transition-colors"
-        >
-          Continuar escaneando
-        </button>
+        <div className="flex flex-col gap-2">
+          {!isOk && result.canMarkPaid && typeof onSettlePayment === "function" && (
+            <button
+              onClick={onSettlePayment}
+              disabled={settlingPayment}
+              className="w-full bg-green-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-green-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {settlingPayment
+                ? "Registrando pago…"
+                : `Marcar pago total (${fmt(result.balanceDue)})`}
+            </button>
+          )}
+          <button
+            onClick={onDismiss}
+            className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-700 transition-colors"
+          >
+            Continuar escaneando
+          </button>
+        </div>
       </div>
     </div>
   );

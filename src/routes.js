@@ -745,6 +745,19 @@ export const colorGuardCampRoutes = [
   items.profile(),
 ];
 
+export const ticketBoothRoutes = [
+  title("Entradas", "ticket-booth-pages"),
+  items.ticketScan({ name: "Escaneo de entradas", key: "ticket-booth-qr-scanner" }),
+  items.ticketList(),
+];
+
+export const ticketManagerRoutes = [
+  title("Entradas", "ticket-manager-pages"),
+  items.ticketList(),
+  items.ticketAssign(),
+  items.ticketScan({ name: "Escaneo de entradas", key: "ticket-manager-qr-scanner" }),
+];
+
 const routes = [
   items.about(),
   items.alumniPublic(),

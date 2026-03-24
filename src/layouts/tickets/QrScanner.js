@@ -9,6 +9,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import {
   VALIDATE_TICKET,
+  SETTLE_TICKET_PAYMENT,
   GET_EVENTS,
   GET_TICKETS,
   GET_EVENT_STATS,
@@ -63,12 +64,16 @@ export default function QRScanner() {
   const [cameraError, setCameraError] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [settlingPayment, setSettlingPayment] = useState(false);
   const [flash, setFlash] = useState(null);
   const [stats, setStats] = useState({ ok: 0, denied: 0 });
 
   const { data: eventsData } = useQuery(GET_EVENTS);
 
   const [validateTicket, { loading: validating }] = useMutation(VALIDATE_TICKET, {
+    awaitRefetchQueries: true,
+  });
+  const [settleTicketPayment] = useMutation(SETTLE_TICKET_PAYMENT, {
     awaitRefetchQueries: true,
   });
 
@@ -144,6 +149,55 @@ export default function QRScanner() {
     },
     [eventsData, registerResult, scanning, selectedEvent, validateTicket, validating]
   );
+
+  const handleSettlePayment = useCallback(async () => {
+    const ticketId = overlayResult?.ticket?.id;
+    if (!ticketId || settlingPayment) return;
+
+    setSettlingPayment(true);
+    try {
+      const refetchQueries = [];
+      if (selectedEvent) {
+        refetchQueries.push({ query: GET_TICKETS, variables: { eventId: selectedEvent } });
+        refetchQueries.push({ query: GET_EVENT_STATS, variables: { eventId: selectedEvent } });
+      }
+
+      const res = await settleTicketPayment({
+        variables: { ticketId },
+        refetchQueries,
+      });
+
+      const updatedTicket = res.data?.settleTicketPayment;
+      setOverlayResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              result: "blocked",
+              canEnter: false,
+              message: "Pago registrado. Escanee nuevamente para autorizar el ingreso.",
+              canMarkPaid: false,
+              balanceDue: 0,
+              ticket: {
+                ...prev.ticket,
+                ...updatedTicket,
+                paid: true,
+              },
+            }
+          : prev
+      );
+    } catch (err) {
+      setOverlayResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              message: err.message || "No se pudo registrar el pago total",
+            }
+          : prev
+      );
+    } finally {
+      setSettlingPayment(false);
+    }
+  }, [overlayResult, selectedEvent, settleTicketPayment, settlingPayment]);
 
   const processFrame = useCallback(() => {
     const webcam = webcamRef.current;
@@ -364,6 +418,8 @@ export default function QRScanner() {
       {overlayResult && (
         <ScanResultOverlay
           result={overlayResult}
+          onSettlePayment={handleSettlePayment}
+          settlingPayment={settlingPayment}
           onDismiss={() => {
             setOverlayResult(null);
             lastDecodedRef.current = "";

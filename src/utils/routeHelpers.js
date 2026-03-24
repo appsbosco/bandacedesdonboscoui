@@ -12,6 +12,8 @@ import routes, {
   cedesRoutes,
   colorGuardCampRoutes,
   instructorsRoutes,
+  ticketBoothRoutes,
+  ticketManagerRoutes,
 } from "routes";
 
 /* =========================
@@ -19,6 +21,8 @@ import routes, {
 ========================= */
 
 export const ADMIN_ROLES = new Set(["Admin", "Director", "Dirección Logística"]);
+export const TICKET_ROLES = new Set(["Taquilla"]);
+export const TICKET_MANAGER_ROLES = new Set(["Tickets Admin"]);
 export const SECTION_ROLES = new Set(["Principal de sección", "Asistente de sección"]);
 export const ATTENDANCE_ROLES = new Set([
   "Principal de sección",
@@ -53,6 +57,9 @@ export const LANDING_LANG_RE = /^\/(es|en)(\/.*)?$/;
 
 export const PROTECTED_PREFIXES = [
   "/dashboard",
+  "/lista-entradas",
+  "/asignar-entradas",
+  "/qr-scanner",
   "/members",
   "/inventory",
   "/performance-attendance",
@@ -172,6 +179,8 @@ const RENDERED_ROUTE_MAP = {
   staff: [...routes, ...staffRoutes],
   cedes: [...routes, ...cedesRoutes],
   instructor: [...routes, ...instructorsRoutes],
+  ticketManager: [...routes, ...ticketManagerRoutes],
+  ticketBooth: [...routes, ...ticketBoothRoutes],
   members: [...routes, ...membersRoutes],
   parents: [...routes, ...parentsRoutes],
 };
@@ -184,6 +193,8 @@ const NAV_ROUTE_MAP = {
   colorGuard: colorGuardCampRoutes,
   cedes: cedesRoutes,
   instructor: instructorsRoutes,
+  ticketManager: ticketManagerRoutes,
+  ticketBooth: ticketBoothRoutes,
   members: membersRoutes,
   parents: parentsRoutes,
 };
@@ -193,6 +204,8 @@ function resolveRoleKey(userRole) {
   if (ADMIN_ROLES.has(userRole)) return "admin";
   if (SECTION_ROLES.has(userRole)) return "section";
   if (ATTENDANCE_ROLES.has(userRole)) return "attendance";
+  if (TICKET_MANAGER_ROLES.has(userRole)) return "ticketManager";
+  if (TICKET_ROLES.has(userRole)) return "ticketBooth";
   if (userRole === "Instructura Color Guard") return "colorGuard";
   if (userRole === "Staff") return "staff";
   if (userRole === "CEDES") return "cedes";

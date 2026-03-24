@@ -3,6 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@apollo/client";
+import jwtDecode from "jwt-decode";
 import { AUTH_USER, REQUEST_RESET_MUTATION } from "graphql/mutations";
 import UserContext from "UserContext";
 import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
@@ -172,6 +173,17 @@ const SignIn = () => {
   const [authUser] = useMutation(AUTH_USER);
   const [requestReset] = useMutation(REQUEST_RESET_MUTATION);
 
+  const resolvePostLoginPath = (token) => {
+    try {
+      const decoded = jwtDecode(token);
+      if (decoded?.role === "Taquilla") return "/qr-scanner";
+      if (decoded?.role === "Tickets Admin") return "/lista-entradas";
+    } catch (_) {
+      return "/dashboard";
+    }
+    return "/dashboard";
+  };
+
   const showToast = (type, message, duration = 4000) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), duration);
@@ -196,7 +208,7 @@ const SignIn = () => {
       localStorage.setItem("token", token);
       showToast("success", "¡Bienvenido! Redirigiendo…");
       refreshUserData();
-      setTimeout(() => navigate("/dashboard"), 1500);
+      setTimeout(() => navigate(resolvePostLoginPath(token)), 1500);
     } catch (err) {
       showToast("error", err.message.replace("GraphQL error: ", ""));
     } finally {
