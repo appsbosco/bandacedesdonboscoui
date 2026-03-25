@@ -81,10 +81,22 @@ export function EvaluationFormModal({
     e.preventDefault();
     setFormError(null);
 
-    if (!form.subjectId) { setFormError("Selecciona una materia"); return; }
-    if (!form.periodId) { setFormError("Selecciona un período"); return; }
-    if (!form.scoreRaw) { setFormError("Ingresa la nota"); return; }
-    if (!evidence) { setFormError("Debes subir evidencia de la nota"); return; }
+    if (!form.subjectId) {
+      setFormError("Selecciona una materia");
+      return;
+    }
+    if (!form.periodId) {
+      setFormError("Selecciona un período");
+      return;
+    }
+    if (!form.scoreRaw) {
+      setFormError("Ingresa la nota");
+      return;
+    }
+    if (!evidence) {
+      setFormError("Debes subir evidencia de la nota");
+      return;
+    }
 
     const input = {
       subjectId: form.subjectId,
@@ -137,7 +149,9 @@ export function EvaluationFormModal({
           >
             <option value="">Selecciona una materia</option>
             {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
         </div>
@@ -154,14 +168,16 @@ export function EvaluationFormModal({
           >
             <option value="">Selecciona un período</option>
             {periods.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — {p.year}</option>
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.year}
+              </option>
             ))}
           </select>
         </div>
 
         {/* Escala + Nota */}
         <div className="grid grid-cols-3 gap-3">
-          <div>
+          {/* <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Nota mínima</label>
             <input
               type="number"
@@ -180,7 +196,7 @@ export function EvaluationFormModal({
               onChange={handleChange}
               className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
+          </div> */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Tu nota *</label>
             <input
@@ -198,11 +214,22 @@ export function EvaluationFormModal({
         {/* Preview normalizado */}
         {normalized !== null && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-4 h-4 text-blue-500 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <p className="text-xs text-blue-700">
-              Equivale a <span className="font-semibold">{normalized}/100</span> en escala normalizada
+              Equivale a <span className="font-semibold">{normalized}/100</span> en escala
+              normalizada
             </p>
           </div>
         )}
@@ -217,9 +244,7 @@ export function EvaluationFormModal({
             onError={(msg) => setEvidenceError(msg)}
             disabled={loading}
           />
-          {evidenceError && (
-            <p className="text-xs text-red-600 mt-1">{evidenceError}</p>
-          )}
+          {evidenceError && <p className="text-xs text-red-600 mt-1">{evidenceError}</p>}
           {isEdit && evidence && !evidenceError && (
             <p className="text-xs text-gray-400 mt-1">
               Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
@@ -230,8 +255,18 @@ export function EvaluationFormModal({
         {/* Error */}
         {formError && (
           <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-            <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-4 h-4 text-red-500 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
             <p className="text-xs text-red-600">{formError}</p>
           </div>
@@ -253,8 +288,19 @@ export function EvaluationFormModal({
           >
             {loading && (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
             )}
             {isEdit ? "Guardar cambios" : "Registrar evaluación"}
