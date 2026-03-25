@@ -39,7 +39,12 @@ function mergeDocumentsResult(previousResult, fetchMoreResult, resultKey) {
 function isAdmin(user) {
   if (!user) return false;
 
-  return user.role === "Admin" || user?.roles?.includes("Admin");
+  return (
+    user.role === "Admin" ||
+    user.role === "CEDES Financiero" ||
+    user?.roles?.includes("Admin") ||
+    user?.roles?.includes("CEDES Financiero")
+  );
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -352,6 +357,7 @@ function DocumentsPage() {
   const userRole = userData?.getUser?.role;
 
   const userIsAdmin = isAdmin({ role: userRole });
+  const canUploadDocuments = userRole !== "CEDES Financiero";
   const [activeTab, setActiveTab] = useState("mine");
 
   return (
@@ -398,29 +404,31 @@ function DocumentsPage() {
             </main>
 
             {/* FAB */}
-            <Link
-              to="/documents/new"
-              className="
-                fixed bottom-6 right-6 z-[1200]
-                w-14 h-14 rounded-full
-                bg-primary-600 hover:bg-primary-500
-                text-white
-                shadow-xl shadow-primary-200/60
-                flex items-center justify-center
-                transition-all duration-200 hover:scale-105
-                focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2
-              "
-              aria-label="Escanear documento"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </Link>
+            {canUploadDocuments && (
+              <Link
+                to="/new-document"
+                className="
+                  fixed bottom-6 right-6 z-[1200]
+                  w-14 h-14 rounded-full
+                  bg-primary-600 hover:bg-primary-500
+                  text-white
+                  shadow-xl shadow-primary-200/60
+                  flex items-center justify-center
+                  transition-all duration-200 hover:scale-105
+                  focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2
+                "
+                aria-label="Escanear documento"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </Link>
+            )}
           </div>
         </SoftBox>
       </Card>

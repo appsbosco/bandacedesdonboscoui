@@ -8,10 +8,12 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@apollo/client";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import { useTours } from "./useTours";
+import { GET_USERS_BY_ID } from "graphql/queries";
 import TourFormModal from "./TourFormModal";
 import {
   TourStatusBadge,
@@ -23,7 +25,7 @@ import {
 
 // ── TourCard ──────────────────────────────────────────────────────────────────
 
-function TourCard({ tour, onEdit, onDelete, onClick }) {
+function TourCard({ tour, onEdit, onDelete, onClick, canManageTours }) {
   const duration = getTourDuration(tour.startDate, tour.endDate);
 
   return (
@@ -116,42 +118,44 @@ function TourCard({ tour, onEdit, onDelete, onClick }) {
           </span>
 
           {/* Actions — stop propagation so card click doesn't fire */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(tour);
-              }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-              title="Editar"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(tour);
-              }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              title="Eliminar"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          </div>
+          {canManageTours && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(tour);
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                title="Editar"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(tour);
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Eliminar"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -160,7 +164,7 @@ function TourCard({ tour, onEdit, onDelete, onClick }) {
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
-function EmptyState({ onCreate }) {
+function EmptyState({ onCreate, canManageTours }) {
   return (
     <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-16 text-center">
       <div className="text-5xl mb-4">✈️</div>
@@ -168,15 +172,17 @@ function EmptyState({ onCreate }) {
       <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
         Crea tu primera gira para comenzar a gestionar participantes, vuelos y habitaciones.
       </p>
-      <button
-        onClick={onCreate}
-        className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl transition-all"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        Crear primera gira
-      </button>
+      {canManageTours && (
+        <button
+          onClick={onCreate}
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Crear primera gira
+        </button>
+      )}
     </div>
   );
 }
@@ -195,6 +201,7 @@ const STATUS_FILTERS = [
 
 export default function TourListPage() {
   const navigate = useNavigate();
+  const { data: userData } = useQuery(GET_USERS_BY_ID);
   const {
     tours,
     loading,
@@ -217,6 +224,7 @@ export default function TourListPage() {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const canManageTours = userData?.getUser?.role !== "CEDES Financiero";
 
   const filtered = tours.filter((t) => {
     const matchStatus = statusFilter === "all" || t.status === statusFilter;
@@ -243,20 +251,22 @@ export default function TourListPage() {
               {tours.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Nueva gira
-          </button>
+          {canManageTours && (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Nueva gira
+            </button>
+          )}
         </div>
 
         {/* Filters */}
@@ -320,7 +330,7 @@ export default function TourListPage() {
             </div>
           ) : filtered.length === 0 ? (
             tours.length === 0 ? (
-              <EmptyState onCreate={openCreateModal} />
+              <EmptyState onCreate={openCreateModal} canManageTours={canManageTours} />
             ) : (
               <div className="py-12 text-center text-gray-500">
                 <p className="text-2xl mb-2">🔍</p>
@@ -337,6 +347,7 @@ export default function TourListPage() {
                   onEdit={openEditModal}
                   onDelete={openDeleteModal}
                   onClick={() => navigate(`/tours/${tour.id}`)}
+                  canManageTours={canManageTours}
                 />
               ))}
             </div>

@@ -10,6 +10,7 @@ import routes, {
   membersRoutes,
   parentsRoutes,
   cedesRoutes,
+  cedesFinancialRoutes,
   colorGuardCampRoutes,
   instructorsRoutes,
   ticketBoothRoutes,
@@ -178,6 +179,7 @@ const RENDERED_ROUTE_MAP = {
   colorGuard: [...routes, ...colorGuardCampRoutes],
   staff: [...routes, ...staffRoutes],
   cedes: [...routes, ...cedesRoutes],
+  cedesFinancial: [...routes, ...cedesFinancialRoutes],
   instructor: [...routes, ...instructorsRoutes],
   ticketManager: [...routes, ...ticketManagerRoutes],
   ticketBooth: [...routes, ...ticketBoothRoutes],
@@ -192,6 +194,7 @@ const NAV_ROUTE_MAP = {
   staff: staffRoutes,
   colorGuard: colorGuardCampRoutes,
   cedes: cedesRoutes,
+  cedesFinancial: cedesFinancialRoutes,
   instructor: instructorsRoutes,
   ticketManager: ticketManagerRoutes,
   ticketBooth: ticketBoothRoutes,
@@ -209,6 +212,7 @@ function resolveRoleKey(userRole) {
   if (userRole === "Instructura Color Guard") return "colorGuard";
   if (userRole === "Staff") return "staff";
   if (userRole === "CEDES") return "cedes";
+  if (userRole === "CEDES Financiero") return "cedesFinancial";
   if (userRole === "Instructor de instrumento") return "instructor";
   if (MEMBERS_EXCLUDED_FOR_PARENTS_ROUTES.has(userRole)) return "members";
   return "parents";

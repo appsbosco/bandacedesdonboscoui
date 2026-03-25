@@ -790,6 +790,16 @@ export const cedesRoutes = [
   items.members(),
 ];
 
+export const cedesFinancialRoutes = [
+  title("Giras", "cedes-financial-tours-pages"),
+  items.tours(),
+  items.tourDetail(),
+
+  title("Documentos", "cedes-financial-documents-pages"),
+  items.documents(),
+  items.documentDetail(),
+];
+
 export const instructorsRoutes = [
   items.dashboard(),
   items.events(),

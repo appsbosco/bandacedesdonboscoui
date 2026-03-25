@@ -81,7 +81,12 @@ function getCloudinaryPdfUrl(image) {
 
 function isAdminUser(user) {
   if (!user) return false;
-  return user.role === "Admin" || user?.roles?.includes("Admin");
+  return (
+    user.role === "Admin" ||
+    user.role === "CEDES Financiero" ||
+    user?.roles?.includes("Admin") ||
+    user?.roles?.includes("CEDES Financiero")
+  );
 }
 
 function getOwnerFullName(owner) {

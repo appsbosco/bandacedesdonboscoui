@@ -28,6 +28,7 @@ import TourParentView from "./selfService/TourParentView";
 
 // Roles con acceso administrativo completo a giras
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
+const TOUR_FINANCE_ROLES = new Set(["CEDES Financiero"]);
 
 // Query mínima para saber si el actor actual es un User o un Parent.
 // getUser devuelve null para Parents → userData === null solo cuando ha terminado de cargar.
@@ -41,6 +42,10 @@ function isAdminRole(role) {
   return ADMIN_ROLES.has(role);
 }
 
+function isTourFinanceRole(role) {
+  return TOUR_FINANCE_ROLES.has(role);
+}
+
 // Todos los tabs disponibles en vista admin
 const ADMIN_TABS = [
   { id: "documents", label: "Documentos", emoji: "📄" },
@@ -48,6 +53,11 @@ const ADMIN_TABS = [
   { id: "flights",   label: "Vuelos",      emoji: "✈️" },
   { id: "rooms",     label: "Habitaciones",emoji: "🏨" },
   { id: "imports",   label: "Importación", emoji: "📋" },
+];
+
+const FINANCIAL_TABS = [
+  { id: "documents", label: "Documentos", emoji: "📄" },
+  { id: "payments", label: "Control financiero", emoji: "💰" },
 ];
 
 // Tabs disponibles en self-service (solo documentos y pagos por ahora)
@@ -243,6 +253,7 @@ export default function TourDetailPage() {
   const currentUser = actorData?.getUser; // undefined | null | { id, role }
 
   const isAdmin = !actorLoading && isAdminRole(currentUser?.role);
+  const isTourFinance = !actorLoading && isTourFinanceRole(currentUser?.role);
   const isParent = !actorLoading && currentUser === null;
 
   if (loading) {
@@ -318,6 +329,30 @@ export default function TourDetailPage() {
             <div className="px-4">
               <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
                 {ADMIN_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
+                      activeTab === tab.id
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <span>{tab.emoji}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="px-4">
+              <AdminTabContent activeTab={activeTab} tour={tour} onTourRefetch={refetch} />
+            </div>
+          </>
+        ) : isTourFinance ? (
+          <>
+            <div className="px-4">
+              <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
+                {FINANCIAL_TABS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
