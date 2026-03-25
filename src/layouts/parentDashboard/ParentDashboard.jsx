@@ -6,6 +6,7 @@ import ChildSelector from "./components/ChildSelector";
 import MetricsCards from "./components/MetricsCards";
 import PendingPaymentsTable from "./components/PendingPaymentsTable";
 import RecentActivity from "./components/RecentActivity";
+import { ParentAcademicSection } from "layouts/academic/parent/ParentAcademicSection";
 
 const DateRangeSelector = ({ selectedPreset, onPresetChange }) => {
   const presets = [
@@ -227,6 +228,11 @@ const ParentDashboard = () => {
             ))}
           </>
         )}
+
+        {/* Sección académica */}
+        <div className="mt-2">
+          <ParentAcademicSection />
+        </div>
       </div>
     </div>
   );

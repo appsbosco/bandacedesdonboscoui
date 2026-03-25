@@ -54,7 +54,7 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
       <div
         className={`
           relative w-full ${sizes[size]}
-          bg-slate-900 border border-slate-700
+          bg-white border 
           rounded-2xl shadow-2xl
           animate-slide-up
         `}
@@ -62,7 +62,7 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <h2 className="text-lg font-semibold text-black">{title}</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-slate-800 transition-colors touch-target"

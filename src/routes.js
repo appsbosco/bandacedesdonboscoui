@@ -77,6 +77,8 @@ import EnsembleControlPage from "layouts/ensembles/EnsembleControlPage";
 import FormationsPage from "layouts/formations";
 import FormationBuilderPage from "layouts/formations/FormationBuilderPage";
 import FormationDetailPage from "layouts/formations/FormationDetailPage";
+import StudentAcademicPage from "layouts/academic/student/StudentAcademicPage";
+import AdminAcademicPage from "layouts/academic/admin/AdminAcademicPage";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ICON_SX_12 = { fontSize: 12 };
@@ -500,6 +502,24 @@ const items = {
       route: "/formations/:formationId",
       component: <FormationDetailPage />,
     }),
+
+  academicStudent: () =>
+    collapse({
+      name: "Mi rendimiento",
+      key: "academic-student",
+      route: "/academic",
+      icon: muiIcon12(SchoolIcon),
+      component: <StudentAcademicPage />,
+    }),
+
+  academicAdmin: () =>
+    collapse({
+      name: "Rendimiento académico",
+      key: "academic-admin",
+      route: "/academic/admin",
+      icon: muiIcon12(SchoolIcon),
+      component: <AdminAcademicPage />,
+    }),
 };
 
 // ─── Menus reutilizables ──────────────────────────────────────────────────────
@@ -594,6 +614,10 @@ export const adminRoutes = [
   items.formations(),
   items.formationNew(),
   items.formationDetail(),
+
+  title("Académico", "academico"),
+  items.academicAdmin(),
+  items.academicStudent(),
 
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
@@ -698,6 +722,9 @@ export const membersRoutes = [
   title("Giras", "giras-member"),
   items.tours(),
   items.tourDetail(),
+
+  title("Académico", "academico-member"),
+  items.academicStudent(),
 
   title("Cuenta", "account-pages"),
   items.profile(),

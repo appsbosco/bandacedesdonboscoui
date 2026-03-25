@@ -1,0 +1,231 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client";
+import {
+  GET_ACADEMIC_SUBJECTS,
+  GET_ACADEMIC_PERIODS,
+  GET_ADMIN_ACADEMIC_DASHBOARD,
+  GET_ADMIN_RISK_RANKING,
+  GET_ADMIN_PENDING_EVALUATIONS,
+  GET_STUDENT_ACADEMIC_EVALUATIONS,
+  CREATE_ACADEMIC_SUBJECT,
+  UPDATE_ACADEMIC_SUBJECT,
+  CREATE_ACADEMIC_PERIOD,
+  UPDATE_ACADEMIC_PERIOD,
+  REVIEW_ACADEMIC_EVALUATION,
+} from "../academic.gql";
+
+export function useAcademicDashboard() {
+  const [filter, setFilter] = useState({ periodId: null, year: null, grade: null });
+  const [reviewModal, setReviewModal] = useState({ open: false, evaluation: null });
+  const [studentDrawer, setStudentDrawer] = useState({ open: false, studentId: null, studentName: null });
+  const [subjectModal, setSubjectModal] = useState({ open: false, mode: "create", subject: null });
+  const [periodModal, setPeriodModal] = useState({ open: false, mode: "create", period: null });
+  const [toast, setToast] = useState(null);
+
+  // ─── Queries ─────────────────────────────────────────────────────────────────
+
+  const subjectsQuery = useQuery(GET_ACADEMIC_SUBJECTS, {
+    fetchPolicy: "cache-and-network",
+  });
+
+  const periodsQuery = useQuery(GET_ACADEMIC_PERIODS, {
+    fetchPolicy: "cache-and-network",
+  });
+
+  const dashboardQuery = useQuery(GET_ADMIN_ACADEMIC_DASHBOARD, {
+    variables: { filter: buildApiFilter(filter) },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const riskRankingQuery = useQuery(GET_ADMIN_RISK_RANKING, {
+    variables: { filter: buildApiFilter(filter), limit: 20 },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const pendingEvalsQuery = useQuery(GET_ADMIN_PENDING_EVALUATIONS, {
+    variables: { filter: buildApiFilter(filter) },
+    fetchPolicy: "cache-and-network",
+  });
+
+  // Student evaluations — solo cuando el drawer está abierto
+  const studentEvalsQuery = useQuery(GET_STUDENT_ACADEMIC_EVALUATIONS, {
+    variables: {
+      studentId: studentDrawer.studentId || "",
+      filter: buildApiFilter(filter),
+    },
+    skip: !studentDrawer.open || !studentDrawer.studentId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  // ─── Mutations ───────────────────────────────────────────────────────────────
+
+  const [createSubjectMutation, { loading: creatingSubject }] = useMutation(CREATE_ACADEMIC_SUBJECT, {
+    onCompleted: () => {
+      showToast("Materia creada", "success");
+      closeSubjectModal();
+      subjectsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
+  const [updateSubjectMutation, { loading: updatingSubject }] = useMutation(UPDATE_ACADEMIC_SUBJECT, {
+    onCompleted: () => {
+      showToast("Materia actualizada", "success");
+      closeSubjectModal();
+      subjectsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
+  const [createPeriodMutation, { loading: creatingPeriod }] = useMutation(CREATE_ACADEMIC_PERIOD, {
+    onCompleted: () => {
+      showToast("Período creado", "success");
+      closePeriodModal();
+      periodsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
+  const [updatePeriodMutation, { loading: updatingPeriod }] = useMutation(UPDATE_ACADEMIC_PERIOD, {
+    onCompleted: () => {
+      showToast("Período actualizado", "success");
+      closePeriodModal();
+      periodsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
+  const [reviewMutation, { loading: reviewing }] = useMutation(REVIEW_ACADEMIC_EVALUATION, {
+    onCompleted: () => {
+      showToast("Evaluación revisada correctamente", "success");
+      closeReviewModal();
+      dashboardQuery.refetch();
+      riskRankingQuery.refetch();
+      pendingEvalsQuery.refetch();
+      if (studentDrawer.studentId) studentEvalsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  function showToast(message, type = "info") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function openReviewModal(evaluation) {
+    setReviewModal({ open: true, evaluation });
+  }
+  function closeReviewModal() {
+    setReviewModal({ open: false, evaluation: null });
+  }
+
+  function openStudentDrawer(studentId, studentName) {
+    setStudentDrawer({ open: true, studentId, studentName });
+  }
+  function closeStudentDrawer() {
+    setStudentDrawer({ open: false, studentId: null, studentName: null });
+  }
+
+  function openSubjectModal(mode = "create", subject = null) {
+    setSubjectModal({ open: true, mode, subject });
+  }
+  function closeSubjectModal() {
+    setSubjectModal({ open: false, mode: "create", subject: null });
+  }
+
+  function openPeriodModal(mode = "create", period = null) {
+    setPeriodModal({ open: true, mode, period });
+  }
+  function closePeriodModal() {
+    setPeriodModal({ open: false, mode: "create", period: null });
+  }
+
+  async function handleCreateSubject(input) {
+    await createSubjectMutation({ variables: { input } });
+  }
+
+  async function handleUpdateSubject(id, input) {
+    await updateSubjectMutation({ variables: { id, input } });
+  }
+
+  async function handleCreatePeriod(input) {
+    await createPeriodMutation({ variables: { input } });
+  }
+
+  async function handleUpdatePeriod(id, input) {
+    await updatePeriodMutation({ variables: { id, input } });
+  }
+
+  async function handleReview(id, status, reviewComment) {
+    await reviewMutation({ variables: { id, status, reviewComment } });
+  }
+
+  return {
+    // Data
+    subjects: subjectsQuery.data?.academicSubjects || [],
+    periods: periodsQuery.data?.academicPeriods || [],
+    dashboard: dashboardQuery.data?.adminAcademicDashboard || null,
+    riskRanking: riskRankingQuery.data?.adminAcademicRiskRanking || [],
+    pendingEvaluations: pendingEvalsQuery.data?.adminPendingEvaluations || [],
+    studentEvaluations: studentEvalsQuery.data?.studentAcademicEvaluations || [],
+
+    // Loading
+    loadingDashboard: dashboardQuery.loading,
+    loadingRiskRanking: riskRankingQuery.loading,
+    loadingPendingEvals: pendingEvalsQuery.loading,
+    loadingStudentEvals: studentEvalsQuery.loading,
+    reviewing,
+    creatingSubject,
+    updatingSubject,
+    creatingPeriod,
+    updatingPeriod,
+
+    // Errors
+    errorDashboard: dashboardQuery.error,
+
+    // Filter
+    filter,
+    setFilter,
+
+    // Modals/Drawers
+    reviewModal,
+    studentDrawer,
+    subjectModal,
+    periodModal,
+    openReviewModal,
+    closeReviewModal,
+    openStudentDrawer,
+    closeStudentDrawer,
+    openSubjectModal,
+    closeSubjectModal,
+    openPeriodModal,
+    closePeriodModal,
+
+    // Actions
+    handleCreateSubject,
+    handleUpdateSubject,
+    handleCreatePeriod,
+    handleUpdatePeriod,
+    handleReview,
+
+    // Toast
+    toast,
+
+    // Refetch
+    refetch: () => {
+      dashboardQuery.refetch();
+      riskRankingQuery.refetch();
+      pendingEvalsQuery.refetch();
+    },
+  };
+}
+
+function buildApiFilter(filter) {
+  const f = {};
+  if (filter.periodId) f.periodId = filter.periodId;
+  if (filter.year) f.year = filter.year;
+  if (filter.grade) f.grade = filter.grade;
+  return Object.keys(f).length > 0 ? f : undefined;
+}

@@ -45,6 +45,7 @@ const GET_EVENTS = gql`
       priority
       visibility
       transportPaymentEnabled
+      transportFeeAmount
       busCapacities {
         busNumber
         capacity
@@ -90,6 +91,10 @@ const GET_EVENT_ROSTER = gql`
       attendanceMarkedAt
       transportPaid
       transportPaidAt
+      transportPaymentMethod
+      transportAmountPaid
+      transportExempt
+      transportExemptReason
       transportPaidBy {
         id
         name
@@ -178,6 +183,7 @@ const UPDATE_EVENT = gql`
     updateEvent(id: $id, input: $input) {
       id
       transportPaymentEnabled
+      transportFeeAmount
       busCapacities {
         busNumber
         capacity
@@ -187,11 +193,31 @@ const UPDATE_EVENT = gql`
 `;
 
 const SET_TRANSPORT_PAYMENT = gql`
-  mutation SetTransportPayment($eventId: ID!, $userId: ID!, $paid: Boolean!) {
-    setTransportPayment(eventId: $eventId, userId: $userId, paid: $paid) {
+  mutation SetTransportPayment(
+    $eventId: ID!
+    $userId: ID!
+    $paid: Boolean!
+    $method: TransportPaymentMethod
+    $amount: Float
+    $exempt: Boolean
+    $exemptionReason: String
+  ) {
+    setTransportPayment(
+      eventId: $eventId
+      userId: $userId
+      paid: $paid
+      method: $method
+      amount: $amount
+      exempt: $exempt
+      exemptionReason: $exemptionReason
+    ) {
       id
       transportPaid
       transportPaidAt
+      transportPaymentMethod
+      transportAmountPaid
+      transportExempt
+      transportExemptReason
       transportPaidBy {
         id
         name
@@ -322,10 +348,19 @@ const buildEventUpdateInput = (eventDetails, overrides = {}) => ({
   audience: Array.isArray(eventDetails?.audience) ? eventDetails.audience : [],
   busCapacities: getNormalizedBusCapacities(eventDetails),
   transportPaymentEnabled: Boolean(eventDetails?.transportPaymentEnabled),
+  transportFeeAmount:
+    Number(eventDetails?.transportFeeAmount) > 0 ? Number(eventDetails.transportFeeAmount) : 0,
   priority: eventDetails?.priority || "normal",
   visibility: eventDetails?.visibility || "public",
   ...overrides,
 });
+
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: "CRC",
+    maximumFractionDigits: 0,
+  }).format(Number(amount) || 0);
 
 const SECTIONS_ORDER = [
   "FLAUTAS",
@@ -1563,6 +1598,9 @@ const BusCapacitiesModal = ({ eventDetails, onClose, onSaved }) => {
   const [transportPaymentEnabled, setTransportPaymentEnabled] = useState(
     Boolean(eventDetails?.transportPaymentEnabled)
   );
+  const [transportFeeAmount, setTransportFeeAmount] = useState(
+    Number(eventDetails?.transportFeeAmount) > 0 ? Number(eventDetails.transportFeeAmount) : 0
+  );
   const [saveEvent, { loading }] = useMutation(UPDATE_EVENT);
 
   const handleSave = async () => {
@@ -1575,6 +1613,7 @@ const BusCapacitiesModal = ({ eventDetails, onClose, onSaved }) => {
             capacity: Math.max(1, parseInt(draft[busNumber], 10) || MAX_BUS_CAPACITY),
           })),
           transportPaymentEnabled,
+          transportFeeAmount: Math.max(0, Number(transportFeeAmount) || 0),
         }),
       },
     });
@@ -1614,6 +1653,21 @@ const BusCapacitiesModal = ({ eventDetails, onClose, onSaved }) => {
           </div>
           <Toggle value={transportPaymentEnabled} onChange={setTransportPaymentEnabled} />
         </div>
+
+        <label className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-gray-800">Monto por persona</span>
+          <input
+            type="number"
+            min={0}
+            step="1"
+            value={transportFeeAmount}
+            onChange={(e) => setTransportFeeAmount(e.target.value)}
+            className="w-full border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-xs text-gray-500">
+            Valor base del transporte para esta gira/presentación.
+          </span>
+        </label>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {BUSES.map((busNumber) => (
@@ -2478,7 +2532,13 @@ ConfigTab.propTypes = {
 const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetch }) => {
   const [busFilter, setBusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [showInsights, setShowInsights] = useState(false);
+  const [showRegistry, setShowRegistry] = useState(true);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [openActionsId, setOpenActionsId] = useState(null);
   const [setTransportPayment] = useMutation(SET_TRANSPORT_PAYMENT);
+  const transportFeeAmount =
+    Number(eventDetails?.transportFeeAmount) > 0 ? Number(eventDetails.transportFeeAmount) : 0;
 
   const transportRoster = useMemo(
     () =>
@@ -2486,9 +2546,41 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
     [roster]
   );
 
+  const chargeableRoster = useMemo(
+    () => transportRoster.filter((entry) => !entry.isStaff),
+    [transportRoster]
+  );
+
+  const staffRoster = useMemo(
+    () => transportRoster.filter((entry) => entry.isStaff),
+    [transportRoster]
+  );
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return transportRoster.filter((entry) => {
+    return chargeableRoster
+      .filter((entry) => entry.transportPaid || entry.transportExempt)
+      .filter((entry) => {
+        if (busFilter === "SIN_BUS" && entry.busNumber) return false;
+        if (
+          busFilter !== "ALL" &&
+          busFilter !== "SIN_BUS" &&
+          Number(entry.busNumber) !== Number(busFilter)
+        ) {
+          return false;
+        }
+        if (!term) return true;
+        return fullName(entry.user).toLowerCase().includes(term);
+      });
+  }, [busFilter, search, chargeableRoster]);
+
+  const pendingEntries = useMemo(() => {
+    return chargeableRoster.filter((entry) => !entry.transportPaid && !entry.transportExempt);
+  }, [chargeableRoster]);
+
+  const pendingFiltered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return pendingEntries.filter((entry) => {
       if (busFilter === "SIN_BUS" && entry.busNumber) return false;
       if (
         busFilter !== "ALL" &&
@@ -2500,27 +2592,91 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
       if (!term) return true;
       return fullName(entry.user).toLowerCase().includes(term);
     });
-  }, [busFilter, search, transportRoster]);
+  }, [busFilter, search, pendingEntries]);
 
-  const stats = useMemo(
-    () => ({
-      total: transportRoster.length,
-      paid: transportRoster.filter((entry) => entry.transportPaid).length,
-      pending: transportRoster.filter((entry) => !entry.transportPaid).length,
-    }),
-    [transportRoster]
-  );
+  const stats = useMemo(() => {
+    const paidEntries = chargeableRoster.filter((entry) => entry.transportPaid);
+    const exemptEntries = chargeableRoster.filter((entry) => entry.transportExempt);
+    const pendingEntries = chargeableRoster.filter((entry) => !entry.transportPaid && !entry.transportExempt);
+    const cashEntries = paidEntries.filter((entry) => entry.transportPaymentMethod === "CASH");
+    const sinpeEntries = paidEntries.filter((entry) => entry.transportPaymentMethod === "SINPE");
+    return {
+      total: chargeableRoster.length,
+      paid: paidEntries.length,
+      exempt: exemptEntries.length,
+      pending: pendingEntries.length,
+      cashAmount: cashEntries.reduce((sum, entry) => sum + (Number(entry.transportAmountPaid) || 0), 0),
+      sinpeAmount: sinpeEntries.reduce((sum, entry) => sum + (Number(entry.transportAmountPaid) || 0), 0),
+      collected: paidEntries.reduce(
+        (sum, entry) => sum + (Number(entry.transportAmountPaid) || transportFeeAmount || 0),
+        0
+      ),
+      pendingAmount: pendingEntries.length * transportFeeAmount,
+      staff: staffRoster.length,
+    };
+  }, [chargeableRoster, staffRoster.length, transportFeeAmount]);
 
-  const handleTogglePaid = async (entry, paid) => {
+  const busStats = useMemo(() => {
+    const groups = new Map();
+    chargeableRoster.forEach((entry) => {
+      const key = entry.busNumber ? `BUS_${entry.busNumber}` : "SIN_BUS";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          label: entry.busNumber ? `Bus ${entry.busNumber}` : "Sin bus",
+          total: 0,
+          paid: 0,
+          exempt: 0,
+          pending: 0,
+          collected: 0,
+        });
+      }
+      const bucket = groups.get(key);
+      bucket.total += 1;
+      if (entry.transportExempt) {
+        bucket.exempt += 1;
+      } else if (entry.transportPaid) {
+        bucket.paid += 1;
+        bucket.collected += Number(entry.transportAmountPaid) || transportFeeAmount || 0;
+      } else {
+        bucket.pending += 1;
+      }
+    });
+    return Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [chargeableRoster, transportFeeAmount]);
+
+  const handleSetPayment = async (entry, overrides) => {
+    setOpenActionsId(null);
     await setTransportPayment({
       variables: {
         eventId,
         userId: entry.user.id,
-        paid,
+        ...overrides,
       },
     });
     await onRefetch?.();
   };
+
+  useEffect(() => {
+    if (!openActionsId) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (event.target.closest("[data-payment-actions-menu]")) return;
+      setOpenActionsId(null);
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setOpenActionsId(null);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [openActionsId]);
 
   if (!eventDetails?.transportPaymentEnabled) {
     return (
@@ -2535,52 +2691,332 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
-        <StatCard label="Con transporte" value={stats.total} />
-        <StatCard label="Pagados" value={stats.paid} color="text-emerald-600" />
-        <StatCard label="Pendientes" value={stats.pending} color="text-amber-600" />
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowInsights((prev) => !prev)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Insights</p>
+            <p className="text-xs text-gray-500">Cobrado, pendiente, efectivo, SINPE y buses</p>
+          </div>
+          <span className="text-sm text-gray-500">{showInsights ? "Ocultar" : "Mostrar"}</span>
+        </button>
+
+        {showInsights && (
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
+            <div className="pt-4 grid grid-cols-2 lg:grid-cols-7 gap-2">
+              <StatCard label="Cobrables" value={stats.total} />
+              <StatCard label="Pagados" value={stats.paid} color="text-emerald-600" />
+              <StatCard label="Exonerados" value={stats.exempt} color="text-sky-600" />
+              <StatCard label="Pendientes" value={stats.pending} color="text-amber-600" />
+              <StatCard label="Efectivo" value={formatCurrency(stats.cashAmount)} color="text-emerald-700" />
+              <StatCard label="SINPE" value={formatCurrency(stats.sinpeAmount)} color="text-blue-700" />
+              <StatCard label="Total" value={formatCurrency(stats.collected)} color="text-violet-700" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-sm font-semibold text-gray-800">Valor del transporte</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {transportFeeAmount > 0 ? formatCurrency(transportFeeAmount) : "No definido"}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Staff fuera del cobro: {staffRoster.length}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Pendiente total: {formatCurrency(stats.pendingAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-sm font-semibold text-gray-800">Resumen por bus</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {busStats.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                      No hay integrantes cobrables.
+                    </div>
+                  ) : (
+                    busStats.map((bus) => (
+                      <div
+                        key={bus.key}
+                        className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-gray-800">{bus.label}</span>
+                          <span className="text-xs text-gray-500">{bus.total} personas</span>
+                        </div>
+                        <div className="text-xs text-gray-600">Pagados: {bus.paid}</div>
+                        <div className="text-xs text-gray-600">Exonerados: {bus.exempt}</div>
+                        <div className="text-xs text-amber-700">Pendientes: {bus.pending}</div>
+                        <div className="text-sm font-semibold text-blue-700">
+                          Recogido: {formatCurrency(bus.collected)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar integrante…"
-            className="flex-1 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={busFilter}
-            onChange={(e) => setBusFilter(e.target.value)}
-            className="sm:w-44 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="ALL">Todos los buses</option>
-            {BUSES.map((busNumber) => (
-              <option key={busNumber} value={busNumber}>
-                Bus {busNumber}
-              </option>
-            ))}
-            <option value="SIN_BUS">Sin bus</option>
-          </select>
+      {transportFeeAmount <= 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Define el monto del transporte en Configurar antes de registrar pagos.
         </div>
+      )}
 
-        <div className="space-y-2">
-          {filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-              No hay integrantes para este filtro.
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowRegistry((prev) => !prev)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Registro</p>
+            <p className="text-xs text-gray-500">Pagados y exonerados</p>
+          </div>
+          <span className="text-sm text-gray-500">{showRegistry ? "Ocultar" : "Mostrar"}</span>
+        </button>
+
+        {showRegistry && (
+          <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
+            <div className="pt-4 flex flex-col sm:flex-row gap-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar integrante…"
+                className="flex-1 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <select
+                value={busFilter}
+                onChange={(e) => setBusFilter(e.target.value)}
+                className="sm:w-44 border border-gray-300 text-gray-900 text-sm rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ALL">Todos los buses</option>
+                {BUSES.map((busNumber) => (
+                  <option key={busNumber} value={busNumber}>
+                    Bus {busNumber}
+                  </option>
+                ))}
+                <option value="SIN_BUS">Sin bus</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowPendingModal(true)}
+                className="px-3 py-2 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200"
+              >
+                Ver pendientes ({pendingFiltered.length})
+              </button>
             </div>
-          ) : (
-            filtered.map((entry) => {
-              const attendanceCfg =
-                ATTENDANCE_CONFIG[entry.attendanceStatus] || ATTENDANCE_CONFIG.PENDING;
-              return (
+
+            <div className="space-y-2">
+              {filtered.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+                  No hay pagos registrados para este filtro.
+                </div>
+              ) : (
+                filtered.map((entry) => {
+                  const attendanceCfg =
+                    ATTENDANCE_CONFIG[entry.attendanceStatus] || ATTENDANCE_CONFIG.PENDING;
+                  const isCash = entry.transportPaid && entry.transportPaymentMethod === "CASH";
+                  const isSinpe = entry.transportPaid && entry.transportPaymentMethod === "SINPE";
+                  return (
+                    <div
+                      key={entry.id}
+                      className="relative rounded-xl border border-gray-200 bg-white px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <UserAvatar user={entry.user} size="sm" busNumber={entry.busNumber || null} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {fullName(entry.user)}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {entry.busNumber ? (
+                              <BusBadge busNumber={entry.busNumber} small />
+                            ) : (
+                              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                Sin bus
+                              </span>
+                            )}
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-semibold ${attendanceCfg.bg} ${attendanceCfg.text}`}
+                            >
+                              {attendanceCfg.label}
+                            </span>
+                            {entry.transportExempt && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-sky-100 text-sky-700">
+                                Exonerado
+                              </span>
+                            )}
+                            {entry.transportPaid && entry.transportPaymentMethod && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
+                                {entry.transportPaymentMethod === "SINPE" ? "SINPE" : "Efectivo"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            <span>
+                              Monto:{" "}
+                              {entry.transportPaid
+                                ? formatCurrency(entry.transportAmountPaid)
+                                : "Exonerado"}
+                            </span>
+                            {entry.transportExempt && entry.transportExemptReason && (
+                              <span>Motivo: {entry.transportExemptReason}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                            entry.transportExempt
+                              ? "bg-sky-100 text-sky-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {entry.transportExempt ? "Exonerado" : "Pagado"}
+                        </span>
+                        {canManagePayments && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleSetPayment(entry, {
+                                  paid: true,
+                                  method: "CASH",
+                                  amount: transportFeeAmount,
+                                  exempt: false,
+                                  exemptionReason: "",
+                                })
+                              }
+                              disabled={transportFeeAmount <= 0}
+                              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 ${
+                                isCash
+                                  ? "bg-emerald-700 text-white ring-2 ring-emerald-200"
+                                  : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              }`}
+                            >
+                              {isCash ? "✓ Efectivo" : "Efectivo"}
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleSetPayment(entry, {
+                                  paid: true,
+                                  method: "SINPE",
+                                  amount: transportFeeAmount,
+                                  exempt: false,
+                                  exemptionReason: "",
+                                })
+                              }
+                              disabled={transportFeeAmount <= 0}
+                              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 ${
+                                isSinpe
+                                  ? "bg-blue-700 text-white ring-2 ring-blue-200"
+                                  : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                              }`}
+                            >
+                              {isSinpe ? "✓ SINPE" : "SINPE"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenActionsId((current) =>
+                                  current === entry.id ? null : entry.id
+                                )
+                              }
+                              className="h-9 w-9 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+                              aria-label="Más acciones de pago"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 5h.01M12 12h.01M12 19h.01"
+                                />
+                              </svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {canManagePayments && openActionsId === entry.id && (
+                        <div
+                          data-payment-actions-menu
+                          className="sm:absolute sm:right-3 sm:top-12 rounded-xl border border-gray-200 bg-white shadow-xl p-2 flex flex-col gap-2 z-10"
+                        >
+                          <button
+                            onClick={() =>
+                              handleSetPayment(entry, {
+                                paid: false,
+                                method: null,
+                                amount: 0,
+                                exempt: false,
+                                exemptionReason: "",
+                              })
+                            }
+                            className="px-3 py-2 rounded-lg text-xs font-semibold transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 text-left"
+                          >
+                            Limpiar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const reason = window.prompt(
+                                "Motivo de la exoneración",
+                                entry.transportExemptReason || "Beca"
+                              );
+                              if (reason === null) return;
+                              await handleSetPayment(entry, {
+                                paid: false,
+                                method: null,
+                                amount: 0,
+                                exempt: true,
+                                exemptionReason: reason,
+                              });
+                            }}
+                            className="px-3 py-2 rounded-lg text-xs font-semibold transition-colors bg-sky-100 text-sky-700 hover:bg-sky-200 text-left"
+                          >
+                            Exonerar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showPendingModal && (
+        <Modal title={`Pendientes de pago (${pendingFiltered.length})`} onClose={() => setShowPendingModal(false)}>
+          <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+            {pendingFiltered.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+                No hay pendientes para este filtro.
+              </div>
+            ) : (
+              pendingFiltered.map((entry) => (
                 <div
                   key={entry.id}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-3 flex flex-col gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <UserAvatar user={entry.user} size="sm" busNumber={entry.busNumber || null} />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-900 truncate">
                         {fullName(entry.user)}
                       </p>
@@ -2592,44 +3028,68 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
                             Sin bus
                           </span>
                         )}
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-semibold ${attendanceCfg.bg} ${attendanceCfg.text}`}
-                        >
-                          {attendanceCfg.label}
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+                          Pendiente
                         </span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 sm:justify-end">
-                    <span
-                      className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                        entry.transportPaid
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {entry.transportPaid ? "Pagado" : "Pendiente"}
-                    </span>
-                    {canManagePayments && (
+                  {canManagePayments && (
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => handleTogglePaid(entry, !entry.transportPaid)}
-                        className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                          entry.transportPaid
-                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
+                        onClick={() =>
+                          handleSetPayment(entry, {
+                            paid: true,
+                            method: "CASH",
+                            amount: transportFeeAmount,
+                            exempt: false,
+                            exemptionReason: "",
+                          })
+                        }
+                        disabled={transportFeeAmount <= 0}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 hover:bg-emerald-200 disabled:opacity-40"
                       >
-                        {entry.transportPaid ? "Quitar pago" : "Marcar pagado"}
+                        Efectivo
                       </button>
-                    )}
-                  </div>
+                      <button
+                        onClick={() =>
+                          handleSetPayment(entry, {
+                            paid: true,
+                            method: "SINPE",
+                            amount: transportFeeAmount,
+                            exempt: false,
+                            exemptionReason: "",
+                          })
+                        }
+                        disabled={transportFeeAmount <= 0}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 disabled:opacity-40"
+                      >
+                        SINPE
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const reason = window.prompt("Motivo de la exoneración", "Beca");
+                          if (reason === null) return;
+                          await handleSetPayment(entry, {
+                            paid: false,
+                            method: null,
+                            amount: 0,
+                            exempt: true,
+                            exemptionReason: reason,
+                          });
+                        }}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200"
+                      >
+                        Exonerar
+                      </button>
+                    </div>
+                  )}
                 </div>
-              );
-            })
-          )}
-        </div>
-      </div>
+              ))
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
