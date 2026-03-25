@@ -12,7 +12,12 @@ import {
 
 export function useAcademicEvaluations({ periodId, year, grade } = {}) {
   const [filter, setFilter] = useState({ periodId, subjectId: null, status: null });
-  const [formModal, setFormModal] = useState({ open: false, mode: "create", evaluation: null });
+  const [formModal, setFormModal] = useState({
+    open: false,
+    mode: "create",
+    evaluation: null,
+    initialSelection: null,
+  });
   const [deleteModal, setDeleteModal] = useState({ open: false, evaluation: null });
   const [toast, setToast] = useState(null);
 
@@ -77,12 +82,12 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     setTimeout(() => setToast(null), 4000);
   }
 
-  function openFormModal(mode = "create", evaluation = null) {
-    setFormModal({ open: true, mode, evaluation });
+  function openFormModal(mode = "create", evaluation = null, initialSelection = null) {
+    setFormModal({ open: true, mode, evaluation, initialSelection });
   }
 
   function closeFormModal() {
-    setFormModal({ open: false, mode: "create", evaluation: null });
+    setFormModal({ open: false, mode: "create", evaluation: null, initialSelection: null });
   }
 
   function openDeleteModal(evaluation) {

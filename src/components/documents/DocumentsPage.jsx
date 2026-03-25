@@ -154,17 +154,20 @@ function AdminDocumentsView() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerInput, setOwnerInput] = useState("");
 
-  const buildFilters = useCallback((overrides = {}) => {
-    const f = {};
-    const nextStatus = overrides.statusFilter ?? statusFilter;
-    const nextType = overrides.typeFilter ?? typeFilter;
-    const nextOwnerName = overrides.ownerName ?? ownerName;
+  const buildFilters = useCallback(
+    (overrides = {}) => {
+      const f = {};
+      const nextStatus = overrides.statusFilter ?? statusFilter;
+      const nextType = overrides.typeFilter ?? typeFilter;
+      const nextOwnerName = overrides.ownerName ?? ownerName;
 
-    if (nextStatus) f.status = nextStatus;
-    if (nextType) f.type = nextType;
-    if (nextOwnerName) f.ownerName = nextOwnerName;
-    return Object.keys(f).length > 0 ? f : undefined;
-  }, [statusFilter, typeFilter, ownerName]);
+      if (nextStatus) f.status = nextStatus;
+      if (nextType) f.type = nextType;
+      if (nextOwnerName) f.ownerName = nextOwnerName;
+      return Object.keys(f).length > 0 ? f : undefined;
+    },
+    [statusFilter, typeFilter, ownerName]
+  );
 
   const { data, loading, error, fetchMore, refetch } = useQuery(ALL_DOCUMENTS, {
     variables: { filters: buildFilters(), pagination },
@@ -424,40 +427,6 @@ function DocumentsPage() {
                 <p className="text-sm text-slate-500 mb-4">
                   Filtra, revisa y escanea nuevos documentos
                 </p>
-
-                {userIsAdmin && !settingsLoading && (
-                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-amber-900">
-                          Tipos sensibles
-                        </p>
-                        <p className="text-xs text-amber-700">
-                          {restrictSensitiveUploadsToAdmins
-                            ? "Pasaporte, visa y permiso de salida solo los puede subir el administrador."
-                            : "Pasaporte, visa y permiso de salida ya están visibles para todos."}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleVisibilityToggle}
-                        disabled={savingVisibilitySettings}
-                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                          restrictSensitiveUploadsToAdmins ? "bg-slate-900" : "bg-emerald-500"
-                        } ${savingVisibilitySettings ? "opacity-60 cursor-not-allowed" : ""}`}
-                        aria-pressed={!restrictSensitiveUploadsToAdmins}
-                        aria-label="Cambiar visibilidad de documentos sensibles"
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            restrictSensitiveUploadsToAdmins ? "translate-x-1" : "translate-x-6"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {/* Tabs — solo visibles para admin */}
                 {userIsAdmin && (

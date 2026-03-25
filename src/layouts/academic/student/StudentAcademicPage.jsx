@@ -239,20 +239,33 @@ export default function StudentAcademicPage() {
                       </button>
                     </div>
                     <div className="space-y-1.5">
-                      {missingCombos.slice(0, 8).map((combo, i) => (
-                        <div key={i} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                          <div>
+                      {missingCombos.map((combo) => (
+                        <div
+                          key={`${combo.subject.id}-${combo.period.id}`}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 px-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="min-w-0">
                             <span className="text-sm text-gray-700 font-medium">{combo.subject.name}</span>
                             <span className="text-xs text-gray-400 ml-2">{combo.period.name} {combo.period.year}</span>
                           </div>
-                          <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">Sin registrar</span>
+                          <div className="flex items-center justify-between sm:justify-end gap-2">
+                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
+                              Sin registrar
+                            </span>
+                            <button
+                              onClick={() =>
+                                openFormModal("create", null, {
+                                  subjectId: combo.subject.id,
+                                  periodId: combo.period.id,
+                                })
+                              }
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
+                            >
+                              Registrar
+                            </button>
+                          </div>
                         </div>
                       ))}
-                      {missingCombos.length > 8 && (
-                        <p className="text-xs text-gray-400 text-center pt-1">
-                          +{missingCombos.length - 8} más
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}
@@ -323,6 +336,7 @@ export default function StudentAcademicPage() {
         onClose={closeFormModal}
         mode={formModal.mode}
         evaluation={formModal.evaluation}
+        initialSelection={formModal.initialSelection}
         subjects={subjects}
         periods={periods}
         onSubmit={handleSubmit}

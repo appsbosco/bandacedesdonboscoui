@@ -1,7 +1,19 @@
 import React, { useEffect } from "react";
 import PropTypes from "prop-types";
 
-export function Modal({ isOpen, onClose, children, title, size = "md" }) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  title,
+  size = "md",
+  containerClassName = "",
+  overlayClassName = "",
+  panelClassName = "",
+  headerClassName = "",
+  contentClassName = "",
+  closeButtonClassName = "",
+}) {
   const sizes = {
     sm: "max-w-sm",
     md: "max-w-md",
@@ -43,11 +55,19 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4">
+    <div
+      className={`fixed inset-0 z-[1300] flex items-center justify-center p-4 ${containerClassName}`.trim()}
+    >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+        className={`absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in ${overlayClassName}`.trim()}
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") onClose?.();
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Cerrar modal"
       />
 
       {/* Modal */}
@@ -57,15 +77,22 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
           bg-white border 
           rounded-2xl shadow-2xl
           animate-slide-up
+          ${panelClassName}
         `}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-            <h2 className="text-lg font-semibold text-black">{title}</h2>
+          <div
+            className={`flex items-center justify-between px-6 py-4 border-b border-slate-700 ${headerClassName}`.trim()}
+          >
+            {typeof title === "string" ? (
+              <h2 className="text-lg font-semibold text-black">{title}</h2>
+            ) : (
+              <div className="min-w-0 flex-1">{title}</div>
+            )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-slate-800 transition-colors touch-target"
+              className={`p-2 rounded-lg hover:bg-slate-800 transition-colors touch-target ${closeButtonClassName}`.trim()}
             >
               <svg
                 className="w-5 h-5 text-slate-400"
@@ -85,7 +112,7 @@ export function Modal({ isOpen, onClose, children, title, size = "md" }) {
         )}
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className={`p-6 ${contentClassName}`.trim()}>{children}</div>
       </div>
     </div>
   );
@@ -97,6 +124,12 @@ Modal.propTypes = {
   children: PropTypes.node,
   title: PropTypes.node, // permite string o JSX
   size: PropTypes.oneOf(["sm", "md", "lg", "xl", "full"]),
+  containerClassName: PropTypes.string,
+  overlayClassName: PropTypes.string,
+  panelClassName: PropTypes.string,
+  headerClassName: PropTypes.string,
+  contentClassName: PropTypes.string,
+  closeButtonClassName: PropTypes.string,
 };
 
 export default Modal;

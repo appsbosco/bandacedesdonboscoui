@@ -9,7 +9,7 @@ import {
  * EvidenceUploader — sube imagen o PDF a Cloudinary
  * Llama a onUpload({ url, publicId, resourceType, originalName }) cuando termina
  */
-export function EvidenceUploader({ onUpload, onError, disabled }) {
+export function EvidenceUploader({ onUpload, onError, disabled, inputId }) {
   const fileInputRef = useRef(null);
   const [state, setState] = useState("idle"); // idle | uploading | success | error
   const [progress, setProgress] = useState(0);
@@ -74,6 +74,7 @@ export function EvidenceUploader({ onUpload, onError, disabled }) {
   return (
     <div className="w-full">
       <input
+        id={inputId}
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -181,6 +182,7 @@ EvidenceUploader.propTypes = {
   onUpload: PropTypes.func.isRequired,
   onError: PropTypes.func,
   disabled: PropTypes.bool,
+  inputId: PropTypes.string,
 };
 
 export default EvidenceUploader;

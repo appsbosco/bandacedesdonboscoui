@@ -16,6 +16,7 @@ export function EvaluationFormModal({
   onClose,
   mode,
   evaluation,
+  initialSelection,
   subjects,
   periods,
   onSubmit,
@@ -44,13 +45,17 @@ export function EvaluationFormModal({
           originalName: evaluation.evidenceOriginalName || "evidencia",
         });
       } else {
-        setForm(INITIAL);
+        setForm({
+          ...INITIAL,
+          subjectId: initialSelection?.subjectId || "",
+          periodId: initialSelection?.periodId || "",
+        });
         setEvidence(null);
       }
       setFormError(null);
       setEvidenceError(null);
     }
-  }, [isOpen, mode, evaluation]);
+  }, [isOpen, mode, evaluation, initialSelection]);
 
   const isEdit = mode === "edit";
 
@@ -133,14 +138,29 @@ export function EvaluationFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? "Editar evaluación" : "Registrar evaluación"}
+      title={
+        isEdit ? "Editar evaluación" : "Registrar evaluación"
+      }
       size="lg"
+      containerClassName="items-end sm:items-center p-0 sm:p-4"
+      overlayClassName="bg-black/40"
+      panelClassName="max-h-[95dvh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl"
+      headerClassName="border-b border-slate-200 px-5 py-4 sm:px-6"
+      contentClassName="p-5 sm:p-6 overflow-y-auto"
+      closeButtonClassName="hover:bg-slate-100"
     >
+      <div className="flex justify-center -mt-2 mb-4 sm:hidden">
+        <div className="w-10 h-1 rounded-full bg-slate-200" />
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Materia */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Materia *</label>
+          <label htmlFor="evaluation-subject" className="block text-xs font-medium text-gray-600 mb-1">
+            Materia *
+          </label>
           <select
+            id="evaluation-subject"
             name="subjectId"
             value={form.subjectId}
             onChange={handleChange}
@@ -158,8 +178,11 @@ export function EvaluationFormModal({
 
         {/* Período */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Período *</label>
+          <label htmlFor="evaluation-period" className="block text-xs font-medium text-gray-600 mb-1">
+            Período *
+          </label>
           <select
+            id="evaluation-period"
             name="periodId"
             value={form.periodId}
             onChange={handleChange}
@@ -198,8 +221,11 @@ export function EvaluationFormModal({
             />
           </div> */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tu nota *</label>
+            <label htmlFor="evaluation-score" className="block text-xs font-medium text-gray-600 mb-1">
+              Tu nota *
+            </label>
             <input
+              id="evaluation-score"
               type="number"
               name="scoreRaw"
               value={form.scoreRaw}
@@ -236,10 +262,11 @@ export function EvaluationFormModal({
 
         {/* Evidencia */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-2">
+          <label htmlFor="evaluation-evidence" className="block text-xs font-medium text-gray-600 mb-2">
             Evidencia (imagen o PDF) *
           </label>
           <EvidenceUploader
+            inputId="evaluation-evidence"
             onUpload={handleEvidenceUpload}
             onError={(msg) => setEvidenceError(msg)}
             disabled={loading}
@@ -316,6 +343,10 @@ EvaluationFormModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   mode: PropTypes.oneOf(["create", "edit"]),
   evaluation: PropTypes.object,
+  initialSelection: PropTypes.shape({
+    subjectId: PropTypes.string,
+    periodId: PropTypes.string,
+  }),
   subjects: PropTypes.array.isRequired,
   periods: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
