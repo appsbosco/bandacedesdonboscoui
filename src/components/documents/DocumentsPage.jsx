@@ -1,10 +1,16 @@
 import React, { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@apollo/client";
-import { MY_DOCUMENTS, ALL_DOCUMENTS } from "../../graphql/documents/documents.gql.js";
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  MY_DOCUMENTS,
+  ALL_DOCUMENTS,
+  DOCUMENT_VISIBILITY_SETTINGS,
+  UPDATE_DOCUMENT_VISIBILITY_SETTINGS,
+} from "../../graphql/documents/documents.gql.js";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentFilters } from "../../components/documents/DocumentsFilters.jsx";
 import { GET_USERS_BY_ID } from "graphql/queries";
+import { isDocumentAdmin } from "./documentAccess";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -34,17 +40,6 @@ function mergeDocumentsResult(previousResult, fetchMoreResult, resultKey) {
       documents: mergedDocuments,
     },
   };
-}
-
-function isAdmin(user) {
-  if (!user) return false;
-
-  return (
-    user.role === "Admin" ||
-    user.role === "CEDES Financiero" ||
-    user?.roles?.includes("Admin") ||
-    user?.roles?.includes("CEDES Financiero")
-  );
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -239,8 +234,14 @@ function AdminDocumentsView() {
         <div className="grid grid-cols-2 gap-2">
           {/* Status */}
           <div>
-            <label className="block text-xs text-slate-500 mb-1 font-medium">Estado</label>
+            <label
+              htmlFor="documents-admin-status-filter"
+              className="block text-xs text-slate-500 mb-1 font-medium"
+            >
+              Estado
+            </label>
             <select
+              id="documents-admin-status-filter"
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
@@ -258,8 +259,14 @@ function AdminDocumentsView() {
 
           {/* Type */}
           <div>
-            <label className="block text-xs text-slate-500 mb-1 font-medium">Tipo</label>
+            <label
+              htmlFor="documents-admin-type-filter"
+              className="block text-xs text-slate-500 mb-1 font-medium"
+            >
+              Tipo
+            </label>
             <select
+              id="documents-admin-type-filter"
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value);
@@ -278,11 +285,15 @@ function AdminDocumentsView() {
 
         {/* Owner ID search */}
         <div>
-          <label className="block text-xs text-slate-500 mb-1 font-medium">
+          <label
+            htmlFor="documents-admin-owner-filter"
+            className="block text-xs text-slate-500 mb-1 font-medium"
+          >
             Filtrar por nombre de usuario
           </label>
           <div className="flex gap-2">
             <input
+              id="documents-admin-owner-filter"
               type="text"
               value={ownerInput}
               onChange={(e) => setOwnerInput(e.target.value)}
@@ -353,12 +364,43 @@ function AdminDocumentsView() {
 // ── Page principal ─────────────────────────────────────────────────────────────
 function DocumentsPage() {
   const { data: userData, loading: userLoading } = useQuery(GET_USERS_BY_ID);
+  const { data: settingsData, loading: settingsLoading } = useQuery(DOCUMENT_VISIBILITY_SETTINGS, {
+    fetchPolicy: "cache-and-network",
+  });
+  const [updateVisibilitySettings, { loading: savingVisibilitySettings }] = useMutation(
+    UPDATE_DOCUMENT_VISIBILITY_SETTINGS
+  );
 
-  const userRole = userData?.getUser?.role;
+  const currentUser = userData?.getUser;
+  const userRole = currentUser?.role;
 
-  const userIsAdmin = isAdmin({ role: userRole });
+  const userIsAdmin = isDocumentAdmin(currentUser);
   const canUploadDocuments = userRole !== "CEDES Financiero";
   const [activeTab, setActiveTab] = useState("mine");
+  const restrictSensitiveUploadsToAdmins =
+    settingsData?.documentVisibilitySettings?.restrictSensitiveUploadsToAdmins ?? true;
+
+  const handleVisibilityToggle = useCallback(async () => {
+    if (!userIsAdmin || savingVisibilitySettings) return;
+
+    await updateVisibilitySettings({
+      variables: {
+        restrictSensitiveUploadsToAdmins: !restrictSensitiveUploadsToAdmins,
+      },
+      optimisticResponse: {
+        updateDocumentVisibilitySettings: {
+          __typename: "DocumentVisibilitySettings",
+          restrictSensitiveUploadsToAdmins: !restrictSensitiveUploadsToAdmins,
+          sensitiveTypes: ["PASSPORT", "VISA", "PERMISO_SALIDA"],
+        },
+      },
+    });
+  }, [
+    restrictSensitiveUploadsToAdmins,
+    savingVisibilitySettings,
+    updateVisibilitySettings,
+    userIsAdmin,
+  ]);
 
   return (
     <DashboardLayout>
@@ -382,6 +424,40 @@ function DocumentsPage() {
                 <p className="text-sm text-slate-500 mb-4">
                   Filtra, revisa y escanea nuevos documentos
                 </p>
+
+                {userIsAdmin && !settingsLoading && (
+                  <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-amber-900">
+                          Tipos sensibles
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          {restrictSensitiveUploadsToAdmins
+                            ? "Pasaporte, visa y permiso de salida solo los puede subir el administrador."
+                            : "Pasaporte, visa y permiso de salida ya están visibles para todos."}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleVisibilityToggle}
+                        disabled={savingVisibilitySettings}
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                          restrictSensitiveUploadsToAdmins ? "bg-slate-900" : "bg-emerald-500"
+                        } ${savingVisibilitySettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                        aria-pressed={!restrictSensitiveUploadsToAdmins}
+                        aria-label="Cambiar visibilidad de documentos sensibles"
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            restrictSensitiveUploadsToAdmins ? "translate-x-1" : "translate-x-6"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tabs — solo visibles para admin */}
                 {userIsAdmin && (

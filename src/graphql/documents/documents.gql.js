@@ -1,21 +1,27 @@
 import { gql } from "@apollo/client";
-import {
-  DOCUMENT_FRAGMENT,
-  DOCUMENT_CARD_FRAGMENT,
-  PAGINATION_FRAGMENT,
-} from "../../graphql/documents/document-fragments.gql.js";
+import { DOCUMENT_FRAGMENT, DOCUMENT_CARD_FRAGMENT } from "./document-fragments.gql.js";
 
 export const MY_DOCUMENTS = gql`
   ${DOCUMENT_CARD_FRAGMENT}
-  ${PAGINATION_FRAGMENT}
-  query MyDocuments($filters: DocumentFiltersInput, $pagination: PaginationInput) {
-    myDocuments(filters: $filters, pagination: $pagination) {
+  query MyDocuments(
+    $type: DocumentType
+    $status: DocumentStatus
+    $expiredOnly: Boolean
+    $limit: Int
+    $skip: Int
+  ) {
+    myDocuments(
+      type: $type
+      status: $status
+      expiredOnly: $expiredOnly
+      limit: $limit
+      skip: $skip
+    ) {
       documents {
         ...DocumentCardFragment
       }
-      pagination {
-        ...PaginationFragment
-      }
+      total
+      hasMore
     }
   }
 `;
@@ -30,61 +36,63 @@ export const DOCUMENT_BY_ID = gql`
 `;
 
 export const DOCUMENTS_EXPIRING_SUMMARY = gql`
-  query DocumentsExpiringSummary($referenceDate: DateTime) {
+  query DocumentsExpiringSummary($referenceDate: String) {
     documentsExpiringSummary(referenceDate: $referenceDate) {
+      total
       expired
       expiringIn30Days
       expiringIn60Days
       expiringIn90Days
       valid
+      noExpirationDate
+    }
+  }
+`;
+
+export const ALL_DOCUMENTS = gql`
+  ${DOCUMENT_CARD_FRAGMENT}
+  query AllDocuments(
+    $ownerSearch: String
+    $type: DocumentType
+    $status: DocumentStatus
+    $expiredOnly: Boolean
+    $limit: Int
+    $skip: Int
+  ) {
+    allDocuments(
+      ownerSearch: $ownerSearch
+      type: $type
+      status: $status
+      expiredOnly: $expiredOnly
+      limit: $limit
+      skip: $skip
+    ) {
+      documents {
+        ...DocumentCardFragment
+      }
       total
+      hasMore
     }
   }
 `;
 
 export const CREATE_DOCUMENT = gql`
-  ${DOCUMENT_FRAGMENT}
-  mutation CreateDocument($input: CreateDocumentInput!) {
-    createDocument(input: $input) {
-      ...DocumentFragment
-    }
-  }
-`;
-
-export const ADD_DOCUMENT_IMAGE = gql`
-  ${DOCUMENT_FRAGMENT}
-  mutation AddDocumentImage($input: AddDocumentImageInput!) {
-    addDocumentImage(input: $input) {
-      ...DocumentFragment
-    }
-  }
-`;
-
-export const UPSERT_DOCUMENT_EXTRACTED_DATA = gql`
-  ${DOCUMENT_FRAGMENT}
-  mutation UpsertDocumentExtractedData($input: UpsertDocumentExtractedDataInput!) {
-    upsertDocumentExtractedData(input: $input) {
-      ...DocumentFragment
-    }
-  }
-`;
-
-export const SET_DOCUMENT_STATUS = gql`
-  ${DOCUMENT_FRAGMENT}
-  mutation SetDocumentStatus($documentId: ID!, $status: DocumentStatus!) {
-    setDocumentStatus(documentId: $documentId, status: $status) {
-      ...DocumentFragment
+  mutation CreateDocument($type: DocumentType!, $notes: String) {
+    createDocument(type: $type, notes: $notes) {
+      id
+      type
+      status
     }
   }
 `;
 
 export const GET_SIGNED_UPLOAD = gql`
-  mutation GetSignedUpload($input: GetSignedUploadInput!) {
-    getSignedUpload(input: $input) {
-      timestamp
+  mutation GetSignedUpload($documentId: ID!, $kind: ImageKind) {
+    getSignedUpload(documentId: $documentId, kind: $kind) {
       signature
-      apiKey
+      timestamp
       cloudName
+      apiKey
       folder
       publicId
       resourceType
@@ -92,35 +100,73 @@ export const GET_SIGNED_UPLOAD = gql`
   }
 `;
 
+export const DOCUMENT_VISIBILITY_SETTINGS = gql`
+  query DocumentVisibilitySettings {
+    documentVisibilitySettings {
+      restrictSensitiveUploadsToAdmins
+      sensitiveTypes
+    }
+  }
+`;
+
+export const UPDATE_DOCUMENT_VISIBILITY_SETTINGS = gql`
+  mutation UpdateDocumentVisibilitySettings($restrictSensitiveUploadsToAdmins: Boolean!) {
+    updateDocumentVisibilitySettings(
+      restrictSensitiveUploadsToAdmins: $restrictSensitiveUploadsToAdmins
+    ) {
+      restrictSensitiveUploadsToAdmins
+      sensitiveTypes
+    }
+  }
+`;
+
+export const ADD_DOCUMENT_IMAGE = gql`
+  mutation AddDocumentImage($documentId: ID!, $image: AddDocumentImageInput!) {
+    addDocumentImage(documentId: $documentId, image: $image) {
+      id
+      status
+      images {
+        id
+        kind
+        url
+      }
+    }
+  }
+`;
+
+export const UPSERT_DOCUMENT_EXTRACTED_DATA = gql`
+  ${DOCUMENT_FRAGMENT}
+  mutation UpsertDocumentExtractedData(
+    $documentId: ID!
+    $data: UpsertDocumentExtractedDataInput!
+  ) {
+    upsertDocumentExtractedData(documentId: $documentId, data: $data) {
+      ...DocumentFragment
+    }
+  }
+`;
+
+export const SET_DOCUMENT_STATUS = gql`
+  mutation SetDocumentStatus($documentId: ID!, $status: DocumentStatus!) {
+    setDocumentStatus(documentId: $documentId, status: $status) {
+      id
+      status
+    }
+  }
+`;
+
 export const DELETE_DOCUMENT = gql`
   mutation DeleteDocument($documentId: ID!) {
-    deleteDocument(documentId: $documentId) {
-      success
-      message
-    }
+    deleteDocument(documentId: $documentId)
   }
 `;
 
 export const ENQUEUE_DOCUMENT_OCR = gql`
-  mutation EnqueueDocumentOcr($input: EnqueueDocumentOcrInput!) {
-    enqueueDocumentOcr(input: $input) {
-      success
+  mutation EnqueueDocumentOcr($documentId: ID!) {
+    enqueueDocumentOcr(documentId: $documentId) {
+      ok
       jobId
-    }
-  }
-`;
-
-export const ALL_DOCUMENTS = gql`
-  ${DOCUMENT_CARD_FRAGMENT}
-  ${PAGINATION_FRAGMENT}
-  query AllDocuments($filters: AllDocumentsFiltersInput, $pagination: PaginationInput) {
-    allDocuments(filters: $filters, pagination: $pagination) {
-      documents {
-        ...DocumentCardFragment
-      }
-      pagination {
-        ...PaginationFragment
-      }
+      message
     }
   }
 `;

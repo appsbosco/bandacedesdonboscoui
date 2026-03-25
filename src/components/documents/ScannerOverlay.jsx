@@ -1,270 +1,101 @@
-// src/components/scanner/ScannerOverlay.js
-import React, { useMemo } from "react";
+/* eslint-disable react/prop-types */
+
+import React, { useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 
-/**
- * Scanner Overlay Component
- *
- * Renders:
- * - Guide rectangle (scanArea)
- * - Detected document polygon
- * - Edge alignment progress (red → yellow → green)
- * - Score indicator
- * - Hint text
- */
-export function ScannerOverlay({
-  scanArea,
-  isReady,
-  isCapturing,
-  corners,
-  edgeAlignments,
-  hint,
-  totalScore,
-}) {
-  const overlayStyle = {
-    "--scan-left": `${scanArea.x * 100}%`,
-    "--scan-top": `${scanArea.y * 100}%`,
-    "--scan-width": `${scanArea.width * 100}%`,
-    "--scan-height": `${scanArea.height * 100}%`,
+const CORNER_SIZE = 24; // px
+
+function Corner({ position }) {
+  const base = "absolute w-6 h-6 border-white";
+  const styles = {
+    "top-left": `${base} border-t-2 border-l-2 top-0 left-0 rounded-tl-md`,
+    "top-right": `${base} border-t-2 border-r-2 top-0 right-0 rounded-tr-md`,
+    "bottom-left": `${base} border-b-2 border-l-2 bottom-0 left-0 rounded-bl-md`,
+    "bottom-right": `${base} border-b-2 border-r-2 bottom-0 right-0 rounded-br-md`,
   };
+  return <div className={styles[position]} />;
+}
 
-  /**
-   * Get color for edge based on alignment score
-   * 0-0.3: red, 0.3-0.7: yellow, 0.7-1.0: green
-   */
-  const getEdgeColor = (alignment) => {
-    if (isCapturing) return "rgba(52, 211, 153, 0.95)"; // emerald
-    if (alignment >= 0.7) return "rgba(52, 211, 153, 0.85)"; // green
-    if (alignment >= 0.3) return "rgba(251, 191, 36, 0.8)"; // yellow/amber
-    return "rgba(239, 68, 68, 0.7)"; // red
-  };
+function ScannerOverlay({ scanArea, quality, documentType }) {
+  const overlayRef = useRef(null);
 
-  /**
-   * Get corner color based on state
-   */
-  const cornerColor = isCapturing
-    ? "text-emerald-500"
-    : isReady
-    ? "text-emerald-500"
-    : "text-sky-400";
+  // Update CSS variables for clip-path cutout
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || !scanArea) return;
+    el.style.setProperty("--scan-x", `${scanArea.x}px`);
+    el.style.setProperty("--scan-y", `${scanArea.y}px`);
+    el.style.setProperty("--scan-w", `${scanArea.width}px`);
+    el.style.setProperty("--scan-h", `${scanArea.height}px`);
+  }, [scanArea]);
 
-  /**
-   * Calculate polygon SVG points from normalized corners
-   */
-  const polygonPoints = useMemo(() => {
-    if (!corners || corners.length !== 4) return null;
-    // corners are in pixel coords from detection, need to normalize
-    return corners;
-  }, [corners]);
+  if (!scanArea) return null;
+
+  const { x, y, width, height } = scanArea;
+  const borderColor = quality.captureReady
+    ? "#22c55e"
+    : quality.allGood
+    ? "#facc15"
+    : "rgba(255,255,255,0.8)";
 
   return (
-    <div className="absolute inset-0 z-10 pointer-events-none" style={overlayStyle}>
-      {/* Dark overlay outside scan area */}
-      <div className="absolute inset-0">
+    <>
+      {/* Dark mask around scan area using 4 divs */}
+      <div className="absolute inset-0 pointer-events-none">
         {/* Top */}
-        <div
-          className="absolute left-0 right-0 top-0 bg-black/60"
-          style={{ height: "var(--scan-top)" }}
-        />
+        <div className="absolute top-0 left-0 right-0 bg-black/55" style={{ height: y }} />
         {/* Bottom */}
-        <div
-          className="absolute left-0 right-0 bottom-0 bg-black/60"
-          style={{ height: `calc(100% - var(--scan-top) - var(--scan-height))` }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 bg-black/55" style={{ top: y + height }} />
         {/* Left */}
-        <div
-          className="absolute left-0 bg-black/60"
-          style={{
-            top: "var(--scan-top)",
-            width: "var(--scan-left)",
-            height: "var(--scan-height)",
-          }}
-        />
+        <div className="absolute bg-black/55" style={{ top: y, left: 0, width: x, height }} />
         {/* Right */}
         <div
-          className="absolute right-0 bg-black/60"
-          style={{
-            top: "var(--scan-top)",
-            width: `calc(100% - var(--scan-left) - var(--scan-width))`,
-            height: "var(--scan-height)",
-          }}
+          className="absolute bg-black/55"
+          style={{ top: y, left: x + width, right: 0, height }}
         />
       </div>
 
-      {/* Guide rectangle frame */}
+      {/* Document frame */}
       <div
-        className="absolute"
+        className="absolute pointer-events-none transition-all duration-300"
         style={{
-          left: "var(--scan-left)",
-          top: "var(--scan-top)",
-          width: "var(--scan-width)",
-          height: "var(--scan-height)",
+          left: x,
+          top: y,
+          width,
+          height,
+          border: `2px solid ${borderColor}`,
+          borderRadius: 8,
+          boxShadow: quality.captureReady ? `0 0 0 2px ${borderColor}40` : "none",
         }}
       >
-        {/* Animated corner brackets */}
-        <div
-          className={`scanner-corner scanner-corner-tl ${cornerColor} transition-colors duration-300`}
-        />
-        <div
-          className={`scanner-corner scanner-corner-tr ${cornerColor} transition-colors duration-300`}
-        />
-        <div
-          className={`scanner-corner scanner-corner-bl ${cornerColor} transition-colors duration-300`}
-        />
-        <div
-          className={`scanner-corner scanner-corner-br ${cornerColor} transition-colors duration-300`}
-        />
+        <Corner position="top-left" />
+        <Corner position="top-right" />
+        <Corner position="bottom-left" />
+        <Corner position="bottom-right" />
 
-        {/* Edge alignment progress bars */}
-        {edgeAlignments && (
-          <>
-            {/* Top edge */}
-            <div className="absolute top-0 left-8 right-8 h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${edgeAlignments.top * 100}%`,
-                  backgroundColor: getEdgeColor(edgeAlignments.top),
-                }}
-              />
-            </div>
-            {/* Bottom edge */}
-            <div className="absolute bottom-0 left-8 right-8 h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${edgeAlignments.bottom * 100}%`,
-                  backgroundColor: getEdgeColor(edgeAlignments.bottom),
-                }}
-              />
-            </div>
-            {/* Left edge */}
-            <div className="absolute left-0 top-8 bottom-8 w-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="w-full rounded-full transition-all duration-300"
-                style={{
-                  height: `${edgeAlignments.left * 100}%`,
-                  backgroundColor: getEdgeColor(edgeAlignments.left),
-                }}
-              />
-            </div>
-            {/* Right edge */}
-            <div className="absolute right-0 top-8 bottom-8 w-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="w-full rounded-full transition-all duration-300"
-                style={{
-                  height: `${edgeAlignments.right * 100}%`,
-                  backgroundColor: getEdgeColor(edgeAlignments.right),
-                }}
-              />
-            </div>
-          </>
+        {/* Scan animation line when ready */}
+        {quality.captureReady && (
+          <div className="absolute left-0 right-0 h-0.5 bg-green-400/70 animate-scan" />
         )}
-
-        {/* Main border */}
-        <div
-          className={`absolute inset-0 border-2 rounded-lg transition-colors duration-300 ${
-            isCapturing
-              ? "border-emerald-400/70"
-              : isReady
-              ? "border-emerald-400/50"
-              : "border-white/30"
-          }`}
-        />
-
-        {/* Scan line animation when ready */}
-        {isReady && !isCapturing && (
-          <div className="absolute inset-x-0 overflow-hidden h-full rounded-lg">
-            <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-scan-line" />
-          </div>
-        )}
-
-        {/* Capture pulse animation */}
-        {isCapturing && (
-          <div className="absolute inset-0 rounded-lg border-4 border-emerald-400 animate-pulse" />
-        )}
-
-        {/* Document type label */}
-        <div className="absolute inset-x-0 -bottom-9 text-center">
-          <span className="text-white/70 text-xs font-medium bg-black/40 px-3 py-1 rounded-full">
-            Documento horizontal
-          </span>
-        </div>
       </div>
 
-      {/* Detected document polygon overlay (SVG) */}
-      {polygonPoints && polygonPoints.length === 4 && (
-        <svg
-          className="absolute inset-0 w-full h-full overflow-visible"
-          viewBox="0 0 1000 1000"
-          preserveAspectRatio="none"
-        >
-          {/* Document outline polygon — viewBox coords (0-1000) */}
-          <polygon
-            points={polygonPoints
-              .map((c) => `${c.x * 1000},${c.y * 1000}`)
-              .join(" ")}
-            fill="none"
-            stroke={isReady ? "rgba(52, 211, 153, 0.7)" : "rgba(56, 189, 248, 0.6)"}
-            strokeWidth="3"
-            strokeLinejoin="round"
-            strokeDasharray={isReady ? "0" : "12,6"}
-            className="transition-all duration-300"
-            style={{ vectorEffect: "non-scaling-stroke" }}
-          />
+      {/* Instruction text */}
+      <div
+        className="absolute left-0 right-0 flex justify-center pointer-events-none"
+        style={{ top: y + height + 16 }}
+      >
+        <p className="text-white text-sm text-center px-4 drop-shadow">{quality.hint}</p>
+      </div>
 
-          {/* Corner markers */}
-          {polygonPoints.map((c, i) => (
-            <g key={i}>
-              <circle
-                cx={c.x * 1000}
-                cy={c.y * 1000}
-                r="8"
-                fill={isReady ? "rgba(52, 211, 153, 0.9)" : "rgba(56, 189, 248, 0.8)"}
-                className="transition-all duration-300"
-                style={{ vectorEffect: "non-scaling-stroke" }}
-              />
-              <circle
-                cx={c.x * 1000}
-                cy={c.y * 1000}
-                r="4"
-                fill="white"
-                className="transition-all duration-300"
-                style={{ vectorEffect: "non-scaling-stroke" }}
-              />
-            </g>
-          ))}
-        </svg>
-      )}
-
-      {/* Hint display */}
-      {hint && (
-        <div className="absolute bottom-28 left-0 right-0 flex justify-center px-4">
-          <div className="bg-black/70 backdrop-blur-sm text-white text-sm font-medium px-5 py-2.5 rounded-full max-w-xs text-center">
-            {hint}
-          </div>
-        </div>
-      )}
-
-      {/* Score indicator badge */}
-      {typeof totalScore === "number" && totalScore > 0 && (
-        <div className="absolute top-4 right-4">
-          <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-all duration-300 ${
-              totalScore >= 0.9
-                ? "bg-emerald-500 text-white"
-                : totalScore >= 0.7
-                ? "bg-amber-500 text-white"
-                : totalScore >= 0.4
-                ? "bg-orange-500 text-white"
-                : "bg-red-500/80 text-white"
-            }`}
-          >
-            {Math.round(totalScore * 100)}
-          </div>
-        </div>
-      )}
-    </div>
+      <style>{`
+        @keyframes scan {
+          0%   { top: 0; }
+          50%  { top: calc(100% - 2px); }
+          100% { top: 0; }
+        }
+        .animate-scan { animation: scan 2s linear infinite; }
+      `}</style>
+    </>
   );
 }
 
@@ -275,31 +106,8 @@ ScannerOverlay.propTypes = {
     width: PropTypes.number,
     height: PropTypes.number,
   }).isRequired,
-  isReady: PropTypes.bool,
-  isCapturing: PropTypes.bool,
-  corners: PropTypes.arrayOf(
-    PropTypes.shape({
-      x: PropTypes.number,
-      y: PropTypes.number,
-    })
-  ),
-  edgeAlignments: PropTypes.shape({
-    top: PropTypes.number,
-    right: PropTypes.number,
-    bottom: PropTypes.number,
-    left: PropTypes.number,
-  }),
-  hint: PropTypes.string,
-  totalScore: PropTypes.number,
-};
-
-ScannerOverlay.defaultProps = {
-  isReady: false,
-  isCapturing: false,
-  corners: null,
-  edgeAlignments: null,
-  hint: "",
-  totalScore: 0,
+  quality: PropTypes.object.isRequired,
+  documentType: PropTypes.string,
 };
 
 export default ScannerOverlay;

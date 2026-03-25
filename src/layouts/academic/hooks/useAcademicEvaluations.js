@@ -19,7 +19,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
   // ─── Queries ─────────────────────────────────────────────────────────────────
 
   const subjectsQuery = useQuery(GET_ACADEMIC_SUBJECTS, {
-    variables: { grade: grade || null, isActive: true },
+    variables: { isActive: true },
     fetchPolicy: "cache-and-network",
   });
 
@@ -105,9 +105,19 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     await deleteMutation({ variables: { id } });
   }
 
+  const subjects = (subjectsQuery.data?.academicSubjects || []).filter((subject) => {
+    if (!grade) return true;
+
+    const subjectGrades = Array.isArray(subject?.grades)
+      ? subject.grades.filter(Boolean)
+      : [];
+
+    return subjectGrades.length === 0 || subjectGrades.includes(grade);
+  });
+
   return {
     // Data
-    subjects: subjectsQuery.data?.academicSubjects || [],
+    subjects,
     periods: periodsQuery.data?.academicPeriods || [],
     evaluations: evaluationsQuery.data?.myAcademicEvaluations || [],
     performance: performanceQuery.data?.myAcademicPerformance || null,

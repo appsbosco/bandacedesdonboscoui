@@ -5,8 +5,15 @@ import { DOCUMENT_TYPES } from "../../utils/constants";
 /**
  * WizardStep1 - Selección del tipo de documento (Light UI)
  */
-export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) {
-  const documentTypes = Object.values(DOCUMENT_TYPES);
+export function WizardStep1({
+  selectedType,
+  onSelectType,
+  onNext,
+  isCreating,
+  documentTypes,
+  helperMessage,
+}) {
+  const availableTypes = documentTypes?.length ? documentTypes : Object.values(DOCUMENT_TYPES);
 
   const canContinue = !!selectedType && !isCreating;
 
@@ -43,7 +50,7 @@ export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) 
         {/* Grid */}
         <div className="px-5 sm:px-6 pb-2">
           <div className="grid  gap-3">
-            {documentTypes.map((type) => {
+            {availableTypes.map((type) => {
               const isSelected = selectedType === type.id;
 
               return (
@@ -186,7 +193,7 @@ export function WizardStep1({ selectedType, onSelectType, onNext, isCreating }) 
 
           {!selectedType && (
             <p className="text-center text-xs text-slate-500 mt-3">
-              Elegí un tipo de documento para continuar
+              {helperMessage || "Elegí un tipo de documento para continuar"}
             </p>
           )}
         </div>
@@ -202,9 +209,20 @@ WizardStep1.propTypes = {
   onSelectType: PropTypes.func.isRequired,
   onNext: PropTypes.func.isRequired,
   isCreating: PropTypes.bool,
+  documentTypes: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    value: PropTypes.string,
+    label: PropTypes.string.isRequired,
+    icon: PropTypes.string,
+    description: PropTypes.string,
+    requiresMRZ: PropTypes.bool,
+  })),
+  helperMessage: PropTypes.string,
 };
 
 WizardStep1.defaultProps = {
   selectedType: null,
   isCreating: false,
+  documentTypes: undefined,
+  helperMessage: "",
 };

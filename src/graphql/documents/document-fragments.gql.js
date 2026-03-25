@@ -1,9 +1,8 @@
 import { gql } from "@apollo/client";
 
-// Document Fragments
 export const DOCUMENT_FRAGMENT = gql`
   fragment DocumentFragment on Document {
-    id: _id
+    id
     type
     source
     status
@@ -15,6 +14,7 @@ export const DOCUMENT_FRAGMENT = gql`
     }
     notes
     images {
+      id
       kind
       url
       publicId
@@ -33,10 +33,13 @@ export const DOCUMENT_FRAGMENT = gql`
       documentNumber
       passportNumber
       visaType
+      visaControlNumber
       dateOfBirth
       sex
       expirationDate
       issueDate
+      destination
+      authorizerName
       mrzRaw
       mrzValid
       mrzFormat
@@ -57,7 +60,7 @@ export const DOCUMENT_FRAGMENT = gql`
 
 export const DOCUMENT_CARD_FRAGMENT = gql`
   fragment DocumentCardFragment on Document {
-    id: _id
+    id
     type
     status
     images {
@@ -81,14 +84,5 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
     isExpired
     daysUntilExpiration
     createdAt
-  }
-`;
-
-export const PAGINATION_FRAGMENT = gql`
-  fragment PaginationFragment on PaginationInfo {
-    total
-    limit
-    skip
-    hasMore
   }
 `;
