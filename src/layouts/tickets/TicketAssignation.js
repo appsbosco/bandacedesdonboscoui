@@ -36,6 +36,18 @@ const GET_USERS = gql`
   }
 `;
 
+const GET_EXALUMNOS = gql`
+  query GetExAlumnos {
+    getExAlumnos {
+      id
+      fullName
+      email
+      instrument
+      yearGraduated
+    }
+  }
+`;
+
 const USER_STATE_OPTIONS = ["Estudiante Activo", "Exalumno"];
 const DEFAULT_BULK_QUANTITY = 2;
 const STATE_PILL_STYLES = {
@@ -62,6 +74,10 @@ function fileToBase64(file) {
 
 function getUserFullName(user) {
   return [user?.name, user?.firstSurName, user?.secondSurName].filter(Boolean).join(" ");
+}
+
+function normalizeCandidateState(state) {
+  return String(state || "").trim() === "Exalumno" ? "Exalumno" : state || "";
 }
 
 function StatePill({ state }) {
@@ -111,6 +127,14 @@ export default function TicketAssignation() {
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
     notifyOnNetworkStatusChange: true,
+  });
+  const {
+    data: exalumnosData,
+    loading: exalumnosLoading,
+    error: exalumnosError,
+  } = useQuery(GET_EXALUMNOS, {
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
   const refetchOpts = eventId ? [{ query: GET_TICKETS, variables: { eventId } }] : [];
@@ -178,18 +202,87 @@ export default function TicketAssignation() {
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
   const selectedEvent = eventsData?.getEventsT?.find((e) => e.id === eventId);
   const queriedUsers = usersData?.getUsers || [];
+  const queriedExalumnos = exalumnosData?.getExAlumnos || [];
   const bulkSelectedUsers = Object.values(selectedBulkUsers);
   const bulkSelectedCount = bulkSelectedUsers.length;
   const bulkTotalQuantity = bulkSelectedUsers.reduce((sum, user) => sum + (user.quantity || 1), 0);
-
-  const roles = useMemo(
-    () => [...new Set(queriedUsers.map((u) => u.role).filter(Boolean))],
-    [queriedUsers]
-  );
+  const searchNeedle = userSearch.trim().toLowerCase();
 
   const filteredUsers = useMemo(() => {
     return queriedUsers.filter((u) => !roleFilter || u.role === roleFilter);
   }, [queriedUsers, roleFilter]);
+
+  const registeredRoles = useMemo(
+    () => [...new Set(queriedUsers.map((u) => u.role).filter(Boolean))],
+    [queriedUsers]
+  );
+
+  const bulkCandidates = useMemo(() => {
+    const normalizedUsers = queriedUsers.map((user) => ({
+      ...user,
+      kind: normalizeCandidateState(user.state) === "Exalumno" ? "exalumno" : "user",
+      state: normalizeCandidateState(user.state),
+      displayRole: user.role || "Usuario registrado",
+      searchBlob: [
+        user.name,
+        user.firstSurName,
+        user.secondSurName,
+        user.email,
+        user.role,
+        user.instrument,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+    }));
+
+    const normalizedExalumnos = queriedExalumnos.map((exalumno) => ({
+      id: `exalumno:${exalumno.id}`,
+      externalId: exalumno.id,
+      kind: "exalumno",
+      name: exalumno.fullName,
+      firstSurName: "",
+      secondSurName: "",
+      email: exalumno.email,
+      role: "Exalumno",
+      displayRole: exalumno.yearGraduated ? `Exalumno ${exalumno.yearGraduated}` : "Exalumno",
+      instrument: exalumno.instrument,
+      state: "Exalumno",
+      searchBlob: [exalumno.fullName, exalumno.email, exalumno.instrument, exalumno.yearGraduated]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+    }));
+
+    const merged = [...normalizedUsers];
+    const seenEmails = new Set(
+      normalizedUsers
+        .map((candidate) => String(candidate.email || "").trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    normalizedExalumnos.forEach((candidate) => {
+      const email = String(candidate.email || "").trim().toLowerCase();
+      if (email && seenEmails.has(email)) return;
+      merged.push(candidate);
+    });
+
+    return merged;
+  }, [queriedExalumnos, queriedUsers]);
+
+  const bulkRoles = useMemo(
+    () => [...new Set(bulkCandidates.map((u) => u.displayRole).filter(Boolean))],
+    [bulkCandidates]
+  );
+
+  const filteredBulkCandidates = useMemo(() => {
+    return bulkCandidates.filter((candidate) => {
+      if (stateFilter && normalizeCandidateState(candidate.state) !== stateFilter) return false;
+      if (roleFilter && candidate.displayRole !== roleFilter) return false;
+      if (searchNeedle && !candidate.searchBlob.includes(searchNeedle)) return false;
+      return true;
+    });
+  }, [bulkCandidates, roleFilter, searchNeedle, stateFilter]);
 
   const toggleBulkUser = (user) => {
     setSelectedBulkUsers((prev) => {
@@ -224,7 +317,7 @@ export default function TicketAssignation() {
   const handleSelectAllFiltered = () => {
     setSelectedBulkUsers((prev) => {
       const next = { ...prev };
-      filteredUsers.forEach((user) => {
+      filteredBulkCandidates.forEach((user) => {
         next[user.id] = next[user.id] || { ...user, quantity: DEFAULT_BULK_QUANTITY };
       });
       return next;
@@ -290,8 +383,11 @@ export default function TicketAssignation() {
               eventId,
               type: ticketType,
               recipients: bulkSelectedUsers.map((user) => ({
-                userId: user.id,
+                userId: user.kind === "user" ? user.id : undefined,
+                name: user.kind === "exalumno" ? getUserFullName(user) : undefined,
+                email: user.kind === "exalumno" ? user.email : undefined,
                 quantity: user.quantity || 1,
+                skipEmail: user.kind === "exalumno" || normalizeCandidateState(user.state) === "Exalumno",
               })),
             },
           },
@@ -472,7 +568,7 @@ export default function TicketAssignation() {
                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                   >
                     <option value="">Todos los roles</option>
-                    {roles.map((r) => (
+                    {registeredRoles.map((r) => (
                       <option key={r} value={r}>
                         {r}
                       </option>
@@ -575,7 +671,7 @@ export default function TicketAssignation() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleSelectAllFiltered}
-                      disabled={!filteredUsers.length || usersLoading}
+                      disabled={!filteredBulkCandidates.length || usersLoading || exalumnosLoading}
                       className="text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Seleccionar filtrados
@@ -617,7 +713,7 @@ export default function TicketAssignation() {
                         className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                       >
                         <option value="">Todos los roles</option>
-                        {roles.map((r) => (
+                        {bulkRoles.map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>
@@ -626,20 +722,20 @@ export default function TicketAssignation() {
                     </div>
 
                     <div className="max-h-96 overflow-y-auto flex flex-col divide-y divide-gray-100">
-                      {usersError ? (
+                      {usersError || exalumnosError ? (
                         <p className="text-center py-8 text-sm text-red-500 px-4">
-                          {usersError.message || "No se pudo cargar la lista de usuarios"}
+                          {usersError?.message || exalumnosError?.message || "No se pudo cargar la lista"}
                         </p>
-                      ) : usersLoading ? (
+                      ) : usersLoading || exalumnosLoading ? (
                         <p className="text-center py-8 text-sm text-gray-400 px-4">
                           Cargando usuarios…
                         </p>
-                      ) : filteredUsers.length === 0 ? (
+                      ) : filteredBulkCandidates.length === 0 ? (
                         <p className="text-center py-8 text-sm text-gray-400 px-4">
                           Sin resultados para este filtro
                         </p>
                       ) : (
-                        filteredUsers.map((u) => {
+                        filteredBulkCandidates.map((u) => {
                           const isChecked = Boolean(selectedBulkUsers[u.id]);
                           return (
                             <label
@@ -663,7 +759,7 @@ export default function TicketAssignation() {
                                 </div>
                                 <p className="text-xs text-gray-500 truncate mt-1">{u.email}</p>
                                 <p className="text-xs text-gray-400 truncate mt-1">
-                                  {u.role}
+                                  {u.displayRole || u.role}
                                   {u.instrument ? ` · ${u.instrument}` : ""}
                                 </p>
                               </div>
