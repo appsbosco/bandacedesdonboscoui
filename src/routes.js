@@ -79,6 +79,7 @@ import FormationBuilderPage from "layouts/formations/FormationBuilderPage";
 import FormationDetailPage from "layouts/formations/FormationDetailPage";
 import StudentAcademicPage from "layouts/academic/student/StudentAcademicPage";
 import AdminAcademicPage from "layouts/academic/admin/AdminAcademicPage";
+import ParentAcademicPage from "layouts/academic/parent/ParentAcademicPage";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ICON_SX_12 = { fontSize: 12 };
@@ -520,6 +521,15 @@ const items = {
       icon: muiIcon12(SchoolIcon),
       component: <AdminAcademicPage />,
     }),
+
+  academicParent: () =>
+    collapse({
+      name: "Rendimiento académico",
+      key: "academic-parent",
+      route: "/academic/parent",
+      icon: muiIcon12(SchoolIcon),
+      component: <ParentAcademicPage />,
+    }),
 };
 
 // ─── Menus reutilizables ──────────────────────────────────────────────────────
@@ -757,6 +767,9 @@ export const parentsRoutes = [
 
   title("Asistencia", "attendance-pages"),
   items.parentDashboard(),
+
+  title("Académico", "academico-parent"),
+  items.academicParent(),
 
   title("Giras", "giras-parent"),
   items.tours(),

@@ -397,6 +397,15 @@ export const REVIEW_ACADEMIC_EVALUATION = gql`
   }
 `;
 
+export const GET_PARENT_CHILD_EVALUATIONS = gql`
+  ${EVALUATION_FRAGMENT}
+  query GetParentChildEvaluations($childId: ID!, $filter: AcademicDashboardFilter) {
+    parentChildEvaluations(childId: $childId, filter: $filter) {
+      ...EvaluationFields
+    }
+  }
+`;
+
 export const ACKNOWLEDGE_CHILD_ACADEMIC_PERFORMANCE = gql`
   mutation AcknowledgeChildAcademicPerformance($childId: ID!, $periodId: ID, $comment: String) {
     acknowledgeChildAcademicPerformance(childId: $childId, periodId: $periodId, comment: $comment) {

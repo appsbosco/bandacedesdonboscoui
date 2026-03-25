@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
+import { GET_USERS } from "graphql/queries";
 import {
   GET_ACADEMIC_SUBJECTS,
   GET_ACADEMIC_PERIODS,
@@ -7,6 +8,7 @@ import {
   GET_ADMIN_RISK_RANKING,
   GET_ADMIN_PENDING_EVALUATIONS,
   GET_STUDENT_ACADEMIC_EVALUATIONS,
+  GET_STUDENT_ACADEMIC_PERFORMANCE,
   CREATE_ACADEMIC_SUBJECT,
   UPDATE_ACADEMIC_SUBJECT,
   CREATE_ACADEMIC_PERIOD,
@@ -15,7 +17,7 @@ import {
 } from "../academic.gql";
 
 export function useAcademicDashboard() {
-  const [filter, setFilter] = useState({ periodId: null, year: null, grade: null });
+  const [filter, setFilter] = useState({ periodId: null, year: null, grade: null, instrument: null });
   const [reviewModal, setReviewModal] = useState({ open: false, evaluation: null });
   const [studentDrawer, setStudentDrawer] = useState({ open: false, studentId: null, studentName: null });
   const [subjectModal, setSubjectModal] = useState({ open: false, mode: "create", subject: null });
@@ -23,6 +25,10 @@ export function useAcademicDashboard() {
   const [toast, setToast] = useState(null);
 
   // ─── Queries ─────────────────────────────────────────────────────────────────
+
+  const usersQuery = useQuery(GET_USERS, {
+    fetchPolicy: "cache-and-network",
+  });
 
   const subjectsQuery = useQuery(GET_ACADEMIC_SUBJECTS, {
     fetchPolicy: "cache-and-network",
@@ -38,7 +44,7 @@ export function useAcademicDashboard() {
   });
 
   const riskRankingQuery = useQuery(GET_ADMIN_RISK_RANKING, {
-    variables: { filter: buildApiFilter(filter), limit: 20 },
+    variables: { filter: buildApiFilter(filter), limit: 50 },
     fetchPolicy: "cache-and-network",
   });
 
@@ -52,6 +58,15 @@ export function useAcademicDashboard() {
     variables: {
       studentId: studentDrawer.studentId || "",
       filter: buildApiFilter(filter),
+    },
+    skip: !studentDrawer.open || !studentDrawer.studentId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  // Student performance — solo cuando el drawer está abierto
+  const studentPerfQuery = useQuery(GET_STUDENT_ACADEMIC_PERFORMANCE, {
+    variables: {
+      studentId: studentDrawer.studentId || "",
     },
     skip: !studentDrawer.open || !studentDrawer.studentId,
     fetchPolicy: "cache-and-network",
@@ -102,7 +117,10 @@ export function useAcademicDashboard() {
       dashboardQuery.refetch();
       riskRankingQuery.refetch();
       pendingEvalsQuery.refetch();
-      if (studentDrawer.studentId) studentEvalsQuery.refetch();
+      if (studentDrawer.studentId) {
+        studentEvalsQuery.refetch();
+        studentPerfQuery.refetch();
+      }
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -164,18 +182,22 @@ export function useAcademicDashboard() {
 
   return {
     // Data
+    allUsers: usersQuery.data?.getUsers || [],
     subjects: subjectsQuery.data?.academicSubjects || [],
     periods: periodsQuery.data?.academicPeriods || [],
     dashboard: dashboardQuery.data?.adminAcademicDashboard || null,
     riskRanking: riskRankingQuery.data?.adminAcademicRiskRanking || [],
     pendingEvaluations: pendingEvalsQuery.data?.adminPendingEvaluations || [],
     studentEvaluations: studentEvalsQuery.data?.studentAcademicEvaluations || [],
+    studentPerformance: studentPerfQuery.data?.studentAcademicPerformance || null,
 
     // Loading
+    loadingUsers: usersQuery.loading,
     loadingDashboard: dashboardQuery.loading,
     loadingRiskRanking: riskRankingQuery.loading,
     loadingPendingEvals: pendingEvalsQuery.loading,
     loadingStudentEvals: studentEvalsQuery.loading,
+    loadingStudentPerf: studentPerfQuery.loading,
     reviewing,
     creatingSubject,
     updatingSubject,
@@ -227,5 +249,6 @@ function buildApiFilter(filter) {
   if (filter.periodId) f.periodId = filter.periodId;
   if (filter.year) f.year = filter.year;
   if (filter.grade) f.grade = filter.grade;
+  if (filter.instrument) f.instrument = filter.instrument;
   return Object.keys(f).length > 0 ? f : undefined;
 }
