@@ -3,6 +3,7 @@ import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { useQuery } from "@apollo/client";
+import { useTranslation } from "react-i18next";
 
 import theme from "assets/theme";
 import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
@@ -38,6 +39,7 @@ import {
   LANDING_LANG_RE,
   PROTECTED_PREFIXES,
 } from "utils/routeHelpers";
+import { normalizePublicLang } from "utils/publicRoutes";
 
 import LanguageRedirect from "./LanguageRedirect";
 import PageLoader from "components/ui/PageLoader";
@@ -55,14 +57,17 @@ const VeladaTickets = lazy(() => import("layouts/tickets/BuyTickets"));
 const ColorGuardCamp = lazy(() => import("layouts/ColorGuardCamp/ColorGuardCamp"));
 const Jacks = lazy(() => import("layouts/sponsors/Jacks"));
 const INS = lazy(() => import("layouts/sponsors/INS"));
-import PerformanceAttendance from "layouts/PerformanceAttendance/PerformanceAttendance";
 const DocumentDetail = lazy(() =>
   import("components/documents/DocumentDetail").then((m) => ({ default: m.DocumentDetail }))
 );
 const SignUp = lazy(() => import("layouts/authentication/sign-up"));
 const SignIn = lazy(() => import("layouts/authentication/sign-in"));
+const PerformanceAttendance = lazy(() =>
+  import("layouts/PerformanceAttendance/PerformanceAttendance")
+);
 
 export default function App() {
+  const { i18n } = useTranslation();
   const [controller, dispatch] = useSoftUIController();
   const { miniSidenav, direction, layout, openConfigurator, sidenavColor } = controller;
 
@@ -99,6 +104,16 @@ export default function App() {
     document.documentElement.scrollTop = 0;
     if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
   }, [pathname]);
+
+  useEffect(() => {
+    const langMatch = pathname.match(/^\/(es|en)(?:\/|$)/);
+    if (!langMatch) return;
+
+    const routeLang = normalizePublicLang(langMatch[1]);
+    if (routeLang !== i18n.language) {
+      i18n.changeLanguage(routeLang);
+    }
+  }, [pathname, i18n]);
 
   useEffect(() => {
     const isLandingPath = pathname === "/" || LANDING_LANG_RE.test(pathname);
@@ -183,10 +198,13 @@ export default function App() {
           <Route path="/" element={<LanguageRedirect />} />
           <Route path="/:lang" element={<Landing />} />
           <Route path="/:lang/nosotros" element={<About />} />
+          <Route path="/:lang/about" element={<About />} />
           <Route path="/:lang/blog" element={<BlogListing />} />
           <Route path="/:lang/blog/:slug" element={<ArticlePage />} />
           <Route path="/:lang/contacto" element={<Contact />} />
+          <Route path="/:lang/contact" element={<Contact />} />
           <Route path="/:lang/calendario" element={<CalendarListing />} />
+          <Route path="/:lang/calendar" element={<CalendarListing />} />
 
           {renderedRouteElements}
 

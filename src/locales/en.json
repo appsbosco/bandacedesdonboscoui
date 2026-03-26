@@ -49,6 +49,38 @@
     "copyright": "Copyright © 2025 Banda CEDES Don Bosco. All rights reserved",
     "developed_by": "Developed by Josué Chinchilla Salazar"
   },
+  "blog": {
+    "home": {
+      "title_prefix": "Recent",
+      "title_suffix": "performances by our band",
+      "floating_label": "Latest performances"
+    },
+    "listing": {
+      "hero_title_prefix": "Welcome to",
+      "hero_title_suffix": "our blog",
+      "hero_description": "Here you can learn more about our band and discover more about our performances, rehearsals, special events, and much more.",
+      "newsletter_label": "Subscribe",
+      "newsletter_placeholder": "Enter your email",
+      "newsletter_submit": "Send",
+      "latest_articles": "Latest articles",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "article": {
+      "not_found": "Article not found",
+      "share": "Share article",
+      "copy_link": "Copy link",
+      "copy_success": "Link copied to clipboard",
+      "copy_error": "Could not copy it. Please copy this link manually:",
+      "instagram_mobile": "Link copied. Open Instagram and paste it into your story or post.",
+      "instagram_desktop": "Link copied. Open Instagram on your phone and paste it into your story or post.",
+      "share_facebook": "Share on Facebook",
+      "share_instagram": "Share on Instagram",
+      "share_whatsapp": "Share on WhatsApp",
+      "share_twitter": "Share on X",
+      "share_generic": "Share"
+    }
+  },
   "about": {
     "history_title_1": "History",
     "history_title_2": "of the CEDES Don Bosco Band",
@@ -72,7 +104,7 @@
   },
   "calendar": {
     "hero": {
-      "title": "Welcome to ",
+      "title": "Welcome to",
       "title_suffix": "our schedule",
       "description": "Here you can find out about the band's upcoming performances"
     },

@@ -1,15 +1,18 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import articles from "./ArticlesData";
+import { useTranslation } from "react-i18next";
 import Header from "components/Header";
 import Footer from "components/Footer";
+import { getBlogArticleBySlug } from "./blogArticles";
 
 const ArticlePage = () => {
-  const { slug } = useParams();
-  const article = articles.find((article) => article.slug === slug);
+  const { slug, lang } = useParams();
+  const { t } = useTranslation();
+  const locale = lang === "en" ? "en" : "es";
+  const article = getBlogArticleBySlug(locale, slug);
 
   if (!article) {
-    return <div>Article not found</div>;
+    return <div>{t("blog.article.not_found")}</div>;
   }
 
   // Copiar link al portapapeles
@@ -21,7 +24,7 @@ const ArticlePage = () => {
       navigator.clipboard
         .writeText(currentURL)
         .then(() => {
-          alert("¡Link copiado al portapapeles!");
+          alert(t("blog.article.copy_success"));
         })
         .catch((err) => {
           console.error("Error al copiar:", err);
@@ -44,10 +47,10 @@ const ArticlePage = () => {
 
     try {
       document.execCommand("copy");
-      alert("¡Link copiado al portapapeles!");
+      alert(t("blog.article.copy_success"));
     } catch (error) {
       console.error("No se pudo copiar el link:", error);
-      alert("No se pudo copiar. Por favor copia manualmente: " + text);
+      alert(`${t("blog.article.copy_error")} ${text}`);
     } finally {
       document.body.removeChild(textarea);
     }
@@ -67,13 +70,13 @@ const ArticlePage = () => {
     copyLink();
 
     if (isMobile) {
-      alert("Link copiado. Abre Instagram y pégalo en tu historia o publicación.");
+      alert(t("blog.article.instagram_mobile"));
       // Intentar abrir Instagram app
       setTimeout(() => {
         window.location.href = "instagram://";
       }, 100);
     } else {
-      alert("Link copiado. Abre Instagram en tu móvil y pégalo en tu historia o publicación.");
+      alert(t("blog.article.instagram_desktop"));
     }
   };
 
@@ -301,7 +304,7 @@ const ArticlePage = () => {
             <hr className="w-full h-px pb-6 mt-14 text-slate-300/75 sm:pb-4" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <p className="pl-0.5 text-lg font-semibold tracking-wide text-slate-900 sm:pl-0">
-                Compartir artículo
+                {t("blog.article.share")}
               </p>
 
               <div className="mt-2.5 flex gap-3 sm:mt-0 sm:gap-4">
@@ -309,7 +312,7 @@ const ArticlePage = () => {
                 <button
                   onClick={copyLink}
                   className="flex items-center justify-center h-10 gap-3 px-6 text-sm font-medium duration-200 ease-in-out border rounded-full group border-slate-200 text-slate-600 hover:bg-slate-50"
-                  title="Copiar link"
+                  title={t("blog.article.copy_link")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -335,15 +338,15 @@ const ArticlePage = () => {
                       <line x1="5.5" y1="12.5" x2="9.5" y2="12.5"></line>
                     </g>
                   </svg>
-                  Copiar link
+                  {t("blog.article.copy_link")}
                 </button>
 
                 {/* Botón Facebook */}
                 <button
                   onClick={shareOnFacebook}
                   className="flex items-center justify-center w-full h-10 duration-200 border rounded-full border-slate-200 hover:bg-slate-50 group"
-                  aria-label="Compartir en Facebook"
-                  title="Compartir en Facebook"
+                  aria-label={t("blog.article.share_facebook")}
+                  title={t("blog.article.share_facebook")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -361,8 +364,8 @@ const ArticlePage = () => {
                 <button
                   onClick={shareOnInstagram}
                   className="flex items-center justify-center w-full h-10 duration-200 border rounded-full border-slate-200 hover:bg-slate-50 group"
-                  aria-label="Compartir en Instagram"
-                  title="Compartir en Instagram"
+                  aria-label={t("blog.article.share_instagram")}
+                  title={t("blog.article.share_instagram")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -382,8 +385,8 @@ const ArticlePage = () => {
                 <button
                   onClick={shareOnWhatsApp}
                   className="flex items-center justify-center w-full h-10 duration-200 border rounded-full border-slate-200 hover:bg-slate-50 group"
-                  aria-label="Compartir en WhatsApp"
-                  title="Compartir en WhatsApp"
+                  aria-label={t("blog.article.share_whatsapp")}
+                  title={t("blog.article.share_whatsapp")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -401,8 +404,8 @@ const ArticlePage = () => {
                 <button
                   onClick={shareOnTwitter}
                   className="flex items-center justify-center  h-10 duration-200 border rounded-full border-slate-200 hover:bg-slate-50 group w-full"
-                  aria-label="Compartir en Twitter"
-                  title="Compartir en Twitter"
+                  aria-label={t("blog.article.share_twitter")}
+                  title={t("blog.article.share_twitter")}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -421,8 +424,8 @@ const ArticlePage = () => {
                   <button
                     onClick={shareGeneric}
                     className="flex items-center justify-center w-full h-10 duration-200 border rounded-full border-slate-200 hover:bg-slate-50 group"
-                    aria-label="Compartir"
-                    title="Compartir"
+                    aria-label={t("blog.article.share_generic")}
+                    title={t("blog.article.share_generic")}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"

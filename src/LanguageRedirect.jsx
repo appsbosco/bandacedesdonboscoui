@@ -1,17 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import i18n from "i18next";
+import { normalizePublicLang } from "utils/publicRoutes";
 
 const LanguageRedirect = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const supportedLangs = ["es", "en"];
-    const langFromI18n = i18n.language?.substring(0, 2) || "es";
-
-    const detectedLang = supportedLangs.includes(langFromI18n) ? langFromI18n : "es";
-
-    console.log("Idioma final detectado:", detectedLang);
+    const detectedLang = normalizePublicLang(i18n.language?.substring(0, 2));
     navigate(`/${detectedLang}`, { replace: true });
   }, [navigate]);
 

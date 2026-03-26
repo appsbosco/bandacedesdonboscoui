@@ -6,10 +6,12 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import { SEND_EMAIL } from "graphql/mutations";
 import { useMutation } from "@apollo/client";
 import { useTranslation } from "react-i18next";
+import { normalizePublicLang } from "utils/publicRoutes";
 
 const Contact = () => {
   const [sendEmail] = useMutation(SEND_EMAIL);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = normalizePublicLang(i18n.language?.slice(0, 2));
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -18,7 +20,8 @@ const Contact = () => {
     const emailData = {
       from: form.email.value,
       to: "banda@cedesdonbosco.ed.cr",
-      subject: "Contacto Banda CEDES Don Bosco",
+      subject:
+        lang === "en" ? "Banda CEDES Don Bosco Contact" : "Contacto Banda CEDES Don Bosco",
       html: `
 
       <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -52,14 +55,14 @@ const Contact = () => {
                     <tr>
                       <td>
                         <p style="font-size:16px;line-height:26px;margin:16px 0"><a target="_blank" style="color:#FF6363;text-decoration:none" href="">Correo: ${form.email.value} </a></p>
-                        <p style="font-size:16px;line-height:26px;margin:16px 0">Contacto: ${form.phone.value} </p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Phone" : "Contacto"}: ${form.phone.value} </p>
 
-                        <p style="font-size:16px;line-height:26px;margin:16px 0">Mensaje: ${form.message.value} </p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Message" : "Mensaje"}: ${form.message.value} </p>
                       </td>
                     </tr>
                   </tbody>
                 </table>
-                <p style="font-size:16px;line-height:26px;margin:16px 0">Best,<br />- Banda CEDES Don Bosco</p>
+                <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Best regards" : "Saludos"}<br />- Banda CEDES Don Bosco</p>
                 <p
                 style="
                   font-size: 14px;
@@ -87,13 +90,13 @@ const Contact = () => {
       variables: {
         input: {
           to: "chinchillajosue50@gmail.com",
-          subject: "Nuevo mensaje de contacto",
-          html: emailData,
+          subject: lang === "en" ? "New contact message" : "Nuevo mensaje de contacto",
+          html: emailData.html,
         },
       },
     })
       .then(({ data }) => {
-        if (data.sendEmail.success) {
+        if (data?.sendEmail) {
           console.log("Email sent successfully");
         } else {
           console.log("Failed to send email");
@@ -186,10 +189,10 @@ const Contact = () => {
                       <p className="mt-1.5 text-base text-slate-600 sm:mt-2">
                         {t("contact.email.description")}
                         <a
-                          href="mailto:hey@janedoe.com"
+                          href={`mailto:${t("contact.email.cta")}`}
                           className="inline-block mt-5 duration-200 ease-in-out text-sky-700 hover:text-sky-600 sm:mt-6"
                         >
-                          banda@cedesdonbosco.ed.cr
+                          {t("contact.email.cta")}
                         </a>
                       </p>
                     </div>
@@ -218,10 +221,10 @@ const Contact = () => {
                       <p className="mt-2 text-base text-slate-600">
                         {t("contact.phone.description")}
                         <a
-                          href="tel:+13234567891"
+                          href={`tel:${t("contact.phone.cta")}`}
                           className="inline-block mt-6 duration-200 ease-in-out text-sky-700 hover:text-sky-600"
                         >
-                          +506 8380-7124
+                          {t("contact.phone.cta")}
                         </a>
                       </p>
                     </div>
@@ -252,7 +255,7 @@ const Contact = () => {
                           name="name"
                           id="name"
                           autoComplete="name"
-                          placeholder={t("contact.form.fields.name")}
+                          placeholder={t("contact.form.fields.namePlaceholder")}
                           className="block w-full px-4 py-4 leading-4 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         />
                       </div>
@@ -292,7 +295,7 @@ const Contact = () => {
                           id="phone"
                           autoComplete="tel"
                           aria-describedby="phone-description"
-                          placeholder="+506 8888-8888"
+                          placeholder={t("contact.form.fields.phonePlaceholder")}
                           className="block w-full px-4 py-4 leading-4 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         />
                       </div>
@@ -312,7 +315,7 @@ const Contact = () => {
                           name="message"
                           rows="5"
                           aria-describedby="message-description"
-                          placeholder={t("contact.form.fields.messageLimit")}
+                          placeholder={t("contact.form.fields.messagePlaceholder")}
                           className="block w-full px-4 py-4 leading-6 transition-colors duration-200 ease-in-out border-0 shadow-sm rounded-xl bg-slate-50 text-md text-slate-900 shadow-sky-100/50 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 hover:bg-white focus:border-0 focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60"
                         ></textarea>
                       </div>

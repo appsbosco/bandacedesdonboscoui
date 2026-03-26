@@ -2,10 +2,11 @@ import React from "react";
 import newsletter from "../assets/images/newsletter-bg.svg";
 import logocedes from "../assets/images/logocedeswhite.webp";
 import { useTranslation } from "react-i18next";
+import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
 
 const Footer = () => {
   const { t, i18n } = useTranslation();
-  const lang = i18n.language;
+  const lang = normalizePublicLang(i18n.language?.slice(0, 2));
 
   return (
     <>
@@ -39,7 +40,7 @@ const Footer = () => {
                     type="text"
                     className="h-14 w-full rounded-full border-0 bg-white/10 py-3.5 pl-5 pr-32 text-sm leading-5 text-sky-50 placeholder-sky-100/90 outline-none ring-1 ring-white/25 backdrop-blur duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white/30 sm:pl-6"
                     required
-                    placeholder="Ingresa tu mensaje "
+                    placeholder={t("footer.input_placeholder")}
                     autoComplete="text"
                   />
                   <button
@@ -91,7 +92,7 @@ const Footer = () => {
                 </h3>
                 <div className="hidden lg:block">
                   <a
-                    href={`/${lang}/contacto`}
+                    href={getPublicPath(lang, "contact")}
                     className="mt-12 bg-white hover:bg-sky-50 text-slate-700 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
                   >
                     {t("footer.cta_button")}
@@ -116,7 +117,7 @@ const Footer = () => {
                 </p>
 
                 <a
-                  href="#"
+                  href={getPublicPath(lang, "contact")}
                   className="mt-10 inline-flex items-center justify-center gap-x-2.5 rounded-full bg-white py-3 px-7 text-md font-semibold leading-none text-slate-700 duration-200 ease-in-out hover:bg-sky-50 lg:hidden"
                 >
                   {t("footer.cta_button")}
@@ -150,7 +151,7 @@ const Footer = () => {
                       {" "}
                       <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z" />{" "}
                     </svg>
-                    Facebook
+                    {t("footer.social_facebook")}
                   </a>
 
                   <a
@@ -171,7 +172,7 @@ const Footer = () => {
                         <circle cx="17.872" cy="6.128" r="1.32"></circle>
                       </g>
                     </svg>
-                    Instagram
+                    {t("footer.social_instagram")}
                   </a>
 
                   <a
@@ -193,7 +194,7 @@ const Footer = () => {
                         fill="white"
                       ></path>{" "}
                     </svg>
-                    WhatsApp
+                    {t("footer.social_whatsapp")}
                   </a>
                 </div>
               </div>

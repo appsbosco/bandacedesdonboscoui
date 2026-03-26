@@ -1,15 +1,20 @@
 import React, { useMemo } from "react";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import { useTranslation } from "react-i18next";
 
-import articles from "../layouts/blog/ArticlesData";
+import { getBlogArticleHref, getBlogArticles } from "../layouts/blog/blogArticles";
 
 const Blog = () => {
+  const { i18n, t } = useTranslation();
+  const lang = i18n.language?.slice(0, 2) === "en" ? "en" : "es";
+
   const latestArticles = useMemo(() => {
+    const articles = getBlogArticles(lang);
     // Por si en algún momento ArticlesData deja de venir ordenado:
     const sorted = [...articles].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
     return sorted.slice(0, 3); // últimos 3
-  }, []);
+  }, [lang]);
 
   return (
     <section className="py-16 overflow-hidden bg-white sm:pt-24 lg:pt-28">
@@ -26,16 +31,16 @@ const Blog = () => {
             >
               <path d="M247.564 18.5808C241.772 13.3568 232.473 12.7526 225.225 11.4427C217.124 9.97398 208.996 8.57034 200.846 7.46096C186.542 5.51305 172.169 4.08857 157.79 3.01565C126.033 0.645858 94.0929 0.0338786 62.3387 2.36982C42.1785 3.85419 22.008 5.90888 2.32917 10.8464C-0.0155171 11.4349 0.207047 14.6719 2.6889 14.7084C22.0261 14.9896 41.3866 12.6406 60.7109 11.8568C79.9471 11.0808 99.2274 10.6719 118.484 10.9558C142.604 11.3125 166.719 12.8334 190.722 15.5156C199.956 16.5469 209.195 17.6016 218.411 18.8255C227.864 20.0808 237.259 22 246.767 20.7422C247.709 20.6198 248.426 19.3568 247.564 18.5808Z" />
             </svg>
-            <span className="relative text-sky-700">Presentaciones </span>
+            <span className="relative text-sky-700">{t("blog.home.title_prefix")} </span>
           </span>
-          <br /> recientes de nuestra banda
+          <br /> {t("blog.home.title_suffix")}
         </h2>
 
         <div className="relative grid max-w-lg gap-8 mx-auto mt-14 sm:mt-16 md:mx-0 md:max-w-none md:grid-cols-2 lg:grid-cols-3 lg:gap-y-6 lg:gap-x-5 xl:gap-x-6 xl:gap-y-8">
           {/* Texto flotante */}
           <div className="absolute hidden gap-6 -top-20 lg:-left-4 xl:flex 2xl:-left-24">
             <span className="inline-block text-2xl tracking-wide transform -rotate-12 font-writing text-slate-600">
-              Últimas presentaciones
+              {t("blog.home.floating_label")}
             </span>
             <svg
               viewBox="0 0 85 29"
@@ -53,7 +58,7 @@ const Blog = () => {
           </div>
 
           {latestArticles.map((article) => {
-            const href = article.slug ? `/blog/${article.slug}` : `/blog/${article.id}`;
+            const href = getBlogArticleHref(lang, article);
             const coverImage = article.images?.[0] ?? "";
             const typeLabel = article.type ?? "Banda de marcha";
             const dateLabel = article.date ?? "";

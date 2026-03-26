@@ -49,6 +49,38 @@
     "copyright": "Copyright © 2025 Banda CEDES Don Bosco. Todos los derechos reservados",
     "developed_by": "Desarrollado por Josué Chinchilla Salazar"
   },
+  "blog": {
+    "home": {
+      "title_prefix": "Presentaciones",
+      "title_suffix": "recientes de nuestra banda",
+      "floating_label": "Últimas presentaciones"
+    },
+    "listing": {
+      "hero_title_prefix": "Bienvenidos a",
+      "hero_title_suffix": "nuestro blog",
+      "hero_description": "Aquí podrás enterarte sobre el mundo de nuestra banda y descubrir más acerca de nuestras presentaciones, ensayos, eventos especiales y mucho más.",
+      "newsletter_label": "Suscribirse",
+      "newsletter_placeholder": "Ingresa tu email",
+      "newsletter_submit": "Enviar",
+      "latest_articles": "Últimos artículos",
+      "previous": "Atrás",
+      "next": "Siguiente"
+    },
+    "article": {
+      "not_found": "Artículo no encontrado",
+      "share": "Compartir artículo",
+      "copy_link": "Copiar link",
+      "copy_success": "Link copiado al portapapeles",
+      "copy_error": "No se pudo copiar. Por favor copia manualmente este enlace:",
+      "instagram_mobile": "Link copiado. Abre Instagram y pégalo en tu historia o publicación.",
+      "instagram_desktop": "Link copiado. Abre Instagram en tu móvil y pégalo en tu historia o publicación.",
+      "share_facebook": "Compartir en Facebook",
+      "share_instagram": "Compartir en Instagram",
+      "share_whatsapp": "Compartir en WhatsApp",
+      "share_twitter": "Compartir en X",
+      "share_generic": "Compartir"
+    }
+  },
   "about": {
     "history_title_1": "Historia",
     "history_title_2": "de la Banda CEDES Don Bosco",
@@ -77,38 +109,38 @@
     "upcoming": {
       "title": "Próximas presentaciones",
       "empty": "No hay presentaciones próximas"
+    }
+  },
+  "contact": {
+    "title": "¿Cómo podemos ayudarte? Hablemos",
+    "description": "Puedes",
+    "title_sufix_1": "contactarnos",
+    "title_sufix_2": "por estos canales",
+    "email": {
+      "title": "Email",
+      "description": "Te responderemos por correo electrónico.",
+      "cta": "banda@cedesdonbosco.ed.cr"
     },
-    "contact": {
-      "title": "¿Cómo podemos ayudarte? Hablemos",
-      "description": "Puedes",
-      "title_sufix_1": "contactarnos",
-      "title_sufix_2": "por estos canales",
-      "email": {
-        "title": "Email",
-        "description": "Te enviaremos un correo electrónico.",
-        "cta": "banda@cedesdonbosco.ed.cr"
+    "phone": {
+      "title": "Llámanos",
+      "description": "Disponible los días de semana de 7 a.m. a 6 p.m.",
+      "cta": "+506 8380-7124"
+    },
+    "form": {
+      "title": "Completa nuestro formulario para comenzar",
+      "fields": {
+        "name": "Nombre",
+        "namePlaceholder": "Tu nombre",
+        "email": "Email",
+        "emailPlaceholder": "ejemplo@email.com",
+        "phone": "Celular",
+        "phoneOptional": "Opcional",
+        "phonePlaceholder": "+506 8888-8888",
+        "message": "Mensaje",
+        "messageLimit": "Máximo 500 caracteres",
+        "messagePlaceholder": "Cuéntanos un poco sobre tu idea..."
       },
-      "phone": {
-        "title": "Llámanos",
-        "description": "Disponible los días de semana de 7 a.m. a 6 p.m.",
-        "cta": "+506 8380-7124"
-      },
-      "form": {
-        "title": "Complete nuestro formulario a continuación para comenzar",
-        "fields": {
-          "name": "Nombre",
-          "namePlaceholder": "BCDB",
-          "email": "Email",
-          "emailPlaceholder": "ejemplo@email.com",
-          "phone": "Celular",
-          "phoneOptional": "Opcional",
-          "phonePlaceholder": "+506 8888-8888",
-          "message": "Mensaje",
-          "messageLimit": "Máximo 500 caracteres",
-          "messagePlaceholder": "Cuéntanos un poco sobre tu idea..."
-        },
-        "submit": "Enviar"
-      }
+      "submit": "Enviar"
     }
   },
   "donation": {

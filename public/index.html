@@ -44,29 +44,14 @@
       />
     </noscript>
 
-    <link rel="apple-touch-icon" sizes="180x180" href="./Icons-03.png" />
-    <link rel="icon" href="./favicon.webp" />
-    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/Icons-03.png" />
+    <link rel="icon" href="/favicon.webp" />
+    <link rel="manifest" href="/manifest.json" />
 
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
   </head>
 
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-
-    <script>
-      var Module = {
-        locateFile: function (path) {
-          return "/opencv/" + path;
-        },
-        onRuntimeInitialized() {
-          window.__opencvReady = true;
-          window.dispatchEvent(new Event("opencvready"));
-        },
-      };
-    </script>
-
-    <script async src="/opencv/opencv.js" type="text/javascript"></script>
   </body>
 </html>

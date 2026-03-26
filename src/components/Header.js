@@ -5,6 +5,8 @@ import { useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 import DonationModal from "./DonationsModal";
+import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
+
 const Header = ({ openModal }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
@@ -12,7 +14,7 @@ const Header = ({ openModal }) => {
   const { pathname } = useLocation();
   const { i18n, t } = useTranslation();
 
-  const lang = i18n.language;
+  const lang = normalizePublicLang(i18n.language?.slice(0, 2));
   const isAuthenticated = localStorage.getItem("token");
 
   const toggleMobileMenu = () => {
@@ -25,7 +27,7 @@ const Header = ({ openModal }) => {
         <nav className="relative z-50 flex items-center justify-between w-full">
           {/* Logo */}
           <div className="flex items-center shrink-0">
-            <a href="/" aria-label="Home" className="flex items-center flex-shrink-0">
+            <a href={getPublicPath(lang, "home")} aria-label={t("nav.home")} className="flex items-center flex-shrink-0">
               <img
                 src={logo}
                 width={120}
@@ -39,34 +41,34 @@ const Header = ({ openModal }) => {
           {/* Desktop navigation links */}
           <div className="items-center hidden md:flex md:space-x-6 lg:space-x-8">
             <a
-              href={`/${lang}`}
+              href={getPublicPath(lang, "home")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               {t("nav.home")}
             </a>
             <a
-              href={`/${lang}/nosotros`}
+              href={getPublicPath(lang, "about")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               {t("nav.about")}
             </a>
 
             <a
-              href={`/${lang}/blog`}
+              href={getPublicPath(lang, "blog")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               {t("nav.blog")}
             </a>
 
             <a
-              href={`/${lang}/calendario`}
+              href={getPublicPath(lang, "calendar")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               {t("nav.calendar")}
             </a>
 
             <a
-              href={`/${lang}/contacto`}
+              href={getPublicPath(lang, "contact")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
               {t("nav.contact")}
@@ -214,41 +216,41 @@ const Header = ({ openModal }) => {
                   {/* Mobile menu links */}
                   <div className="flex flex-col space-y-4">
                     <a
-                      href={`/${lang}`}
+                      href={getPublicPath(lang, "home")}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Inicio
+                      {t("nav.home")}
                     </a>
                     <a
-                      href={`/${lang}/nosotros`}
+                      href={getPublicPath(lang, "about")}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Nosotros
+                      {t("nav.about")}
                     </a>
 
                     <a
-                      href={`/${lang}/blog`}
+                      href={getPublicPath(lang, "blog")}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Blog
+                      {t("nav.blog")}
                     </a>
                     <a
-                      href={`/${lang}/calendario`}
+                      href={getPublicPath(lang, "calendar")}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Calendario
+                      {t("nav.calendar")}
                     </a>
                     <a
-                      href={`/${lang}/contacto`}
+                      href={getPublicPath(lang, "contact")}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Contacto
+                      {t("nav.contact")}
                     </a>
                     <a
                       href={`/autenticacion/iniciar-sesion`}
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
-                      Iniciar Sesión
+                      {t("nav.login")}
                     </a>
                     {/* {pathname !== "/autenticacion/registrarse-privado" &&
                       pathname !== "/autenticacion/iniciar-sesion" && (

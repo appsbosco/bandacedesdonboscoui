@@ -34,10 +34,10 @@
 //      Se añade un comentario aclaratorio.
 
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { gql, useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
-import { GET_EVENTS } from "graphql/queries";
+import { GET_EVENTS, GET_USERS_BY_ID } from "graphql/queries";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -69,21 +69,6 @@ import { ErrorState } from "./components/ErrorState";
 /* =========================
    Constants
 ========================= */
-
-const GET_CURRENT_USER = gql`
-  query getUser {
-    getUser {
-      id
-      name
-      firstSurName
-      secondSurName
-      email
-      role
-      instrument
-      avatar
-    }
-  }
-`;
 
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
 
@@ -139,7 +124,7 @@ const NULL_FALLBACK = null;
 export default function Dashboard() {
   // [P6] fetchPolicy explícito: protege ante configuraciones Apollo globales que
   //      podrían forzar network-only y duplicar round-trips innecesarios.
-  const { data: userData, loading: userLoading } = useQuery(GET_CURRENT_USER, {
+  const { data: userData, loading: userLoading } = useQuery(GET_USERS_BY_ID, {
     fetchPolicy: "cache-first",
   });
   const { data: eventData, loading: eventLoading, error: eventError } = useQuery(GET_EVENTS, {

@@ -1,18 +1,11 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React from "react";
 import Header from "components/Header";
 import Footer from "components/Footer";
 import BlogHero from "./blog-hero-bg.svg";
 import { useTranslation } from "react-i18next";
 
-const articlesPerPage = 3;
-
 const CalendarListing = () => {
-  const [currentPage, setCurrentPage] = useState(1);
   const { t } = useTranslation();
-
-  // Calculate the index range of the articles to display on the current page
-  const indexOfLastArticle = currentPage * articlesPerPage;
 
   return (
     <div>
@@ -23,7 +16,7 @@ const CalendarListing = () => {
           <img src={BlogHero} alt="" className="absolute inset-0 w-full h-full" />
           <div className="relative flex flex-col items-center justify-center">
             <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl">
-              Bienvenidos a{" "}
+              {t("calendar.hero.title")}{" "}
               <span className="relative whitespace-nowrap">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +47,7 @@ const CalendarListing = () => {
           <section className="bg-white  antialiased">
             <div className="max-w-screen-xl px-4 py-8 mx-auto lg:px-6 sm:py-16 lg:py-24">
               <div className=" flex items-center justify-center text-center">
-                <p> No hay presentaciones próximas </p>
+                <p>{t("calendar.upcoming.empty")}</p>
               </div>
               {/* <div className="flow-root max-w-3xl mx-auto mt-8 sm:mt-12 lg:mt-8">
                 <div className="-my-4 divide-y divide-gray-200 ">

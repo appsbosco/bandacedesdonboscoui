@@ -1,10 +1,11 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import HeroSection from "./HeroImages";
+import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
 
 const Hero = () => {
   const { i18n, t } = useTranslation();
-  const lang = i18n.language;
+  const lang = normalizePublicLang(i18n.language?.slice(0, 2));
 
   return (
     <section className="relative py-20 overflow-hidden lg:py-24">
@@ -78,7 +79,7 @@ const Hero = () => {
           </p>
           <div className="flex flex-wrap items-center justify-center mt-10 gap-y-6 gap-x-10 lg:justify-start">
             <a
-              href={`/${lang}/contacto`}
+              href={getPublicPath(lang, "contact")}
               className="h-11 bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
             >
               {t("hero.contact")}
