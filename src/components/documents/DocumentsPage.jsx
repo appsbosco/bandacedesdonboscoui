@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@apollo/client";
 import { MY_DOCUMENTS, ALL_DOCUMENTS } from "../../graphql/documents/documents.gql.js";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentFilters } from "../../components/documents/DocumentsFilters.jsx";
 import { GET_USERS_BY_ID } from "graphql/queries";
-import { isDocumentAdmin } from "./documentAccess";
+import { isDocumentAdmin, SENSITIVE_DOCUMENT_TYPES } from "./documentAccess";
 import { getStatusLabel, maskDocumentNumber } from "../../utils/documentHelpers";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -13,6 +13,8 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Card from "@mui/material/Card";
 import SoftBox from "components/SoftBox";
 import PropTypes from "prop-types";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function mergeDocumentsResult(previousResult, fetchMoreResult, resultKey) {
   if (!fetchMoreResult?.[resultKey]) return previousResult;
@@ -76,9 +78,10 @@ function getDaysUntilExpiration(value) {
 function getExpiryState(value) {
   const days = getDaysUntilExpiration(value);
   if (days == null) return { kind: "missing", label: "Sin fecha", color: "#9CA3AF" };
-  if (days < 0) return { kind: "expired", label: `Vencido ${Math.abs(days)}d`, color: "#DC2626" };
-  if (days <= 30) return { kind: "warning", label: `${days}d`, color: "#EA580C" };
-  return { kind: "ok", label: `${days}d`, color: "#059669" };
+  if (days < 0) return { kind: "expired", label: `Vencido hace ${Math.abs(days)}d`, color: "#DC2626" };
+  if (days <= 30) return { kind: "critical", label: `${days}d restantes`, color: "#EA580C" };
+  if (days <= 90) return { kind: "warning", label: `${days}d restantes`, color: "#D97706" };
+  return { kind: "ok", label: `${days}d restantes`, color: "#059669" };
 }
 
 function sortDocumentsByFreshness(documents) {
@@ -107,7 +110,7 @@ function getDocumentTypeLabel(type) {
     case "PERMISO_SALIDA":
       return "Permiso de salida";
     case "OTHER":
-      return "Otro documento";
+      return "Documento adjunto";
     default:
       return type || "Documento";
   }
@@ -132,23 +135,28 @@ function buildExtractedFields(document) {
     { label: "Control visa", value: extracted.visaControlNumber },
     {
       label: "Nacimiento",
-      value: formatDate(extracted.dateOfBirth) !== "—" ? formatDate(extracted.dateOfBirth) : null,
+      value:
+        formatDate(extracted.dateOfBirth) !== "—" ? formatDate(extracted.dateOfBirth) : null,
     },
     { label: "Sexo", value: extracted.sex },
     {
       label: "Expiración",
       value:
-        formatDate(extracted.expirationDate) !== "—" ? formatDate(extracted.expirationDate) : null,
+        formatDate(extracted.expirationDate) !== "—"
+          ? formatDate(extracted.expirationDate)
+          : null,
     },
     {
       label: "Emisión",
-      value: formatDate(extracted.issueDate) !== "—" ? formatDate(extracted.issueDate) : null,
+      value:
+        formatDate(extracted.issueDate) !== "—" ? formatDate(extracted.issueDate) : null,
     },
     { label: "Destino", value: extracted.destination },
     { label: "Autorizante", value: extracted.authorizerName },
     {
       label: "MRZ válido",
-      value: typeof extracted.mrzValid === "boolean" ? (extracted.mrzValid ? "Sí" : "No") : null,
+      value:
+        typeof extracted.mrzValid === "boolean" ? (extracted.mrzValid ? "Sí" : "No") : null,
     },
     { label: "Formato MRZ", value: extracted.mrzFormat },
     {
@@ -168,7 +176,7 @@ function computeRowStatus(row) {
 
   if (statuses.includes("REJECTED")) return "REJECTED";
   if (expiryStates.includes("expired")) return "EXPIRED";
-  if (expiryStates.includes("warning")) return "EXPIRING";
+  if (expiryStates.includes("critical")) return "EXPIRING";
 
   const hasPendingState = statuses.some((status) =>
     [
@@ -184,6 +192,8 @@ function computeRowStatus(row) {
   if (hasPendingState) return "INCOMPLETE";
   return "COMPLETE";
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TABLE_STATUS_FILTERS = [
   { value: "ALL", label: "Todos" },
@@ -221,6 +231,17 @@ const DOCUMENT_BADGE_STYLES = {
   DATA_CAPTURED: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
   UPLOADED: { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
 };
+
+// Left-border color class per aggregate status (Tailwind arbitrary values via style)
+const ROW_STATUS_BORDER_COLOR = {
+  COMPLETE: "#10B981",
+  INCOMPLETE: "#38BDF8",
+  EXPIRED: "#EF4444",
+  EXPIRING: "#F59E0B",
+  REJECTED: "#DC2626",
+};
+
+// ─── Small UI components ───────────────────────────────────────────────────────
 
 function TabButton({ active, onClick, children, count }) {
   return (
@@ -329,13 +350,109 @@ ExpiryInfo.propTypes = {
   date: PropTypes.string,
 };
 
+// ─── DocumentSlot: lean table cell for desktop (status + expiry only) ─────────
+
+function DocumentSlot({ doc, extraCount, showExpiry }) {
+  if (!doc) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-xs text-slate-300 border border-dashed border-slate-200 rounded-lg px-2 py-0.5 whitespace-nowrap">
+          Sin archivo
+        </span>
+      </div>
+    );
+  }
+
+  const expiry = showExpiry ? getExpiryState(doc.extracted?.expirationDate) : null;
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <DocumentStateBadge status={doc.status} />
+      {showExpiry && doc.extracted?.expirationDate && (
+        <>
+          <span style={{ fontSize: "11px", color: "#64748B" }}>
+            {formatDate(doc.extracted.expirationDate)}
+          </span>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: expiry?.color }}>
+            {expiry?.label}
+          </span>
+        </>
+      )}
+      {showExpiry && !doc.extracted?.expirationDate && (
+        <span style={{ fontSize: "10px", color: "#9CA3AF" }}>Sin fecha de vencimiento</span>
+      )}
+      <Link
+        to={`/documents/${doc.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 mt-0.5 transition-colors"
+      >
+        Ver
+      </Link>
+      {extraCount > 0 && (
+        <span className="text-[10px] text-slate-400">+{extraCount} adicional(es)</span>
+      )}
+    </div>
+  );
+}
+
+DocumentSlot.propTypes = {
+  doc: PropTypes.shape({
+    id: PropTypes.string,
+    status: PropTypes.string,
+    extracted: PropTypes.shape({
+      expirationDate: PropTypes.string,
+    }),
+  }),
+  extraCount: PropTypes.number,
+  showExpiry: PropTypes.bool,
+};
+
+DocumentSlot.defaultProps = {
+  doc: null,
+  extraCount: 0,
+  showExpiry: false,
+};
+
+// ─── OtherDocsBadge: neutral chip — never competes with identity docs ─────────
+
+function OtherDocsBadge({ count }) {
+  if (!count) {
+    return <span className="text-xs text-slate-300">—</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+        />
+      </svg>
+      {count}
+    </span>
+  );
+}
+
+OtherDocsBadge.propTypes = {
+  count: PropTypes.number,
+};
+
+OtherDocsBadge.defaultProps = {
+  count: 0,
+};
+
+// ─── DocumentCell: used in mobile expanded view ───────────────────────────────
+
 function DocumentCell({ document, extraCount }) {
   if (!document) {
     return <span style={{ fontSize: "11px", color: "#9CA3AF" }}>Sin archivo</span>;
   }
 
   const docNumber = document.extracted?.passportNumber || document.extracted?.documentNumber;
-  const expiry = document.extracted?.expirationDate ? getExpiryState(document.extracted.expirationDate) : null;
+  const expiry = document.extracted?.expirationDate
+    ? getExpiryState(document.extracted.expirationDate)
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
@@ -359,7 +476,9 @@ function DocumentCell({ document, extraCount }) {
         </span>
       )}
       {expiry && (
-        <span style={{ fontSize: "10px", fontWeight: 700, color: expiry.color }}>{expiry.label}</span>
+        <span style={{ fontSize: "10px", fontWeight: 700, color: expiry.color }}>
+          {expiry.label}
+        </span>
       )}
       <Link
         to={`/documents/${document.id}`}
@@ -398,6 +517,8 @@ DocumentCell.defaultProps = {
   document: null,
   extraCount: 0,
 };
+
+// ─── FullDocumentCard: expanded card used in detail views ─────────────────────
 
 function FullDocumentCard({ document }) {
   const previewImage = getPreviewImage(document);
@@ -481,7 +602,9 @@ function FullDocumentCard({ document }) {
               Datos principales
             </p>
             {primaryFields.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No hay datos estructurados en este documento.</p>
+              <p className="mt-2 text-sm text-slate-500">
+                No hay datos estructurados en este documento.
+              </p>
             ) : (
               <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                 {primaryFields.map((field) => (
@@ -543,6 +666,274 @@ FullDocumentCard.propTypes = {
   }).isRequired,
 };
 
+// ─── CriticalDocBlock: one row inside UserDetailPanel ─────────────────────────
+
+function CriticalDocBlock({ typeLabel, icon, doc, extraDocs }) {
+  if (!doc) {
+    return (
+      <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+        <div className="flex items-center gap-2">
+          <span className="text-base">{icon}</span>
+          <span className="text-sm font-medium text-slate-700">{typeLabel}</span>
+        </div>
+        <span className="text-xs text-slate-400 border border-dashed border-slate-200 rounded-full px-2.5 py-0.5">
+          Sin archivo
+        </span>
+      </div>
+    );
+  }
+
+  const expiry = getExpiryState(doc.extracted?.expirationDate);
+  const docNumber = doc.extracted?.passportNumber || doc.extracted?.documentNumber;
+
+  return (
+    <div className="py-3 border-b border-slate-100 last:border-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-slate-900">{typeLabel}</span>
+              <DocumentStateBadge status={doc.status} />
+            </div>
+            {docNumber && (
+              <span className="text-xs text-slate-500 font-mono mt-1 block">
+                {maskDocumentNumber(docNumber)}
+              </span>
+            )}
+            {doc.extracted?.expirationDate && (
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="text-xs text-slate-500">
+                  Vence: {formatDate(doc.extracted.expirationDate)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: expiry.color,
+                    background:
+                      expiry.kind === "expired"
+                        ? "#FEF2F2"
+                        : expiry.kind === "critical"
+                        ? "#FFF7ED"
+                        : expiry.kind === "warning"
+                        ? "#FFFBEB"
+                        : "#ECFDF5",
+                    padding: "1px 6px",
+                    borderRadius: "9999px",
+                  }}
+                >
+                  {expiry.label}
+                </span>
+              </div>
+            )}
+            {!doc.extracted?.expirationDate && (
+              <span className="text-xs text-slate-400 mt-1 block">Sin fecha de vencimiento</span>
+            )}
+          </div>
+        </div>
+        <Link
+          to={`/documents/${doc.id}`}
+          className="flex-shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+        >
+          Abrir
+        </Link>
+      </div>
+
+      {extraDocs?.length > 0 && (
+        <div className="mt-2 ml-7 space-y-1.5">
+          {extraDocs.map((extra) => (
+            <div
+              key={extra.id}
+              className="flex items-center justify-between gap-2 pl-2 border-l-2 border-slate-200"
+            >
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <DocumentStateBadge status={extra.status} />
+                <span className="text-[10px] text-slate-400">{formatDate(extra.createdAt)}</span>
+              </div>
+              <Link
+                to={`/documents/${extra.id}`}
+                className="text-[10px] font-semibold text-blue-500 hover:text-blue-700 whitespace-nowrap"
+              >
+                Ver
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+CriticalDocBlock.propTypes = {
+  typeLabel: PropTypes.string.isRequired,
+  icon: PropTypes.string.isRequired,
+  doc: PropTypes.shape({
+    id: PropTypes.string,
+    status: PropTypes.string,
+    createdAt: PropTypes.string,
+    extracted: PropTypes.shape({
+      passportNumber: PropTypes.string,
+      documentNumber: PropTypes.string,
+      expirationDate: PropTypes.string,
+    }),
+  }),
+  extraDocs: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      status: PropTypes.string,
+      createdAt: PropTypes.string,
+    })
+  ),
+};
+
+CriticalDocBlock.defaultProps = {
+  doc: null,
+  extraDocs: [],
+};
+
+// ─── UserDetailPanel: slide-in panel with full user document detail ───────────
+
+function UserDetailPanel({ row, onClose }) {
+  const criticalDocs = row.documents.filter((d) => SENSITIVE_DOCUMENT_TYPES.includes(d.type));
+  const otherDocs = row.documents.filter((d) => d.type === "OTHER");
+
+  const passportDocs = sortDocumentsByFreshness(criticalDocs.filter((d) => d.type === "PASSPORT"));
+  const visaDocs = sortDocumentsByFreshness(criticalDocs.filter((d) => d.type === "VISA"));
+  const permitDocs = sortDocumentsByFreshness(
+    criticalDocs.filter((d) => d.type === "PERMISO_SALIDA")
+  );
+
+  return (
+    <div className="flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden h-full">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-200 flex-shrink-0">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900 truncate leading-snug">
+            {row.ownerLabel}
+          </h3>
+          <p className="text-xs text-slate-500 truncate mt-0.5">{row.owner?.email || "Sin correo"}</p>
+          <div className="mt-2">
+            <AggregateStatusBadge status={row.aggregateStatus} />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          aria-label="Cerrar panel"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Identity documents section */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">
+            Documentos de identidad
+          </p>
+          <CriticalDocBlock
+            typeLabel="Pasaporte"
+            icon="🛂"
+            doc={passportDocs[0] || null}
+            extraDocs={passportDocs.slice(1)}
+          />
+          <CriticalDocBlock
+            typeLabel="Visa"
+            icon="🌍"
+            doc={visaDocs[0] || null}
+            extraDocs={visaDocs.slice(1)}
+          />
+          <CriticalDocBlock
+            typeLabel="Permiso de salida"
+            icon="📋"
+            doc={permitDocs[0] || null}
+            extraDocs={permitDocs.slice(1)}
+          />
+        </div>
+
+        {/* Complementary documents section — visually distinct */}
+        <div className="bg-slate-50 border-t border-slate-200 px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-3">
+            Documentos complementarios
+            {otherDocs.length > 0 && (
+              <span className="ml-1.5 normal-case font-medium text-slate-400">
+                ({otherDocs.length})
+              </span>
+            )}
+          </p>
+          {otherDocs.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">Sin documentos adjuntos</p>
+          ) : (
+            <div className="space-y-2">
+              {otherDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between gap-2 bg-white rounded-xl px-3 py-2.5 ring-1 ring-slate-200"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg
+                      className="w-3.5 h-3.5 text-slate-400 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                      />
+                    </svg>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <DocumentStateBadge status={doc.status} />
+                        <span className="text-[10px] text-slate-400">
+                          {formatDate(doc.createdAt)}
+                        </span>
+                      </div>
+                      {doc.notes && (
+                        <p className="text-xs text-slate-600 truncate mt-0.5">{doc.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    to={`/documents/${doc.id}`}
+                    className="flex-shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+                  >
+                    Ver
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+UserDetailPanel.propTypes = {
+  row: PropTypes.shape({
+    ownerLabel: PropTypes.string,
+    aggregateStatus: PropTypes.string,
+    owner: PropTypes.shape({ email: PropTypes.string }),
+    documents: PropTypes.array,
+  }).isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+// ─── MobileSummaryItem ────────────────────────────────────────────────────────
+
 function MobileSummaryItem({ label, children }) {
   return (
     <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
@@ -557,31 +948,53 @@ MobileSummaryItem.propTypes = {
   children: PropTypes.node,
 };
 
+// ─── MobileRowCard: card for mobile list with status left-border ───────────────
+
 function MobileRowCard({ row, expanded, onToggle }) {
+  const borderColor = ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
+
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+    <div
+      className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+      style={{ borderLeft: `4px solid ${borderColor}` }}
+    >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold text-slate-900">{row.ownerLabel}</h3>
-            <p className="mt-1 break-all text-xs text-slate-500">{row.owner?.email || "Sin correo"}</p>
-            <p className="mt-1 text-xs text-slate-400">{row.counts.total} documento(s) cargado(s)</p>
+            <p className="mt-1 break-all text-xs text-slate-500">
+              {row.owner?.email || "Sin correo"}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              {row.counts.total} documento(s) cargado(s)
+            </p>
           </div>
           <AggregateStatusBadge status={row.aggregateStatus} />
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <MobileSummaryItem label="Pasaporte">
-            <DocumentCell document={row.passport} extraCount={Math.max(0, row.counts.passport - 1)} />
+            <DocumentCell
+              document={row.passport}
+              extraCount={Math.max(0, row.counts.passport - 1)}
+            />
           </MobileSummaryItem>
           <MobileSummaryItem label="Vence pasaporte">
-            {row.passport ? <ExpiryInfo date={row.passport.extracted?.expirationDate} /> : <span className="text-xs text-slate-300">—</span>}
+            {row.passport ? (
+              <ExpiryInfo date={row.passport.extracted?.expirationDate} />
+            ) : (
+              <span className="text-xs text-slate-300">—</span>
+            )}
           </MobileSummaryItem>
           <MobileSummaryItem label="Visa">
             <DocumentCell document={row.visa} extraCount={Math.max(0, row.counts.visa - 1)} />
           </MobileSummaryItem>
           <MobileSummaryItem label="Vence visa">
-            {row.visa ? <ExpiryInfo date={row.visa.extracted?.expirationDate} /> : <span className="text-xs text-slate-300">—</span>}
+            {row.visa ? (
+              <ExpiryInfo date={row.visa.extracted?.expirationDate} />
+            ) : (
+              <span className="text-xs text-slate-300">—</span>
+            )}
           </MobileSummaryItem>
           <MobileSummaryItem label="Permiso salida">
             <DocumentCell
@@ -589,20 +1002,33 @@ function MobileRowCard({ row, expanded, onToggle }) {
               extraCount={Math.max(0, row.counts.exitPermit - 1)}
             />
           </MobileSummaryItem>
-          <MobileSummaryItem label="Otros documentos">
-            <DocumentCell
-              document={row.otherDocument}
-              extraCount={Math.max(0, row.counts.other - 1)}
-            />
+          <MobileSummaryItem label="Adjuntos">
+            <div className="flex items-center h-full">
+              <OtherDocsBadge count={row.counts.other} />
+            </div>
           </MobileSummaryItem>
         </div>
 
         <button
           type="button"
           onClick={onToggle}
-          className="mt-4 inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
         >
-          {expanded ? "Ocultar" : "Ver todo"}
+          {expanded ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+              Ocultar
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              Ver todo
+            </>
+          )}
         </button>
       </div>
 
@@ -614,16 +1040,18 @@ function MobileRowCard({ row, expanded, onToggle }) {
                 Todos los documentos de {row.ownerLabel}
               </h4>
               <p className="mt-1 text-xs text-slate-500">
-                Incluye pasaportes, visas, permisos, comprobantes de pago y cualquier archivo subido como otro documento.
+                Pasaportes, visas, permisos y documentos adjuntos.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
                 Total: {row.counts.total}
               </span>
-              <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
-                Otros: {row.counts.other}
-              </span>
+              {row.counts.other > 0 && (
+                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
+                  Adjuntos: {row.counts.other}
+                </span>
+              )}
             </div>
           </div>
 
@@ -643,6 +1071,183 @@ MobileRowCard.propTypes = {
   expanded: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
 };
+
+// ─── FinancieroView: specialized view for CEDES Financiero role ───────────────
+// Only shows OTHER documents grouped by user — no identity data visible.
+
+function FinancieroView() {
+  const [pagination] = useState({ limit: 200, skip: 0 });
+  const [ownerSearch, setOwnerSearch] = useState("");
+
+  const { data, loading, error } = useQuery(ALL_DOCUMENTS, {
+    variables: { pagination },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const documents = data?.allDocuments?.documents || [];
+
+  const groupedRows = useMemo(() => {
+    const ownersMap = new Map();
+    const otherDocs = documents.filter((d) => d.type === "OTHER");
+
+    otherDocs.forEach((doc) => {
+      const owner = doc.owner || {};
+      const ownerId = owner.id || owner.email || doc.id;
+      const current = ownersMap.get(ownerId) || { id: ownerId, owner, documents: [] };
+      current.documents.push(doc);
+      ownersMap.set(ownerId, current);
+    });
+
+    return Array.from(ownersMap.values())
+      .map((entry) => ({
+        ...entry,
+        ownerLabel: getOwnerLabel(entry.owner),
+        documents: sortDocumentsByFreshness(entry.documents),
+      }))
+      .sort((a, b) => a.ownerLabel.localeCompare(b.ownerLabel, "es"));
+  }, [documents]);
+
+  const filteredRows = useMemo(() => {
+    const search = ownerSearch.trim().toLowerCase();
+    if (!search) return groupedRows;
+    return groupedRows.filter((row) => {
+      const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(search);
+    });
+  }, [groupedRows, ownerSearch]);
+
+  if (loading && documents.length === 0) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 bg-slate-100 animate-pulse rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-slate-600 text-sm">
+          Error al cargar los documentos. Intenta de nuevo.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-4">
+        <label
+          htmlFor="financiero-search"
+          className="block text-xs text-slate-500 mb-1 font-medium"
+        >
+          Buscar integrante
+        </label>
+        <input
+          id="financiero-search"
+          type="text"
+          value={ownerSearch}
+          onChange={(e) => setOwnerSearch(e.target.value)}
+          placeholder="Nombre, apellido o correo"
+          className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+        />
+      </div>
+
+      {filteredRows.length === 0 ? (
+        <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-10 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-50 ring-1 ring-slate-200 flex items-center justify-center">
+            <svg
+              className="w-6 h-6 text-slate-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              />
+            </svg>
+          </div>
+          <p className="text-base font-semibold text-slate-900">
+            {ownerSearch ? "Sin resultados" : "Sin documentos complementarios"}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {ownerSearch
+              ? "No se encontraron integrantes para la búsqueda."
+              : "Aún no hay documentos adjuntos cargados."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredRows.map((row) => (
+            <div
+              key={row.id}
+              className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm overflow-hidden"
+            >
+              {/* User header */}
+              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-slate-900">{row.ownerLabel}</span>
+                  {row.owner?.email && (
+                    <span className="ml-2 text-xs text-slate-500">{row.owner.email}</span>
+                  )}
+                </div>
+                <OtherDocsBadge count={row.documents.length} />
+              </div>
+
+              {/* Document list */}
+              <div className="divide-y divide-slate-100">
+                {row.documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between px-4 py-3 gap-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <svg
+                        className="w-4 h-4 text-slate-400 flex-shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                        />
+                      </svg>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <DocumentStateBadge status={doc.status} />
+                          <span className="text-xs text-slate-400">{formatDate(doc.createdAt)}</span>
+                        </div>
+                        {doc.notes && (
+                          <p className="text-xs text-slate-600 truncate mt-0.5">{doc.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/documents/${doc.id}`}
+                      className="flex-shrink-0 inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                    >
+                      Ver documento
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MyDocumentsView ──────────────────────────────────────────────────────────
 
 function MyDocumentsView() {
   const [filters, setFilters] = useState({});
@@ -693,12 +1298,27 @@ function MyDocumentsView() {
   );
 }
 
+// ─── AdminDocumentsView: master-detail layout for admins ──────────────────────
+
 function AdminDocumentsView() {
   const [pagination] = useState({ limit: 100, skip: 0 });
   const [rowStatusFilter, setRowStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
-  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [expandedRowId, setExpandedRowId] = useState(null); // mobile expand
+  const [selectedRow, setSelectedRow] = useState(null); // desktop panel
+  const [sortBy, setSortBy] = useState("name"); // "name" | "recent"
+
+  const tableTopRef = useRef(null);
+
+  // Scroll to the table top whenever a new row is selected so the panel is always visible
+  useEffect(() => {
+    if (!selectedRow || !tableTopRef.current) return;
+    const rect = tableTopRef.current.getBoundingClientRect();
+    if (rect.top < 20) {
+      tableTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedRow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, loading, error, fetchMore } = useQuery(ALL_DOCUMENTS, {
     variables: { pagination },
@@ -759,20 +1379,29 @@ function AdminDocumentsView() {
           },
         };
 
-        return {
-          ...row,
-          aggregateStatus: computeRowStatus(row),
-        };
+        const lastUploadDate = Math.max(
+          ...entry.documents.map(
+            (d) => getDateValue(d.updatedAt || d.createdAt)?.getTime() || 0
+          )
+        );
+
+        return { ...row, aggregateStatus: computeRowStatus(row), lastUploadDate };
       })
-      .sort((a, b) => a.ownerLabel.localeCompare(b.ownerLabel, "es"));
-  }, [documents]);
+      .sort((a, b) => {
+        if (sortBy === "recent") return b.lastUploadDate - a.lastUploadDate;
+        return a.ownerLabel.localeCompare(b.ownerLabel, "es");
+      });
+  }, [documents, sortBy]);
 
   const filteredRows = useMemo(() => {
     return groupedRows.filter((row) => {
       const search = ownerSearch.trim().toLowerCase();
 
       if (search) {
-        const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
+        const haystack = [row.ownerLabel, row.owner?.email]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
         if (!haystack.includes(search)) return false;
       }
 
@@ -831,16 +1460,23 @@ function AdminDocumentsView() {
     setRowStatusFilter("ALL");
     setTypeFilter("");
     setOwnerSearch("");
+    setSortBy("name");
+    setSelectedRow(null);
     setExpandedRowId(null);
   };
 
-  const hasActiveFilters = rowStatusFilter !== "ALL" || typeFilter || ownerSearch;
+  const hasActiveFilters = rowStatusFilter !== "ALL" || typeFilter || ownerSearch || sortBy !== "name";
+
+  const handleSelectRow = (row) => {
+    setSelectedRow((current) => (current?.id === row.id ? null : row));
+  };
 
   return (
     <div className="space-y-4">
+      {/* Filters */}
       <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-700">Vista admin por integrante</span>
+          <span className="text-sm font-semibold text-slate-700">Vista por integrante</span>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -851,7 +1487,7 @@ function AdminDocumentsView() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           <div>
             <label
               htmlFor="documents-admin-status-filter"
@@ -868,6 +1504,9 @@ function AdminDocumentsView() {
               {TABLE_STATUS_FILTERS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                  {option.value !== "ALL" && tableStats[option.value] != null
+                    ? ` (${tableStats[option.value]})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -878,7 +1517,7 @@ function AdminDocumentsView() {
               htmlFor="documents-admin-type-filter"
               className="block text-xs text-slate-500 mb-1 font-medium"
             >
-              Tipo requerido
+              Tipo de documento
             </label>
             <select
               id="documents-admin-type-filter"
@@ -910,9 +1549,28 @@ function AdminDocumentsView() {
               className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
             />
           </div>
+
+          <div>
+            <label
+              htmlFor="documents-admin-sort"
+              className="block text-xs text-slate-500 mb-1 font-medium"
+            >
+              Ordenar por
+            </label>
+            <select
+              id="documents-admin-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+            >
+              <option value="name">Nombre (A–Z)</option>
+              <option value="recent">Más reciente primero</option>
+            </select>
+          </div>
         </div>
       </div>
 
+      {/* Stats cards */}
       {!loading && !error && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -921,38 +1579,41 @@ function AdminDocumentsView() {
                 Integrantes
               </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{filteredRows.length}</p>
-              <p className="text-xs text-slate-500">con documentos cargados</p>
+              <p className="text-xs text-slate-500">con documentos</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
                 Pasaportes
               </p>
               <p className="mt-1 text-2xl font-bold text-emerald-700">{tableStats.passport}</p>
-              <p className="text-xs text-slate-500">integrantes con pasaporte</p>
+              <p className="text-xs text-slate-500">cargados</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Visas</p>
               <p className="mt-1 text-2xl font-bold text-sky-700">{tableStats.visa}</p>
-              <p className="text-xs text-slate-500">integrantes con visa</p>
+              <p className="text-xs text-slate-500">cargadas</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
                 Permisos
               </p>
               <p className="mt-1 text-2xl font-bold text-violet-700">{tableStats.exitPermit}</p>
-              <p className="text-xs text-slate-500">integrantes con permiso</p>
+              <p className="text-xs text-slate-500">cargados</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Otros</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{tableStats.other}</p>
-              <p className="text-xs text-slate-500">integrantes con otros docs</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                Vencidos / Urgentes
+              </p>
+              <p className="mt-1 text-2xl font-bold text-red-600">
+                {(tableStats.EXPIRED || 0) + (tableStats.EXPIRING || 0)}
+              </p>
+              <p className="text-xs text-slate-500">requieren atención</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 px-1">
             <span className="text-sm text-slate-500">
-              {documents.length} de {total} documento{total !== 1 ? "s" : ""} cargado
-              {total !== 1 ? "s" : ""} en memoria
+              {documents.length} de {total} documento{total !== 1 ? "s" : ""} en memoria
             </span>
             {hasActiveFilters && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
@@ -963,6 +1624,7 @@ function AdminDocumentsView() {
         </>
       )}
 
+      {/* Content */}
       {loading && documents.length === 0 ? (
         <DocumentList
           documents={[]}
@@ -992,6 +1654,7 @@ function AdminDocumentsView() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Mobile: stack cards */}
           <div className="space-y-4 lg:hidden">
             {filteredRows.map((row) => (
               <MobileRowCard
@@ -1005,167 +1668,171 @@ function AdminDocumentsView() {
             ))}
           </div>
 
-          <div className="hidden overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 lg:block">
-            <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  {[
-                    "Integrante",
-                    "Pasaporte",
-                    "Vence pasaporte",
-                    "Visa",
-                    "Vence visa",
-                    "Permiso salida",
-                    "Otros documentos",
-                    "Estado",
-                    "",
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      className="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 text-left"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, index) => {
-                  const isExpanded = expandedRowId === row.id;
-
-                  return (
-                    <React.Fragment key={row.id}>
-                      <tr
-                        className={
-                          index < filteredRows.length - 1 || isExpanded
-                            ? "border-b border-slate-100"
-                            : ""
-                        }
-                      >
-                        <td className="px-4 py-4 align-top">
-                          <p className="m-0 text-sm font-semibold text-slate-900">{row.ownerLabel}</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {row.owner?.email || "Sin correo"}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-400">
-                            {row.counts.total} documento(s) cargado(s)
-                          </p>
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          <DocumentCell
-                            document={row.passport}
-                            extraCount={Math.max(0, row.counts.passport - 1)}
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          {row.passport ? (
-                            <ExpiryInfo date={row.passport.extracted?.expirationDate} />
-                          ) : (
-                            <span className="text-xs text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          <DocumentCell
-                            document={row.visa}
-                            extraCount={Math.max(0, row.counts.visa - 1)}
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          {row.visa ? (
-                            <ExpiryInfo date={row.visa.extracted?.expirationDate} />
-                          ) : (
-                            <span className="text-xs text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          <DocumentCell
-                            document={row.exitPermit}
-                            extraCount={Math.max(0, row.counts.exitPermit - 1)}
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          <DocumentCell
-                            document={row.otherDocument}
-                            extraCount={Math.max(0, row.counts.other - 1)}
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-center align-top">
-                          <AggregateStatusBadge status={row.aggregateStatus} />
-                        </td>
-                        <td className="px-4 py-4 text-right align-top">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedRowId((current) => (current === row.id ? null : row.id))
-                            }
-                            className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          >
-                            {isExpanded ? "Ocultar" : "Ver todo"}
-                          </button>
-                        </td>
-                      </tr>
-
-                      {isExpanded && (
-                        <tr
-                          className={index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
+          {/* Desktop: master-detail layout */}
+          <div ref={tableTopRef} className="hidden lg:flex gap-4 items-start scroll-mt-4">
+            {/* Table */}
+            <div className="flex-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      {[
+                        { label: "Integrante", align: "left" },
+                        { label: "Estado", align: "center" },
+                        { label: "Pasaporte", align: "center" },
+                        { label: "Visa", align: "center" },
+                        { label: "Permiso de salida", align: "center" },
+                        { label: "Adjuntos", align: "center" },
+                        { label: "", align: "right" },
+                      ].map((col) => (
+                        <th
+                          key={col.label}
+                          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 text-${col.align}`}
                         >
-                          <td colSpan={9} className="bg-slate-50 px-4 py-5">
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                              <div>
-                                <h3 className="text-sm font-semibold text-slate-900">
-                                  Todos los documentos de {row.ownerLabel}
-                                </h3>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Incluye pasaportes, visas, permisos, comprobantes de pago y cualquier archivo subido como otro documento.
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap gap-2 text-xs">
-                                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
-                                  Total: {row.counts.total}
-                                </span>
-                                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
-                                  Otros: {row.counts.other}
-                                </span>
-                              </div>
-                            </div>
+                          {col.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row, index) => {
+                      const isSelected = selectedRow?.id === row.id;
+                      const borderColor =
+                        ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
 
-                            <div className="space-y-4">
-                              {row.documents.map((document) => (
-                                <FullDocumentCard key={document.id} document={document} />
-                              ))}
+                      return (
+                        <tr
+                          key={row.id}
+                          style={{ borderLeft: `4px solid ${borderColor}` }}
+                          className={`
+                            ${index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
+                            ${isSelected ? "bg-blue-50/50" : "hover:bg-slate-50"}
+                            cursor-pointer transition-colors
+                          `}
+                          onClick={() => handleSelectRow(row)}
+                        >
+                          {/* Integrante */}
+                          <td className="px-4 py-4 align-middle">
+                            <p className="text-sm font-semibold text-slate-900 leading-tight">
+                              {row.ownerLabel}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              {row.owner?.email || "Sin correo"}
+                            </p>
+                            {sortBy === "recent" && row.lastUploadDate > 0 && (
+                              <p className="mt-0.5 text-[10px] text-slate-400">
+                                Último: {formatDate(new Date(row.lastUploadDate).toISOString())}
+                              </p>
+                            )}
+                          </td>
+
+                          {/* Estado */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <AggregateStatusBadge status={row.aggregateStatus} />
+                          </td>
+
+                          {/* Pasaporte */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <DocumentSlot
+                              doc={row.passport}
+                              extraCount={Math.max(0, row.counts.passport - 1)}
+                              showExpiry
+                            />
+                          </td>
+
+                          {/* Visa */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <DocumentSlot
+                              doc={row.visa}
+                              extraCount={Math.max(0, row.counts.visa - 1)}
+                              showExpiry
+                            />
+                          </td>
+
+                          {/* Permiso de salida */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <DocumentSlot
+                              doc={row.exitPermit}
+                              extraCount={Math.max(0, row.counts.exitPermit - 1)}
+                              showExpiry={false}
+                            />
+                          </td>
+
+                          {/* Adjuntos (Other) — neutral badge, never competes */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <OtherDocsBadge count={row.counts.other} />
+                          </td>
+
+                          {/* Chevron / select indicator */}
+                          <td className="px-4 py-4 text-right align-middle">
+                            <div
+                              className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                                isSelected
+                                  ? "bg-blue-600 text-white"
+                                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                              }`}
+                            >
+                              <svg
+                                className={`w-4 h-4 transition-transform ${
+                                  isSelected ? "rotate-90" : ""
+                                }`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-          <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
-            <span className="text-xs text-slate-500">
-              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""} visible
-              {filteredRows.length !== 1 ? "s" : ""}
-            </span>
-            {hasMore && (
-              <button
-                onClick={handleLoadMore}
-                className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 transition-colors"
+              <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
+                <span className="text-xs text-slate-500">
+                  {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
+                  {selectedRow ? " · Haz clic en otra fila para cambiar el detalle" : " · Haz clic en una fila para ver el detalle"}
+                </span>
+                {hasMore && (
+                  <button
+                    onClick={handleLoadMore}
+                    className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 transition-colors"
+                  >
+                    Cargar más
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Detail panel */}
+            {selectedRow && (
+              <div
+                className="w-96 flex-shrink-0 sticky top-4"
+                style={{ maxHeight: "calc(100vh - 140px)" }}
               >
-                Cargar más documentos
-              </button>
+                <UserDetailPanel
+                  key={selectedRow.id}
+                  row={selectedRow}
+                  onClose={() => setSelectedRow(null)}
+                />
+              </div>
             )}
-          </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
+
+// ─── DocumentsPage: root component ───────────────────────────────────────────
 
 function DocumentsPage() {
   const { data: userData } = useQuery(GET_USERS_BY_ID);
@@ -1174,7 +1841,8 @@ function DocumentsPage() {
   const userRole = currentUser?.role;
 
   const userIsAdmin = isDocumentAdmin(currentUser);
-  const canUploadDocuments = userRole !== "CEDES Financiero";
+  const isFinanciero = userRole === "CEDES Financiero";
+  const canUploadDocuments = !isFinanciero;
   const [activeTab, setActiveTab] = useState("mine");
 
   return (
@@ -1185,36 +1853,54 @@ function DocumentsPage() {
         <SoftBox p={2}>
           <div className="min-h-screen bg-slate-50">
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-slate-200">
-              <div className="max-w-6xl mx-auto px-4 py-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h1 className="text-xl font-semibold text-slate-900">Documentos</h1>
-                  {userIsAdmin && (
-                    <span className="text-xs px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full ring-1 ring-violet-200 font-semibold">
-                      Admin
-                    </span>
-                  )}
+              <div className="max-w-[1400px] mx-auto px-4 py-4">
+                <div className="flex items-center justify-between mb-1">
+                  <h1 className="text-xl font-semibold text-slate-900">
+                    {isFinanciero ? "Documentos complementarios" : "Documentos"}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    {isFinanciero && (
+                      <span className="text-xs px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-semibold">
+                        CEDES Financiero
+                      </span>
+                    )}
+                    {userIsAdmin && !isFinanciero && (
+                      <span className="text-xs px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full ring-1 ring-violet-200 font-semibold">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-sm text-slate-500 mb-4">
-                  Filtra, revisa y escanea nuevos documentos
+                  {isFinanciero
+                    ? "Documentos adjuntos y comprobantes cargados por los integrantes"
+                    : "Filtra, revisa y escanea documentos de los integrantes"}
                 </p>
 
-                {userIsAdmin && (
+                {userIsAdmin && !isFinanciero && (
                   <div className="flex gap-2 p-1 bg-slate-100 rounded-full w-fit">
-                    <TabButton active={activeTab === "mine"} onClick={() => setActiveTab("mine")}>
+                    <TabButton
+                      active={activeTab === "mine"}
+                      onClick={() => setActiveTab("mine")}
+                    >
                       Mis documentos
                     </TabButton>
-                    <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>
-                      Tabla admin
+                    <TabButton
+                      active={activeTab === "all"}
+                      onClick={() => setActiveTab("all")}
+                    >
+                      Vista admin
                     </TabButton>
                   </div>
                 )}
               </div>
             </header>
 
-            <main className="mx-auto max-w-6xl px-4 py-6">
-              {(!userIsAdmin || activeTab === "mine") && <MyDocumentsView />}
-              {userIsAdmin && activeTab === "all" && <AdminDocumentsView />}
+            <main className="mx-auto max-w-[1400px] px-4 py-6">
+              {isFinanciero && <FinancieroView />}
+              {!isFinanciero && (!userIsAdmin || activeTab === "mine") && <MyDocumentsView />}
+              {!isFinanciero && userIsAdmin && activeTab === "all" && <AdminDocumentsView />}
             </main>
 
             {canUploadDocuments && (
