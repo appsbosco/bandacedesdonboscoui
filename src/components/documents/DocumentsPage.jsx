@@ -1,10 +1,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@apollo/client";
-import {
-  MY_DOCUMENTS,
-  ALL_DOCUMENTS,
-} from "../../graphql/documents/documents.gql.js";
+import { MY_DOCUMENTS, ALL_DOCUMENTS } from "../../graphql/documents/documents.gql.js";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentFilters } from "../../components/documents/DocumentsFilters.jsx";
 import { GET_USERS_BY_ID } from "graphql/queries";
@@ -66,7 +63,9 @@ function getDaysUntilExpiration(value) {
   if (!date) return null;
 
   const now = new Date();
-  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startOfToday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
   const startOfTarget = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   );
@@ -92,8 +91,72 @@ function sortDocumentsByFreshness(documents) {
 
 function getOwnerLabel(owner) {
   if (!owner) return "Sin propietario";
-  const fullName = [owner.name, owner.firstSurName, owner.secondSurName].filter(Boolean).join(" ").trim();
+  const fullName = [owner.name, owner.firstSurName, owner.secondSurName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   return fullName || owner.email || "Sin nombre";
+}
+
+function getDocumentTypeLabel(type) {
+  switch (type) {
+    case "PASSPORT":
+      return "Pasaporte";
+    case "VISA":
+      return "Visa";
+    case "PERMISO_SALIDA":
+      return "Permiso de salida";
+    case "OTHER":
+      return "Otro documento";
+    default:
+      return type || "Documento";
+  }
+}
+
+function getPreviewImage(document) {
+  if (!document?.images?.length) return null;
+  return document.images.find((image) => image.kind === "NORMALIZED") || document.images[0];
+}
+
+function buildExtractedFields(document) {
+  const extracted = document?.extracted || {};
+  return [
+    { label: "Nombre completo", value: extracted.fullName },
+    { label: "Nombres", value: extracted.givenNames },
+    { label: "Apellidos", value: extracted.surname },
+    { label: "Nacionalidad", value: extracted.nationality },
+    { label: "País emisor", value: extracted.issuingCountry },
+    { label: "Número documento", value: extracted.documentNumber, sensitive: true },
+    { label: "Número pasaporte", value: extracted.passportNumber, sensitive: true },
+    { label: "Tipo de visa", value: extracted.visaType },
+    { label: "Control visa", value: extracted.visaControlNumber },
+    {
+      label: "Nacimiento",
+      value: formatDate(extracted.dateOfBirth) !== "—" ? formatDate(extracted.dateOfBirth) : null,
+    },
+    { label: "Sexo", value: extracted.sex },
+    {
+      label: "Expiración",
+      value:
+        formatDate(extracted.expirationDate) !== "—" ? formatDate(extracted.expirationDate) : null,
+    },
+    {
+      label: "Emisión",
+      value: formatDate(extracted.issueDate) !== "—" ? formatDate(extracted.issueDate) : null,
+    },
+    { label: "Destino", value: extracted.destination },
+    { label: "Autorizante", value: extracted.authorizerName },
+    {
+      label: "MRZ válido",
+      value: typeof extracted.mrzValid === "boolean" ? (extracted.mrzValid ? "Sí" : "No") : null,
+    },
+    { label: "Formato MRZ", value: extracted.mrzFormat },
+    {
+      label: "Confianza OCR",
+      value: extracted.ocrConfidence != null ? `${Math.round(extracted.ocrConfidence)}%` : null,
+    },
+    { label: "Texto OCR", value: extracted.ocrText },
+  ].filter((field) => field.value);
 }
 
 function computeRowStatus(row) {
@@ -108,7 +171,14 @@ function computeRowStatus(row) {
   if (expiryStates.includes("warning")) return "EXPIRING";
 
   const hasPendingState = statuses.some((status) =>
-    ["UPLOADED", "DATA_CAPTURED", "CAPTURE_ACCEPTED", "OCR_PENDING", "OCR_PROCESSING", "OCR_FAILED"].includes(status)
+    [
+      "UPLOADED",
+      "DATA_CAPTURED",
+      "CAPTURE_ACCEPTED",
+      "OCR_PENDING",
+      "OCR_PROCESSING",
+      "OCR_FAILED",
+    ].includes(status)
   );
 
   if (hasPendingState) return "INCOMPLETE";
@@ -265,6 +335,7 @@ function DocumentCell({ document, extraCount }) {
   }
 
   const docNumber = document.extracted?.passportNumber || document.extracted?.documentNumber;
+  const expiry = document.extracted?.expirationDate ? getExpiryState(document.extracted.expirationDate) : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
@@ -273,6 +344,22 @@ function DocumentCell({ document, extraCount }) {
         <span style={{ fontSize: "11px", color: "#475569", fontFamily: "monospace" }}>
           {maskDocumentNumber(docNumber)}
         </span>
+      )}
+      {document.extracted?.fullName && (
+        <span
+          style={{
+            maxWidth: "120px",
+            fontSize: "10px",
+            color: "#64748B",
+            textAlign: "center",
+            lineHeight: 1.25,
+          }}
+        >
+          {document.extracted.fullName}
+        </span>
+      )}
+      {expiry && (
+        <span style={{ fontSize: "10px", fontWeight: 700, color: expiry.color }}>{expiry.label}</span>
       )}
       <Link
         to={`/documents/${document.id}`}
@@ -298,6 +385,7 @@ DocumentCell.propTypes = {
     id: PropTypes.string,
     status: PropTypes.string,
     extracted: PropTypes.shape({
+      fullName: PropTypes.string,
       passportNumber: PropTypes.string,
       documentNumber: PropTypes.string,
       expirationDate: PropTypes.string,
@@ -309,6 +397,251 @@ DocumentCell.propTypes = {
 DocumentCell.defaultProps = {
   document: null,
   extraCount: 0,
+};
+
+function FullDocumentCard({ document }) {
+  const previewImage = getPreviewImage(document);
+  const extractedFields = buildExtractedFields(document);
+  const expiry = getExpiryState(document.extracted?.expirationDate);
+  const docNumber = document.extracted?.passportNumber || document.extracted?.documentNumber;
+  const primaryFields = extractedFields.slice(0, 8);
+  const secondaryFields = extractedFields.slice(8);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-slate-900">
+                {getDocumentTypeLabel(document.type)}
+              </h3>
+              <DocumentStateBadge status={document.status} />
+              {document.extracted?.expirationDate && (
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{ background: "#F8FAFC", color: expiry.color, border: "1px solid #E2E8F0" }}
+                >
+                  {expiry.label}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+              <span>ID: {document.id}</span>
+              <span>Creado: {formatDate(document.createdAt)}</span>
+              <span>Actualizado: {formatDate(document.updatedAt)}</span>
+              <span>Imágenes: {document.images?.length || 0}</span>
+              <span>Intentos OCR: {document.ocrAttempts ?? 0}</span>
+            </div>
+
+            {(document.extracted?.fullName || docNumber || document.notes) && (
+              <div className="mt-3 space-y-1 text-sm text-slate-700">
+                {document.extracted?.fullName && (
+                  <p>
+                    <span className="font-semibold text-slate-900">Titular:</span>{" "}
+                    {document.extracted.fullName}
+                  </p>
+                )}
+                {docNumber && (
+                  <p>
+                    <span className="font-semibold text-slate-900">Número:</span>{" "}
+                    {maskDocumentNumber(docNumber)}
+                  </p>
+                )}
+                {document.notes && (
+                  <p>
+                    <span className="font-semibold text-slate-900">Notas:</span> {document.notes}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {previewImage?.url && (
+              <img
+                src={previewImage.url}
+                alt={getDocumentTypeLabel(document.type)}
+                className="h-16 w-16 rounded-xl border border-slate-200 bg-slate-50 object-cover"
+              />
+            )}
+            <Link
+              to={`/documents/${document.id}`}
+              className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Abrir detalle
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+              Datos principales
+            </p>
+            {primaryFields.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">No hay datos estructurados en este documento.</p>
+            ) : (
+              <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                {primaryFields.map((field) => (
+                  <p key={field.label} className="break-words text-sm text-slate-700">
+                    <span className="font-semibold text-slate-900">{field.label}:</span>{" "}
+                    {field.sensitive ? maskDocumentNumber(field.value) : field.value}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+              Datos adicionales
+            </p>
+            {secondaryFields.length === 0 && !document.ocrLastError ? (
+              <p className="mt-2 text-sm text-slate-500">Sin datos adicionales.</p>
+            ) : (
+              <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                {secondaryFields.map((field) => (
+                  <p key={field.label} className="break-words text-sm text-slate-700">
+                    <span className="font-semibold text-slate-900">{field.label}:</span>{" "}
+                    {field.sensitive ? maskDocumentNumber(field.value) : field.value}
+                  </p>
+                ))}
+                {document.ocrLastError && (
+                  <p className="break-words text-sm text-slate-700 sm:col-span-2">
+                    <span className="font-semibold text-slate-900">Error OCR:</span>{" "}
+                    {document.ocrLastError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+FullDocumentCard.propTypes = {
+  document: PropTypes.shape({
+    id: PropTypes.string,
+    type: PropTypes.string,
+    status: PropTypes.string,
+    notes: PropTypes.string,
+    createdAt: PropTypes.string,
+    updatedAt: PropTypes.string,
+    ocrAttempts: PropTypes.number,
+    ocrLastError: PropTypes.string,
+    images: PropTypes.arrayOf(
+      PropTypes.shape({
+        url: PropTypes.string,
+        kind: PropTypes.string,
+      })
+    ),
+    extracted: PropTypes.object,
+  }).isRequired,
+};
+
+function MobileSummaryItem({ label, children }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">{label}</p>
+      <div className="mt-2 min-h-[28px]">{children}</div>
+    </div>
+  );
+}
+
+MobileSummaryItem.propTypes = {
+  label: PropTypes.string.isRequired,
+  children: PropTypes.node,
+};
+
+function MobileRowCard({ row, expanded, onToggle }) {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-slate-900">{row.ownerLabel}</h3>
+            <p className="mt-1 break-all text-xs text-slate-500">{row.owner?.email || "Sin correo"}</p>
+            <p className="mt-1 text-xs text-slate-400">{row.counts.total} documento(s) cargado(s)</p>
+          </div>
+          <AggregateStatusBadge status={row.aggregateStatus} />
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <MobileSummaryItem label="Pasaporte">
+            <DocumentCell document={row.passport} extraCount={Math.max(0, row.counts.passport - 1)} />
+          </MobileSummaryItem>
+          <MobileSummaryItem label="Vence pasaporte">
+            {row.passport ? <ExpiryInfo date={row.passport.extracted?.expirationDate} /> : <span className="text-xs text-slate-300">—</span>}
+          </MobileSummaryItem>
+          <MobileSummaryItem label="Visa">
+            <DocumentCell document={row.visa} extraCount={Math.max(0, row.counts.visa - 1)} />
+          </MobileSummaryItem>
+          <MobileSummaryItem label="Vence visa">
+            {row.visa ? <ExpiryInfo date={row.visa.extracted?.expirationDate} /> : <span className="text-xs text-slate-300">—</span>}
+          </MobileSummaryItem>
+          <MobileSummaryItem label="Permiso salida">
+            <DocumentCell
+              document={row.exitPermit}
+              extraCount={Math.max(0, row.counts.exitPermit - 1)}
+            />
+          </MobileSummaryItem>
+          <MobileSummaryItem label="Otros documentos">
+            <DocumentCell
+              document={row.otherDocument}
+              extraCount={Math.max(0, row.counts.other - 1)}
+            />
+          </MobileSummaryItem>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          className="mt-4 inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          {expanded ? "Ocultar" : "Ver todo"}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-slate-200 bg-slate-50 p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900">
+                Todos los documentos de {row.ownerLabel}
+              </h4>
+              <p className="mt-1 text-xs text-slate-500">
+                Incluye pasaportes, visas, permisos, comprobantes de pago y cualquier archivo subido como otro documento.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
+                Total: {row.counts.total}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
+                Otros: {row.counts.other}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {row.documents.map((document) => (
+              <FullDocumentCard key={document.id} document={document} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+MobileRowCard.propTypes = {
+  row: PropTypes.object.isRequired,
+  expanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
 };
 
 function MyDocumentsView() {
@@ -365,6 +698,7 @@ function AdminDocumentsView() {
   const [rowStatusFilter, setRowStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
+  const [expandedRowId, setExpandedRowId] = useState(null);
 
   const { data, loading, error, fetchMore } = useQuery(ALL_DOCUMENTS, {
     variables: { pagination },
@@ -403,6 +737,9 @@ function AdminDocumentsView() {
         const permitDocs = sortDocumentsByFreshness(
           entry.documents.filter((document) => document.type === "PERMISO_SALIDA")
         );
+        const otherDocs = sortDocumentsByFreshness(
+          entry.documents.filter((document) => document.type === "OTHER")
+        );
 
         const row = {
           id: entry.id,
@@ -412,11 +749,13 @@ function AdminDocumentsView() {
           passport: passportDocs[0] || null,
           visa: visaDocs[0] || null,
           exitPermit: permitDocs[0] || null,
+          otherDocument: otherDocs[0] || null,
           counts: {
             total: entry.documents.length,
             passport: passportDocs.length,
             visa: visaDocs.length,
             exitPermit: permitDocs.length,
+            other: otherDocs.length,
           },
         };
 
@@ -458,6 +797,7 @@ function AdminDocumentsView() {
           if (row.passport) acc.passport += 1;
           if (row.visa) acc.visa += 1;
           if (row.exitPermit) acc.exitPermit += 1;
+          if (row.otherDocument) acc.other += 1;
           acc[row.aggregateStatus] = (acc[row.aggregateStatus] || 0) + 1;
           return acc;
         },
@@ -465,6 +805,7 @@ function AdminDocumentsView() {
           passport: 0,
           visa: 0,
           exitPermit: 0,
+          other: 0,
           COMPLETE: 0,
           INCOMPLETE: 0,
           EXPIRED: 0,
@@ -490,6 +831,7 @@ function AdminDocumentsView() {
     setRowStatusFilter("ALL");
     setTypeFilter("");
     setOwnerSearch("");
+    setExpandedRowId(null);
   };
 
   const hasActiveFilters = rowStatusFilter !== "ALL" || typeFilter || ownerSearch;
@@ -573,14 +915,18 @@ function AdminDocumentsView() {
 
       {!loading && !error && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Integrantes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                Integrantes
+              </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{filteredRows.length}</p>
               <p className="text-xs text-slate-500">con documentos cargados</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Pasaportes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                Pasaportes
+              </p>
               <p className="mt-1 text-2xl font-bold text-emerald-700">{tableStats.passport}</p>
               <p className="text-xs text-slate-500">integrantes con pasaporte</p>
             </div>
@@ -590,15 +936,23 @@ function AdminDocumentsView() {
               <p className="text-xs text-slate-500">integrantes con visa</p>
             </div>
             <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Permisos</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
+                Permisos
+              </p>
               <p className="mt-1 text-2xl font-bold text-violet-700">{tableStats.exitPermit}</p>
               <p className="text-xs text-slate-500">integrantes con permiso</p>
+            </div>
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Otros</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{tableStats.other}</p>
+              <p className="text-xs text-slate-500">integrantes con otros docs</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 px-1">
             <span className="text-sm text-slate-500">
-              {documents.length} de {total} documento{total !== 1 ? "s" : ""} cargado{total !== 1 ? "s" : ""} en memoria
+              {documents.length} de {total} documento{total !== 1 ? "s" : ""} cargado
+              {total !== 1 ? "s" : ""} en memoria
             </span>
             {hasActiveFilters && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
@@ -637,8 +991,22 @@ function AdminDocumentsView() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="space-y-4 lg:hidden">
+            {filteredRows.map((row) => (
+              <MobileRowCard
+                key={row.id}
+                row={row}
+                expanded={expandedRowId === row.id}
+                onToggle={() =>
+                  setExpandedRowId((current) => (current === row.id ? null : row.id))
+                }
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 lg:block">
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -649,7 +1017,9 @@ function AdminDocumentsView() {
                     "Visa",
                     "Vence visa",
                     "Permiso salida",
+                    "Otros documentos",
                     "Estado",
+                    "",
                   ].map((header) => (
                     <th
                       key={header}
@@ -661,57 +1031,124 @@ function AdminDocumentsView() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row, index) => (
-                  <tr
-                    key={row.id}
-                    className={index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
-                  >
-                    <td className="px-4 py-4 align-top">
-                      <p className="m-0 text-sm font-semibold text-slate-900">{row.ownerLabel}</p>
-                      <p className="mt-1 text-xs text-slate-500">{row.owner?.email || "Sin correo"}</p>
-                      <p className="mt-1 text-xs text-slate-400">{row.counts.total} documento(s) cargado(s)</p>
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      <DocumentCell
-                        document={row.passport}
-                        extraCount={Math.max(0, row.counts.passport - 1)}
-                      />
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      {row.passport ? (
-                        <ExpiryInfo date={row.passport.extracted?.expirationDate} />
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
+                {filteredRows.map((row, index) => {
+                  const isExpanded = expandedRowId === row.id;
+
+                  return (
+                    <React.Fragment key={row.id}>
+                      <tr
+                        className={
+                          index < filteredRows.length - 1 || isExpanded
+                            ? "border-b border-slate-100"
+                            : ""
+                        }
+                      >
+                        <td className="px-4 py-4 align-top">
+                          <p className="m-0 text-sm font-semibold text-slate-900">{row.ownerLabel}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {row.owner?.email || "Sin correo"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {row.counts.total} documento(s) cargado(s)
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          <DocumentCell
+                            document={row.passport}
+                            extraCount={Math.max(0, row.counts.passport - 1)}
+                          />
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          {row.passport ? (
+                            <ExpiryInfo date={row.passport.extracted?.expirationDate} />
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          <DocumentCell
+                            document={row.visa}
+                            extraCount={Math.max(0, row.counts.visa - 1)}
+                          />
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          {row.visa ? (
+                            <ExpiryInfo date={row.visa.extracted?.expirationDate} />
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          <DocumentCell
+                            document={row.exitPermit}
+                            extraCount={Math.max(0, row.counts.exitPermit - 1)}
+                          />
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          <DocumentCell
+                            document={row.otherDocument}
+                            extraCount={Math.max(0, row.counts.other - 1)}
+                          />
+                        </td>
+                        <td className="px-4 py-4 text-center align-top">
+                          <AggregateStatusBadge status={row.aggregateStatus} />
+                        </td>
+                        <td className="px-4 py-4 text-right align-top">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedRowId((current) => (current === row.id ? null : row.id))
+                            }
+                            className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            {isExpanded ? "Ocultar" : "Ver todo"}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {isExpanded && (
+                        <tr
+                          className={index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
+                        >
+                          <td colSpan={9} className="bg-slate-50 px-4 py-5">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <h3 className="text-sm font-semibold text-slate-900">
+                                  Todos los documentos de {row.ownerLabel}
+                                </h3>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Incluye pasaportes, visas, permisos, comprobantes de pago y cualquier archivo subido como otro documento.
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
+                                  Total: {row.counts.total}
+                                </span>
+                                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 ring-1 ring-slate-200">
+                                  Otros: {row.counts.other}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              {row.documents.map((document) => (
+                                <FullDocumentCard key={document.id} document={document} />
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      <DocumentCell document={row.visa} extraCount={Math.max(0, row.counts.visa - 1)} />
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      {row.visa ? (
-                        <ExpiryInfo date={row.visa.extracted?.expirationDate} />
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      <DocumentCell
-                        document={row.exitPermit}
-                        extraCount={Math.max(0, row.counts.exitPermit - 1)}
-                      />
-                    </td>
-                    <td className="px-4 py-4 text-center align-top">
-                      <AggregateStatusBadge status={row.aggregateStatus} />
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
             <span className="text-xs text-slate-500">
-              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""} visible{filteredRows.length !== 1 ? "s" : ""}
+              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""} visible
+              {filteredRows.length !== 1 ? "s" : ""}
             </span>
             {hasMore && (
               <button
@@ -722,8 +1159,10 @@ function AdminDocumentsView() {
               </button>
             )}
           </div>
+          </div>
         </div>
       )}
+
     </div>
   );
 }
@@ -773,7 +1212,7 @@ function DocumentsPage() {
               </div>
             </header>
 
-            <main className="max-w-6xl mx-auto px-4 py-6">
+            <main className="mx-auto max-w-6xl px-4 py-6">
               {(!userIsAdmin || activeTab === "mine") && <MyDocumentsView />}
               {userIsAdmin && activeTab === "all" && <AdminDocumentsView />}
             </main>
