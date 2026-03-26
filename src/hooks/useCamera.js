@@ -61,7 +61,13 @@ export function useCamera(options = {}) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          if (playErr.name !== "NotAllowedError" && playErr.name !== "AbortError") {
+            throw playErr;
+          }
+        }
       }
 
       setIsReady(true);

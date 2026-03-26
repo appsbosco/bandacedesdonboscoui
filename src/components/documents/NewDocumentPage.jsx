@@ -9,6 +9,7 @@ import {
   ADD_DOCUMENT_IMAGE,
   UPSERT_DOCUMENT_EXTRACTED_DATA,
   ENQUEUE_DOCUMENT_OCR,
+  PROCESS_DOCUMENT_OCR,
   DOCUMENT_VISIBILITY_SETTINGS,
 } from "../../graphql/documents/documents.gql";
 import { OCR_TYPES, DOCUMENT_TYPES } from "../../utils/constants";
@@ -128,11 +129,15 @@ export default function NewDocumentPage() {
   const [uploadError, setUploadError] = useState(null);
   const [successState, setSuccessState] = useState(null);
 
+  const [ocrExtracted, setOcrExtracted] = useState(null);
+  const [processingPhase, setProcessingPhase] = useState(null); // null | 'uploading' | 'processing'
+
   const [createDocument] = useMutation(CREATE_DOCUMENT);
   const [getSignedUpload] = useMutation(GET_SIGNED_UPLOAD);
   const [addDocumentImage] = useMutation(ADD_DOCUMENT_IMAGE);
   const [upsertExtractedData] = useMutation(UPSERT_DOCUMENT_EXTRACTED_DATA);
   const [enqueueDocumentOcr] = useMutation(ENQUEUE_DOCUMENT_OCR);
+  const [processDocumentOcr] = useMutation(PROCESS_DOCUMENT_OCR);
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const { data: settingsData, loading: settingsLoading } = useQuery(DOCUMENT_VISIBILITY_SETTINGS, {
     fetchPolicy: "cache-and-network",
@@ -168,6 +173,8 @@ export default function NewDocumentPage() {
     async (blob, captureMeta) => {
       setUploadError(null);
       setUploading(true);
+      setProcessingPhase("uploading");
+      setOcrExtracted(null);
       try {
         // 1. Create document
         const { data: createData } = await createDocument({ variables: { type: docType } });
@@ -206,9 +213,24 @@ export default function NewDocumentPage() {
           return;
         }
 
-        // 5. Enqueue OCR if needed
+        // 5. Process OCR synchronously (no polling needed)
         if (OCR_TYPES.includes(docType)) {
-          await enqueueDocumentOcr({ variables: { documentId: docId } });
+          setProcessingPhase("processing");
+          try {
+            const { data: ocrData } = await processDocumentOcr({
+              variables: { documentId: docId },
+            });
+            // Pass extracted data directly to Step 3 — no polling needed
+            setOcrExtracted(ocrData?.processDocumentOcr || null);
+          } catch (ocrErr) {
+            console.warn("[NewDocumentPage] sync OCR failed, falling back to polling:", ocrErr.message);
+            // Fallback: enqueue for the worker to process and let Step 3 poll
+            try {
+              await enqueueDocumentOcr({ variables: { documentId: docId } });
+            } catch (_) {
+              // Already enqueued or max attempts — Step 3 will handle it
+            }
+          }
         }
 
         setStep(2);
@@ -217,6 +239,7 @@ export default function NewDocumentPage() {
         setUploadError(err.message || "Error al subir el documento. Intente nuevamente.");
       } finally {
         setUploading(false);
+        setProcessingPhase(null);
       }
     },
     [
@@ -224,6 +247,7 @@ export default function NewDocumentPage() {
       createDocument,
       getSignedUpload,
       addDocumentImage,
+      processDocumentOcr,
       enqueueDocumentOcr,
       showSuccessAndRedirect,
     ]
@@ -284,8 +308,17 @@ export default function NewDocumentPage() {
 
         {!successState && !settingsLoading && uploading && (
           <div className="flex flex-col items-center justify-center p-12 gap-3">
-            <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
-            <p className="text-sm text-gray-500">Subiendo documento…</p>
+            <div className="animate-spin w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full" />
+            <p className="text-base font-semibold text-gray-800">
+              {processingPhase === "processing"
+                ? "Analizando documento…"
+                : "Subiendo documento…"}
+            </p>
+            <p className="text-sm text-gray-400">
+              {processingPhase === "processing"
+                ? "Extrayendo información automáticamente"
+                : "Preparando imagen para análisis"}
+            </p>
           </div>
         )}
 
@@ -333,6 +366,7 @@ export default function NewDocumentPage() {
               <WizardStep3
                 documentId={documentId}
                 documentType={docType}
+                preloadedDocument={ocrExtracted}
                 onConfirm={handleConfirm}
                 onBack={() => setStep(1)}
               />

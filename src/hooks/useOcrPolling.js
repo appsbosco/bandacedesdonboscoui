@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { DOCUMENT_BY_ID } from '../graphql/documents/documents.gql';
 
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLLS        = 60; // 3 minutes max
+const POLL_INTERVAL_MS = 1500; // Reduced from 3000 — faster feedback
+const MAX_POLLS        = 40;  // 1 minute max (was 3 minutes)
 
 const TERMINAL_SUCCESS = new Set(['OCR_SUCCESS', 'VERIFIED']);
 const TERMINAL_FAIL    = new Set(['OCR_FAILED', 'REJECTED']);

@@ -8,9 +8,9 @@ describe("reconcileData", () => {
     expect(result.mrzValid).toBe(false);
   });
 
-  test("MRZ_NOT_DETECTED when only OCR present", () => {
+  test("NO_MRZ_FOUND when only OCR present", () => {
     const result = reconcileData(null, { fullName: "John Doe", nationality: "USA" });
-    expect(result.reasonCodes).toContain("MRZ_NOT_DETECTED");
+    expect(result.reasonCodes).toContain("NO_MRZ_FOUND");
     expect(result.fields.fullName).toBe("John Doe");
     expect(result.fields.nationality).toBe("USA");
     expect(result.mrzValid).toBe(false);

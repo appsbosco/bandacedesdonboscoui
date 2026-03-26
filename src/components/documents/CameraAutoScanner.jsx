@@ -16,6 +16,7 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
   const { videoRef, isReady, error: camError, startCamera, stopCamera } = useCamera();
   const [phase, setPhase] = useState("initializing"); // initializing | scanning | captured
   const [capturedBlob, setCapturedBlob] = useState(null);
+  const [capturedMeta, setCapturedMeta] = useState(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const autoCapturedRef = useRef(false);
   const warmupDoneRef = useRef(false);
@@ -46,7 +47,7 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
 
   // Frame analysis
   const { quality, reset: resetQuality } = useFrameAnalysis(videoRef, scanArea, {
-    thresholds: { focusMin: 0.25, brightnessMin: 70, brightnessMax: 225, glareMax: 5 },
+    thresholds: { focusMin: 0.20, brightnessMin: 60, brightnessMax: 230, glareMax: 6 },
   });
 
   // Camera startup
@@ -85,12 +86,13 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
         browser: navigator.userAgent.slice(0, 120),
         w: Math.round(scanArea.width),
         h: Math.round(scanArea.height),
-        blurVar: quality.focus,
-        glarePct: quality.glare,
+        blurVar: typeof quality.focus === 'object' ? quality.focus.score : quality.focus,
+        glarePct: typeof quality.glare === 'object' ? quality.glare.percent : quality.glare,
         attempt: attemptCount + 1,
         ts: new Date().toISOString(),
       };
       setCapturedBlob(blob);
+      setCapturedMeta(meta);
       setPhase("captured");
       stopCamera();
     } catch (err) {
@@ -105,7 +107,9 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
   }, [doCapture]);
 
   const handleRetake = useCallback(() => {
+    warmupDoneRef.current = false;
     setCapturedBlob(null);
+    setCapturedMeta(null);
     setAttemptCount((n) => n + 1);
     autoCapturedRef.current = false;
     resetQuality();
@@ -118,18 +122,9 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
   }, [startCamera, resetQuality]);
 
   const handleConfirm = useCallback(() => {
-    if (!capturedBlob || !videoRef.current) return;
-    const meta = {
-      device: navigator.userAgent.slice(0, 120),
-      w: Math.round(scanArea?.width || 0),
-      h: Math.round(scanArea?.height || 0),
-      blurVar: quality.focus,
-      glarePct: quality.glare,
-      attempt: attemptCount + 1,
-      ts: new Date().toISOString(),
-    };
-    onCapture(capturedBlob, meta);
-  }, [capturedBlob, scanArea, quality, attemptCount, onCapture]);
+    if (!capturedBlob || !capturedMeta) return;
+    onCapture(capturedBlob, capturedMeta);
+  }, [capturedBlob, capturedMeta, onCapture]);
 
   // ── Render ──
 
@@ -149,22 +144,25 @@ function CameraAutoScanner({ documentType, onCapture, onCancel }) {
     const previewUrl = URL.createObjectURL(capturedBlob);
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-4 bg-gray-950">
-        <p className="text-white font-semibold">¿La imagen es legible?</p>
+        <p className="text-white font-semibold text-lg">¿La imagen es legible?</p>
         <img
           src={previewUrl}
           alt="Captura"
           className="rounded-xl max-h-72 object-contain border border-white/20"
+          onLoad={() => URL.revokeObjectURL(previewUrl)}
         />
         <div className="flex gap-3 w-full max-w-xs">
           <button
+            type="button"
             onClick={handleRetake}
-            className="flex-1 py-3 bg-white/10 text-white rounded-xl text-sm font-medium"
+            className="flex-1 py-4 bg-white/10 text-white rounded-xl text-sm font-medium active:bg-white/20 touch-manipulation"
           >
             Retomar
           </button>
           <button
+            type="button"
             onClick={handleConfirm}
-            className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-medium"
+            className="flex-1 py-4 bg-white text-black rounded-xl text-sm font-bold active:bg-gray-200 touch-manipulation"
           >
             Usar esta
           </button>

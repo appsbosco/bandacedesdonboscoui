@@ -103,24 +103,38 @@ function DataForm({ fields, values, onChange }) {
 }
 
 /**
- * Step 3: OCR polling + data review/confirmation.
- * - For OCR_TYPES: polls server until extraction completes, shows results, allows editing.
- * - For OTHER: shows manual form directly.
+ * Step 3: OCR data review/confirmation.
+ * - If preloadedDocument is provided (sync OCR succeeded), skip polling entirely.
+ * - Otherwise falls back to polling for the worker to finish.
+ * - For OTHER types: shows manual form directly.
  */
-function WizardStep3({ documentId, documentType, onConfirm, onBack }) {
-  const { status, document: ocrDoc, startPolling, progressPct } = useOcrPolling();
+function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, onBack }) {
+  const { status: pollStatus, document: polledDoc, startPolling, progressPct } = useOcrPolling();
   const [form, setForm] = useState({});
   const [editMode, setEditMode] = useState(false);
 
   const fields = FIELDS_BY_TYPE[documentType] || FIELDS_BY_TYPE.OTHER;
   const needsOcr = OCR_TYPES.includes(documentType);
 
-  // Start polling if document needs OCR
-  useEffect(() => {
-    if (documentId && needsOcr) startPolling(documentId);
-  }, [documentId, needsOcr, startPolling]);
+  // Determine the active document source: preloaded (sync) or polled (fallback)
+  const hasPreloaded = preloadedDocument?.extracted != null;
+  const ocrDoc = hasPreloaded ? preloadedDocument : polledDoc;
 
-  // Populate form when OCR data arrives
+  // Derive status: if preloaded, determine from document status
+  const status = hasPreloaded
+    ? (preloadedDocument.status === "OCR_SUCCESS" || preloadedDocument.status === "VERIFIED"
+        ? "success"
+        : preloadedDocument.status === "OCR_FAILED" || preloadedDocument.status === "REJECTED"
+          ? "failed"
+          : "success") // If we have extracted data, treat as success
+    : pollStatus;
+
+  // Start polling ONLY if no preloaded data (fallback path)
+  useEffect(() => {
+    if (documentId && needsOcr && !hasPreloaded) startPolling(documentId);
+  }, [documentId, needsOcr, hasPreloaded, startPolling]);
+
+  // Populate form when OCR data arrives (from either source)
   useEffect(() => {
     if (ocrDoc?.extracted) {
       const e = ocrDoc.extracted;
@@ -194,7 +208,7 @@ function WizardStep3({ documentId, documentType, onConfirm, onBack }) {
             style={{ width: `${Math.max(progressPct, 4)}%` }}
           />
         </div>
-        <p className="text-xs text-gray-400">Puede tomar hasta 30 segundos</p>
+        <p className="text-xs text-gray-400">Esto tomará solo unos segundos</p>
       </div>
     );
   }
@@ -224,8 +238,12 @@ function WizardStep3({ documentId, documentType, onConfirm, onBack }) {
         {/* Warnings */}
         {codes.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-            {codes.includes("MRZ_CHECKDIGIT_FAIL") && <p>Verificación de MRZ parcial.</p>}
-            {codes.includes("NO_MRZ_FOUND") && <p>No se detectó zona MRZ.</p>}
+            {codes.some(
+              (c) => c === "MRZ_CHECKDIGIT_FAIL" || c.startsWith("MRZ_CHECKDIGIT_FAIL_")
+            ) && <p>Verificación de MRZ parcial.</p>}
+            {(codes.includes("NO_MRZ_FOUND") || codes.includes("MRZ_NOT_DETECTED")) && (
+              <p>No se detectó zona MRZ.</p>
+            )}
             {codes.includes("NAME_NOT_FOUND") && <p>Nombre no detectado.</p>}
             {codes.includes("DATE_NOT_FOUND") && <p>Fecha de vencimiento no detectada.</p>}
             <p className="mt-1 font-medium">Revise y corrija los campos antes de confirmar.</p>

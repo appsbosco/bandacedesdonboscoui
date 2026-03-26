@@ -170,3 +170,12 @@ export const ENQUEUE_DOCUMENT_OCR = gql`
     }
   }
 `;
+
+export const PROCESS_DOCUMENT_OCR = gql`
+  ${DOCUMENT_FRAGMENT}
+  mutation ProcessDocumentOcr($documentId: ID!) {
+    processDocumentOcr(documentId: $documentId) {
+      ...DocumentFragment
+    }
+  }
+`;

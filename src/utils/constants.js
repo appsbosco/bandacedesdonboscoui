@@ -4,8 +4,8 @@
 
 export const SCANNER_CONFIG = {
   targetFps:         8,
-  stabilityMs:       800,
-  warmupMs:          1500,
+  stabilityMs:       500,
+  warmupMs:          800,
 };
 
 export const QUALITY_THRESHOLDS = {

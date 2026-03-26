@@ -86,7 +86,7 @@ export function reconcileData(mrzData, ocrData, options = {}) {
   }
 
   if (!hasMRZ) {
-    reasonCodes.push("MRZ_NOT_DETECTED");
+    reasonCodes.push("NO_MRZ_FOUND");
   }
 
   // Reconcile each field

@@ -10,8 +10,6 @@ import { CAMERA_TYPES, DOC_LABELS } from "../../utils/constants";
  * - PERMISO_SALIDA / OTHER → FileUploader
  */
 function WizardStep2({ documentType, onCaptured, onBack }) {
-  const [blob, setBlob] = useState(null);
-  const [meta, setMeta] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [file, setFile] = useState(null);
 
@@ -26,44 +24,11 @@ function WizardStep2({ documentType, onCaptured, onBack }) {
           <CameraAutoScanner
             documentType={documentType}
             onCapture={(b, m) => {
-              setBlob(b);
-              setMeta(m);
+              onCaptured(b, m);
               setScanning(false);
             }}
             onCancel={() => setScanning(false)}
           />
-        </div>
-      );
-    }
-
-    if (blob) {
-      const previewUrl = URL.createObjectURL(blob);
-      return (
-        <div className="flex flex-col items-center p-6 gap-5">
-          <h3 className="text-lg font-semibold text-gray-800">Documento capturado</h3>
-          <img
-            src={previewUrl}
-            alt="Captura"
-            className="rounded-xl max-h-64 object-contain shadow"
-          />
-          <div className="flex gap-3 w-full max-w-xs">
-            <button
-              onClick={() => {
-                setBlob(null);
-                setMeta(null);
-                setScanning(true);
-              }}
-              className="flex-1 py-3 border border-gray-200 rounded-xl text-sm text-gray-600"
-            >
-              Retomar
-            </button>
-            <button
-              onClick={() => onCaptured(blob, meta)}
-              className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-medium"
-            >
-              Continuar
-            </button>
-          </div>
         </div>
       );
     }
