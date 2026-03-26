@@ -73,6 +73,7 @@ export const PROTECTED_PREFIXES = [
   "/documents",
   "/new-document",
   "/tours",
+  "/booking-requests",
 ];
 
 const NO_SIDENAV_EXACT_PATHS = new Set([

@@ -9,6 +9,10 @@ export const PUBLIC_ROUTE_SEGMENTS = {
     es: "blog",
     en: "blog",
   },
+  ensembles: {
+    es: "agrupaciones",
+    en: "ensembles",
+  },
   calendar: {
     es: "calendario",
     en: "calendar",

@@ -22,6 +22,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
@@ -80,6 +81,7 @@ import FormationDetailPage from "layouts/formations/FormationDetailPage";
 import StudentAcademicPage from "layouts/academic/student/StudentAcademicPage";
 import AdminAcademicPage from "layouts/academic/admin/AdminAcademicPage";
 import ParentAcademicPage from "layouts/academic/parent/ParentAcademicPage";
+import BookingRequestsDashboard from "layouts/bookingRequests/BookingRequestsDashboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ICON_SX_12 = { fontSize: 12 };
@@ -503,6 +505,14 @@ const items = {
       route: "/formations/:formationId",
       component: <FormationDetailPage />,
     }),
+  bookingRequests: () =>
+    collapse({
+      name: "Contrataciones",
+      key: "booking-requests",
+      route: "/booking-requests",
+      icon: muiIcon12(WorkOutlineIcon),
+      component: <BookingRequestsDashboard />,
+    }),
 
   academicStudent: () =>
     collapse({
@@ -603,6 +613,7 @@ export const adminRoutes = [
   title("Agrupaciones", "agrupaciones"),
   items.ensembles(),
   items.ensembleMembers(),
+  items.bookingRequests(),
 
   title("Calendario", "calendario"),
   items.events(),

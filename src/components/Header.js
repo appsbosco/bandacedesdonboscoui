@@ -54,6 +54,13 @@ const Header = ({ openModal }) => {
             </a>
 
             <a
+              href={getPublicPath(lang, "ensembles")}
+              className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
+            >
+              {t("nav.ensembles", lang === "en" ? "Ensembles" : "Agrupaciones")}
+            </a>
+
+            <a
               href={getPublicPath(lang, "blog")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
             >
@@ -226,6 +233,13 @@ const Header = ({ openModal }) => {
                       className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
                     >
                       {t("nav.about")}
+                    </a>
+
+                    <a
+                      href={getPublicPath(lang, "ensembles")}
+                      className="block text-base font-semibold duration-200 text-slate-700 hover:text-slate-900"
+                    >
+                      {t("nav.ensembles", lang === "en" ? "Ensembles" : "Agrupaciones")}
                     </a>
 
                     <a

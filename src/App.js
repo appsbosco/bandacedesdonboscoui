@@ -49,6 +49,8 @@ const About = lazy(() => import("components/About"));
 const Contact = lazy(() => import("components/Contact"));
 const BlogListing = lazy(() => import("layouts/blog/BlogListing"));
 const ArticlePage = lazy(() => import("layouts/blog/ArticlePage"));
+const GroupingsIndex = lazy(() => import("layouts/agrupaciones/GroupingsIndex"));
+const GroupingPage = lazy(() => import("layouts/agrupaciones/GroupingPage"));
 const CalendarListing = lazy(() => import("layouts/calendar/CalendarListing"));
 const Alumni = lazy(() => import("layouts/Alumni/Alumni"));
 const Guatemala = lazy(() => import("layouts/guatemala/Guatemala"));
@@ -199,6 +201,10 @@ export default function App() {
           <Route path="/:lang" element={<Landing />} />
           <Route path="/:lang/nosotros" element={<About />} />
           <Route path="/:lang/about" element={<About />} />
+          <Route path="/:lang/agrupaciones" element={<GroupingsIndex />} />
+          <Route path="/:lang/ensembles" element={<GroupingsIndex />} />
+          <Route path="/:lang/agrupaciones/:slug" element={<GroupingPage />} />
+          <Route path="/:lang/ensembles/:slug" element={<GroupingPage />} />
           <Route path="/:lang/blog" element={<BlogListing />} />
           <Route path="/:lang/blog/:slug" element={<ArticlePage />} />
           <Route path="/:lang/contacto" element={<Contact />} />
