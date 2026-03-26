@@ -20,11 +20,11 @@ const SponsorBadge = () => {
             <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full bg-slate-100 ring-1 ring-slate-200/50">
               <div className="w-1.5 h-1.5 rounded-full bg-sky-600 animate-pulse"></div>
               <span className="text-xs font-medium uppercase tracking-wider text-slate-600 sm:text-sm">
-                {t("sponsor.badge", "Alianza estratégica")}
+                {t("sponsor.badge")}
               </span>
             </div>
             <h2 className="text-2xl font-semibold font-display text-slate-900 sm:text-3xl">
-              {t("sponsor.title", "Patrocinador Oficial")}
+              {t("sponsor.title")}
             </h2>
           </div>
 
@@ -38,13 +38,10 @@ const SponsorBadge = () => {
               <div className="lg:col-span-5">
                 <div className="space-y-4 text-center lg:text-left">
                   <h3 className="text-xl font-medium font-display text-slate-900 sm:text-2xl">
-                    {t("sponsor.subtitle", "Instituto Nacional de Seguros")}
+                    {t("sponsor.subtitle")}
                   </h3>
                   <p className="max-w-md mx-auto text-base leading-relaxed text-slate-600 lg:mx-0">
-                    {t(
-                      "sponsor.description",
-                      "Orgullosos de contar con el respaldo del INS en nuestro camino hacia el Rose Parade 2027."
-                    )}
+                    {t("sponsor.description")}
                   </p>
                   <div className="flex items-center justify-center gap-2 pt-2 lg:justify-start">
                     <div className="flex -space-x-1">
@@ -88,7 +85,7 @@ const SponsorBadge = () => {
                       </div>
                     </div>
                     <span className="text-sm font-medium text-slate-600">
-                      {t("sponsor.trust", "Confianza y compromiso")}
+                      {t("sponsor.trust")}
                     </span>
                   </div>
                 </div>
@@ -100,7 +97,7 @@ const SponsorBadge = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group block"
-                  aria-label="Visitar sitio web del INS - Instituto Nacional de Seguros"
+                  aria-label={t("sponsor.visit_aria")}
                 >
                   <div className="relative overflow-hidden rounded-2xl bg-white p-12 shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5 transition-all duration-300 hover:shadow-xl hover:shadow-slate-300/40 hover:ring-slate-900/10 sm:p-16 lg:p-20">
                     <div
@@ -115,7 +112,7 @@ const SponsorBadge = () => {
                     <div className="relative flex items-center justify-center">
                       <img
                         src={INS_LOGO_URL}
-                        alt="Logo Instituto Nacional de Seguros - INS"
+                        alt={t("sponsor.logo_alt")}
                         width={320}
                         height={107}
                         className="h-24 w-auto object-contain transition-all duration-300 group-hover:scale-105 sm:h-28 lg:h-32"
@@ -125,7 +122,7 @@ const SponsorBadge = () => {
 
                     <div className="absolute bottom-6 right-6 flex items-center gap-2 opacity-0 transition-all duration-300 group-hover:opacity-100">
                       <span className="text-xs font-medium text-slate-500">
-                        {t("sponsor.visit", "Conocer más")}
+                        {t("sponsor.visit")}
                       </span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -186,7 +183,7 @@ export const SponsorFooterBadge = () => {
       <div className="relative max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-center py-10 sm:py-12 lg:py-14">
           <p className="mb-6 text-xs font-medium uppercase tracking-widest text-slate-400 sm:text-sm">
-            {t("sponsor.footer_label", "Patrocinador Oficial")}
+            {t("sponsor.footer_label")}
           </p>
 
           <a
@@ -194,7 +191,7 @@ export const SponsorFooterBadge = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="group relative inline-flex items-center justify-center"
-            aria-label="Visitar sitio web del INS"
+            aria-label={t("sponsor.visit_aria")}
           >
             <div
               className="absolute inset-0 rounded-2xl bg-gradient-to-r from-sky-500/10 via-sky-400/5 to-sky-500/10 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100"
@@ -209,7 +206,7 @@ export const SponsorFooterBadge = () => {
 
               <img
                 src={INS_LOGO_URL}
-                alt="Logo Instituto Nacional de Seguros"
+                alt={t("sponsor.logo_alt")}
                 width={180}
                 height={60}
                 className="relative h-11 w-auto object-contain opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:scale-105 sm:h-12"
@@ -219,7 +216,7 @@ export const SponsorFooterBadge = () => {
           </a>
 
           <p className="mt-5 text-xs text-center text-slate-500 max-w-md sm:text-sm">
-            {t("sponsor.footer_text", "Gracias por impulsar la música y la cultura costarricense")}
+            {t("sponsor.footer_text")}
           </p>
         </div>
       </div>

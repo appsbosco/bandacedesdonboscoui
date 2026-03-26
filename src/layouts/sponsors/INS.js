@@ -1,12 +1,162 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import INS_LOGO_URL from "../../assets/images/Logo INS.webp";
+import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
 
 const INS_WEBSITE_URL = "https://www.grupoins.com/";
 
+const sponsorContent = {
+  es: {
+    heroBadge: "Alianza estratégica",
+    heroTitle: "patrocinador oficial de la Banda CEDES Don Bosco",
+    heroText:
+      "Una alianza comprometida con la música, la cultura y la juventud costarricense rumbo al Desfile de las Rosas 2027.",
+    primaryCta: "Conocer al INS",
+    secondaryCta: "Conocer la banda",
+    logoAlt: "Logo del Instituto Nacional de Seguros, patrocinador oficial de la Banda CEDES Don Bosco",
+    thanksTitle: "Nuestro más sincero agradecimiento",
+    thanksParagraphs: [
+      "La Banda CEDES Don Bosco se enorgullece de contar con el respaldo del Instituto Nacional de Seguros (INS) como nuestro patrocinador oficial. Esta alianza representa mucho más que un apoyo económico: es un compromiso compartido con la cultura, la disciplina, el desarrollo de nuestra juventud y el fortalecimiento de las comunidades costarricenses.",
+      "Gracias al INS, cientos de jóvenes músicos tienen la oportunidad de crecer, representar a Costa Rica en escenarios internacionales y perseguir el sueño de participar en el prestigioso Desfile de las Rosas 2027. Este apoyo impulsa no solo la música, sino valores fundamentales como el trabajo en equipo, la excelencia y el orgullo nacional.",
+    ],
+    aboutTitle: "Sobre el",
+    aboutText:
+      "Una institución comprometida con el bienestar y la protección de las familias costarricenses.",
+    aboutParagraphs: [
+      "El Instituto Nacional de Seguros (INS) es una institución autónoma costarricense con una larga trayectoria en la protección y el respaldo de las familias, empresas y comunidades del país. Fundado con el propósito de ofrecer servicios de seguros accesibles y confiables, el INS se ha consolidado como un pilar fundamental en la economía y el bienestar social de Costa Rica.",
+      "A lo largo de su historia, el INS ha demostrado un compromiso inquebrantable con la prevención, la educación y la responsabilidad social. Su labor trasciende el ámbito asegurador: la institución trabaja activamente en programas de prevención de riesgos, educación vial, protección del medio ambiente y apoyo a iniciativas culturales y deportivas que fortalecen el tejido social costarricense.",
+      "El INS ofrece una amplia gama de productos y servicios diseñados para proteger lo que más importa: desde seguros de vida, salud y automóviles, hasta seguros empresariales, agrícolas y de responsabilidad civil. Su modelo de atención se caracteriza por la cercanía, la eficiencia y un profundo conocimiento de las necesidades del pueblo costarricense.",
+      "Además de su labor aseguradora, el INS impulsa constantemente iniciativas de impacto social que buscan mejorar la calidad de vida de las comunidades. La institución entiende que su responsabilidad va más allá de indemnizar siniestros: se trata de construir un país más seguro, más preparado y más resiliente ante los desafíos del futuro.",
+    ],
+    impactTitle: "Áreas de impacto del INS",
+    impactItems: [
+      ["Protección integral:", "Cobertura de seguros para personas, familias, empresas y sectores productivos del país."],
+      ["Prevención y educación:", "Campañas de prevención de accidentes, seguridad vial y gestión de riesgos en comunidades."],
+      ["Respaldo económico:", "Generación de empleo y contribución al desarrollo económico sostenible de Costa Rica."],
+      ["Compromiso ambiental:", "Programas de sostenibilidad y protección del medio ambiente."],
+      ["Apoyo cultural y deportivo:", "Patrocinio de iniciativas que promueven el arte, la música, el deporte y el desarrollo juvenil."],
+      ["Fortalecimiento comunitario:", "Inversión en proyectos sociales que benefician directamente a las comunidades costarricenses."],
+    ],
+    allianceTitle: "¿Por qué esta alianza?",
+    allianceText: "Valores compartidos que nos unen rumbo al Desfile de las Rosas 2027.",
+    allianceCards: [
+      ["Compromiso con la juventud", "Tanto el INS como la Banda CEDES Don Bosco creen en el poder transformador de invertir en los jóvenes, ofreciéndoles oportunidades de crecimiento, disciplina y desarrollo personal."],
+      ["Excelencia y representación", "La búsqueda constante de la excelencia une a ambas instituciones. Representar a Costa Rica en el escenario mundial con orgullo y profesionalismo es un objetivo compartido."],
+      ["Impacto cultural y social", "Esta alianza trasciende lo económico: se trata de fortalecer la identidad cultural costarricense, promover la música como herramienta de transformación social y unir comunidades."],
+    ],
+    projectMeaningTitle: "Lo que significa para el proyecto 2027",
+    projectMeaningText:
+      "El patrocinio del INS es un pilar fundamental para que la Banda CEDES Don Bosco pueda enfrentar el desafío de prepararse para el Desfile de las Rosas 2027. Este apoyo nos permite cubrir aspectos esenciales como logística, equipamiento, formación musical de alto nivel y todos los preparativos necesarios para representar a Costa Rica con excelencia en uno de los eventos más prestigiosos del mundo. Sin esta alianza, el sueño de marchar en Pasadena sería significativamente más difícil de alcanzar.",
+    possibleTitle: "Lo que este patrocinio hace posible",
+    possibleText:
+      "El apoyo del INS se traduce en acciones concretas que impulsan nuestro proyecto rumbo al Desfile de las Rosas 2027.",
+    possibleItems: [
+      ["Transporte y logística", "Traslado de más de 280 miembros de la banda, instrumentos y equipamiento hacia Estados Unidos para el Desfile de las Rosas 2027."],
+      ["Instrumentos y equipamiento", "Mantenimiento, reparación y adquisición de instrumentos musicales de alta calidad, así como equipamiento técnico necesario para ensayos y presentaciones."],
+      ["Uniformes y vestuario oficial", "Diseño, confección y personalización de uniformes de gala y presentación que representan dignamente a Costa Rica en el escenario internacional."],
+      ["Gastos administrativos y operativos", "Cobertura de trámites migratorios, seguros, permisos y gestiones administrativas necesarias para la participación internacional."],
+      ["Formación y capacitación musical", "Clínicas con instructores internacionales, talleres de perfeccionamiento técnico y entrenamientos especializados para el evento."],
+      ["Preparación física y apoyo integral", "Programas de acondicionamiento físico, apoyo nutricional y acompañamiento psicológico para los miembros de la banda durante la preparación intensiva."],
+      ["Comunicación y difusión", "Producción de material audiovisual, cobertura mediática y estrategias de comunicación para visibilizar el proceso y el logro de la banda a nivel nacional e internacional."],
+      ["Actividades preparatorias y presentaciones previas", "Participación en eventos locales e internacionales de preparación, conciertos de recaudación y presentaciones que contribuyen a la experiencia del grupo."],
+    ],
+    roadTitle: "Rumbo al Desfile de las Rosas 2027",
+    roadText:
+      "Un proyecto de años que representa disciplina, excelencia, orgullo y la oportunidad de llevar la música costarricense al escenario más importante del mundo.",
+    challengeTitle: "El desafío de una vida",
+    challengeParagraphs: [
+      "El Desfile de las Rosas (Rose Parade) es uno de los eventos más prestigiosos y reconocidos a nivel mundial. Cada año, millones de personas en todo el planeta sintonizan para ver este icónico desfile que se lleva a cabo en Pasadena, California, el 1 de enero. Participar en este evento no es solo un honor: es un reconocimiento a la excelencia musical, la disciplina y el compromiso con la representación cultural.",
+      "Para la Banda CEDES Don Bosco, el camino hacia el Rose Parade 2027 comenzó hace años y representa el proyecto más ambicioso de nuestra historia. Este desafío requiere preparación técnica de altísimo nivel, ensayos intensivos, formación musical constante, acondicionamiento físico riguroso y una logística compleja que involucra a cientos de jóvenes músicos, instructores, familias y colaboradores.",
+      "Más allá de la música, este proyecto simboliza los valores que nos definen: perseverancia, trabajo en equipo, respeto, orgullo nacional y el poder transformador del arte. Cada ensayo, cada nota, cada paso de marcha nos acerca a cumplir el sueño de representar a Costa Rica con excelencia en el escenario mundial.",
+    ],
+    milestonesTitle: "Hitos del proyecto 2025–2027",
+    milestones: [
+      ["Fase de preparación intensiva (2025)", "Inicio de ensayos especializados, clínicas con instructores internacionales, fortalecimiento técnico y definición del repertorio musical para el desfile."],
+      ["Presentaciones preparatorias (2025–2026)", "Participación en eventos locales e internacionales para ganar experiencia, ajustar detalles técnicos y generar visibilidad del proyecto."],
+      ["Acondicionamiento físico y logístico (2026)", "Programas de entrenamiento físico, gestiones migratorias, trámites administrativos y coordinación logística para el viaje internacional."],
+      ["Ensayos finales y ajustes (2026–2027)", "Perfeccionamiento de coreografías, sincronización musical, ensayos generales y últimos detalles técnicos antes del evento."],
+      ["Viaje a Pasadena (diciembre 2026)", "Traslado del grupo completo a California, ensayos in situ y preparativos finales en el lugar del evento."],
+      ["Desfile de las Rosas 2027 (1 de enero 2027)", "Participación oficial de la Banda CEDES Don Bosco en el Rose Parade, representando a Costa Rica ante millones de espectadores en todo el mundo."],
+    ],
+  },
+  en: {
+    heroBadge: "Strategic alliance",
+    heroTitle: "official sponsor of Banda CEDES Don Bosco",
+    heroText:
+      "A partnership committed to music, culture, and Costa Rican youth on the road to the 2027 Rose Parade.",
+    primaryCta: "Meet INS",
+    secondaryCta: "Meet the band",
+    logoAlt: "National Insurance Institute logo, official sponsor of Banda CEDES Don Bosco",
+    thanksTitle: "Our sincere gratitude",
+    thanksParagraphs: [
+      "Banda CEDES Don Bosco is proud to count on the support of the National Insurance Institute (INS) as our official sponsor. This partnership represents far more than financial backing: it is a shared commitment to culture, discipline, youth development, and the strengthening of Costa Rican communities.",
+      "Thanks to INS, hundreds of young musicians have the opportunity to grow, represent Costa Rica on international stages, and pursue the dream of taking part in the prestigious 2027 Rose Parade. This support strengthens not only music, but also core values such as teamwork, excellence, and national pride.",
+    ],
+    aboutTitle: "About",
+    aboutText: "An institution committed to the well-being and protection of Costa Rican families.",
+    aboutParagraphs: [
+      "The National Insurance Institute (INS) is a Costa Rican autonomous institution with a long-standing track record of protecting and supporting families, businesses, and communities across the country. Founded to provide accessible and reliable insurance services, INS has become a cornerstone of Costa Rica's economy and social well-being.",
+      "Throughout its history, INS has shown an unwavering commitment to prevention, education, and social responsibility. Its work goes beyond insurance: the institution actively supports risk-prevention programs, road safety education, environmental protection, and cultural and sports initiatives that strengthen Costa Rica's social fabric.",
+      "INS offers a wide range of products and services designed to protect what matters most, from life, health, and auto insurance to business, agricultural, and liability coverage. Its service model is defined by proximity, efficiency, and a deep understanding of the needs of the Costa Rican people.",
+      "In addition to its insurance mission, INS consistently promotes high-impact social initiatives aimed at improving community well-being. The institution understands that its responsibility goes beyond compensation claims: it is about building a safer, more prepared, and more resilient country.",
+    ],
+    impactTitle: "INS areas of impact",
+    impactItems: [
+      ["Comprehensive protection:", "Insurance coverage for people, families, businesses, and productive sectors across the country."],
+      ["Prevention and education:", "Accident-prevention campaigns, road safety efforts, and community risk-management programs."],
+      ["Economic support:", "Job creation and contribution to Costa Rica's sustainable economic development."],
+      ["Environmental commitment:", "Sustainability programs and environmental protection initiatives."],
+      ["Support for culture and sports:", "Sponsorship of initiatives that promote art, music, sports, and youth development."],
+      ["Community strengthening:", "Investment in social projects that directly benefit Costa Rican communities."],
+    ],
+    allianceTitle: "Why this partnership?",
+    allianceText: "Shared values that bring us together on the road to the 2027 Rose Parade.",
+    allianceCards: [
+      ["Commitment to youth", "Both INS and Banda CEDES Don Bosco believe in the transformative power of investing in young people, offering opportunities for growth, discipline, and personal development."],
+      ["Excellence and representation", "A constant pursuit of excellence unites both institutions. Representing Costa Rica on the world stage with pride and professionalism is a shared goal."],
+      ["Cultural and social impact", "This partnership goes beyond funding: it is about strengthening Costa Rican cultural identity, promoting music as a tool for social transformation, and bringing communities together."],
+    ],
+    projectMeaningTitle: "What this means for the 2027 project",
+    projectMeaningText:
+      "INS sponsorship is a foundational pillar that helps Banda CEDES Don Bosco meet the challenge of preparing for the 2027 Rose Parade. This support allows us to cover essential needs such as logistics, equipment, advanced musical training, and the full range of preparation required to represent Costa Rica with excellence at one of the world's most prestigious events. Without this partnership, the dream of marching in Pasadena would be significantly harder to reach.",
+    possibleTitle: "What this sponsorship makes possible",
+    possibleText:
+      "INS support becomes concrete actions that move our project forward toward the 2027 Rose Parade.",
+    possibleItems: [
+      ["Transportation and logistics", "Travel arrangements for more than 280 band members, instruments, and equipment to the United States for the 2027 Rose Parade."],
+      ["Instruments and equipment", "Maintenance, repair, and acquisition of high-quality musical instruments, along with technical equipment needed for rehearsals and performances."],
+      ["Official uniforms and attire", "Design, tailoring, and customization of formal and performance uniforms that represent Costa Rica with dignity on the international stage."],
+      ["Administrative and operational expenses", "Coverage for immigration procedures, insurance, permits, and administrative work required for international participation."],
+      ["Music training and development", "Clinics with international instructors, technical improvement workshops, and specialized event preparation."],
+      ["Physical preparation and holistic support", "Fitness programs, nutritional support, and psychological support for band members during intensive preparation."],
+      ["Communication and outreach", "Audiovisual production, media coverage, and communication strategies to make the band's journey and achievement visible nationally and internationally."],
+      ["Preparatory activities and prior performances", "Participation in local and international preparatory events, fundraising concerts, and performances that build the group's experience."],
+    ],
+    roadTitle: "On the road to the 2027 Rose Parade",
+    roadText:
+      "A multi-year project that represents discipline, excellence, pride, and the opportunity to bring Costa Rican music to the world's most important stage.",
+    challengeTitle: "The challenge of a lifetime",
+    challengeParagraphs: [
+      "The Rose Parade is one of the world's most prestigious and recognized events. Every year, millions of people across the globe tune in to watch this iconic parade in Pasadena, California, on January 1. Taking part in this event is not only an honor: it is recognition of musical excellence, discipline, and commitment to cultural representation.",
+      "For Banda CEDES Don Bosco, the road to the 2027 Rose Parade began years ago and represents the most ambitious project in our history. This challenge requires top-level technical preparation, intensive rehearsals, continuous musical training, rigorous physical conditioning, and complex logistics involving hundreds of young musicians, instructors, families, and collaborators.",
+      "Beyond music, this project symbolizes the values that define us: perseverance, teamwork, respect, national pride, and the transformative power of art. Every rehearsal, every note, and every marching step brings us closer to fulfilling the dream of representing Costa Rica with excellence on the world stage.",
+    ],
+    milestonesTitle: "2025–2027 project milestones",
+    milestones: [
+      ["Intensive preparation phase (2025)", "Launch of specialized rehearsals, clinics with international instructors, technical strengthening, and definition of the musical repertoire for the parade."],
+      ["Preparatory performances (2025–2026)", "Participation in local and international events to gain experience, fine-tune technical details, and raise visibility for the project."],
+      ["Physical and logistical preparation (2026)", "Physical training programs, immigration procedures, administrative work, and logistical coordination for the international trip."],
+      ["Final rehearsals and adjustments (2026–2027)", "Refinement of choreography, musical synchronization, full rehearsals, and final technical adjustments before the event."],
+      ["Trip to Pasadena (December 2026)", "Travel of the full group to California, on-site rehearsals, and final preparation at the event location."],
+      ["Rose Parade 2027 (January 1, 2027)", "Official participation of Banda CEDES Don Bosco in the Rose Parade, representing Costa Rica before millions of viewers around the world."],
+    ],
+  },
+};
+
 const INS = () => {
   const { i18n } = useTranslation();
-  const lang = i18n.language;
+  const lang = normalizePublicLang(i18n.resolvedLanguage?.substring(0, 2) || i18n.language);
+  const copy = sponsorContent[lang] || sponsorContent.es;
 
   return (
     <>
@@ -75,7 +225,7 @@ const INS = () => {
                 />
               </svg>
               <span className="text-xs font-semibold uppercase tracking-wide text-sky-700 sm:text-sm">
-                Alianza estratégica
+                {copy.heroBadge}
               </span>
             </div>
 
@@ -93,11 +243,10 @@ const INS = () => {
                 </svg>
                 <span className="relative">INS</span>
               </span>
-              , patrocinador oficial de la Banda CEDES Don Bosco
+              , {copy.heroTitle}
             </h1>
             <p className="mt-6 text-lg leading-8 text-center text-slate-700 lg:text-left">
-              Una alianza comprometida con la música, la cultura y la juventud costarricense rumbo
-              al Desfile de las Rosas 2027.
+              {copy.heroText}
             </p>
             <div className="flex flex-wrap items-center justify-center mt-10 gap-y-6 gap-x-6 lg:justify-start">
               <a
@@ -106,7 +255,7 @@ const INS = () => {
                 rel="noopener noreferrer"
                 className="h-11 bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
               >
-                Conocer al INS
+                {copy.primaryCta}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
@@ -121,10 +270,10 @@ const INS = () => {
                 </svg>
               </a>
               <a
-                href={`/${lang}/nosotros`}
+                href={getPublicPath(lang, "about")}
                 className="h-11 text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 hover:bg-slate-200/60 hover:shadow-sky-100/50 bg-slate-100/80 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
               >
-                Conocer la banda
+                {copy.secondaryCta}
               </a>
             </div>
           </div>
@@ -135,7 +284,7 @@ const INS = () => {
               <div className="relative overflow-hidden rounded-3xl bg-white p-12 shadow-2xl shadow-sky-100/50 ring-1 ring-slate-900/5 sm:p-16 lg:p-20">
                 <img
                   src={INS_LOGO_URL}
-                  alt="Logo del Instituto Nacional de Seguros - INS, patrocinador oficial de la Banda CEDES Don Bosco"
+                  alt={copy.logoAlt}
                   width={320}
                   height={107}
                   className="h-24 w-auto object-contain sm:h-28 lg:h-32"
@@ -152,23 +301,12 @@ const INS = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-              Nuestro más sincero agradecimiento
+              {copy.thanksTitle}
             </h2>
             <div className="mt-8 space-y-6 text-lg leading-8 text-slate-700">
-              <p>
-                La Banda CEDES Don Bosco se enorgullece de contar con el respaldo del Instituto
-                Nacional de Seguros (INS) como nuestro patrocinador oficial. Esta alianza representa
-                mucho más que un apoyo económico: es un compromiso compartido con la cultura, la
-                disciplina, el desarrollo de nuestra juventud y el fortalecimiento de las
-                comunidades costarricenses.
-              </p>
-              <p>
-                Gracias al INS, cientos de jóvenes músicos tienen la oportunidad de crecer,
-                representar a Costa Rica en escenarios internacionales y perseguir el sueño de
-                participar en el prestigioso Desfile de las Rosas 2027. Este apoyo impulsa no solo
-                la música, sino valores fundamentales como el trabajo en equipo, la excelencia y el
-                orgullo nacional.
-              </p>
+              {copy.thanksParagraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           </div>
         </div>
@@ -180,7 +318,7 @@ const INS = () => {
           <div className="grid items-start max-w-xl gap-12 mx-auto lg:mx-0 lg:max-w-none lg:grid-cols-12 lg:gap-16">
             <div className="lg:col-span-5">
               <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-                Sobre el{" "}
+                {copy.aboutTitle}{" "}
                 <span className="relative whitespace-nowrap">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -196,48 +334,23 @@ const INS = () => {
                 </span>
               </h2>
               <p className="mt-6 text-lg leading-8 text-slate-700">
-                Una institución comprometida con el bienestar y la protección de las familias
-                costarricenses.
+                {copy.aboutText}
               </p>
             </div>
             <div className="lg:col-span-7">
               <div className="space-y-6 text-base leading-7 text-slate-700">
-                <p>
-                  El Instituto Nacional de Seguros (INS) es una institución autónoma costarricense
-                  con una larga trayectoria en la protección y el respaldo de las familias, empresas
-                  y comunidades del país. Fundado con el propósito de ofrecer servicios de seguros
-                  accesibles y confiables, el INS se ha consolidado como un pilar fundamental en la
-                  economía y el bienestar social de Costa Rica.
-                </p>
-                <p>
-                  A lo largo de su historia, el INS ha demostrado un compromiso inquebrantable con
-                  la prevención, la educación y la responsabilidad social. Su labor trasciende el
-                  ámbito asegurador: la institución trabaja activamente en programas de prevención
-                  de riesgos, educación vial, protección del medio ambiente y apoyo a iniciativas
-                  culturales y deportivas que fortalecen el tejido social costarricense.
-                </p>
-                <p>
-                  El INS ofrece una amplia gama de productos y servicios diseñados para proteger lo
-                  que más importa: desde seguros de vida, salud y automóviles, hasta seguros
-                  empresariales, agrícolas y de responsabilidad civil. Su modelo de atención se
-                  caracteriza por la cercanía, la eficiencia y un profundo conocimiento de las
-                  necesidades del pueblo costarricense.
-                </p>
-                <p>
-                  Además de su labor aseguradora, el INS impulsa constantemente iniciativas de
-                  impacto social que buscan mejorar la calidad de vida de las comunidades. La
-                  institución entiende que su responsabilidad va más allá de indemnizar siniestros:
-                  se trata de construir un país más seguro, más preparado y más resiliente ante los
-                  desafíos del futuro.
-                </p>
+                {copy.aboutParagraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
               </div>
 
               <div className="mt-10">
                 <h3 className="text-xl font-medium font-display text-slate-900">
-                  Áreas de impacto del INS
+                  {copy.impactTitle}
                 </h3>
                 <ul className="mt-6 space-y-4">
-                  <li className="flex items-start gap-3">
+                  {copy.impactItems.map(([title, text]) => (
+                  <li key={title} className="flex items-start gap-3">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -251,100 +364,10 @@ const INS = () => {
                       />
                     </svg>
                     <span className="text-base leading-7 text-slate-700">
-                      <strong>Protección integral:</strong> Cobertura de seguros para personas,
-                      familias, empresas y sectores productivos del país.
+                      <strong>{title}</strong> {text}
                     </span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-6 h-6 text-sky-700 shrink-0"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-base leading-7 text-slate-700">
-                      <strong>Prevención y educación:</strong> Campañas de prevención de accidentes,
-                      seguridad vial y gestión de riesgos en comunidades.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-6 h-6 text-sky-700 shrink-0"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-base leading-7 text-slate-700">
-                      <strong>Respaldo económico:</strong> Generación de empleo y contribución al
-                      desarrollo económico sostenible de Costa Rica.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-6 h-6 text-sky-700 shrink-0"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-base leading-7 text-slate-700">
-                      <strong>Compromiso ambiental:</strong> Programas de sostenibilidad y
-                      protección del medio ambiente.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-6 h-6 text-sky-700 shrink-0"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-base leading-7 text-slate-700">
-                      <strong>Apoyo cultural y deportivo:</strong> Patrocinio de iniciativas que
-                      promueven el arte, la música, el deporte y el desarrollo juvenil.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-6 h-6 text-sky-700 shrink-0"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-base leading-7 text-slate-700">
-                      <strong>Fortalecimiento comunitario:</strong> Inversión en proyectos sociales
-                      que benefician directamente a las comunidades costarricenses.
-                    </span>
-                  </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -357,10 +380,10 @@ const INS = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-              ¿Por qué esta alianza?
+              {copy.allianceTitle}
             </h2>
             <p className="mt-6 text-lg leading-8 text-slate-700">
-              Valores compartidos que nos unen rumbo al Desfile de las Rosas 2027.
+              {copy.allianceText}
             </p>
           </div>
 
@@ -376,14 +399,8 @@ const INS = () => {
                   <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-medium font-display text-slate-900">
-                Compromiso con la juventud
-              </h3>
-              <p className="mt-4 text-base leading-7 text-slate-700">
-                Tanto el INS como la Banda CEDES Don Bosco creen en el poder transformador de
-                invertir en los jóvenes, ofreciéndoles oportunidades de crecimiento, disciplina y
-                desarrollo personal.
-              </p>
+              <h3 className="text-xl font-medium font-display text-slate-900">{copy.allianceCards[0][0]}</h3>
+              <p className="mt-4 text-base leading-7 text-slate-700">{copy.allianceCards[0][1]}</p>
             </div>
 
             <div className="relative p-8 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5">
@@ -401,14 +418,8 @@ const INS = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-medium font-display text-slate-900">
-                Excelencia y representación
-              </h3>
-              <p className="mt-4 text-base leading-7 text-slate-700">
-                La búsqueda constante de la excelencia une a ambas instituciones. Representar a
-                Costa Rica en el escenario mundial con orgullo y profesionalismo es un objetivo
-                compartido.
-              </p>
+              <h3 className="text-xl font-medium font-display text-slate-900">{copy.allianceCards[1][0]}</h3>
+              <p className="mt-4 text-base leading-7 text-slate-700">{copy.allianceCards[1][1]}</p>
             </div>
 
             <div className="relative p-8 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5">
@@ -428,30 +439,18 @@ const INS = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-medium font-display text-slate-900">
-                Impacto cultural y social
-              </h3>
-              <p className="mt-4 text-base leading-7 text-slate-700">
-                Esta alianza trasciende lo económico: se trata de fortalecer la identidad cultural
-                costarricense, promover la música como herramienta de transformación social y unir
-                comunidades.
-              </p>
+              <h3 className="text-xl font-medium font-display text-slate-900">{copy.allianceCards[2][0]}</h3>
+              <p className="mt-4 text-base leading-7 text-slate-700">{copy.allianceCards[2][1]}</p>
             </div>
           </div>
 
           <div className="max-w-3xl mx-auto mt-16 lg:mt-20">
             <div className="p-8 overflow-hidden rounded-2xl bg-sky-50/50 ring-1 ring-sky-100 sm:p-10">
               <h3 className="text-2xl font-semibold font-display text-slate-900">
-                Lo que significa para el proyecto 2027
+                {copy.projectMeaningTitle}
               </h3>
               <p className="mt-4 text-base leading-7 text-slate-700">
-                El patrocinio del INS es un pilar fundamental para que la Banda CEDES Don Bosco
-                pueda enfrentar el desafío de prepararse para el Desfile de las Rosas 2027. Este
-                apoyo nos permite cubrir aspectos esenciales como logística, equipamiento, formación
-                musical de alto nivel y todos los preparativos necesarios para representar a Costa
-                Rica con excelencia en uno de los eventos más prestigiosos del mundo. Sin esta
-                alianza, el sueño de marchar en Pasadena sería significativamente más difícil de
-                alcanzar.
+                {copy.projectMeaningText}
               </p>
             </div>
           </div>
@@ -463,11 +462,10 @@ const INS = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-              Lo que este patrocinio hace posible
+              {copy.possibleTitle}
             </h2>
             <p className="mt-6 text-lg leading-8 text-slate-700">
-              El apoyo del INS se traduce en acciones concretas que impulsan nuestro proyecto rumbo
-              al Desfile de las Rosas 2027.
+              {copy.possibleText}
             </p>
           </div>
 
@@ -485,13 +483,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Transporte y logística
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Traslado de más de 280 miembros de la banda, instrumentos y equipamiento hacia
-                  Estados Unidos para el Desfile de las Rosas 2027.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[0][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[0][1]}</p>
               </div>
             </div>
 
@@ -511,13 +504,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Instrumentos y equipamiento
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Mantenimiento, reparación y adquisición de instrumentos musicales de alta calidad,
-                  así como equipamiento técnico necesario para ensayos y presentaciones.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[1][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[1][1]}</p>
               </div>
             </div>
 
@@ -537,13 +525,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Uniformes y vestuario oficial
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Diseño, confección y personalización de uniformes de gala y presentación que
-                  representan dignamente a Costa Rica en el escenario internacional.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[2][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[2][1]}</p>
               </div>
             </div>
 
@@ -568,13 +551,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Gastos administrativos y operativos
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Cobertura de trámites migratorios, seguros, permisos y gestiones administrativas
-                  necesarias para la participación internacional.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[3][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[3][1]}</p>
               </div>
             </div>
 
@@ -590,13 +568,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Formación y capacitación musical
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Clínicas con instructores internacionales, talleres de perfeccionamiento técnico y
-                  entrenamientos especializados para el evento.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[4][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[4][1]}</p>
               </div>
             </div>
 
@@ -612,13 +585,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Preparación física y apoyo integral
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Programas de acondicionamiento físico, apoyo nutricional y acompañamiento
-                  psicológico para los miembros de la banda durante la preparación intensiva.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[5][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[5][1]}</p>
               </div>
             </div>
 
@@ -638,14 +606,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Comunicación y difusión
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Producción de material audiovisual, cobertura mediática y estrategias de
-                  comunicación para visibilizar el proceso y el logro de la banda a nivel nacional e
-                  internacional.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[6][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[6][1]}</p>
               </div>
             </div>
 
@@ -666,13 +628,8 @@ const INS = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold font-display text-slate-900">
-                  Actividades preparatorias y presentaciones previas
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Participación en eventos locales e internacionales de preparación, conciertos de
-                  recaudación y presentaciones que contribuyen a la experiencia del grupo.
-                </p>
+                <h3 className="text-base font-semibold font-display text-slate-900">{copy.possibleItems[7][0]}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.possibleItems[7][1]}</p>
               </div>
             </div>
           </div>
@@ -684,139 +641,41 @@ const INS = () => {
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
-              Rumbo al Desfile de las Rosas 2027
+              {copy.roadTitle}
             </h2>
             <p className="mt-6 text-lg leading-8 text-slate-700">
-              Un proyecto de años que representa disciplina, excelencia, orgullo y la oportunidad de
-              llevar la música costarricense al escenario más importante del mundo.
+              {copy.roadText}
             </p>
           </div>
 
           <div className="max-w-4xl mx-auto mt-16 space-y-8 lg:mt-20">
             <div className="p-8 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-200/60 ring-1 ring-slate-900/5 sm:p-10">
               <h3 className="text-2xl font-semibold font-display text-slate-900">
-                El desafío de una vida
+                {copy.challengeTitle}
               </h3>
               <div className="mt-6 space-y-4 text-base leading-7 text-slate-700">
-                <p>
-                  El Desfile de las Rosas (Rose Parade) es uno de los eventos más prestigiosos y
-                  reconocidos a nivel mundial. Cada año, millones de personas en todo el planeta
-                  sintonizan para ver este icónico desfile que se lleva a cabo en Pasadena,
-                  California, el 1 de enero. Participar en este evento no es solo un honor: es un
-                  reconocimiento a la excelencia musical, la disciplina y el compromiso con la
-                  representación cultural.
-                </p>
-                <p>
-                  Para la Banda CEDES Don Bosco, el camino hacia el Rose Parade 2027 comenzó hace
-                  años y representa el proyecto más ambicioso de nuestra historia. Este desafío
-                  requiere preparación técnica de altísimo nivel, ensayos intensivos, formación
-                  musical constante, acondicionamiento físico riguroso y una logística compleja que
-                  involucra a cientos de jóvenes músicos, instructores, familias y colaboradores.
-                </p>
-                <p>
-                  Más allá de la música, este proyecto simboliza los valores que nos definen:
-                  perseverancia, trabajo en equipo, respeto, orgullo nacional y el poder
-                  transformador del arte. Cada ensayo, cada nota, cada paso de marcha nos acerca a
-                  cumplir el sueño de representar a Costa Rica con excelencia en el escenario
-                  mundial.
-                </p>
+                {copy.challengeParagraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
               </div>
             </div>
 
             <div className="p-8 overflow-hidden rounded-2xl bg-sky-50/50 ring-1 ring-sky-100 sm:p-10">
               <h3 className="text-2xl font-semibold font-display text-slate-900">
-                Hitos del proyecto 2025–2027
+                {copy.milestonesTitle}
               </h3>
               <ul className="mt-8 space-y-6">
-                <li className="relative pl-8">
+                {copy.milestones.map(([title, text]) => (
+                <li key={title} className="relative pl-8">
                   <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
                     <div className="w-2 h-2 rounded-full bg-white"></div>
                   </div>
                   <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Fase de preparación intensiva (2025)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Inicio de ensayos especializados, clínicas con instructores internacionales,
-                      fortalecimiento técnico y definición del repertorio musical para el desfile.
-                    </p>
+                    <h4 className="text-base font-semibold text-slate-900">{title}</h4>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">{text}</p>
                   </div>
                 </li>
-
-                <li className="relative pl-8">
-                  <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Presentaciones preparatorias (2025–2026)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Participación en eventos locales e internacionales para ganar experiencia,
-                      ajustar detalles técnicos y generar visibilidad del proyecto.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="relative pl-8">
-                  <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Acondicionamiento físico y logístico (2026)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Programas de entrenamiento físico, gestiones migratorias, trámites
-                      administrativos y coordinación logística para el viaje internacional.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="relative pl-8">
-                  <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Ensayos finales y ajustes (2026–2027)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Perfeccionamiento de coreografías, sincronización musical, ensayos generales y
-                      últimos detalles técnicos antes del evento.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="relative pl-8">
-                  <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Viaje a Pasadena (diciembre 2026)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Traslado del grupo completo a California, ensayos in situ y preparativos
-                      finales en el lugar del evento.
-                    </p>
-                  </div>
-                </li>
-
-                <li className="relative pl-8">
-                  <div className="absolute left-0 flex items-center justify-center w-6 h-6 rounded-full bg-sky-700">
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Desfile de las Rosas 2027 (1 de enero 2027)
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Participación oficial de la Banda CEDES Don Bosco en el Rose Parade,
-                      representando a Costa Rica ante millones de espectadores en todo el mundo.
-                    </p>
-                  </div>
-                </li>
+                ))}
               </ul>
             </div>
           </div>

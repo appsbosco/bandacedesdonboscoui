@@ -143,6 +143,19 @@
       "submit": "Enviar"
     }
   },
+  "sponsor": {
+    "badge": "Alianza estratégica",
+    "title": "Patrocinador Oficial",
+    "subtitle": "Instituto Nacional de Seguros",
+    "description": "Orgullosos de contar con el respaldo del INS en nuestro camino hacia el Rose Parade 2027.",
+    "trust": "Confianza y compromiso",
+    "visit": "Conocer más",
+    "footer_label": "Patrocinador Oficial",
+    "footer_text": "Gracias por impulsar la música y la cultura costarricense",
+    "visit_aria": "Visitar sitio web del INS",
+    "logo_alt": "Logo del Instituto Nacional de Seguros",
+    "logo_alt_full": "Logo del Instituto Nacional de Seguros, patrocinador oficial de la Banda CEDES Don Bosco"
+  },
   "donation": {
     "header": {
       "badge": "Rumbo al Rose Parade 2027",

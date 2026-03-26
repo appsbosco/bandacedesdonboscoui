@@ -145,6 +145,19 @@
       "submit": "Send"
     }
   },
+  "sponsor": {
+    "badge": "Strategic alliance",
+    "title": "Official Sponsor",
+    "subtitle": "National Insurance Institute",
+    "description": "Proud to have INS backing our journey to the Rose Parade 2027.",
+    "trust": "Trust and commitment",
+    "visit": "Learn more",
+    "footer_label": "Official Sponsor",
+    "footer_text": "Thank you for supporting Costa Rican music and culture",
+    "visit_aria": "Visit the INS website",
+    "logo_alt": "National Insurance Institute logo",
+    "logo_alt_full": "National Insurance Institute logo, official sponsor of Banda CEDES Don Bosco"
+  },
   "donation": {
     "header": {
       "badge": "On Our Way to the Rose Parade 2027",

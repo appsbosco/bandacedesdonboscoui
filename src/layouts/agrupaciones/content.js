@@ -387,7 +387,8 @@ export const ENSEMBLE_CONTENT = {
           "Latin, jazz, and popular music for elegant events, festivals, and energetic live performances.",
         heroSubtitle:
           "A format with strong sound and flexible repertoire for social, corporate, and artistic occasions.",
-        heroImage: bigBandA,
+        heroImage:
+          "https://res.cloudinary.com/dnhhbkmpf/image/upload/v1774558440/IMG_8670_mlzjjx.webp",
         gallery: ENSEMBLE_GALLERY_URLS["big-band"],
         seoTitle: "Big Band | Banda CEDES Don Bosco",
         seoDescription:
@@ -438,7 +439,8 @@ export const ENSEMBLE_CONTENT = {
           "The main format for large-scale events, with visual strength, collective energy, and strong musical impact.",
         heroSubtitle:
           "An ensemble ideal for parades, civic ceremonies, institutional events, and performances that require power, discipline, and presence.",
-        heroImage: bicentenario,
+        heroImage:
+          "https://res.cloudinary.com/dnhhbkmpf/image/upload/v1754511066/DSC08255_ndwf2n.webp",
         gallery: ENSEMBLE_GALLERY_URLS["banda-de-marcha"],
         seoTitle: "Marching Band | Banda CEDES Don Bosco",
         seoDescription:
