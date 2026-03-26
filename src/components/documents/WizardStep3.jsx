@@ -7,37 +7,37 @@ import { OCR_TYPES } from "../../utils/constants";
 
 const FIELDS_BY_TYPE = {
   PASSPORT: [
-    { key: "givenNames", label: "Nombres", type: "text" },
-    { key: "surname", label: "Apellidos", type: "text" },
-    { key: "passportNumber", label: "N° Pasaporte", type: "text" },
-    { key: "nationality", label: "Nacionalidad", type: "text" },
-    { key: "dateOfBirth", label: "Fecha de nacimiento", type: "date" },
-    { key: "sex", label: "Sexo", type: "select", options: ["M", "F", "X"] },
-    { key: "expirationDate", label: "Vencimiento", type: "date" },
+    { key: "givenNames", label: "Nombres", type: "text", required: true },
+    { key: "surname", label: "Apellidos", type: "text", required: true },
+    { key: "passportNumber", label: "N° Pasaporte", type: "text", required: true },
+    { key: "nationality", label: "Nacionalidad", type: "text", required: true },
+    { key: "dateOfBirth", label: "Fecha de nacimiento", type: "date", required: true },
+    { key: "sex", label: "Sexo", type: "select", options: ["M", "F", "X"], required: true },
+    { key: "expirationDate", label: "Vencimiento", type: "date", required: true },
   ],
   VISA: [
-    { key: "givenNames", label: "Nombres", type: "text" },
-    { key: "surname", label: "Apellidos", type: "text" },
-    { key: "passportNumber", label: "N° Pasaporte", type: "text" },
-    { key: "nationality", label: "Nacionalidad", type: "text" },
-    { key: "dateOfBirth", label: "Fecha de nacimiento", type: "date" },
-    { key: "sex", label: "Sexo", type: "select", options: ["M", "F", "X"] },
-    { key: "expirationDate", label: "Vencimiento", type: "date" },
-    { key: "visaType", label: "Tipo de visa", type: "text" },
-    { key: "visaControlNumber", label: "N° Control", type: "text" },
-    { key: "issueDate", label: "Fecha de emisión", type: "date" },
+    { key: "givenNames", label: "Nombres", type: "text", required: true },
+    { key: "surname", label: "Apellidos", type: "text", required: true },
+    { key: "passportNumber", label: "N° Pasaporte", type: "text", required: true },
+    { key: "nationality", label: "Nacionalidad", type: "text", required: true },
+    { key: "dateOfBirth", label: "Fecha de nacimiento", type: "date", required: true },
+    { key: "sex", label: "Sexo", type: "select", options: ["M", "F", "X"], required: true },
+    { key: "expirationDate", label: "Vencimiento", type: "date", required: true },
+    { key: "visaType", label: "Tipo de visa", type: "text", required: true },
+    { key: "visaControlNumber", label: "N° Control", type: "text", required: true },
+    { key: "issueDate", label: "Fecha de emisión", type: "date", required: true },
   ],
   PERMISO_SALIDA: [
-    { key: "fullName", label: "Nombre del menor", type: "text" },
-    { key: "documentNumber", label: "N° Documento", type: "text" },
-    { key: "expirationDate", label: "Vencimiento", type: "date" },
-    { key: "destination", label: "Destino", type: "text" },
-    { key: "authorizerName", label: "Autoriza", type: "text" },
+    { key: "fullName", label: "Nombre del menor", type: "text", required: true },
+    { key: "documentNumber", label: "N° Documento", type: "text", required: true },
+    { key: "expirationDate", label: "Vencimiento", type: "date", required: true },
+    { key: "destination", label: "Destino", type: "text", required: true },
+    { key: "authorizerName", label: "Autoriza", type: "text", required: true },
   ],
   OTHER: [
-    { key: "fullName", label: "Nombre", type: "text" },
-    { key: "documentNumber", label: "N° Documento", type: "text" },
-    { key: "expirationDate", label: "Vencimiento", type: "date" },
+    { key: "fullName", label: "Nombre", type: "text", required: true },
+    { key: "documentNumber", label: "N° Documento", type: "text", required: true },
+    { key: "expirationDate", label: "Vencimiento", type: "date", required: true },
     { key: "notes", label: "Notas", type: "textarea" },
   ],
 };
@@ -56,19 +56,32 @@ const inputBase =
   "w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent";
 
 // ─── Data form ────────────────────────────────────────────────────────────────
-function DataForm({ fields, values, onChange }) {
+function getEmptyRequiredKeys(fields, values) {
+  return fields
+    .filter((field) => field.required)
+    .filter((field) => {
+      const value = values[field.key];
+      return typeof value === "string" ? value.trim() === "" : !value;
+    })
+    .map((field) => field.key);
+}
+
+function DataForm({ fields, values, onChange, missingKeys = [] }) {
   return (
     <div className="space-y-4 w-full">
-      {fields.map(({ key, label, type, options }) => (
+      {fields.map(({ key, label, type, options, required }) => (
         <div key={key}>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
             {label}
+            {required && <span className="ml-1 text-red-500">*</span>}
           </label>
           {type === "select" ? (
             <select
               value={values[key] || ""}
               onChange={(e) => onChange(key, e.target.value)}
-              className={inputBase}
+              className={`${inputBase} ${
+                missingKeys.includes(key) ? "border-red-300 ring-1 ring-red-100" : ""
+              }`}
             >
               <option value="">—</option>
               {options.map((o) => (
@@ -82,15 +95,22 @@ function DataForm({ fields, values, onChange }) {
               value={values[key] || ""}
               onChange={(e) => onChange(key, e.target.value)}
               rows={3}
-              className={`${inputBase} resize-none`}
+              className={`${inputBase} resize-none ${
+                missingKeys.includes(key) ? "border-red-300 ring-1 ring-red-100" : ""
+              }`}
             />
           ) : (
             <input
               type={type}
               value={values[key] || ""}
               onChange={(e) => onChange(key, e.target.value)}
-              className={inputBase}
+              className={`${inputBase} ${
+                missingKeys.includes(key) ? "border-red-300 ring-1 ring-red-100" : ""
+              }`}
             />
+          )}
+          {missingKeys.includes(key) && (
+            <p className="mt-1.5 text-xs font-medium text-red-600">Este campo es obligatorio.</p>
           )}
         </div>
       ))}
@@ -99,12 +119,22 @@ function DataForm({ fields, values, onChange }) {
 }
 
 // ─── Shared CTA footer ────────────────────────────────────────────────────────
-function ActionFooter({ onBack, onConfirm, confirmLabel = "Confirmar" }) {
+function ActionFooter({
+  onBack,
+  onConfirm,
+  confirmLabel = "Confirmar",
+  confirmDisabled = false,
+}) {
   return (
     <div className="pt-4 space-y-3">
       <button
         onClick={onConfirm}
-        className="w-full py-4 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-sm transition-all duration-200 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+        disabled={confirmDisabled}
+        className={`w-full py-4 rounded-2xl font-semibold text-sm shadow-sm transition-all duration-200 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+          confirmDisabled
+            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+            : "bg-slate-900 text-white focus:ring-slate-900"
+        }`}
       >
         {confirmLabel}
       </button>
@@ -131,6 +161,11 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
 
   const fields = FIELDS_BY_TYPE[documentType] || FIELDS_BY_TYPE.OTHER;
   const needsOcr = OCR_TYPES.includes(documentType);
+  const missingRequiredKeys = getEmptyRequiredKeys(fields, form);
+  const hasMissingRequiredFields = missingRequiredKeys.length > 0;
+  const missingRequiredLabels = fields
+    .filter((field) => missingRequiredKeys.includes(field.key))
+    .map((field) => field.label);
 
   const hasPreloaded = preloadedDocument?.extracted != null;
   const ocrDoc = hasPreloaded ? preloadedDocument : polledDoc;
@@ -149,12 +184,6 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
   useEffect(() => {
     if (!ocrDoc?.extracted) return;
     const e = ocrDoc.extracted;
-    console.log(
-      "[WizardStep3] Populating form from extracted data:",
-      Object.keys(e)
-        .filter((k) => e[k])
-        .join(", ")
-    );
     setForm({
       givenNames: e.givenNames || "",
       surname: e.surname || "",
@@ -188,7 +217,7 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
       <div className="flex flex-col px-5 py-6 gap-5">
         <div className="text-center space-y-1">
           <h2 className="text-xl font-semibold text-slate-900">Datos del documento</h2>
-          <p className="text-sm text-slate-500">Todos los campos son opcionales</p>
+          <p className="text-sm text-slate-500">Completa todos los campos obligatorios</p>
         </div>
 
         <div className="flex items-start gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3.5">
@@ -206,12 +235,22 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
             />
           </svg>
           <p className="text-sm text-slate-600">
-            Puedes guardar el documento sin llenar ningún campo adicional.
+            Si falta información, debes completarla antes de guardar el documento.
           </p>
         </div>
 
-        <DataForm fields={fields} values={form} onChange={handleChange} />
-        <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Guardar" />
+        <DataForm
+          fields={fields}
+          values={form}
+          onChange={handleChange}
+          missingKeys={missingRequiredKeys}
+        />
+        <ActionFooter
+          onBack={onBack}
+          onConfirm={handleConfirm}
+          confirmLabel="Guardar"
+          confirmDisabled={hasMissingRequiredFields}
+        />
       </div>
     );
   }
@@ -299,6 +338,29 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
           </div>
         )}
 
+        {hasMissingRequiredFields && (
+          <div className="flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 px-4 py-4">
+            <svg
+              className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"
+              />
+            </svg>
+            <div className="text-sm text-red-700 space-y-1">
+              <p className="font-semibold">Faltan campos obligatorios.</p>
+              <p>Debes completar lo siguiente antes de confirmar:</p>
+              <p>{missingRequiredLabels.join(", ")}</p>
+            </div>
+          </div>
+        )}
+
         {/* Data card */}
         {!mrzValid || editMode ? (
           // Edit mode
@@ -315,7 +377,12 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
               )}
             </div>
             <p className="text-sm text-slate-500">Corrige cualquier campo si es necesario.</p>
-            <DataForm fields={fields} values={form} onChange={handleChange} />
+            <DataForm
+              fields={fields}
+              values={form}
+              onChange={handleChange}
+              missingKeys={missingRequiredKeys}
+            />
           </div>
         ) : (
           // Read-only summary card
@@ -368,7 +435,12 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
           </div>
         )}
 
-        <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Confirmar" />
+        <ActionFooter
+          onBack={onBack}
+          onConfirm={handleConfirm}
+          confirmLabel="Confirmar"
+          confirmDisabled={hasMissingRequiredFields}
+        />
       </div>
     );
   }
@@ -407,8 +479,18 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
         </div>
       </div>
 
-      <DataForm fields={fields} values={form} onChange={handleChange} />
-      <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Guardar" />
+      <DataForm
+        fields={fields}
+        values={form}
+        onChange={handleChange}
+        missingKeys={missingRequiredKeys}
+      />
+      <ActionFooter
+        onBack={onBack}
+        onConfirm={handleConfirm}
+        confirmLabel="Guardar"
+        confirmDisabled={hasMissingRequiredFields}
+      />
     </div>
   );
 }
