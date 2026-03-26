@@ -31,14 +31,16 @@ function getApiBaseUrl() {
 function getCloudinaryPdfUrl(image) {
   if (!image) return null;
 
-  const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
-  if (image.publicId && cloudName) {
-    const publicId = image.publicId.endsWith(".pdf") ? image.publicId : `${image.publicId}.pdf`;
-    return `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}`;
+  if (image.url) {
+    return image.url;
   }
 
-  if (!image.url) return image.url;
-  return image.url.endsWith(".pdf") ? image.url : `${image.url}.pdf`;
+  const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+  if (image.publicId && cloudName) {
+    return `https://res.cloudinary.com/${cloudName}/raw/upload/${image.publicId}`;
+  }
+
+  return image.url;
 }
 
 function buildPdfPreviewUrl(url, publicId) {

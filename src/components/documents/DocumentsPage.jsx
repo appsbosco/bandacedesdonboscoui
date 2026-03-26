@@ -78,7 +78,8 @@ function getDaysUntilExpiration(value) {
 function getExpiryState(value) {
   const days = getDaysUntilExpiration(value);
   if (days == null) return { kind: "missing", label: "Sin fecha", color: "#9CA3AF" };
-  if (days < 0) return { kind: "expired", label: `Vencido hace ${Math.abs(days)}d`, color: "#DC2626" };
+  if (days < 0)
+    return { kind: "expired", label: `Vencido hace ${Math.abs(days)}d`, color: "#DC2626" };
   if (days <= 30) return { kind: "critical", label: `${days}d restantes`, color: "#EA580C" };
   if (days <= 90) return { kind: "warning", label: `${days}d restantes`, color: "#D97706" };
   return { kind: "ok", label: `${days}d restantes`, color: "#059669" };
@@ -121,6 +122,10 @@ function getPreviewImage(document) {
   return document.images.find((image) => image.kind === "NORMALIZED") || document.images[0];
 }
 
+function isPdfMimeType(type) {
+  return type === "application/pdf" || type === "image/pdf";
+}
+
 function buildExtractedFields(document) {
   const extracted = document?.extracted || {};
   return [
@@ -135,28 +140,23 @@ function buildExtractedFields(document) {
     { label: "Control visa", value: extracted.visaControlNumber },
     {
       label: "Nacimiento",
-      value:
-        formatDate(extracted.dateOfBirth) !== "—" ? formatDate(extracted.dateOfBirth) : null,
+      value: formatDate(extracted.dateOfBirth) !== "—" ? formatDate(extracted.dateOfBirth) : null,
     },
     { label: "Sexo", value: extracted.sex },
     {
       label: "Expiración",
       value:
-        formatDate(extracted.expirationDate) !== "—"
-          ? formatDate(extracted.expirationDate)
-          : null,
+        formatDate(extracted.expirationDate) !== "—" ? formatDate(extracted.expirationDate) : null,
     },
     {
       label: "Emisión",
-      value:
-        formatDate(extracted.issueDate) !== "—" ? formatDate(extracted.issueDate) : null,
+      value: formatDate(extracted.issueDate) !== "—" ? formatDate(extracted.issueDate) : null,
     },
     { label: "Destino", value: extracted.destination },
     { label: "Autorizante", value: extracted.authorizerName },
     {
       label: "MRZ válido",
-      value:
-        typeof extracted.mrzValid === "boolean" ? (extracted.mrzValid ? "Sí" : "No") : null,
+      value: typeof extracted.mrzValid === "boolean" ? (extracted.mrzValid ? "Sí" : "No") : null,
     },
     { label: "Formato MRZ", value: extracted.mrzFormat },
     {
@@ -541,7 +541,11 @@ function FullDocumentCard({ document }) {
               {document.extracted?.expirationDate && (
                 <span
                   className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold"
-                  style={{ background: "#F8FAFC", color: expiry.color, border: "1px solid #E2E8F0" }}
+                  style={{
+                    background: "#F8FAFC",
+                    color: expiry.color,
+                    border: "1px solid #E2E8F0",
+                  }}
                 >
                   {expiry.label}
                 </span>
@@ -580,13 +584,32 @@ function FullDocumentCard({ document }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {previewImage?.url && (
-              <img
-                src={previewImage.url}
-                alt={getDocumentTypeLabel(document.type)}
-                className="h-16 w-16 rounded-xl border border-slate-200 bg-slate-50 object-cover"
-              />
-            )}
+            {previewImage?.url &&
+              (isPdfMimeType(previewImage.mimeType) ? (
+                <div className="flex h-16 w-16 flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600">
+                  <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="M7 21h10a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 0013.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="M13 3v5h5M9 13h6M9 17h4"
+                    />
+                  </svg>
+                  <span className="mt-1 text-[10px] font-bold tracking-wide">PDF</span>
+                </div>
+              ) : (
+                <img
+                  src={previewImage.url}
+                  alt={getDocumentTypeLabel(document.type)}
+                  className="h-16 w-16 rounded-xl border border-slate-200 bg-slate-50 object-cover"
+                />
+              ))}
             <Link
               to={`/documents/${document.id}`}
               className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -812,7 +835,9 @@ function UserDetailPanel({ row, onClose }) {
           <h3 className="text-sm font-semibold text-slate-900 truncate leading-snug">
             {row.ownerLabel}
           </h3>
-          <p className="text-xs text-slate-500 truncate mt-0.5">{row.owner?.email || "Sin correo"}</p>
+          <p className="text-xs text-slate-500 truncate mt-0.5">
+            {row.owner?.email || "Sin correo"}
+          </p>
           <div className="mt-2">
             <AggregateStatusBadge status={row.aggregateStatus} />
           </div>
@@ -1017,14 +1042,24 @@ function MobileRowCard({ row, expanded, onToggle }) {
           {expanded ? (
             <>
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 15l7-7 7 7"
+                />
               </svg>
               Ocultar
             </>
           ) : (
             <>
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
               Ver todo
             </>
@@ -1129,9 +1164,7 @@ function FinancieroView() {
   if (error) {
     return (
       <div className="text-center py-10">
-        <p className="text-slate-600 text-sm">
-          Error al cargar los documentos. Intenta de nuevo.
-        </p>
+        <p className="text-slate-600 text-sm">Error al cargar los documentos. Intenta de nuevo.</p>
       </div>
     );
   }
@@ -1223,7 +1256,9 @@ function FinancieroView() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <DocumentStateBadge status={doc.status} />
-                          <span className="text-xs text-slate-400">{formatDate(doc.createdAt)}</span>
+                          <span className="text-xs text-slate-400">
+                            {formatDate(doc.createdAt)}
+                          </span>
                         </div>
                         {doc.notes && (
                           <p className="text-xs text-slate-600 truncate mt-0.5">{doc.notes}</p>
@@ -1380,9 +1415,7 @@ function AdminDocumentsView() {
         };
 
         const lastUploadDate = Math.max(
-          ...entry.documents.map(
-            (d) => getDateValue(d.updatedAt || d.createdAt)?.getTime() || 0
-          )
+          ...entry.documents.map((d) => getDateValue(d.updatedAt || d.createdAt)?.getTime() || 0)
         );
 
         return { ...row, aggregateStatus: computeRowStatus(row), lastUploadDate };
@@ -1398,10 +1431,7 @@ function AdminDocumentsView() {
       const search = ownerSearch.trim().toLowerCase();
 
       if (search) {
-        const haystack = [row.ownerLabel, row.owner?.email]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+        const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
         if (!haystack.includes(search)) return false;
       }
 
@@ -1465,7 +1495,8 @@ function AdminDocumentsView() {
     setExpandedRowId(null);
   };
 
-  const hasActiveFilters = rowStatusFilter !== "ALL" || typeFilter || ownerSearch || sortBy !== "name";
+  const hasActiveFilters =
+    rowStatusFilter !== "ALL" || typeFilter || ownerSearch || sortBy !== "name";
 
   const handleSelectRow = (row) => {
     setSelectedRow((current) => (current?.id === row.id ? null : row));
@@ -1661,9 +1692,7 @@ function AdminDocumentsView() {
                 key={row.id}
                 row={row}
                 expanded={expandedRowId === row.id}
-                onToggle={() =>
-                  setExpandedRowId((current) => (current === row.id ? null : row.id))
-                }
+                onToggle={() => setExpandedRowId((current) => (current === row.id ? null : row.id))}
               />
             ))}
           </div>
@@ -1697,8 +1726,7 @@ function AdminDocumentsView() {
                   <tbody>
                     {filteredRows.map((row, index) => {
                       const isSelected = selectedRow?.id === row.id;
-                      const borderColor =
-                        ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
+                      const borderColor = ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
 
                       return (
                         <tr
@@ -1799,7 +1827,9 @@ function AdminDocumentsView() {
               <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
                 <span className="text-xs text-slate-500">
                   {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
-                  {selectedRow ? " · Haz clic en otra fila para cambiar el detalle" : " · Haz clic en una fila para ver el detalle"}
+                  {selectedRow
+                    ? " · Haz clic en otra fila para cambiar el detalle"
+                    : " · Haz clic en una fila para ver el detalle"}
                 </span>
                 {hasMore && (
                   <button
@@ -1880,16 +1910,10 @@ function DocumentsPage() {
 
                 {userIsAdmin && !isFinanciero && (
                   <div className="flex gap-2 p-1 bg-slate-100 rounded-full w-fit">
-                    <TabButton
-                      active={activeTab === "mine"}
-                      onClick={() => setActiveTab("mine")}
-                    >
+                    <TabButton active={activeTab === "mine"} onClick={() => setActiveTab("mine")}>
                       Mis documentos
                     </TabButton>
-                    <TabButton
-                      active={activeTab === "all"}
-                      onClick={() => setActiveTab("all")}
-                    >
+                    <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>
                       Vista admin
                     </TabButton>
                   </div>
@@ -1907,10 +1931,10 @@ function DocumentsPage() {
               <Link
                 to="/new-document"
                 className="
-                  fixed bottom-6 right-6 z-[1200]
+                  fixed bottom-10 right-12 z-[1200]
                   w-14 h-14 rounded-full
                   bg-primary-600 hover:bg-primary-500
-                  text-white
+                  text-black
                   shadow-xl shadow-primary-200/60
                   flex items-center justify-center
                   transition-all duration-200 hover:scale-105

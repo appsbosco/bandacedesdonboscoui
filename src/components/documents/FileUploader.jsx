@@ -8,6 +8,7 @@ function FileUploader({ onFileReady, label = 'Toca para adjuntar documento' }) {
   const inputRef = useRef(null);
   const [preview,  setPreview]  = useState(null);
   const [fileName, setFileName] = useState('');
+  const [fileType, setFileType] = useState('');
   const [error,    setError]    = useState(null);
   const [dragging, setDragging] = useState(false);
 
@@ -18,17 +19,21 @@ function FileUploader({ onFileReady, label = 'Toca para adjuntar documento' }) {
     if (!okType) { setError('Formato no válido. Usa JPG, PNG, WebP o PDF.'); return; }
     if (file.size > MAX_BYTES) { setError('El archivo no puede superar 15 MB.'); return; }
     setFileName(file.name);
+    setFileType(file.type);
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = e => setPreview(e.target.result);
       reader.readAsDataURL(file);
-    } else { setPreview(null); }
+    } else {
+      setPreview(null);
+    }
     onFileReady(file);
   }
 
   function handleReset() {
     setPreview(null);
     setFileName('');
+    setFileType('');
     setError(null);
     if (inputRef.current) inputRef.current.value = '';
   }
@@ -59,22 +64,46 @@ function FileUploader({ onFileReady, label = 'Toca para adjuntar documento' }) {
         onDragLeave={() => setDragging(false)}
         className={dropZoneClass}
       >
-        {preview ? (
+        {preview || fileName ? (
           <div className="flex flex-col items-center gap-3">
-            <div className="relative">
-              <img
-                src={preview}
-                alt="Vista previa"
-                className="max-h-52 rounded-2xl shadow-sm object-contain"
-              />
-            </div>
+            {preview ? (
+              <div className="relative">
+                <img
+                  src={preview}
+                  alt="Vista previa"
+                  className="max-h-52 rounded-2xl shadow-sm object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex h-32 w-32 items-center justify-center rounded-3xl bg-red-50 text-red-500">
+                <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.7}
+                    d="M7 21h10a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 0013.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.7}
+                    d="M13 3v5h5M9 13h6M9 17h6"
+                  />
+                </svg>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </span>
-              <p className="text-xs font-medium text-slate-600 truncate max-w-[200px]">{fileName}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-slate-600 truncate max-w-[220px]">{fileName}</p>
+                {!preview && (
+                  <p className="text-[11px] text-slate-400">{fileType || 'application/pdf'}</p>
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -120,7 +149,7 @@ function FileUploader({ onFileReady, label = 'Toca para adjuntar documento' }) {
       )}
 
       {/* Change file button */}
-      {preview && (
+      {fileName && (
         <button
           onClick={e => { e.stopPropagation(); handleReset(); }}
           className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors text-center py-1"

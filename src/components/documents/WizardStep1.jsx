@@ -6,12 +6,12 @@ import { DOCUMENT_TYPES } from "../../utils/constants";
  * WizardStep1 - Selección del tipo de documento (Light UI)
  */
 export function WizardStep1({
-  selectedType,
+  selectedType = null,
   onSelectType,
   onNext,
-  isCreating,
+  isCreating = false,
   documentTypes,
-  helperMessage,
+  helperMessage = "",
 }) {
   const availableTypes = documentTypes?.length ? documentTypes : Object.values(DOCUMENT_TYPES);
 
@@ -218,11 +218,4 @@ WizardStep1.propTypes = {
     requiresMRZ: PropTypes.bool,
   })),
   helperMessage: PropTypes.string,
-};
-
-WizardStep1.defaultProps = {
-  selectedType: null,
-  isCreating: false,
-  documentTypes: undefined,
-  helperMessage: "",
 };

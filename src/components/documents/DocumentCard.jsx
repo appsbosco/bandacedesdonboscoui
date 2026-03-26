@@ -28,6 +28,10 @@ function getOwnerFullName(owner) {
   );
 }
 
+function isPdfMimeType(type) {
+  return type === "application/pdf" || type === "image/pdf";
+}
+
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_STYLES = {
@@ -122,7 +126,9 @@ export function DocumentCard({ document, showOwner, actions }) {
   const typeInfo = getDocumentTypeInfo(type);
   const expirationStatus = getExpirationStatus(daysUntilExpiration);
 
-  const thumbnailUrl = images?.[0]?.url;
+  const thumbnail = images?.[0] || null;
+  const thumbnailUrl = thumbnail?.url;
+  const isPdfThumbnail = isPdfMimeType(thumbnail?.mimeType);
 
   const displayName =
     extracted?.fullName ||
@@ -189,12 +195,32 @@ export function DocumentCard({ document, showOwner, actions }) {
       <div className="flex items-start gap-3 sm:gap-4">
         {/* Thumbnail */}
         <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
-          {thumbnailUrl ? (
+          {thumbnailUrl && !isPdfThumbnail ? (
             <img
               src={thumbnailUrl}
               alt={typeInfo?.label ?? type}
               className="w-full h-full object-cover"
             />
+          ) : isPdfThumbnail ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-red-50 text-red-600">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M7 21h10a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 0013.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M13 3v5h5M9 13h6M9 17h4"
+                />
+              </svg>
+              <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold tracking-wide">
+                PDF
+              </span>
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-3xl text-slate-300">
               {typeInfo?.icon ?? "📄"}
@@ -329,7 +355,11 @@ const ExtractedShape = PropTypes.shape({
   expirationDate: PropTypes.string,
 });
 
-const ImageShape = PropTypes.shape({ url: PropTypes.string });
+const ImageShape = PropTypes.shape({
+  url: PropTypes.string,
+  mimeType: PropTypes.string,
+  publicId: PropTypes.string,
+});
 
 StatusBadge.propTypes = {
   status: PropTypes.string.isRequired,

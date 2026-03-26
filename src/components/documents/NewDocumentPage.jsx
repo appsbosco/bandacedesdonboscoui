@@ -33,10 +33,14 @@ async function uploadToCloudinary(blob, signedData) {
   formData.append("signature", signedData.signature);
   if (signedData.publicId) formData.append("public_id", signedData.publicId);
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${signedData.cloudName}/image/upload`, {
-    method: "POST",
-    body: formData,
-  });
+  const resourceType = signedData.resourceType || "image";
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${signedData.cloudName}/${resourceType}/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
 
   if (!res.ok) {
     const body = await res.text().catch(() => res.statusText);
@@ -314,9 +318,10 @@ export default function NewDocumentPage() {
         const { data: createData } = await createDocument({ variables: { type: docType } });
         const docId = createData.createDocument.id;
         setDocumentId(docId);
+        const mimeType = blob?.type || captureMeta?.mimeType || "application/octet-stream";
 
         const { data: signData } = await getSignedUpload({
-          variables: { documentId: docId, kind: "RAW" },
+          variables: { documentId: docId, kind: "RAW", mimeType },
         });
         const signed = signData.getSignedUpload;
 
@@ -331,7 +336,9 @@ export default function NewDocumentPage() {
           height: uploadResult.height,
           bytes: uploadResult.bytes,
           mimeType:
-            uploadResult.resource_type === "image" ? "image/jpeg" : "application/octet-stream",
+            mimeType === "image/pdf"
+              ? "application/pdf"
+              : mimeType || "application/octet-stream",
         };
         if (captureMeta) imageInput.captureMeta = captureMeta;
         await addDocumentImage({ variables: { documentId: docId, image: imageInput } });

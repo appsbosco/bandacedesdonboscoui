@@ -69,8 +69,8 @@ export const CREATE_DOCUMENT = gql`
 `;
 
 export const GET_SIGNED_UPLOAD = gql`
-  mutation GetSignedUpload($documentId: ID!, $kind: ImageKind) {
-    getSignedUpload(documentId: $documentId, kind: $kind) {
+  mutation GetSignedUpload($documentId: ID!, $kind: ImageKind, $mimeType: String) {
+    getSignedUpload(documentId: $documentId, kind: $kind, mimeType: $mimeType) {
       signature
       timestamp
       cloudName

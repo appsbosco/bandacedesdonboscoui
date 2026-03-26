@@ -69,14 +69,16 @@ function buildPdfPreviewUrl(url, publicId) {
 function getCloudinaryPdfUrl(image) {
   if (!image) return null;
 
-  const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
-  if (image.publicId && cloudName) {
-    const publicId = image.publicId.endsWith(".pdf") ? image.publicId : `${image.publicId}.pdf`;
-    return `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}`;
+  if (image.url) {
+    return image.url;
   }
 
-  if (!image.url) return image.url;
-  return image.url.endsWith(".pdf") ? image.url : `${image.url}.pdf`;
+  const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+  if (image.publicId && cloudName) {
+    return `https://res.cloudinary.com/${cloudName}/raw/upload/${image.publicId}`;
+  }
+
+  return image.url;
 }
 
 function isAdminUser(user) {
@@ -146,7 +148,7 @@ OwnerCard.propTypes = {
 };
 
 // ── DataField ─────────────────────────────────────────────────────────────────
-function DataField({ label, value, sensitive }) {
+function DataField({ label, value, sensitive = false }) {
   const [showSensitive, setShowSensitive] = useState(false);
   const displayValue = sensitive && !showSensitive ? maskDocumentNumber(value) : value;
 
@@ -174,7 +176,109 @@ DataField.propTypes = {
   sensitive: PropTypes.bool,
 };
 
-DataField.defaultProps = { sensitive: false };
+function renderExtractedFieldsByType(document) {
+  const extracted = document?.extracted || {};
+
+  if (document?.type === "PASSPORT") {
+    return (
+      <>
+        {extracted.fullName && <DataField label="Nombre Completo" value={extracted.fullName} />}
+        {extracted.givenNames && <DataField label="Nombre(s)" value={extracted.givenNames} />}
+        {extracted.surname && <DataField label="Apellido(s)" value={extracted.surname} />}
+        {extracted.nationality && <DataField label="Nacionalidad" value={extracted.nationality} />}
+        {extracted.issuingCountry && (
+          <DataField label="País Emisor" value={extracted.issuingCountry} />
+        )}
+        {extracted.passportNumber && (
+          <DataField label="N° Pasaporte" value={extracted.passportNumber} sensitive />
+        )}
+        {extracted.documentNumber && (
+          <DataField label="N° Documento" value={extracted.documentNumber} sensitive />
+        )}
+        {extracted.dateOfBirth && (
+          <DataField label="Fecha de Nacimiento" value={formatDate(extracted.dateOfBirth)} />
+        )}
+        {extracted.sex && <DataField label="Sexo" value={extracted.sex} />}
+        {extracted.issueDate && (
+          <DataField label="Fecha de Emisión" value={formatDate(extracted.issueDate)} />
+        )}
+        {extracted.expirationDate && (
+          <DataField label="Fecha de Expiración" value={formatDate(extracted.expirationDate)} />
+        )}
+      </>
+    );
+  }
+
+  if (document?.type === "VISA") {
+    return (
+      <>
+        {extracted.fullName && <DataField label="Nombre Completo" value={extracted.fullName} />}
+        {extracted.givenNames && <DataField label="Nombre(s)" value={extracted.givenNames} />}
+        {extracted.surname && <DataField label="Apellido(s)" value={extracted.surname} />}
+        {extracted.nationality && <DataField label="Nacionalidad" value={extracted.nationality} />}
+        {extracted.issuingCountry && (
+          <DataField label="País Emisor" value={extracted.issuingCountry} />
+        )}
+        {extracted.passportNumber && (
+          <DataField label="N° Pasaporte" value={extracted.passportNumber} sensitive />
+        )}
+        {extracted.documentNumber && (
+          <DataField label="N° Documento" value={extracted.documentNumber} sensitive />
+        )}
+        {extracted.visaType && <DataField label="Tipo de Visa" value={extracted.visaType} />}
+        {extracted.visaControlNumber && (
+          <DataField label="N° de Control de Visa" value={extracted.visaControlNumber} sensitive />
+        )}
+        {extracted.dateOfBirth && (
+          <DataField label="Fecha de Nacimiento" value={formatDate(extracted.dateOfBirth)} />
+        )}
+        {extracted.sex && <DataField label="Sexo" value={extracted.sex} />}
+        {extracted.issueDate && (
+          <DataField label="Fecha de Emisión" value={formatDate(extracted.issueDate)} />
+        )}
+        {extracted.expirationDate && (
+          <DataField label="Fecha de Expiración" value={formatDate(extracted.expirationDate)} />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {extracted.fullName && <DataField label="Nombre Completo" value={extracted.fullName} />}
+      {extracted.givenNames && <DataField label="Nombre(s)" value={extracted.givenNames} />}
+      {extracted.surname && <DataField label="Apellido(s)" value={extracted.surname} />}
+      {extracted.nationality && <DataField label="Nacionalidad" value={extracted.nationality} />}
+      {extracted.issuingCountry && (
+        <DataField label="País Emisor" value={extracted.issuingCountry} />
+      )}
+      {extracted.passportNumber && (
+        <DataField label="N° Pasaporte" value={extracted.passportNumber} sensitive />
+      )}
+      {extracted.documentNumber && (
+        <DataField label="N° Documento" value={extracted.documentNumber} sensitive />
+      )}
+      {extracted.visaType && <DataField label="Tipo de Visa" value={extracted.visaType} />}
+      {extracted.visaControlNumber && (
+        <DataField label="N° de Control de Visa" value={extracted.visaControlNumber} sensitive />
+      )}
+      {extracted.dateOfBirth && (
+        <DataField label="Fecha de Nacimiento" value={formatDate(extracted.dateOfBirth)} />
+      )}
+      {extracted.sex && <DataField label="Sexo" value={extracted.sex} />}
+      {extracted.issueDate && (
+        <DataField label="Fecha de Emisión" value={formatDate(extracted.issueDate)} />
+      )}
+      {extracted.expirationDate && (
+        <DataField label="Fecha de Expiración" value={formatDate(extracted.expirationDate)} />
+      )}
+      {extracted.destination && <DataField label="Destino" value={extracted.destination} />}
+      {extracted.authorizerName && (
+        <DataField label="Autorizante" value={extracted.authorizerName} />
+      )}
+    </>
+  );
+}
 
 function DocumentFilePreview({ image, alt, className = "", frameClassName = "", compact = false }) {
   if (!image?.url) return null;
@@ -347,10 +451,10 @@ export function DocumentDetail() {
   if (loading && !data) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <Skeleton variant="card" className="mb-6" />
+        <Skeleton variant="rect" className="mb-6" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton variant="card" />
-          <Skeleton variant="card" />
+          <Skeleton variant="rect" />
+          <Skeleton variant="rect" />
         </div>
       </div>
     );
@@ -714,59 +818,7 @@ export function DocumentDetail() {
               </div>
 
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                {document.extracted?.fullName && (
-                  <DataField label="Nombre Completo" value={document.extracted.fullName} />
-                )}
-                {document.extracted?.givenNames && (
-                  <DataField label="Nombre(s)" value={document.extracted.givenNames} />
-                )}
-                {document.extracted?.surname && (
-                  <DataField label="Apellido(s)" value={document.extracted.surname} />
-                )}
-                {document.extracted?.nationality && (
-                  <DataField label="Nacionalidad" value={document.extracted.nationality} />
-                )}
-                {document.extracted?.issuingCountry && (
-                  <DataField label="País Emisor" value={document.extracted.issuingCountry} />
-                )}
-                {document.extracted?.passportNumber && (
-                  <DataField
-                    label="N° Pasaporte"
-                    value={document.extracted.passportNumber}
-                    sensitive
-                  />
-                )}
-                {document.extracted?.documentNumber && (
-                  <DataField
-                    label="N° Documento"
-                    value={document.extracted.documentNumber}
-                    sensitive
-                  />
-                )}
-                {document.extracted?.visaType && (
-                  <DataField label="Tipo de Visa" value={document.extracted.visaType} />
-                )}
-                {document.extracted?.dateOfBirth && (
-                  <DataField
-                    label="Fecha de Nacimiento"
-                    value={formatDate(document.extracted.dateOfBirth)}
-                  />
-                )}
-                {document.extracted?.sex && (
-                  <DataField label="Sexo" value={document.extracted.sex} />
-                )}
-                {document.extracted?.issueDate && (
-                  <DataField
-                    label="Fecha de Emisión"
-                    value={formatDate(document.extracted.issueDate)}
-                  />
-                )}
-                {document.extracted?.expirationDate && (
-                  <DataField
-                    label="Fecha de Expiración"
-                    value={formatDate(document.extracted.expirationDate)}
-                  />
-                )}
+                {renderExtractedFieldsByType(document)}
               </dl>
 
               {document.extracted?.mrzRaw && (
