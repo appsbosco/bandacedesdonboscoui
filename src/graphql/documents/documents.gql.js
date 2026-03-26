@@ -3,25 +3,17 @@ import { DOCUMENT_FRAGMENT, DOCUMENT_CARD_FRAGMENT } from "./document-fragments.
 
 export const MY_DOCUMENTS = gql`
   ${DOCUMENT_CARD_FRAGMENT}
-  query MyDocuments(
-    $type: DocumentType
-    $status: DocumentStatus
-    $expiredOnly: Boolean
-    $limit: Int
-    $skip: Int
-  ) {
-    myDocuments(
-      type: $type
-      status: $status
-      expiredOnly: $expiredOnly
-      limit: $limit
-      skip: $skip
-    ) {
+  query MyDocuments($filters: DocumentFiltersInput, $pagination: DocumentPaginationInput) {
+    myDocuments(filters: $filters, pagination: $pagination) {
       documents {
         ...DocumentCardFragment
       }
-      total
-      hasMore
+      pagination {
+        total
+        limit
+        skip
+        hasMore
+      }
     }
   }
 `;
@@ -51,27 +43,17 @@ export const DOCUMENTS_EXPIRING_SUMMARY = gql`
 
 export const ALL_DOCUMENTS = gql`
   ${DOCUMENT_CARD_FRAGMENT}
-  query AllDocuments(
-    $ownerSearch: String
-    $type: DocumentType
-    $status: DocumentStatus
-    $expiredOnly: Boolean
-    $limit: Int
-    $skip: Int
-  ) {
-    allDocuments(
-      ownerSearch: $ownerSearch
-      type: $type
-      status: $status
-      expiredOnly: $expiredOnly
-      limit: $limit
-      skip: $skip
-    ) {
+  query AllDocuments($filters: DocumentFiltersInput, $pagination: DocumentPaginationInput) {
+    allDocuments(filters: $filters, pagination: $pagination) {
       documents {
         ...DocumentCardFragment
       }
-      total
-      hasMore
+      pagination {
+        total
+        limit
+        skip
+        hasMore
+      }
     }
   }
 `;

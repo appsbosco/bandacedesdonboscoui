@@ -1,16 +1,15 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
   MY_DOCUMENTS,
   ALL_DOCUMENTS,
-  DOCUMENT_VISIBILITY_SETTINGS,
-  UPDATE_DOCUMENT_VISIBILITY_SETTINGS,
 } from "../../graphql/documents/documents.gql.js";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentFilters } from "../../components/documents/DocumentsFilters.jsx";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { isDocumentAdmin } from "./documentAccess";
+import { getStatusLabel, maskDocumentNumber } from "../../utils/documentHelpers";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -42,7 +41,117 @@ function mergeDocumentsResult(previousResult, fetchMoreResult, resultKey) {
   };
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+function formatDate(dateValue) {
+  if (!dateValue) return "—";
+  try {
+    return new Date(dateValue).toLocaleDateString("es-CR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function getDateValue(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDaysUntilExpiration(value) {
+  const date = getDateValue(value);
+  if (!date) return null;
+
+  const now = new Date();
+  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startOfTarget = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+
+  return Math.floor((startOfTarget - startOfToday) / (1000 * 60 * 60 * 24));
+}
+
+function getExpiryState(value) {
+  const days = getDaysUntilExpiration(value);
+  if (days == null) return { kind: "missing", label: "Sin fecha", color: "#9CA3AF" };
+  if (days < 0) return { kind: "expired", label: `Vencido ${Math.abs(days)}d`, color: "#DC2626" };
+  if (days <= 30) return { kind: "warning", label: `${days}d`, color: "#EA580C" };
+  return { kind: "ok", label: `${days}d`, color: "#059669" };
+}
+
+function sortDocumentsByFreshness(documents) {
+  return [...documents].sort((a, b) => {
+    const aDate = getDateValue(a.updatedAt || a.createdAt)?.getTime() || 0;
+    const bDate = getDateValue(b.updatedAt || b.createdAt)?.getTime() || 0;
+    return bDate - aDate;
+  });
+}
+
+function getOwnerLabel(owner) {
+  if (!owner) return "Sin propietario";
+  const fullName = [owner.name, owner.firstSurName, owner.secondSurName].filter(Boolean).join(" ").trim();
+  return fullName || owner.email || "Sin nombre";
+}
+
+function computeRowStatus(row) {
+  const docs = [row.passport, row.visa, row.exitPermit].filter(Boolean);
+  const statuses = docs.map((doc) => doc.status);
+  const expiryStates = [row.passport, row.visa]
+    .filter(Boolean)
+    .map((doc) => getExpiryState(doc.extracted?.expirationDate).kind);
+
+  if (statuses.includes("REJECTED")) return "REJECTED";
+  if (expiryStates.includes("expired")) return "EXPIRED";
+  if (expiryStates.includes("warning")) return "EXPIRING";
+
+  const hasPendingState = statuses.some((status) =>
+    ["UPLOADED", "DATA_CAPTURED", "CAPTURE_ACCEPTED", "OCR_PENDING", "OCR_PROCESSING", "OCR_FAILED"].includes(status)
+  );
+
+  if (hasPendingState) return "INCOMPLETE";
+  return "COMPLETE";
+}
+
+const TABLE_STATUS_FILTERS = [
+  { value: "ALL", label: "Todos" },
+  { value: "COMPLETE", label: "Completos" },
+  { value: "INCOMPLETE", label: "Pendientes" },
+  { value: "EXPIRED", label: "Vencidos" },
+  { value: "EXPIRING", label: "Por vencer" },
+  { value: "REJECTED", label: "Rechazados" },
+];
+
+const TYPE_OPTIONS = [
+  { value: "", label: "Todos los tipos" },
+  { value: "PASSPORT", label: "Pasaporte" },
+  { value: "VISA", label: "Visa" },
+  { value: "PERMISO_SALIDA", label: "Permiso de salida" },
+  { value: "OTHER", label: "Otro" },
+];
+
+const ROW_STATUS_CONFIG = {
+  COMPLETE: { label: "Completo", bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0" },
+  INCOMPLETE: { label: "Pendiente", bg: "#FFFBEB", color: "#92400E", border: "#FDE68A" },
+  EXPIRED: { label: "Vencido", bg: "#FEF2F2", color: "#991B1B", border: "#FECACA" },
+  EXPIRING: { label: "Por vencer", bg: "#FFF7ED", color: "#9A3412", border: "#FED7AA" },
+  REJECTED: { label: "Rechazado", bg: "#FEF2F2", color: "#991B1B", border: "#FCA5A5" },
+};
+
+const DOCUMENT_BADGE_STYLES = {
+  VERIFIED: { bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0" },
+  OCR_SUCCESS: { bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0" },
+  OCR_FAILED: { bg: "#FEF2F2", color: "#991B1B", border: "#FECACA" },
+  REJECTED: { bg: "#FEF2F2", color: "#991B1B", border: "#FCA5A5" },
+  OCR_PENDING: { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A" },
+  OCR_PROCESSING: { bg: "#FEF3C7", color: "#92400E", border: "#FDE68A" },
+  CAPTURE_ACCEPTED: { bg: "#E0F2FE", color: "#075985", border: "#BAE6FD" },
+  DATA_CAPTURED: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
+  UPLOADED: { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
+};
+
 function TabButton({ active, onClick, children, count }) {
   return (
     <button
@@ -59,8 +168,9 @@ function TabButton({ active, onClick, children, count }) {
       {children}
       {count != null && (
         <span
-          className={`text-xs px-2 py-0.5 rounded-full font-bold
-          ${active ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"}`}
+          className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            active ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"
+          }`}
         >
           {count}
         </span>
@@ -76,7 +186,131 @@ TabButton.propTypes = {
   count: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
 
-// ── Vista "Mis documentos" ─────────────────────────────────────────────────────
+function AggregateStatusBadge({ status }) {
+  const config = ROW_STATUS_CONFIG[status] || ROW_STATUS_CONFIG.INCOMPLETE;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4px 10px",
+        borderRadius: "9999px",
+        fontSize: "11px",
+        fontWeight: 700,
+        background: config.bg,
+        color: config.color,
+        border: `1px solid ${config.border}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {config.label}
+    </span>
+  );
+}
+
+AggregateStatusBadge.propTypes = {
+  status: PropTypes.string,
+};
+
+function DocumentStateBadge({ status }) {
+  if (!status) return null;
+  const style = DOCUMENT_BADGE_STYLES[status] || DOCUMENT_BADGE_STYLES.UPLOADED;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "2px 8px",
+        borderRadius: "9999px",
+        fontSize: "10px",
+        fontWeight: 700,
+        background: style.bg,
+        color: style.color,
+        border: `1px solid ${style.border}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {getStatusLabel(status)}
+    </span>
+  );
+}
+
+DocumentStateBadge.propTypes = {
+  status: PropTypes.string,
+};
+
+function ExpiryInfo({ date }) {
+  const state = getExpiryState(date);
+  if (state.kind === "missing") {
+    return <span style={{ fontSize: "11px", color: state.color }}>{state.label}</span>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+      <span style={{ fontSize: "11px", color: "#475569" }}>{formatDate(date)}</span>
+      <span style={{ fontSize: "10px", fontWeight: 700, color: state.color }}>{state.label}</span>
+    </div>
+  );
+}
+
+ExpiryInfo.propTypes = {
+  date: PropTypes.string,
+};
+
+function DocumentCell({ document, extraCount }) {
+  if (!document) {
+    return <span style={{ fontSize: "11px", color: "#9CA3AF" }}>Sin archivo</span>;
+  }
+
+  const docNumber = document.extracted?.passportNumber || document.extracted?.documentNumber;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+      <DocumentStateBadge status={document.status} />
+      {docNumber && (
+        <span style={{ fontSize: "11px", color: "#475569", fontFamily: "monospace" }}>
+          {maskDocumentNumber(docNumber)}
+        </span>
+      )}
+      <Link
+        to={`/documents/${document.id}`}
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          fontSize: "11px",
+          fontWeight: 700,
+          color: "#1D4ED8",
+          textDecoration: "none",
+        }}
+      >
+        Ver documento
+      </Link>
+      {extraCount > 0 && (
+        <span style={{ fontSize: "10px", color: "#64748B" }}>+{extraCount} adicional(es)</span>
+      )}
+    </div>
+  );
+}
+
+DocumentCell.propTypes = {
+  document: PropTypes.shape({
+    id: PropTypes.string,
+    status: PropTypes.string,
+    extracted: PropTypes.shape({
+      passportNumber: PropTypes.string,
+      documentNumber: PropTypes.string,
+      expirationDate: PropTypes.string,
+    }),
+  }),
+  extraCount: PropTypes.number,
+};
+
+DocumentCell.defaultProps = {
+  document: null,
+  extraCount: 0,
+};
+
 function MyDocumentsView() {
   const [filters, setFilters] = useState({});
   const [pagination, setPagination] = useState({ limit: 20, skip: 0 });
@@ -126,104 +360,145 @@ function MyDocumentsView() {
   );
 }
 
-// ── Vista "Todos los documentos" (Admin) ──────────────────────────────────────
-const STATUS_OPTIONS = [
-  { value: "", label: "Todos los estados" },
-  { value: "UPLOADED", label: "Subido" },
-  { value: "CAPTURE_ACCEPTED", label: "Captura aceptada" },
-  { value: "OCR_PENDING", label: "OCR pendiente" },
-  { value: "OCR_PROCESSING", label: "OCR procesando" },
-  { value: "OCR_SUCCESS", label: "OCR exitoso" },
-  { value: "OCR_FAILED", label: "OCR fallido" },
-  { value: "VERIFIED", label: "Verificado" },
-  { value: "REJECTED", label: "Rechazado" },
-];
-
-const TYPE_OPTIONS = [
-  { value: "", label: "Todos los tipos" },
-  { value: "PASSPORT", label: "Pasaporte" },
-  { value: "VISA", label: "Visa" },
-  { value: "PERMISO_SALIDA", label: "Permiso de salida" },
-  { value: "OTHER", label: "Otro" },
-];
-
 function AdminDocumentsView() {
-  const [pagination, setPagination] = useState({ limit: 20, skip: 0 });
-  const [statusFilter, setStatusFilter] = useState("");
+  const [pagination] = useState({ limit: 100, skip: 0 });
+  const [rowStatusFilter, setRowStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [ownerInput, setOwnerInput] = useState("");
+  const [ownerSearch, setOwnerSearch] = useState("");
 
-  const buildFilters = useCallback(
-    (overrides = {}) => {
-      const f = {};
-      const nextStatus = overrides.statusFilter ?? statusFilter;
-      const nextType = overrides.typeFilter ?? typeFilter;
-      const nextOwnerName = overrides.ownerName ?? ownerName;
-
-      if (nextStatus) f.status = nextStatus;
-      if (nextType) f.type = nextType;
-      if (nextOwnerName) f.ownerName = nextOwnerName;
-      return Object.keys(f).length > 0 ? f : undefined;
-    },
-    [statusFilter, typeFilter, ownerName]
-  );
-
-  const { data, loading, error, fetchMore, refetch } = useQuery(ALL_DOCUMENTS, {
-    variables: { filters: buildFilters(), pagination },
+  const { data, loading, error, fetchMore } = useQuery(ALL_DOCUMENTS, {
+    variables: { pagination },
     fetchPolicy: "cache-and-network",
   });
 
   const documents = data?.allDocuments?.documents || [];
   const paginationInfo = data?.allDocuments?.pagination;
   const hasMore = paginationInfo?.hasMore || false;
-  const total = paginationInfo?.total ?? 0;
+  const total = paginationInfo?.total ?? documents.length;
 
-  const applyFilters = useCallback(() => {
-    setPagination({ limit: 20, skip: 0 });
-    refetch({ filters: buildFilters(), pagination: { limit: 20, skip: 0 } });
-  }, [buildFilters, refetch]);
+  const groupedRows = useMemo(() => {
+    const ownersMap = new Map();
+
+    documents.forEach((document) => {
+      const owner = document.owner || {};
+      const ownerId = owner.id || owner.email || document.id;
+      const current = ownersMap.get(ownerId) || {
+        id: ownerId,
+        owner,
+        documents: [],
+      };
+
+      current.documents.push(document);
+      ownersMap.set(ownerId, current);
+    });
+
+    return Array.from(ownersMap.values())
+      .map((entry) => {
+        const passportDocs = sortDocumentsByFreshness(
+          entry.documents.filter((document) => document.type === "PASSPORT")
+        );
+        const visaDocs = sortDocumentsByFreshness(
+          entry.documents.filter((document) => document.type === "VISA")
+        );
+        const permitDocs = sortDocumentsByFreshness(
+          entry.documents.filter((document) => document.type === "PERMISO_SALIDA")
+        );
+
+        const row = {
+          id: entry.id,
+          owner: entry.owner,
+          ownerLabel: getOwnerLabel(entry.owner),
+          documents: sortDocumentsByFreshness(entry.documents),
+          passport: passportDocs[0] || null,
+          visa: visaDocs[0] || null,
+          exitPermit: permitDocs[0] || null,
+          counts: {
+            total: entry.documents.length,
+            passport: passportDocs.length,
+            visa: visaDocs.length,
+            exitPermit: permitDocs.length,
+          },
+        };
+
+        return {
+          ...row,
+          aggregateStatus: computeRowStatus(row),
+        };
+      })
+      .sort((a, b) => a.ownerLabel.localeCompare(b.ownerLabel, "es"));
+  }, [documents]);
+
+  const filteredRows = useMemo(() => {
+    return groupedRows.filter((row) => {
+      const search = ownerSearch.trim().toLowerCase();
+
+      if (search) {
+        const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+
+      if (rowStatusFilter !== "ALL" && row.aggregateStatus !== rowStatusFilter) return false;
+
+      if (typeFilter === "PASSPORT" && !row.passport) return false;
+      if (typeFilter === "VISA" && !row.visa) return false;
+      if (typeFilter === "PERMISO_SALIDA" && !row.exitPermit) return false;
+      if (typeFilter === "OTHER") {
+        const hasOtherDocs = row.documents.some((document) => document.type === "OTHER");
+        if (!hasOtherDocs) return false;
+      }
+
+      return true;
+    });
+  }, [groupedRows, ownerSearch, rowStatusFilter, typeFilter]);
+
+  const tableStats = useMemo(
+    () =>
+      filteredRows.reduce(
+        (acc, row) => {
+          if (row.passport) acc.passport += 1;
+          if (row.visa) acc.visa += 1;
+          if (row.exitPermit) acc.exitPermit += 1;
+          acc[row.aggregateStatus] = (acc[row.aggregateStatus] || 0) + 1;
+          return acc;
+        },
+        {
+          passport: 0,
+          visa: 0,
+          exitPermit: 0,
+          COMPLETE: 0,
+          INCOMPLETE: 0,
+          EXPIRED: 0,
+          EXPIRING: 0,
+          REJECTED: 0,
+        }
+      ),
+    [filteredRows]
+  );
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore) return;
     fetchMore({
       variables: {
-        filters: buildFilters(),
-        pagination: { limit: 20, skip: documents.length },
+        pagination: { ...pagination, skip: documents.length },
       },
       updateQuery: (previousResult, { fetchMoreResult }) =>
         mergeDocumentsResult(previousResult, fetchMoreResult, "allDocuments"),
     });
-  }, [hasMore, documents.length, fetchMore, statusFilter, typeFilter, ownerName]);
-
-  const handleOwnerSearch = (e) => {
-    e.preventDefault();
-    const trimmedOwnerName = ownerInput.trim();
-    setOwnerName(trimmedOwnerName);
-    setPagination({ limit: 20, skip: 0 });
-    refetch({
-      filters: buildFilters({ ownerName: trimmedOwnerName }),
-      pagination: { limit: 20, skip: 0 },
-    });
-  };
+  }, [documents.length, fetchMore, hasMore, pagination]);
 
   const clearFilters = () => {
-    setStatusFilter("");
+    setRowStatusFilter("ALL");
     setTypeFilter("");
-    setOwnerName("");
-    setOwnerInput("");
-    setPagination({ limit: 20, skip: 0 });
-    refetch({ filters: undefined, pagination: { limit: 20, skip: 0 } });
+    setOwnerSearch("");
   };
 
-  const hasActiveFilters = statusFilter || typeFilter || ownerName;
+  const hasActiveFilters = rowStatusFilter !== "ALL" || typeFilter || ownerSearch;
 
   return (
     <div className="space-y-4">
-      {/* Filtros admin */}
       <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-700">Filtros</span>
+          <span className="text-sm font-semibold text-slate-700">Vista admin por integrante</span>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -234,145 +509,227 @@ function AdminDocumentsView() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {/* Status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div>
             <label
               htmlFor="documents-admin-status-filter"
               className="block text-xs text-slate-500 mb-1 font-medium"
             >
-              Estado
+              Estado general
             </label>
             <select
               id="documents-admin-status-filter"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-              }}
-              onBlur={applyFilters}
+              value={rowStatusFilter}
+              onChange={(e) => setRowStatusFilter(e.target.value)}
               className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
             >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+              {TABLE_STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Type */}
           <div>
             <label
               htmlFor="documents-admin-type-filter"
               className="block text-xs text-slate-500 mb-1 font-medium"
             >
-              Tipo
+              Tipo requerido
             </label>
             <select
               id="documents-admin-type-filter"
               value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-              }}
-              onBlur={applyFilters}
+              onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
             >
-              {TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+              {TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </div>
-        </div>
 
-        {/* Owner ID search */}
-        <div>
-          <label
-            htmlFor="documents-admin-owner-filter"
-            className="block text-xs text-slate-500 mb-1 font-medium"
-          >
-            Filtrar por nombre de usuario
-          </label>
-          <div className="flex gap-2">
+          <div>
+            <label
+              htmlFor="documents-admin-owner-filter"
+              className="block text-xs text-slate-500 mb-1 font-medium"
+            >
+              Buscar integrante
+            </label>
             <input
               id="documents-admin-owner-filter"
               type="text"
-              value={ownerInput}
-              onChange={(e) => setOwnerInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleOwnerSearch(e)}
-              placeholder="Nombre o apellido.."
-              className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700 font-mono"
+              value={ownerSearch}
+              onChange={(e) => setOwnerSearch(e.target.value)}
+              placeholder="Nombre, apellido o correo"
+              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
             />
-            <button
-              onClick={handleOwnerSearch}
-              className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 transition-colors"
-            >
-              Buscar
-            </button>
           </div>
-          {ownerName && (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">Filtrando por:</span>
-              <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded-lg text-slate-600">
-                {ownerName}
-              </span>
-              <button
-                onClick={() => {
-                  setOwnerName("");
-                  setOwnerInput("");
-                  setPagination({ limit: 20, skip: 0 });
-                  refetch({
-                    filters: buildFilters({ ownerName: "" }),
-                    pagination: { limit: 20, skip: 0 },
-                  });
-                }}
-                className="text-xs text-red-400 hover:text-red-600"
-              >
-                ✕
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Contador */}
-      {!loading && (
-        <div className="flex items-center gap-2 px-1">
-          <span className="text-sm text-slate-500">
-            {total} documento{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}
-          </span>
-          {hasActiveFilters && (
-            <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
-              Filtros activos
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Integrantes</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{filteredRows.length}</p>
+              <p className="text-xs text-slate-500">con documentos cargados</p>
+            </div>
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Pasaportes</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{tableStats.passport}</p>
+              <p className="text-xs text-slate-500">integrantes con pasaporte</p>
+            </div>
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Visas</p>
+              <p className="mt-1 text-2xl font-bold text-sky-700">{tableStats.visa}</p>
+              <p className="text-xs text-slate-500">integrantes con visa</p>
+            </div>
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Permisos</p>
+              <p className="mt-1 text-2xl font-bold text-violet-700">{tableStats.exitPermit}</p>
+              <p className="text-xs text-slate-500">integrantes con permiso</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-sm text-slate-500">
+              {documents.length} de {total} documento{total !== 1 ? "s" : ""} cargado{total !== 1 ? "s" : ""} en memoria
             </span>
-          )}
-        </div>
+            {hasActiveFilters && (
+              <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
+                Filtros activos
+              </span>
+            )}
+          </div>
+        </>
       )}
 
-      <DocumentList
-        documents={documents}
-        loading={loading}
-        error={error}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        loadingMore={loading && documents.length > 0}
-        emptyMessage="No se encontraron documentos"
-        showOwner // prop para que DocumentList muestre el owner en cada card
-      />
+      {loading && documents.length === 0 ? (
+        <DocumentList
+          documents={[]}
+          loading
+          error={null}
+          hasMore={false}
+          onLoadMore={() => {}}
+          loadingMore={false}
+          emptyMessage="Cargando documentos"
+        />
+      ) : error ? (
+        <DocumentList
+          documents={[]}
+          loading={false}
+          error={error}
+          hasMore={false}
+          onLoadMore={() => {}}
+          loadingMore={false}
+          emptyMessage="No se encontraron documentos"
+        />
+      ) : filteredRows.length === 0 ? (
+        <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-10 text-center">
+          <h3 className="text-lg font-semibold text-slate-900">No se encontraron integrantes</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            Ajusta los filtros o carga más documentos para ampliar la tabla.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  {[
+                    "Integrante",
+                    "Pasaporte",
+                    "Vence pasaporte",
+                    "Visa",
+                    "Vence visa",
+                    "Permiso salida",
+                    "Estado",
+                  ].map((header) => (
+                    <th
+                      key={header}
+                      className="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 text-left"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row, index) => (
+                  <tr
+                    key={row.id}
+                    className={index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
+                  >
+                    <td className="px-4 py-4 align-top">
+                      <p className="m-0 text-sm font-semibold text-slate-900">{row.ownerLabel}</p>
+                      <p className="mt-1 text-xs text-slate-500">{row.owner?.email || "Sin correo"}</p>
+                      <p className="mt-1 text-xs text-slate-400">{row.counts.total} documento(s) cargado(s)</p>
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      <DocumentCell
+                        document={row.passport}
+                        extraCount={Math.max(0, row.counts.passport - 1)}
+                      />
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      {row.passport ? (
+                        <ExpiryInfo date={row.passport.extracted?.expirationDate} />
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      <DocumentCell document={row.visa} extraCount={Math.max(0, row.counts.visa - 1)} />
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      {row.visa ? (
+                        <ExpiryInfo date={row.visa.extracted?.expirationDate} />
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      <DocumentCell
+                        document={row.exitPermit}
+                        extraCount={Math.max(0, row.counts.exitPermit - 1)}
+                      />
+                    </td>
+                    <td className="px-4 py-4 text-center align-top">
+                      <AggregateStatusBadge status={row.aggregateStatus} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
+            <span className="text-xs text-slate-500">
+              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""} visible{filteredRows.length !== 1 ? "s" : ""}
+            </span>
+            {hasMore && (
+              <button
+                onClick={handleLoadMore}
+                className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 transition-colors"
+              >
+                Cargar más documentos
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Page principal ─────────────────────────────────────────────────────────────
 function DocumentsPage() {
-  const { data: userData, loading: userLoading } = useQuery(GET_USERS_BY_ID);
-  const { data: settingsData, loading: settingsLoading } = useQuery(DOCUMENT_VISIBILITY_SETTINGS, {
-    fetchPolicy: "cache-and-network",
-  });
-  const [updateVisibilitySettings, { loading: savingVisibilitySettings }] = useMutation(
-    UPDATE_DOCUMENT_VISIBILITY_SETTINGS
-  );
+  const { data: userData } = useQuery(GET_USERS_BY_ID);
 
   const currentUser = userData?.getUser;
   const userRole = currentUser?.role;
@@ -380,30 +737,6 @@ function DocumentsPage() {
   const userIsAdmin = isDocumentAdmin(currentUser);
   const canUploadDocuments = userRole !== "CEDES Financiero";
   const [activeTab, setActiveTab] = useState("mine");
-  const restrictSensitiveUploadsToAdmins =
-    settingsData?.documentVisibilitySettings?.restrictSensitiveUploadsToAdmins ?? true;
-
-  const handleVisibilityToggle = useCallback(async () => {
-    if (!userIsAdmin || savingVisibilitySettings) return;
-
-    await updateVisibilitySettings({
-      variables: {
-        restrictSensitiveUploadsToAdmins: !restrictSensitiveUploadsToAdmins,
-      },
-      optimisticResponse: {
-        updateDocumentVisibilitySettings: {
-          __typename: "DocumentVisibilitySettings",
-          restrictSensitiveUploadsToAdmins: !restrictSensitiveUploadsToAdmins,
-          sensitiveTypes: ["PASSPORT", "VISA", "PERMISO_SALIDA"],
-        },
-      },
-    });
-  }, [
-    restrictSensitiveUploadsToAdmins,
-    savingVisibilitySettings,
-    updateVisibilitySettings,
-    userIsAdmin,
-  ]);
 
   return (
     <DashboardLayout>
@@ -412,9 +745,8 @@ function DocumentsPage() {
       <Card>
         <SoftBox p={2}>
           <div className="min-h-screen bg-slate-50">
-            {/* Header */}
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-slate-200">
-              <div className="max-w-lg mx-auto px-4 py-4">
+              <div className="max-w-6xl mx-auto px-4 py-4">
                 <div className="flex items-center justify-between mb-3">
                   <h1 className="text-xl font-semibold text-slate-900">Documentos</h1>
                   {userIsAdmin && (
@@ -428,27 +760,24 @@ function DocumentsPage() {
                   Filtra, revisa y escanea nuevos documentos
                 </p>
 
-                {/* Tabs — solo visibles para admin */}
                 {userIsAdmin && (
                   <div className="flex gap-2 p-1 bg-slate-100 rounded-full w-fit">
                     <TabButton active={activeTab === "mine"} onClick={() => setActiveTab("mine")}>
                       Mis documentos
                     </TabButton>
                     <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>
-                      Todos
+                      Tabla admin
                     </TabButton>
                   </div>
                 )}
               </div>
             </header>
 
-            {/* Content */}
-            <main className="max-w-lg mx-auto px-4 py-6">
+            <main className="max-w-6xl mx-auto px-4 py-6">
               {(!userIsAdmin || activeTab === "mine") && <MyDocumentsView />}
               {userIsAdmin && activeTab === "all" && <AdminDocumentsView />}
             </main>
 
-            {/* FAB */}
             {canUploadDocuments && (
               <Link
                 to="/new-document"

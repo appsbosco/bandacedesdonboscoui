@@ -24,6 +24,7 @@ const FIELDS_BY_TYPE = {
     { key: "sex", label: "Sexo", type: "select", options: ["M", "F", "X"] },
     { key: "expirationDate", label: "Vencimiento", type: "date" },
     { key: "visaType", label: "Tipo de visa", type: "text" },
+    { key: "visaControlNumber", label: "N° Control", type: "text" },
     { key: "issueDate", label: "Fecha de emisión", type: "date" },
   ],
   PERMISO_SALIDA: [
@@ -50,54 +51,69 @@ function toDateInput(val) {
   }
 }
 
+// ─── Shared input style ───────────────────────────────────────────────────────
+const inputBase =
+  "w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent";
+
+// ─── Data form ────────────────────────────────────────────────────────────────
 function DataForm({ fields, values, onChange }) {
   return (
-    <div className="space-y-3 w-full">
-      {fields.map(({ key, label, type, options }) => {
-        if (type === "select") {
-          return (
-            <div key={key}>
-              <label className="block text-xs text-gray-500 mb-1">{label}</label>
-              <select
-                value={values[key] || ""}
-                onChange={(e) => onChange(key, e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
-              >
-                <option value="">—</option>
-                {options.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        }
-        if (type === "textarea") {
-          return (
-            <div key={key}>
-              <label className="block text-xs text-gray-500 mb-1">{label}</label>
-              <textarea
-                value={values[key] || ""}
-                onChange={(e) => onChange(key, e.target.value)}
-                rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-indigo-400"
-              />
-            </div>
-          );
-        }
-        return (
-          <div key={key}>
-            <label className="block text-xs text-gray-500 mb-1">{label}</label>
+    <div className="space-y-4 w-full">
+      {fields.map(({ key, label, type, options }) => (
+        <div key={key}>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+            {label}
+          </label>
+          {type === "select" ? (
+            <select
+              value={values[key] || ""}
+              onChange={(e) => onChange(key, e.target.value)}
+              className={inputBase}
+            >
+              <option value="">—</option>
+              {options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : type === "textarea" ? (
+            <textarea
+              value={values[key] || ""}
+              onChange={(e) => onChange(key, e.target.value)}
+              rows={3}
+              className={`${inputBase} resize-none`}
+            />
+          ) : (
             <input
               type={type}
               value={values[key] || ""}
               onChange={(e) => onChange(key, e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className={inputBase}
             />
-          </div>
-        );
-      })}
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Shared CTA footer ────────────────────────────────────────────────────────
+function ActionFooter({ onBack, onConfirm, confirmLabel = "Confirmar" }) {
+  return (
+    <div className="pt-4 space-y-3">
+      <button
+        onClick={onConfirm}
+        className="w-full py-4 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-sm transition-all duration-200 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+      >
+        {confirmLabel}
+      </button>
+      <button
+        onClick={onBack}
+        className="w-full py-4 rounded-2xl border border-slate-200 text-slate-600 text-sm font-medium transition-all duration-200 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+      >
+        Atrás
+      </button>
     </div>
   );
 }
@@ -116,31 +132,29 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
   const fields = FIELDS_BY_TYPE[documentType] || FIELDS_BY_TYPE.OTHER;
   const needsOcr = OCR_TYPES.includes(documentType);
 
-  // Determine the active document source: preloaded (sync) or polled (fallback)
   const hasPreloaded = preloadedDocument?.extracted != null;
   const ocrDoc = hasPreloaded ? preloadedDocument : polledDoc;
 
-  // Derive status: if preloaded, determine from document status
   const status = hasPreloaded
-    ? (preloadedDocument.status === "OCR_SUCCESS" || preloadedDocument.status === "VERIFIED"
-        ? "success"
-        : preloadedDocument.status === "OCR_FAILED" || preloadedDocument.status === "REJECTED"
-          ? "failed"
-          : "success") // If we have extracted data, treat as success
+    ? preloadedDocument.status === "OCR_FAILED" || preloadedDocument.status === "REJECTED"
+      ? "failed"
+      : "success"
     : pollStatus;
 
-  // Start polling ONLY if no preloaded data (fallback path)
   useEffect(() => {
     if (documentId && needsOcr && !hasPreloaded) startPolling(documentId);
   }, [documentId, needsOcr, hasPreloaded, startPolling]);
 
-  // Populate form when OCR data arrives (from either source)
-  // Use extracted fields as dep to avoid reference-equality issues
   const extractedJson = JSON.stringify(ocrDoc?.extracted || null);
   useEffect(() => {
     if (!ocrDoc?.extracted) return;
     const e = ocrDoc.extracted;
-    console.log("[WizardStep3] Populating form from extracted data:", Object.keys(e).filter(k => e[k]).join(", "));
+    console.log(
+      "[WizardStep3] Populating form from extracted data:",
+      Object.keys(e)
+        .filter((k) => e[k])
+        .join(", ")
+    );
     setForm({
       givenNames: e.givenNames || "",
       surname: e.surname || "",
@@ -153,6 +167,7 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
       expirationDate: toDateInput(e.expirationDate),
       issueDate: toDateInput(e.issueDate),
       visaType: e.visaType || "",
+      visaControlNumber: e.visaControlNumber || "",
       destination: e.destination || "",
       authorizerName: e.authorizerName || "",
       notes: "",
@@ -170,47 +185,75 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
   // ─── No OCR needed (OTHER) ───────────────────────────────────────────────
   if (!needsOcr) {
     return (
-      <div className="flex flex-col p-5 gap-4">
-        <h3 className="text-base font-semibold text-gray-800">Datos del documento</h3>
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
-          <p className="text-sm font-semibold text-sky-900">Todo este bloque es opcional</p>
-          <p className="text-sm text-sky-700">
-            Puede guardar el documento sin llenar ningún campo adicional.
+      <div className="flex flex-col px-5 py-6 gap-5">
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-semibold text-slate-900">Datos del documento</h2>
+          <p className="text-sm text-slate-500">Todos los campos son opcionales</p>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3.5">
+          <svg
+            className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <p className="text-sm text-slate-600">
+            Puedes guardar el documento sin llenar ningún campo adicional.
           </p>
         </div>
+
         <DataForm fields={fields} values={form} onChange={handleChange} />
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={onBack}
-            className="flex-1 py-3 border border-gray-200 rounded-xl text-sm text-gray-600"
-          >
-            Atrás
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-medium"
-          >
-            Guardar
-          </button>
-        </div>
+        <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Guardar" />
       </div>
     );
   }
 
-  // ─── OCR Polling ─────────────────────────────────────────────────────────
+  // ─── OCR Polling / Idle ──────────────────────────────────────────────────
   if (status === "idle" || status === "polling") {
     return (
-      <div className="flex flex-col items-center justify-center p-8 gap-4 min-h-[320px]">
-        <div className="animate-spin w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full" />
-        <h3 className="text-base font-semibold text-gray-800">Analizando documento…</h3>
-        <p className="text-sm text-gray-400">Extrayendo información automáticamente</p>
-        <div className="w-full max-w-xs bg-gray-100 rounded-full h-1.5">
-          <div
-            className="bg-black h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${Math.max(progressPct, 4)}%` }}
-          />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 gap-8">
+        {/* Animated document icon */}
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-2 border-slate-100 border-t-slate-800 animate-spin" />
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <svg
+              className="w-7 h-7 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+              />
+            </svg>
+          </div>
         </div>
-        <p className="text-xs text-gray-400">Esto tomará solo unos segundos</p>
+
+        <div className="text-center space-y-1.5">
+          <h3 className="text-lg font-semibold text-slate-900">Leyendo el documento…</h3>
+          <p className="text-sm text-slate-500">Extrayendo información automáticamente</p>
+        </div>
+
+        <div className="w-full max-w-[200px] space-y-2">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="bg-slate-900 h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${Math.max(progressPct, 4)}%` }}
+            />
+          </div>
+          <p className="text-xs text-center text-slate-400">Esto solo tomará un momento</p>
+        </div>
       </div>
     );
   }
@@ -221,113 +264,151 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
     const confidence = ocrDoc?.extracted?.ocrConfidence || 0;
     const codes = ocrDoc?.extracted?.reasonCodes || [];
 
-    return (
-      <div className="flex flex-col p-5 gap-4">
-        {/* Status badge */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {mrzValid ? (
-            <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-              ✓ MRZ verificado
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
-              ⚠ Requiere revisión
-            </span>
-          )}
-          <span className="text-xs text-gray-400">Confianza {Math.round(confidence * 100)}%</span>
-        </div>
+    const hasWarnings = codes.length > 0;
+    const filledFields = fields.filter(({ key }) => form[key]);
 
-        {/* Warnings */}
-        {codes.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-            {codes.some(
-              (c) => c === "MRZ_CHECKDIGIT_FAIL" || c.startsWith("MRZ_CHECKDIGIT_FAIL_")
-            ) && <p>Verificación de MRZ parcial.</p>}
-            {(codes.includes("NO_MRZ_FOUND") || codes.includes("MRZ_NOT_DETECTED")) && (
-              <p>No se detectó zona MRZ.</p>
-            )}
-            {codes.includes("NAME_NOT_FOUND") && <p>Nombre no detectado.</p>}
-            {codes.includes("DATE_NOT_FOUND") && <p>Fecha de vencimiento no detectada.</p>}
-            <p className="mt-1 font-medium">Revise y corrija los campos antes de confirmar.</p>
+    return (
+      <div className="flex flex-col px-5 py-6 gap-5">
+        {/* Warnings banner */}
+        {hasWarnings && (
+          <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-4">
+            <svg
+              className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div className="text-sm text-amber-800 space-y-0.5">
+              {codes.some(
+                (c) => c === "MRZ_CHECKDIGIT_FAIL" || c.startsWith("MRZ_CHECKDIGIT_FAIL_")
+              ) && <p>Verificación de MRZ parcial.</p>}
+              {(codes.includes("NO_MRZ_FOUND") || codes.includes("MRZ_NOT_DETECTED")) && (
+                <p>No se detectó zona MRZ.</p>
+              )}
+              {codes.includes("NAME_NOT_FOUND") && <p>Nombre no detectado.</p>}
+              {codes.includes("DATE_NOT_FOUND") && <p>Fecha de vencimiento no detectada.</p>}
+              <p className="font-semibold mt-1">Revisa y corrige los campos antes de confirmar.</p>
+            </div>
           </div>
         )}
 
-        {/* Data form (pre-filled + editable) */}
+        {/* Data card */}
         {!mrzValid || editMode ? (
-          <>
-            <p className="text-xs text-gray-500">Corrija cualquier campo si es necesario.</p>
-            <DataForm fields={fields} values={form} onChange={handleChange} />
-          </>
-        ) : (
-          <>
-            {/* Compact read-only view */}
-            <div className="divide-y divide-gray-100">
-              {fields.map(({ key, label }) =>
-                form[key] ? (
-                  <div key={key} className="flex justify-between py-2">
-                    <span className="text-xs text-gray-500">{label}</span>
-                    <span className="text-xs font-medium text-gray-800 text-right max-w-[60%]">
-                      {key === "passportNumber" || key === "documentNumber"
-                        ? "••••" + form[key].slice(-4)
-                        : form[key]}
-                    </span>
-                  </div>
-                ) : null
+          // Edit mode
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">Revisa los datos</h3>
+              {editMode && (
+                <button
+                  onClick={() => setEditMode(false)}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors px-2.5 py-1 rounded-lg hover:bg-slate-100"
+                >
+                  Vista resumen
+                </button>
               )}
             </div>
-            <button
-              onClick={() => setEditMode(true)}
-              className="text-xs text-indigo-500 self-start"
-            >
-              Editar datos
-            </button>
-          </>
+            <p className="text-sm text-slate-500">Corrige cualquier campo si es necesario.</p>
+            <DataForm fields={fields} values={form} onChange={handleChange} />
+          </div>
+        ) : (
+          // Read-only summary card
+          <div className="rounded-3xl bg-white ring-1 ring-slate-100 shadow-sm overflow-hidden">
+            {/* Card header */}
+            <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold ring-1 ring-emerald-200">
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  MRZ verificado
+                </span>
+                <span className="text-xs text-slate-400">
+                  {Math.round(confidence * 100)}% confianza
+                </span>
+              </div>
+              <button
+                onClick={() => setEditMode(true)}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors px-2.5 py-1 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
+              >
+                Editar
+              </button>
+            </div>
+
+            {/* Field rows */}
+            <div className="divide-y divide-slate-50">
+              {filledFields.map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between px-5 py-3.5">
+                  <span className="text-xs font-medium text-slate-500">{label}</span>
+                  <span className="text-sm font-semibold text-slate-900 text-right max-w-[58%]">
+                    {key === "passportNumber" || key === "documentNumber"
+                      ? "••••" + form[key].slice(-4)
+                      : form[key]}
+                  </span>
+                </div>
+              ))}
+              {filledFields.length === 0 && (
+                <p className="px-5 py-4 text-sm text-slate-400 text-center">
+                  No se extrajeron datos. Usa Editar para completar manualmente.
+                </p>
+              )}
+            </div>
+          </div>
         )}
 
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={onBack}
-            className="flex-1 py-3 border border-gray-200 rounded-xl text-sm text-gray-600"
-          >
-            Atrás
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-medium"
-          >
-            Confirmar
-          </button>
-        </div>
+        <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Confirmar" />
       </div>
     );
   }
 
   // ─── OCR Failed / Timeout ─────────────────────────────────────────────────
   return (
-    <div className="flex flex-col p-5 gap-4">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-        <p className="text-sm font-semibold text-red-700">
-          {status === "timeout"
-            ? "El análisis tardó demasiado"
-            : "No se pudieron extraer los datos"}
-        </p>
-        <p className="text-sm text-red-600 mt-1">Complete los campos manualmente.</p>
+    <div className="flex flex-col px-5 py-6 gap-5">
+      {/* Error card */}
+      <div className="rounded-3xl bg-white ring-1 ring-red-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-5 flex items-start gap-4">
+          <div className="w-11 h-11 rounded-2xl bg-red-50 flex-shrink-0 flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              {status === "timeout"
+                ? "El análisis tardó demasiado"
+                : "No se pudo leer el documento"}
+            </p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Completa los campos manualmente para continuar.
+            </p>
+          </div>
+        </div>
       </div>
+
       <DataForm fields={fields} values={form} onChange={handleChange} />
-      <div className="flex gap-3 pt-2">
-        <button
-          onClick={onBack}
-          className="flex-1 py-3 border border-gray-200 rounded-xl text-sm text-gray-600"
-        >
-          Atrás
-        </button>
-        <button
-          onClick={handleConfirm}
-          className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-medium"
-        >
-          Guardar
-        </button>
-      </div>
+      <ActionFooter onBack={onBack} onConfirm={handleConfirm} confirmLabel="Guardar" />
     </div>
   );
 }

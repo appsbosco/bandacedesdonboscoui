@@ -7,6 +7,7 @@ export const DOCUMENT_FRAGMENT = gql`
     source
     status
     owner {
+      id
       name
       firstSurName
       secondSurName
@@ -76,6 +77,7 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
       expirationDate
     }
     owner {
+      id
       name
       firstSurName
       secondSurName

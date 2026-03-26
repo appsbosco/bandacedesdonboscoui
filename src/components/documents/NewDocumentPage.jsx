@@ -12,6 +12,8 @@ import {
   PROCESS_DOCUMENT_OCR,
   DOCUMENT_VISIBILITY_SETTINGS,
 } from "../../graphql/documents/documents.gql";
+import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
+import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { OCR_TYPES, DOCUMENT_TYPES } from "../../utils/constants";
 import { GET_USERS_BY_ID } from "../../graphql/queries";
 import WizardStep1 from "./WizardStep1";
@@ -29,7 +31,6 @@ async function uploadToCloudinary(blob, signedData) {
   formData.append("api_key", signedData.apiKey);
   formData.append("timestamp", String(signedData.timestamp));
   formData.append("signature", signedData.signature);
-  // public_id must match exactly what was signed on the backend
   if (signedData.publicId) formData.append("public_id", signedData.publicId);
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${signedData.cloudName}/image/upload`, {
@@ -44,32 +45,68 @@ async function uploadToCloudinary(blob, signedData) {
   return res.json();
 }
 
+// ─── Premium step progress ────────────────────────────────────────────────────
 function ProgressBar({ step, total }) {
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
-      {Array.from({ length: total }, (_, i) => (
-        <React.Fragment key={STEPS[i] || `step-${i + 1}`}>
-          <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-            ${
-              i < step
-                ? "bg-black text-white"
-                : i === step
-                ? "border-2 border-indigo-500 text-indigo-500"
-                : "border-2 border-gray-200 text-gray-400"
-            }`}
-          >
-            {i < step ? "✓" : i + 1}
-          </div>
-          {i < total - 1 && (
-            <div className={`flex-1 h-0.5 ${i < step ? "bg-black" : "bg-gray-200"}`} />
-          )}
-        </React.Fragment>
-      ))}
+    <div className="px-6 pt-5 pb-4">
+      <div className="flex items-start">
+        {Array.from({ length: total }, (_, i) => (
+          <React.Fragment key={STEPS[i] || `step-${i + 1}`}>
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300
+                  ${
+                    i < step
+                      ? "bg-emerald-500 text-white"
+                      : i === step
+                      ? "bg-slate-900 text-white ring-4 ring-slate-900/10"
+                      : "bg-slate-100 text-slate-400"
+                  }`}
+              >
+                {i < step ? (
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  i + 1
+                )}
+              </div>
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-wider transition-colors duration-200
+                  ${
+                    i === step ? "text-slate-900" : i < step ? "text-emerald-600" : "text-slate-400"
+                  }`}
+              >
+                {STEPS[i]}
+              </span>
+            </div>
+            {i < total - 1 && (
+              <div className="flex-1 mx-2 mt-4">
+                <div className="h-0.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: i < step ? "100%" : "0%",
+                      backgroundColor: i < step ? "#34d399" : "transparent",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 }
 
+// ─── Success state ────────────────────────────────────────────────────────────
 function SuccessState({ title, message }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
@@ -120,6 +157,107 @@ function SuccessState({ title, message }) {
   );
 }
 
+// ─── Shared loading state ─────────────────────────────────────────────────────
+function ProcessingState({ phase }) {
+  const isProcessing = phase === "processing";
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-8 gap-6">
+      <div className="relative flex items-center justify-center w-20 h-20 mt-10">
+        <div className="absolute inset-0 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin" />
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+          {isProcessing ? (
+            <svg
+              className="w-7 h-7 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-7 h-7 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+          )}
+        </div>
+      </div>
+
+      <div className="text-center space-y-1.5 mt-10">
+        <p className="text-base font-semibold text-slate-900">
+          {isProcessing ? "Analizando documento…" : "Subiendo documento…"}
+        </p>
+        <p className="text-sm text-slate-500">
+          {isProcessing
+            ? "Extrayendo información automáticamente"
+            : "Preparando imagen para análisis"}
+        </p>
+      </div>
+
+      <div className="w-full max-w-[180px]">
+        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-slate-900 rounded-full"
+            style={{ width: "60%", animation: "indeterminate-bar 1.4s ease-in-out infinite" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Upload error state ───────────────────────────────────────────────────────
+function UploadErrorState({ error, onRetry }) {
+  return (
+    <div className="p-5">
+      <div className="rounded-3xl bg-white ring-1 ring-red-100 shadow-sm overflow-hidden">
+        <div className="p-6 flex flex-col items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+            <svg
+              className="w-6 h-6 text-red-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-0.5">Error al subir</h3>
+            <p className="text-sm text-slate-500">{error}</p>
+          </div>
+          <button
+            onClick={onRetry}
+            className="w-full py-4 rounded-2xl bg-slate-900 text-white text-sm font-semibold transition-all active:scale-[0.99] shadow-sm"
+          >
+            Intentar de nuevo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NewDocumentPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -156,11 +294,9 @@ export default function NewDocumentPage() {
 
   useEffect(() => {
     if (!successState?.redirectTo) return undefined;
-
     const timeoutId = window.setTimeout(() => {
       navigate(successState.redirectTo);
     }, SUCCESS_REDIRECT_MS);
-
     return () => window.clearTimeout(timeoutId);
   }, [navigate, successState]);
 
@@ -168,7 +304,6 @@ export default function NewDocumentPage() {
     setSuccessState({ title, message, redirectTo });
   }, []);
 
-  // Step 2 → file/blob captured
   const handleCaptured = useCallback(
     async (blob, captureMeta) => {
       setUploadError(null);
@@ -176,21 +311,17 @@ export default function NewDocumentPage() {
       setProcessingPhase("uploading");
       setOcrExtracted(null);
       try {
-        // 1. Create document
         const { data: createData } = await createDocument({ variables: { type: docType } });
         const docId = createData.createDocument.id;
         setDocumentId(docId);
 
-        // 2. Get signed upload URL
         const { data: signData } = await getSignedUpload({
           variables: { documentId: docId, kind: "RAW" },
         });
         const signed = signData.getSignedUpload;
 
-        // 3. Upload to Cloudinary
         const uploadResult = await uploadToCloudinary(blob, signed);
 
-        // 4. Register image on document
         const imageInput = {
           kind: "RAW",
           url: uploadResult.secure_url,
@@ -213,18 +344,18 @@ export default function NewDocumentPage() {
           return;
         }
 
-        // 5. Process OCR synchronously (no polling needed)
         if (OCR_TYPES.includes(docType)) {
           setProcessingPhase("processing");
           try {
             const { data: ocrData } = await processDocumentOcr({
               variables: { documentId: docId },
             });
-            // Pass extracted data directly to Step 3 — no polling needed
             setOcrExtracted(ocrData?.processDocumentOcr || null);
           } catch (ocrErr) {
-            console.warn("[NewDocumentPage] sync OCR failed, falling back to polling:", ocrErr.message);
-            // Fallback: enqueue for the worker to process and let Step 3 poll
+            console.warn(
+              "[NewDocumentPage] sync OCR failed, falling back to polling:",
+              ocrErr.message
+            );
             try {
               await enqueueDocumentOcr({ variables: { documentId: docId } });
             } catch (_) {
@@ -253,7 +384,6 @@ export default function NewDocumentPage() {
     ]
   );
 
-  // Step 3 → OCR data confirmed
   const handleConfirm = useCallback(
     async (formData) => {
       try {
@@ -277,103 +407,98 @@ export default function NewDocumentPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-lg mx-auto">
-          <ProgressBar step={step} total={STEPS.length} />
-          <p className="text-center text-xs text-gray-400 pb-3">{STEPS[step]}</p>
+    <DashboardLayout>
+      <DashboardNavbar />
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        {/* Header with progress */}
+        <div className="bg-white border-b border-slate-100 sticky top-0 z-10">
+          <div className="max-w-lg mx-auto">
+            <ProgressBar step={step} total={STEPS.length} />
+          </div>
         </div>
-      </div>
 
-      <style>{`
+        <style>{`
         @keyframes document-success-progress {
           from { width: 0%; }
           to { width: 100%; }
         }
+        @keyframes indeterminate-bar {
+          0%   { transform: translateX(-100%); width: 60%; }
+          50%  { transform: translateX(83%);   width: 60%; }
+          100% { transform: translateX(283%);  width: 60%; }
+        }
       `}</style>
 
-      {/* Content */}
-      <div className="flex-1 max-w-lg mx-auto w-full">
-        {successState && !uploading && !uploadError && (
-          <SuccessState title={successState.title} message={successState.message} />
-        )}
+        {/* Content */}
+        <div className="flex-1 max-w-lg mx-auto w-full flex flex-col">
+          {/* Success */}
+          {successState && !uploading && !uploadError && (
+            <SuccessState title={successState.title} message={successState.message} />
+          )}
 
-        {settingsLoading && (
-          <div className="flex flex-col items-center justify-center p-12 gap-3">
-            <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
-            <p className="text-sm text-gray-500">Cargando configuración…</p>
-          </div>
-        )}
+          {/* Settings loading */}
+          {settingsLoading && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+              <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-slate-700 animate-spin" />
+              <p className="text-sm text-slate-500">Cargando configuración…</p>
+            </div>
+          )}
 
-        {!successState && !settingsLoading && uploading && (
-          <div className="flex flex-col items-center justify-center p-12 gap-3">
-            <div className="animate-spin w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full" />
-            <p className="text-base font-semibold text-gray-800">
-              {processingPhase === "processing"
-                ? "Analizando documento…"
-                : "Subiendo documento…"}
-            </p>
-            <p className="text-sm text-gray-400">
-              {processingPhase === "processing"
-                ? "Extrayendo información automáticamente"
-                : "Preparando imagen para análisis"}
-            </p>
-          </div>
-        )}
+          {/* Uploading / Processing */}
+          {!successState && !settingsLoading && uploading && (
+            <ProcessingState phase={processingPhase} />
+          )}
 
-        {!successState && !settingsLoading && uploadError && !uploading && (
-          <div className="m-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-sm text-red-600">{uploadError}</p>
-            <button
-              onClick={() => {
+          {/* Upload error */}
+          {!successState && !settingsLoading && uploadError && !uploading && (
+            <UploadErrorState
+              error={uploadError}
+              onRetry={() => {
                 setUploadError(null);
                 setStep(1);
               }}
-              className="mt-2 text-xs text-red-500 underline"
-            >
-              Intentar de nuevo
-            </button>
-          </div>
-        )}
+            />
+          )}
 
-        {!successState && !settingsLoading && !uploading && !uploadError && (
-          <>
-            {step === 0 && (
-              <WizardStep1
-                selectedType={docType}
-                onSelectType={(type) => {
-                  setDocType(type);
-                }}
-                onNext={() => setStep(1)}
-                isCreating={false}
-                documentTypes={filteredDocumentTypes}
-                helperMessage={
-                  restrictSensitiveUploadsToAdmins && !userIsAdmin
-                    ? "Pasaporte, visa y permiso de salida no se deben de subir de momento"
-                    : ""
-                }
-              />
-            )}
-            {step === 1 && docType && (
-              <WizardStep2
-                documentType={docType}
-                onCaptured={handleCaptured}
-                onBack={() => setStep(0)}
-              />
-            )}
-            {step === 2 && (
-              <WizardStep3
-                documentId={documentId}
-                documentType={docType}
-                preloadedDocument={ocrExtracted}
-                onConfirm={handleConfirm}
-                onBack={() => setStep(1)}
-              />
-            )}
-          </>
-        )}
+          {/* Wizard steps */}
+          {!successState && !settingsLoading && !uploading && !uploadError && (
+            <>
+              {step === 0 && (
+                <WizardStep1
+                  selectedType={docType}
+                  onSelectType={(type) => {
+                    setDocType(type);
+                  }}
+                  onNext={() => setStep(1)}
+                  isCreating={false}
+                  documentTypes={filteredDocumentTypes}
+                  helperMessage={
+                    restrictSensitiveUploadsToAdmins && !userIsAdmin
+                      ? "Pasaporte, visa y permiso de salida no se deben de subir de momento"
+                      : ""
+                  }
+                />
+              )}
+              {step === 1 && docType && (
+                <WizardStep2
+                  documentType={docType}
+                  onCaptured={handleCaptured}
+                  onBack={() => setStep(0)}
+                />
+              )}
+              {step === 2 && (
+                <WizardStep3
+                  documentId={documentId}
+                  documentType={docType}
+                  preloadedDocument={ocrExtracted}
+                  onConfirm={handleConfirm}
+                  onBack={() => setStep(1)}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
