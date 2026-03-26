@@ -408,6 +408,9 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
           Pasaportes, visas y permisos de salida de{" "}
           <strong>{tourName}</strong>
         </p>
+        <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#2563EB" }}>
+          Los participantes vinculados sincronizan pasaporte, visa y permiso desde Documents.
+        </p>
         {hasRefDate ? (
           <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#059669" }}>
             ✓ Fecha referencia: {formatRefDate(refDate)} — regla adulto/menor aplicada
@@ -785,7 +788,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                           onMouseEnter={(e) => (e.currentTarget.style.background = "#374151")}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "#111827")}
                         >
-                          Editar
+                          {p.linkedUser ? "Notas" : "Editar"}
                         </button>
                       </div>
                     </td>

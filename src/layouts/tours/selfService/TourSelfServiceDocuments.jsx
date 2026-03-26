@@ -63,6 +63,12 @@ export default function TourSelfServiceDocuments({ participant }) {
 
   return (
     <div className="space-y-5">
+      {participant.linkedUser && (
+        <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          Esta información se sincroniza automáticamente desde Documents.
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
         <h3 className="text-sm font-bold text-gray-700 mb-4">Pasaporte</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

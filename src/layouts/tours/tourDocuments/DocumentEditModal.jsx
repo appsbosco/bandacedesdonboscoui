@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 /**
- * DocumentEditModal — editar campos de documentos de un participante.
- * Edita: passportNumber, passportExpiry, hasVisa, visaExpiry, hasExitPermit, notes.
- * Persiste via updateTourParticipant mutation.
+ * DocumentEditModal — edición documental de un participante.
+ * Para participantes vinculados, passport / visa / permiso llegan sincronizados
+ * desde Documents y acá solo se permiten notas.
  *
  * FIXES:
  * - Fechas en formato dd/mm/yyyy con inputs separados (evita bug del mes 24)
@@ -163,9 +163,26 @@ function DateInput({ label, value, onChange }) {
 
 function Toggle({ label, checked, onChange, description }) {
   return (
-    <div
-      style={{ display: "flex", alignItems: "flex-start", gap: "12px", cursor: "pointer" }}
+    <button
+      type="button"
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "12px",
+        cursor: "pointer",
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        width: "100%",
+        textAlign: "left",
+      }}
       onClick={() => onChange(!checked)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onChange(!checked);
+        }
+      }}
     >
       {/* Track */}
       <div
@@ -201,13 +218,13 @@ function Toggle({ label, checked, onChange, description }) {
           <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "2px" }}>{description}</p>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 
 // ── TextField ─────────────────────────────────────────────────────────────────
 
-function Field({ label, placeholder, value, onChange }) {
+function Field({ label, placeholder, value, onChange, readOnly = false }) {
   return (
     <div>
       <label
@@ -227,6 +244,7 @@ function Field({ label, placeholder, value, onChange }) {
         type="text"
         value={value}
         placeholder={placeholder}
+        readOnly={readOnly}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: "100%",
@@ -236,8 +254,13 @@ function Field({ label, placeholder, value, onChange }) {
           borderRadius: "10px",
           outline: "none",
           boxSizing: "border-box",
+          background: readOnly ? "#F9FAFB" : "#fff",
+          color: readOnly ? "#6B7280" : "#111827",
+          cursor: readOnly ? "default" : "text",
         }}
-        onFocus={(e) => (e.target.style.borderColor = "#111827")}
+        onFocus={(e) => {
+          if (!readOnly) e.target.style.borderColor = "#111827";
+        }}
         onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
       />
     </div>
@@ -296,6 +319,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
   }, [participant]);
 
   if (!participant) return null;
+  const isSyncedFromDocuments = Boolean(participant.linkedUser);
 
   const ageAtTour =
     refDate && participant.birthDate
@@ -306,27 +330,36 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
   const passportIso = partsToIso(passportDate);
   const visaIso = partsToIso(visaDate);
 
-  const canSave =
-    // passport date either empty or valid
-    (!passportDate.day || passportIso) &&
-    // visa date either empty or valid (only matters if hasVisa)
-    (!hasVisa || !visaDate.day || visaIso);
+  const canSave = isSyncedFromDocuments
+    ? true
+    : (
+        // passport date either empty or valid
+        (!passportDate.day || passportIso) &&
+        // visa date either empty or valid (only matters if hasVisa)
+        (!hasVisa || !visaDate.day || visaIso)
+      );
 
   const handleSubmit = () => {
     if (!canSave) return;
-    const input = {
-      passportNumber: passportNumber.trim() || null,
-      passportExpiry: passportIso || null,
-      hasVisa,
-      visaExpiry: hasVisa ? visaIso || null : null,
-      hasExitPermit,
-      notes: notes.trim() || null,
-    };
+    const input = isSyncedFromDocuments
+      ? {
+          notes: notes.trim() || null,
+        }
+      : {
+          passportNumber: passportNumber.trim() || null,
+          passportExpiry: passportIso || null,
+          hasVisa,
+          visaExpiry: hasVisa ? visaIso || null : null,
+          hasExitPermit,
+          notes: notes.trim() || null,
+        };
     onSave(participant.id, input);
   };
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -339,6 +372,14 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
         backdropFilter: "blur(4px)",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            onClose();
+          }
+        }
+      }}
     >
       <div
         style={{
@@ -366,7 +407,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
         >
           <div>
             <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#111827" }}>
-              Editar documentos
+              {isSyncedFromDocuments ? "Datos sincronizados" : "Editar documentos"}
             </h3>
             <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#6B7280", fontWeight: 600 }}>
               {participantFullName(participant)}
@@ -419,34 +460,87 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
             gap: "16px",
           }}
         >
+          {isSyncedFromDocuments && (
+            <div
+              style={{
+                padding: "12px 14px",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
+                borderRadius: "14px",
+                color: "#1D4ED8",
+                fontSize: "12px",
+                lineHeight: 1.5,
+              }}
+            >
+              Pasaporte, visa y permiso de salida se administran en Documents para
+              participantes vinculados. Esta pantalla solo conserva notas locales.
+            </div>
+          )}
+
           {/* Passport */}
           <Section title="Pasaporte">
-            <Field
-              label="Número de pasaporte"
-              placeholder="Ej: A1234567"
-              value={passportNumber}
-              onChange={setPassportNumber}
-            />
-            <DateInput
-              label="Fecha de vencimiento (DD/MM/AAAA)"
-              value={passportDate}
-              onChange={setPassportDate}
-            />
+            {isSyncedFromDocuments ? (
+              <>
+                <Field
+                  label="Número de pasaporte"
+                  placeholder="Ej: A1234567"
+                  value={participant.passportNumber || "—"}
+                  onChange={() => {}}
+                  readOnly
+                />
+                <div style={{ fontSize: "12px", color: "#6B7280" }}>
+                  Vence:{" "}
+                  {participant.passportExpiry
+                    ? new Date(participant.passportExpiry).toLocaleDateString("es-CR")
+                    : "—"}
+                </div>
+              </>
+            ) : (
+              <>
+                <Field
+                  label="Número de pasaporte"
+                  placeholder="Ej: A1234567"
+                  value={passportNumber}
+                  onChange={setPassportNumber}
+                />
+                <DateInput
+                  label="Fecha de vencimiento (DD/MM/AAAA)"
+                  value={passportDate}
+                  onChange={setPassportDate}
+                />
+              </>
+            )}
           </Section>
 
           {/* Visa */}
           <Section title="Visa">
-            <Toggle
-              label="Tiene visa"
-              checked={hasVisa}
-              onChange={setHasVisa}
-            />
-            {hasVisa && (
-              <DateInput
-                label="Vencimiento de visa (DD/MM/AAAA)"
-                value={visaDate}
-                onChange={setVisaDate}
-              />
+            {isSyncedFromDocuments ? (
+              <div style={{ fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
+                <div>
+                  Estado: <strong>{participant.hasVisa ? "Registrada" : "No registrada"}</strong>
+                </div>
+                <div>
+                  Vence:{" "}
+                  {participant.hasVisa && participant.visaExpiry
+                    ? new Date(participant.visaExpiry).toLocaleDateString("es-CR")
+                    : "—"}
+                </div>
+              </div>
+            ) : (
+              <>
+                <Toggle
+                  label="Tiene visa"
+                  checked={hasVisa}
+                  onChange={setHasVisa}
+                />
+                {hasVisa && (
+                  <DateInput
+                    label="Vencimiento de visa (DD/MM/AAAA)"
+                    value={visaDate}
+                    onChange={setVisaDate}
+                  />
+                )}
+              </>
             )}
           </Section>
 
@@ -481,11 +575,17 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                   Sin fecha de nacimiento registrada. Verificar si aplica.
                 </div>
               )}
-              <Toggle
-                label="Tiene permiso de salida"
-                checked={hasExitPermit}
-                onChange={setHasExitPermit}
-              />
+              {isSyncedFromDocuments ? (
+                <div style={{ fontSize: "13px", color: "#374151" }}>
+                  Estado: <strong>{participant.hasExitPermit ? "Registrado" : "Pendiente"}</strong>
+                </div>
+              ) : (
+                <Toggle
+                  label="Tiene permiso de salida"
+                  checked={hasExitPermit}
+                  onChange={setHasExitPermit}
+                />
+              )}
             </Section>
           )}
 
@@ -576,7 +676,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
               if (!saving && canSave) e.currentTarget.style.background = "#111827";
             }}
           >
-            {saving ? "Guardando…" : "Guardar cambios"}
+            {saving ? "Guardando…" : isSyncedFromDocuments ? "Guardar notas" : "Guardar cambios"}
           </button>
         </div>
       </div>

@@ -3,12 +3,10 @@ import { gql } from "@apollo/client";
 /**
  * tourDocuments.gql.js
  *
- * SCHEMA NOTE: The backend has no separate TourDocument type.
- * Document data (passport, visa, exit permit) lives directly on TourParticipant.
- * All document operations use getTourParticipants + updateTourParticipant.
- *
- * The previous getTourDocumentStatus / getTourDocumentAlerts queries did not exist
- * in the backend schema and have been replaced with real endpoints.
+ * TourParticipant expone una proyección sincronizada para passport / visa / permit.
+ * La fuente canónica vive en el módulo Documents cuando el participante está
+ * vinculado a un User; la edición manual en TourParticipant queda como fallback
+ * solo para participantes no vinculados.
  */
 
 export const GET_TOUR_PARTICIPANTS_DOCS = gql`
@@ -35,6 +33,9 @@ export const GET_TOUR_PARTICIPANTS_DOCS = gql`
       # Audit
       createdAt
       updatedAt
+      linkedUser {
+        id
+      }
       addedBy {
         name
         firstSurName
