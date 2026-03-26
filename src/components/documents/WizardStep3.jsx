@@ -135,27 +135,29 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
   }, [documentId, needsOcr, hasPreloaded, startPolling]);
 
   // Populate form when OCR data arrives (from either source)
+  // Use extracted fields as dep to avoid reference-equality issues
+  const extractedJson = JSON.stringify(ocrDoc?.extracted || null);
   useEffect(() => {
-    if (ocrDoc?.extracted) {
-      const e = ocrDoc.extracted;
-      setForm({
-        givenNames: e.givenNames || "",
-        surname: e.surname || "",
-        fullName: e.fullName || "",
-        passportNumber: e.passportNumber || "",
-        documentNumber: e.documentNumber || "",
-        nationality: e.nationality || "",
-        dateOfBirth: toDateInput(e.dateOfBirth),
-        sex: e.sex || "",
-        expirationDate: toDateInput(e.expirationDate),
-        issueDate: toDateInput(e.issueDate),
-        visaType: e.visaType || "",
-        destination: e.destination || "",
-        authorizerName: e.authorizerName || "",
-        notes: "",
-      });
-    }
-  }, [ocrDoc]);
+    if (!ocrDoc?.extracted) return;
+    const e = ocrDoc.extracted;
+    console.log("[WizardStep3] Populating form from extracted data:", Object.keys(e).filter(k => e[k]).join(", "));
+    setForm({
+      givenNames: e.givenNames || "",
+      surname: e.surname || "",
+      fullName: e.fullName || "",
+      passportNumber: e.passportNumber || "",
+      documentNumber: e.documentNumber || "",
+      nationality: e.nationality || "",
+      dateOfBirth: toDateInput(e.dateOfBirth),
+      sex: e.sex || "",
+      expirationDate: toDateInput(e.expirationDate),
+      issueDate: toDateInput(e.issueDate),
+      visaType: e.visaType || "",
+      destination: e.destination || "",
+      authorizerName: e.authorizerName || "",
+      notes: "",
+    });
+  }, [extractedJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = useCallback((key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
