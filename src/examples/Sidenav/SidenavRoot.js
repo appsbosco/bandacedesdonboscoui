@@ -19,7 +19,7 @@ import { styled } from "@mui/material/styles";
 
 export default styled(Drawer)(({ theme, ownerState }) => {
   const { palette, boxShadows, transitions, breakpoints, functions } = theme;
-  const { transparentSidenav, miniSidenav } = ownerState;
+  const { transparentSidenav, miniSidenav, isDesktop } = ownerState;
 
   const sidebarWidth = 250;
   const { white, transparent } = palette;
@@ -76,6 +76,8 @@ export default styled(Drawer)(({ theme, ownerState }) => {
       zIndex: theme.zIndex.drawer, // 1000 — below modals (1300)
       boxShadow: xxl,
       border: "none",
+      willChange: isDesktop ? "width, background-color" : "transform",
+      contain: "layout paint style",
 
       ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
     },

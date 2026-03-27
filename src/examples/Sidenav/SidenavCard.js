@@ -13,6 +13,8 @@ Coded by Josué Chinchilla
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
+import { memo } from "react";
+
 // @mui material components
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -76,4 +78,4 @@ function SidenavCard() {
   );
 }
 
-export default SidenavCard;
+export default memo(SidenavCard);

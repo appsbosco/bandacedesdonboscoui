@@ -13,7 +13,7 @@ Coded by Josué Chinchilla
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 // react-router-dom components
 import { NavLink, useLocation } from "react-router-dom";
@@ -26,6 +26,7 @@ import Divider from "@mui/material/Divider";
 import Icon from "@mui/material/Icon";
 import Link from "@mui/material/Link";
 import List from "@mui/material/List";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 // Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
@@ -48,92 +49,107 @@ function Sidenav({ color = "info", brand = "", brandName, routes, ...rest }) {
   const location = useLocation();
   const { pathname } = location;
   const collapseName = pathname.split("/").slice(1)[0];
+  const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("xl"));
+  const sidenavRef = useRef(null);
 
-  const closeSidenav = () => setMiniSidenav(dispatch, true);
+  const closeSidenav = useCallback(() => setMiniSidenav(dispatch, true), [dispatch]);
 
   useEffect(() => {
-    // A function that sets the mini state of the sidenav.
-    function handleMiniSidenav() {
-      setMiniSidenav(dispatch, window.innerWidth < 1200);
+    setMiniSidenav(dispatch, !isDesktop);
+  }, [dispatch, isDesktop]);
+
+  useEffect(() => {
+    if (isDesktop || miniSidenav) {
+      return undefined;
     }
 
-    /** 
-     The event listener that's calling the handleMiniSidenav function when resizing the window.
-    */
-    window.addEventListener("resize", handleMiniSidenav);
+    function handlePointerDown(event) {
+      if (sidenavRef.current?.contains(event.target)) {
+        return;
+      }
 
-    // Call the handleMiniSidenav function to set the state with the initial value.
-    handleMiniSidenav();
+      closeSidenav();
+    }
 
-    // Remove event listener on cleanup
-    return () => window.removeEventListener("resize", handleMiniSidenav);
-  }, [dispatch, location]);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [closeSidenav, isDesktop, miniSidenav]);
 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, noCollapse, key, route, href }) => {
-    let returnValue;
+  const renderRoutes = useMemo(
+    () =>
+      routes.map(({ type, name, icon, title, noCollapse, key, route, href }) => {
+        let returnValue;
 
-    if (type === "collapse") {
-      returnValue = href ? (
-        <Link
-          href={href}
-          key={key}
-          target="_blank"
-          rel="noreferrer"
-          sx={{ textDecoration: "none" }}
-        >
-          <SidenavCollapse
-            color={color}
-            name={name}
-            icon={icon}
-            active={key === collapseName}
-            noCollapse={noCollapse}
-          />
-        </Link>
-      ) : (
-        <NavLink to={route} key={key}>
-          <SidenavCollapse
-            color={color}
-            key={key}
-            name={name}
-            icon={icon}
-            active={key === collapseName}
-            noCollapse={noCollapse}
-          />
-        </NavLink>
-      );
-    } else if (type === "title") {
-      returnValue = (
-        <SoftTypography
-          key={key}
-          display="block"
-          variant="caption"
-          fontWeight="bold"
-          textTransform="uppercase"
-          opacity={0.6}
-          pl={3}
-          mt={2}
-          mb={1}
-          ml={1}
-        >
-          {title}
-        </SoftTypography>
-      );
-    } else if (type === "divider") {
-      returnValue = <Divider key={key} />;
-    }
+        if (type === "collapse") {
+          returnValue = href ? (
+            <Link
+              href={href}
+              key={key}
+              target="_blank"
+              rel="noreferrer"
+              sx={{ textDecoration: "none" }}
+            >
+              <SidenavCollapse
+                color={color}
+                name={name}
+                icon={icon}
+                active={key === collapseName}
+                noCollapse={noCollapse}
+              />
+            </Link>
+          ) : (
+            <NavLink to={route} key={key}>
+              <SidenavCollapse
+                color={color}
+                key={key}
+                name={name}
+                icon={icon}
+                active={key === collapseName}
+                noCollapse={noCollapse}
+              />
+            </NavLink>
+          );
+        } else if (type === "title") {
+          returnValue = (
+            <SoftTypography
+              key={key}
+              display="block"
+              variant="caption"
+              fontWeight="bold"
+              textTransform="uppercase"
+              opacity={0.6}
+              pl={3}
+              mt={2}
+              mb={1}
+              ml={1}
+            >
+              {title}
+            </SoftTypography>
+          );
+        } else if (type === "divider") {
+          returnValue = <Divider key={key} />;
+        }
 
-    return returnValue;
-  });
+        return returnValue;
+      }),
+    [collapseName, color, routes]
+  );
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.location.href = "/";
-  };
+  }, []);
 
   return (
-    <SidenavRoot {...rest} variant="permanent" ownerState={{ transparentSidenav, miniSidenav }}>
+    <SidenavRoot
+      {...rest}
+      ref={sidenavRef}
+      variant="permanent"
+      ownerState={{ transparentSidenav, miniSidenav, isDesktop }}
+    >
       <SoftBox pt={3} pb={1} px={4} textAlign="center">
         <SoftBox
           display={{ xs: "block", xl: "none" }}
