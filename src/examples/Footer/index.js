@@ -18,6 +18,7 @@ import PropTypes from "prop-types";
 
 // @mui material components
 import Link from "@mui/material/Link";
+import InstagramIcon from "@mui/icons-material/Instagram";
 
 // Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
@@ -65,6 +66,17 @@ function Footer({ company, links }) {
             &nbsp;{name}&nbsp;
           </SoftTypography>
         </Link>
+        <SoftTypography variant="button" fontWeight="regular" color="text">
+          |&nbsp;
+        </SoftTypography>
+        <Link
+          href="https://instagram.com/josuechinchilla3"
+          target="_blank"
+          aria-label="Instagram de Josué Chinchilla"
+          sx={{ display: "inline-flex", alignItems: "center" }}
+        >
+          <InstagramIcon fontSize="small" />
+        </Link>
       </SoftBox>
       <SoftBox
         component="ul"
@@ -91,7 +103,7 @@ function Footer({ company, links }) {
 
 // Setting default values for the props of Footer
 Footer.defaultProps = {
-  company: { href: "/", name: "Josué Chinchilla" },
+  company: { href: "https://josuechinchilla.com", name: "Josué Chinchilla" },
   links: [
     { href: "/", name: "Home" },
     { href: "/nosotros", name: "Acerca de nosotros" },

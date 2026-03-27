@@ -1,8 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, Route, Routes, matchPath, useLocation, useNavigate, useParams } from "react-router-dom";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
 import { useQuery } from "@apollo/client";
+import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
 
 import theme from "assets/theme";
@@ -39,10 +43,11 @@ import {
   LANDING_LANG_RE,
   PROTECTED_PREFIXES,
 } from "utils/routeHelpers";
-import { normalizePublicLang } from "utils/publicRoutes";
+import { isSupportedPublicLang, normalizePublicLang } from "utils/publicRoutes";
 import { useFirebaseMessaging } from "hooks/useFirebaseMessaging";
 
 import LanguageRedirect from "./LanguageRedirect";
+import PageLayout from "examples/LayoutContainers/PageLayout";
 import PageLoader from "components/ui/PageLoader";
 
 const Landing = lazy(() => import("layouts/landing/Landing"));
@@ -68,6 +73,55 @@ const SignIn = lazy(() => import("layouts/authentication/sign-in"));
 const PerformanceAttendance = lazy(() =>
   import("layouts/PerformanceAttendance/PerformanceAttendance")
 );
+
+function routeDefsMatchPath(routeDefs, pathname) {
+  const visit = (items) =>
+    items?.some((routeDef) => {
+      if (!routeDef) return false;
+      if (routeDef.collapse && visit(routeDef.collapse)) return true;
+      if (!routeDef.route) return false;
+      return Boolean(matchPath({ path: routeDef.route, end: true }, pathname));
+    });
+
+  return visit(routeDefs ?? []);
+}
+
+function NotFoundPage() {
+  return (
+    <PageLayout background="white">
+      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" px={3}>
+        <Box textAlign="center" maxWidth={560}>
+          <Typography variant="h2" fontWeight={700} color="dark" mb={1}>
+            404
+          </Typography>
+          <Typography variant="h4" fontWeight={700} color="dark" mb={1.5}>
+            Pagina no encontrada
+          </Typography>
+          <Typography variant="body1" color="text" mb={3}>
+            La ruta que intentaste abrir no existe o no esta disponible como pagina publica.
+          </Typography>
+          <Button component={RouterLink} to="/" variant="contained" color="info">
+            Ir al inicio
+          </Button>
+        </Box>
+      </Box>
+    </PageLayout>
+  );
+}
+
+function PublicLangRoute({ children }) {
+  const { lang } = useParams();
+
+  if (!isSupportedPublicLang(lang)) {
+    return <NotFoundPage />;
+  }
+
+  return children;
+}
+
+PublicLangRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default function App() {
   const { i18n } = useTranslation();
@@ -162,6 +216,13 @@ export default function App() {
     [renderedRouteDefs]
   );
 
+  const isKnownRoute = useMemo(() => {
+    if (routeDefsMatchPath(renderedRouteDefs, pathname)) return true;
+    if (matchPath({ path: "/performance-attendance/:eventId", end: true }, pathname)) return true;
+    if (canAccessDocuments && matchPath({ path: "/documents/:id", end: true }, pathname)) return true;
+    return false;
+  }, [renderedRouteDefs, pathname, canAccessDocuments]);
+
   const filteredNavRoutes = useMemo(
     () =>
       navRouteDefs.filter((r) => {
@@ -176,10 +237,12 @@ export default function App() {
   );
 
   const canRenderSidenav = useMemo(() => {
+    if (!isAuthenticated) return false;
     if (layout !== "dashboard") return false;
+    if (!isKnownRoute) return false;
     if (HIDE_SIDENAV_FOR_LANG_RE.test(pathname)) return false;
     return shouldShowSidenavForPath(pathname);
-  }, [layout, pathname]);
+  }, [isAuthenticated, isKnownRoute, layout, pathname]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -202,19 +265,43 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<LanguageRedirect />} />
-          <Route path="/:lang" element={<Landing />} />
-          <Route path="/:lang/nosotros" element={<About />} />
-          <Route path="/:lang/about" element={<About />} />
-          <Route path="/:lang/agrupaciones" element={<GroupingsIndex />} />
-          <Route path="/:lang/ensembles" element={<GroupingsIndex />} />
-          <Route path="/:lang/agrupaciones/:slug" element={<GroupingPage />} />
-          <Route path="/:lang/ensembles/:slug" element={<GroupingPage />} />
-          <Route path="/:lang/blog" element={<BlogListing />} />
-          <Route path="/:lang/blog/:slug" element={<ArticlePage />} />
-          <Route path="/:lang/contacto" element={<Contact />} />
-          <Route path="/:lang/contact" element={<Contact />} />
-          <Route path="/:lang/calendario" element={<CalendarListing />} />
-          <Route path="/:lang/calendar" element={<CalendarListing />} />
+          <Route path="/:lang" element={<PublicLangRoute><Landing /></PublicLangRoute>} />
+          <Route path="/:lang/nosotros" element={<PublicLangRoute><About /></PublicLangRoute>} />
+          <Route path="/:lang/about" element={<PublicLangRoute><About /></PublicLangRoute>} />
+          <Route
+            path="/:lang/agrupaciones"
+            element={<PublicLangRoute><GroupingsIndex /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/ensembles"
+            element={<PublicLangRoute><GroupingsIndex /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/agrupaciones/:slug"
+            element={<PublicLangRoute><GroupingPage /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/ensembles/:slug"
+            element={<PublicLangRoute><GroupingPage /></PublicLangRoute>}
+          />
+          <Route path="/:lang/blog" element={<PublicLangRoute><BlogListing /></PublicLangRoute>} />
+          <Route
+            path="/:lang/blog/:slug"
+            element={<PublicLangRoute><ArticlePage /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/contacto"
+            element={<PublicLangRoute><Contact /></PublicLangRoute>}
+          />
+          <Route path="/:lang/contact" element={<PublicLangRoute><Contact /></PublicLangRoute>} />
+          <Route
+            path="/:lang/calendario"
+            element={<PublicLangRoute><CalendarListing /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/calendar"
+            element={<PublicLangRoute><CalendarListing /></PublicLangRoute>}
+          />
 
           {renderedRouteElements}
 
@@ -232,6 +319,7 @@ export default function App() {
           <Route path="/color-guard-camp" element={<ColorGuardCamp />} />
           <Route path="/autenticacion/registrarse-privado" element={<SignUp />} />
           <Route path="/autenticacion/iniciar-sesion" element={<SignIn />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </ThemeProvider>

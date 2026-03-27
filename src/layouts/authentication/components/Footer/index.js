@@ -73,7 +73,15 @@ function Footer() {
             {/* <SoftBox mr={3} color="secondary">
               <TwitterIcon fontSize="small" />
             </SoftBox> */}
-            <SoftBox mr={3} color="secondary">
+            <SoftBox
+              mr={3}
+              color="secondary"
+              component="a"
+              href="https://instagram.com/josuechinchilla3"
+              target="_blank"
+              rel="noreferrer"
+              sx={{ display: "inline-flex" }}
+            >
               <InstagramIcon fontSize="small" />
             </SoftBox>
             {/* <SoftBox mr={3} color="secondary">
@@ -86,8 +94,31 @@ function Footer() {
         </Grid>
         <Grid item xs={12} lg={8} sx={{ textAlign: "center" }}>
           <SoftTypography variant="body2" color="secondary">
-            Copyright &copy; 2025 Banda CEDES Don Bosco - Todos los derechos reservados -
-            Desarrollado por Josué Chinchilla.
+            Copyright &copy; 2026 Banda CEDES Don Bosco - Todos los derechos reservados -
+            {" "}Desarrollado por{" "}
+            <SoftTypography
+              component="a"
+              href="https://josuechinchilla.com"
+              target="_blank"
+              rel="noreferrer"
+              variant="body2"
+              color="secondary"
+              sx={{ textDecoration: "underline" }}
+            >
+              Josué Chinchilla
+            </SoftTypography>
+            .{" "}
+            <SoftTypography
+              component="a"
+              href="https://instagram.com/josuechinchilla3"
+              target="_blank"
+              rel="noreferrer"
+              variant="body2"
+              color="secondary"
+              sx={{ textDecoration: "underline" }}
+            >
+              Instagram
+            </SoftTypography>
           </SoftTypography>
         </Grid>
       </Grid>

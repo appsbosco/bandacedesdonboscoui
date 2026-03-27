@@ -12,6 +12,8 @@ export const DOCUMENT_FRAGMENT = gql`
       firstSurName
       secondSurName
       email
+      role
+      instrument
     }
     notes
     images {
@@ -82,6 +84,8 @@ export const DOCUMENT_CARD_FRAGMENT = gql`
       firstSurName
       secondSurName
       email
+      role
+      instrument
     }
     isExpired
     daysUntilExpiration
