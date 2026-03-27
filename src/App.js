@@ -40,6 +40,7 @@ import {
   PROTECTED_PREFIXES,
 } from "utils/routeHelpers";
 import { normalizePublicLang } from "utils/publicRoutes";
+import { useFirebaseMessaging } from "hooks/useFirebaseMessaging";
 
 import LanguageRedirect from "./LanguageRedirect";
 import PageLoader from "components/ui/PageLoader";
@@ -129,6 +130,9 @@ export default function App() {
     skip: !isAuthenticated,
   });
   const userRole = userData?.getUser?.role;
+  const userId = userData?.getUser?.id ?? null;
+
+  useFirebaseMessaging(userId);
 
   useEffect(() => {
     if (!isAuthenticated || !userRole) return;

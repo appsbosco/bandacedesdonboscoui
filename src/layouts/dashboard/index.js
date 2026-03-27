@@ -55,7 +55,6 @@ const PresentationHero = lazy(() => import("components/events/PresentationHero")
 
 import { buildSortKey } from "utils/eventHelpers";
 import { normalizeTimeTo12h } from "utils/dateHelpers";
-import { useFirebaseMessaging } from "hooks/useFirebaseMessaging";
 
 import { BAND_COLORS } from "./constants";
 
@@ -159,18 +158,10 @@ export default function Dashboard() {
 
   const currentUser = userData?.getUser ?? null;
 
-  // [P5] userId se deriva con useMemo para que su referencia solo cambie
-  //      cuando el id real cambia, no cuando Apollo reconstruye el objeto usuario.
-  //      Evita que useFirebaseMessaging reciba un nuevo userId en renders
-  //      intermedios donde el objeto cambia pero el id es el mismo.
-  const userId = useMemo(() => currentUser?.id ?? null, [currentUser?.id]);
-
   const isAdmin = useMemo(
     () => ADMIN_ROLES.has(String(currentUser?.role ?? "")),
     [currentUser?.role]
   );
-
-  useFirebaseMessaging(userId);
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
