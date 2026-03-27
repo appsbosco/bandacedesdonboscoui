@@ -326,6 +326,26 @@ export const GET_PARENT_CHILDREN_ACADEMIC_OVERVIEW = gql`
   }
 `;
 
+export const GET_SECTION_INSTRUMENT_ACADEMIC_OVERVIEW = gql`
+  ${PERFORMANCE_FRAGMENT}
+  query GetSectionInstrumentAcademicOverview($periodId: ID, $year: Int) {
+    sectionInstrumentAcademicOverview(periodId: $periodId, year: $year) {
+      memberId
+      memberName
+      memberGrade
+      memberInstrument
+      memberAvatar
+      allEvaluationsSubmitted
+      expectedEvaluationsCount
+      submittedEvaluationsCount
+      missingEvaluationsCount
+      performance {
+        ...PerformanceFields
+      }
+    }
+  }
+`;
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export const CREATE_ACADEMIC_SUBJECT = gql`

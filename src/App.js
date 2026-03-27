@@ -183,8 +183,9 @@ export default function App() {
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
     skip: !isAuthenticated,
   });
-  const userRole = userData?.getUser?.role;
-  const userId = userData?.getUser?.id ?? null;
+  const currentUser = userData?.getUser || null;
+  const userRole = currentUser?.role;
+  const userId = currentUser?.id ?? null;
 
   useFirebaseMessaging(userId);
 
@@ -204,12 +205,12 @@ export default function App() {
     }
   }, [isAuthenticated, navigate, pathname, userRole]);
 
-  const renderedRouteDefs = useMemo(() => resolveRenderedRouteDefs(userRole), [userRole]);
+  const renderedRouteDefs = useMemo(() => resolveRenderedRouteDefs(currentUser), [currentUser]);
   const renderedRouteElements = useMemo(
     () => buildRouteElements(renderedRouteDefs),
     [renderedRouteDefs]
   );
-  const navRouteDefs = useMemo(() => resolveNavRouteDefs(userRole), [userRole]);
+  const navRouteDefs = useMemo(() => resolveNavRouteDefs(currentUser), [currentUser]);
 
   const canAccessDocuments = useMemo(
     () => renderedRouteDefs.some((r) => r?.route === "/documents"),

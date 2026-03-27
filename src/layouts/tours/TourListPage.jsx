@@ -23,6 +23,8 @@ import {
   DeleteConfirmModal,
 } from "./TourHelpers";
 
+const TOUR_CREATOR_ROLES = new Set(["Admin"]);
+
 // ── TourCard ──────────────────────────────────────────────────────────────────
 
 function TourCard({ tour, onEdit, onDelete, onClick, canManageTours }) {
@@ -224,7 +226,7 @@ export default function TourListPage() {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const canManageTours = userData?.getUser?.role !== "CEDES Financiero";
+  const canManageTours = TOUR_CREATOR_ROLES.has(userData?.getUser?.role);
 
   const filtered = tours.filter((t) => {
     const matchStatus = statusFilter === "all" || t.status === statusFilter;

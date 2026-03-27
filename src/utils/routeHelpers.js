@@ -9,6 +9,7 @@ import routes, {
   staffRoutes,
   membersRoutes,
   parentsRoutes,
+  sectionRoutes as declaredSectionRoutes,
   cedesRoutes,
   cedesFinancialRoutes,
   colorGuardCampRoutes,
@@ -74,6 +75,7 @@ export const PROTECTED_PREFIXES = [
   "/new-document",
   "/tours",
   "/booking-requests",
+  "/academic",
 ];
 
 const NO_SIDENAV_EXACT_PATHS = new Set([
@@ -146,8 +148,15 @@ export const sectionRoutes = [
   findRouteByKey(membersRoutes, "documents-pages"),
   findRouteByKey(membersRoutes, "documents"),
   findRouteByKey(membersRoutes, "new-document"),
+  { type: "title", title: "Giras", key: "section-tours-pages" },
+  findRouteByKey(membersRoutes, "tours"),
+  findRouteByKey(membersRoutes, "tour-detail"),
   { type: "title", title: "Asistencia", key: "section-attendance-pages" },
   ...attendanceRoutes,
+  { type: "title", title: "Entradas", key: "section-ticket-pages" },
+  findRouteByKey(membersRoutes, "mis-entradas"),
+  { type: "title", title: "Académico", key: "section-academic-pages" },
+  findRouteByKey(declaredSectionRoutes, "academic-section"),
   { type: "title", title: "Formaciones", key: "section-formations-pages" },
   findRouteByKey(adminRoutes, "formations"),
   findRouteByKey(adminRoutes, "formation-detail"),
@@ -155,6 +164,10 @@ export const sectionRoutes = [
   findRouteByKey(membersRoutes, "almuerzos"),
   findRouteByKey(membersRoutes, "account-pages"),
   findRouteByKey(membersRoutes, "Profile"),
+].filter(Boolean);
+
+export const sectionExalumnoRoutes = [
+  ...sectionRoutes,
 ].filter(Boolean);
 
 export const attendanceNavRoutes = [
@@ -176,6 +189,7 @@ export const attendanceNavRoutes = [
 const RENDERED_ROUTE_MAP = {
   admin: [...routes, ...adminRoutes],
   section: [...routes, ...sectionRoutes],
+  sectionExalumno: [...routes, ...sectionExalumnoRoutes],
   attendance: [...routes, ...attendanceNavRoutes],
   colorGuard: [...routes, ...colorGuardCampRoutes],
   staff: [...routes, ...staffRoutes],
@@ -191,6 +205,7 @@ const RENDERED_ROUTE_MAP = {
 const NAV_ROUTE_MAP = {
   admin: adminRoutes,
   section: sectionRoutes,
+  sectionExalumno: sectionExalumnoRoutes,
   attendance: attendanceNavRoutes,
   staff: staffRoutes,
   colorGuard: colorGuardCampRoutes,
@@ -203,9 +218,16 @@ const NAV_ROUTE_MAP = {
   parents: parentsRoutes,
 };
 
-function resolveRoleKey(userRole) {
+function resolveRoleKey(userOrRole) {
+  const user =
+    typeof userOrRole === "object" && userOrRole !== null
+      ? userOrRole
+      : { role: userOrRole, state: null };
+  const userRole = user?.role ?? null;
+
   if (!userRole) return "parents";
   if (ADMIN_ROLES.has(userRole)) return "admin";
+  if (userRole === "Principal de sección" && user?.state === "Exalumno") return "sectionExalumno";
   if (SECTION_ROLES.has(userRole)) return "section";
   if (ATTENDANCE_ROLES.has(userRole)) return "attendance";
   if (TICKET_MANAGER_ROLES.has(userRole)) return "ticketManager";
@@ -219,10 +241,10 @@ function resolveRoleKey(userRole) {
   return "parents";
 }
 
-export function resolveRenderedRouteDefs(userRole) {
-  return RENDERED_ROUTE_MAP[resolveRoleKey(userRole)];
+export function resolveRenderedRouteDefs(user) {
+  return RENDERED_ROUTE_MAP[resolveRoleKey(user)];
 }
 
-export function resolveNavRouteDefs(userRole) {
-  return NAV_ROUTE_MAP[resolveRoleKey(userRole)];
+export function resolveNavRouteDefs(user) {
+  return NAV_ROUTE_MAP[resolveRoleKey(user)];
 }

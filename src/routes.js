@@ -81,6 +81,7 @@ import FormationDetailPage from "layouts/formations/FormationDetailPage";
 import StudentAcademicPage from "layouts/academic/student/StudentAcademicPage";
 import AdminAcademicPage from "layouts/academic/admin/AdminAcademicPage";
 import ParentAcademicPage from "layouts/academic/parent/ParentAcademicPage";
+import SectionAcademicPage from "layouts/academic/section/SectionAcademicPage";
 import BookingRequestsDashboard from "layouts/bookingRequests/BookingRequestsDashboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -540,6 +541,15 @@ const items = {
       icon: muiIcon12(SchoolIcon),
       component: <ParentAcademicPage />,
     }),
+
+  academicSection: () =>
+    collapse({
+      name: "Seguimiento académico",
+      key: "academic-section",
+      route: "/academic/section",
+      icon: muiIcon12(SchoolIcon),
+      component: <SectionAcademicPage />,
+    }),
 };
 
 // ─── Menus reutilizables ──────────────────────────────────────────────────────
@@ -757,6 +767,10 @@ export const sectionRoutes = [
 
   ...documentsMenu(),
 
+  title("Giras", "giras-section"),
+  items.tours(),
+  items.tourDetail(),
+
   title("Asistencia", "attendance-pages"),
   items.attendanceTake(),
   items.attendanceHistory(),
@@ -767,6 +781,9 @@ export const sectionRoutes = [
 
   title("Entradas", "section-ticket-pages"),
   items.myTickets(),
+
+  title("Académico", "academico-section"),
+  items.academicSection(),
 
   title("Cuenta", "account-pages"),
   items.profile(),
