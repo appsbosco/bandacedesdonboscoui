@@ -155,19 +155,21 @@ export const sectionRoutes = [
   ...attendanceRoutes,
   { type: "title", title: "Entradas", key: "section-ticket-pages" },
   findRouteByKey(membersRoutes, "mis-entradas"),
-  { type: "title", title: "Académico", key: "section-academic-pages" },
-  findRouteByKey(declaredSectionRoutes, "academic-section"),
   { type: "title", title: "Formaciones", key: "section-formations-pages" },
   findRouteByKey(adminRoutes, "formations"),
   findRouteByKey(adminRoutes, "formation-detail"),
   findRouteByKey(membersRoutes, "almuerzos-pages"),
   findRouteByKey(membersRoutes, "almuerzos"),
+  { type: "title", title: "Académico", key: "section-self-academic-pages" },
+  findRouteByKey(membersRoutes, "academic-student"),
   findRouteByKey(membersRoutes, "account-pages"),
   findRouteByKey(membersRoutes, "Profile"),
 ].filter(Boolean);
 
 export const sectionExalumnoRoutes = [
   ...sectionRoutes,
+  { type: "title", title: "Seguimiento académico", key: "section-academic-pages" },
+  findRouteByKey(declaredSectionRoutes, "academic-section"),
 ].filter(Boolean);
 
 export const attendanceNavRoutes = [
