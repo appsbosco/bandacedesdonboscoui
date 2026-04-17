@@ -150,6 +150,21 @@ export const UPDATE_PAYMENT = gql`
   }
 `;
 
+export const UPDATE_TICKET_QUANTITY = gql`
+  mutation UpdateTicketQuantity($ticketId: ID!, $ticketQuantity: Int!) {
+    updateTicketQuantity(ticketId: $ticketId, ticketQuantity: $ticketQuantity) {
+      id
+      paid
+      amountPaid
+      status
+      ticketQuantity
+      scans
+      raffleNumbers
+      externalTicketNumbers
+    }
+  }
+`;
+
 export const ASSIGN_TICKETS = gql`
   mutation AssignTickets($input: TicketInput!) {
     assignTickets(input: $input) {

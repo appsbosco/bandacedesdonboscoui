@@ -395,6 +395,12 @@ const items = {
       icon: muiIcon12(ConfirmationNumberIcon),
       component: <TicketList />,
     }),
+  ticketListDetail: () =>
+    routeOnly({
+      key: "lista-entradas-detail",
+      route: "/lista-entradas/:eventId",
+      component: <TicketList />,
+    }),
   myTickets: () =>
     collapse({
       name: "Mis entradas",
@@ -591,6 +597,7 @@ export const protectedRoutes = [
     icon: muiIcon12(ConfirmationNumberIcon),
     component: <TicketList />,
   }),
+  items.ticketListDetail(),
   items.ticketScan({ name: "QRScanner", key: "qrscanner" }),
   items.ticketAssign(),
   items.colorGuardCampDashboard({ icon: muiIcon12(SchoolIcon) }),
@@ -663,6 +670,7 @@ export const adminRoutes = [
   title("Entradas", "entradas-eventos"),
   items.myTickets(),
   items.ticketList(),
+  items.ticketListDetail(),
   items.ticketAssign(),
   items.ticketScan({ name: "Escaneo de entradas", key: "qr-scanner" }),
 
@@ -701,6 +709,7 @@ export const staffRoutes = [
   title("Entradas", "entradas-eventos"),
   items.myTickets(),
   items.ticketList(),
+  items.ticketListDetail(),
   items.ticketScan({ name: "Escaneo de entradas", key: "qr-scanner" }),
 
   title("Almuerzos", "almuerzos-pages"),
@@ -858,12 +867,14 @@ export const ticketBoothRoutes = [
   items.myTickets(),
   items.ticketScan({ name: "Escaneo de entradas", key: "ticket-booth-qr-scanner" }),
   items.ticketList(),
+  items.ticketListDetail(),
 ];
 
 export const ticketManagerRoutes = [
   title("Entradas", "ticket-manager-pages"),
   items.myTickets(),
   items.ticketList(),
+  items.ticketListDetail(),
   items.ticketAssign(),
   items.ticketScan({ name: "Escaneo de entradas", key: "ticket-manager-qr-scanner" }),
 ];
