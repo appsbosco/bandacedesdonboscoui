@@ -138,69 +138,75 @@ export function EvaluationFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={
-        isEdit ? "Editar evaluación" : "Registrar evaluación"
-      }
+      title={isEdit ? "Editar evaluación" : "Registrar evaluación"}
       size="lg"
       containerClassName="items-end sm:items-center p-0 sm:p-4"
       overlayClassName="bg-black/40"
-      panelClassName="max-h-[95dvh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl"
+      panelClassName="max-h-[95dvh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl flex flex-col"
       headerClassName="border-b border-slate-200 px-5 py-4 sm:px-6"
-      contentClassName="p-5 sm:p-6 overflow-y-auto"
+      contentClassName="p-0 flex-1 min-h-0 overflow-hidden"
       closeButtonClassName="hover:bg-slate-100"
     >
-      <div className="flex justify-center -mt-2 mb-4 sm:hidden">
-        <div className="w-10 h-1 rounded-full bg-slate-200" />
-      </div>
+      <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-2 sm:px-6 sm:pt-5">
+          <div className="flex justify-center mb-4 sm:hidden">
+            <div className="w-10 h-1 rounded-full bg-slate-200" />
+          </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Materia */}
-        <div>
-          <label htmlFor="evaluation-subject" className="block text-xs font-medium text-gray-600 mb-1">
-            Materia *
-          </label>
-          <select
-            id="evaluation-subject"
-            name="subjectId"
-            value={form.subjectId}
-            onChange={handleChange}
-            disabled={isEdit}
-            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
-          >
-            <option value="">Selecciona una materia</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="flex flex-col gap-4">
+            {/* Materia */}
+            <div>
+              <label
+                htmlFor="evaluation-subject"
+                className="block text-xs font-medium text-gray-600 mb-1"
+              >
+                Materia *
+              </label>
+              <select
+                id="evaluation-subject"
+                name="subjectId"
+                value={form.subjectId}
+                onChange={handleChange}
+                disabled={isEdit}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
+              >
+                <option value="">Selecciona una materia</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Período */}
-        <div>
-          <label htmlFor="evaluation-period" className="block text-xs font-medium text-gray-600 mb-1">
-            Período *
-          </label>
-          <select
-            id="evaluation-period"
-            name="periodId"
-            value={form.periodId}
-            onChange={handleChange}
-            disabled={isEdit}
-            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
-          >
-            <option value="">Selecciona un período</option>
-            {periods.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {p.year}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Período */}
+            <div>
+              <label
+                htmlFor="evaluation-period"
+                className="block text-xs font-medium text-gray-600 mb-1"
+              >
+                Período *
+              </label>
+              <select
+                id="evaluation-period"
+                name="periodId"
+                value={form.periodId}
+                onChange={handleChange}
+                disabled={isEdit}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
+              >
+                <option value="">Selecciona un período</option>
+                {periods.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {p.year}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Escala + Nota */}
-        <div className="grid grid-cols-3 gap-3">
-          {/* <div>
+            {/* Escala + Nota */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Nota mínima</label>
             <input
               type="number"
@@ -220,87 +226,95 @@ export function EvaluationFormModal({
               className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div> */}
-          <div>
-            <label htmlFor="evaluation-score" className="block text-xs font-medium text-gray-600 mb-1">
-              Tu nota *
-            </label>
-            <input
-              id="evaluation-score"
-              type="number"
-              name="scoreRaw"
-              value={form.scoreRaw}
-              onChange={handleChange}
-              step="0.01"
-              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="85"
-            />
+              <div>
+                <label
+                  htmlFor="evaluation-score"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
+                  Tu nota *
+                </label>
+                <input
+                  id="evaluation-score"
+                  type="number"
+                  name="scoreRaw"
+                  value={form.scoreRaw}
+                  onChange={handleChange}
+                  step="0.01"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="85"
+                />
+              </div>
+            </div>
+
+            {/* Preview normalizado */}
+            {normalized !== null && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <svg
+                  className="w-4 h-4 text-blue-500 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="text-xs text-blue-700">
+                  Equivale a <span className="font-semibold">{normalized}/100</span> en escala
+                  normalizada
+                </p>
+              </div>
+            )}
+
+            {/* Evidencia */}
+            <div>
+              <label
+                htmlFor="evaluation-evidence"
+                className="block text-xs font-medium text-gray-600 mb-2"
+              >
+                Evidencia (imagen o PDF) *
+              </label>
+              <EvidenceUploader
+                inputId="evaluation-evidence"
+                onUpload={handleEvidenceUpload}
+                onError={(msg) => setEvidenceError(msg)}
+                disabled={loading}
+              />
+              {evidenceError && <p className="text-xs text-red-600 mt-1">{evidenceError}</p>}
+              {isEdit && evidence && !evidenceError && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
+                </p>
+              )}
+            </div>
+
+            {/* Error */}
+            {formError && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <svg
+                  className="w-4 h-4 text-red-500 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                <p className="text-xs text-red-600">{formError}</p>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Preview normalizado */}
-        {normalized !== null && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <svg
-              className="w-4 h-4 text-blue-500 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-xs text-blue-700">
-              Equivale a <span className="font-semibold">{normalized}/100</span> en escala
-              normalizada
-            </p>
-          </div>
-        )}
-
-        {/* Evidencia */}
-        <div>
-          <label htmlFor="evaluation-evidence" className="block text-xs font-medium text-gray-600 mb-2">
-            Evidencia (imagen o PDF) *
-          </label>
-          <EvidenceUploader
-            inputId="evaluation-evidence"
-            onUpload={handleEvidenceUpload}
-            onError={(msg) => setEvidenceError(msg)}
-            disabled={loading}
-          />
-          {evidenceError && <p className="text-xs text-red-600 mt-1">{evidenceError}</p>}
-          {isEdit && evidence && !evidenceError && (
-            <p className="text-xs text-gray-400 mt-1">
-              Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
-            </p>
-          )}
-        </div>
-
-        {/* Error */}
-        {formError && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-            <svg
-              className="w-4 h-4 text-red-500 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-            <p className="text-xs text-red-600">{formError}</p>
-          </div>
-        )}
 
         {/* Actions */}
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 border-t border-slate-200 bg-white px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_24px_rgba(15,23,42,0.06)] sm:px-6 sm:pb-4">
           <button
             type="button"
             onClick={onClose}
