@@ -541,6 +541,10 @@ export default function SectionAcademicPage() {
     setDetailOpen(true);
   }
 
+  function handleOpenReview(evaluation) {
+    setReviewingEvaluation(evaluation);
+  }
+
   function ToastBar() {
     if (!toast) return null;
     const colors = {
@@ -739,7 +743,7 @@ export default function SectionAcademicPage() {
             member={selectedMember}
             evaluations={memberEvaluations}
             loadingEvaluations={loadingMemberEvaluations}
-            onOpenReview={setReviewingEvaluation}
+            onOpenReview={handleOpenReview}
           />
         </div>
       </BottomSheetDialog>

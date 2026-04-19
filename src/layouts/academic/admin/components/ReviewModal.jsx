@@ -33,7 +33,14 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
   const st = STATUS_CONFIG[evaluation.status] || STATUS_CONFIG.pending;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Revisar evaluación" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Revisar evaluación"
+      size="lg"
+      containerClassName="!z-[10020]"
+      containerStyle={{ zIndex: 10020 }}
+    >
       <div className="space-y-4">
         {/* Student + Subject info */}
         <div className="grid grid-cols-2 gap-3 text-sm">

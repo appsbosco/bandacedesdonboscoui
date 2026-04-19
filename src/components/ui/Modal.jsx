@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 
 export function Modal({
@@ -13,6 +14,7 @@ export function Modal({
   headerClassName = "",
   contentClassName = "",
   closeButtonClassName = "",
+  containerStyle = {},
 }) {
   const sizes = {
     sm: "max-w-sm",
@@ -54,9 +56,10 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  const modal = (
     <div
-      className={`fixed inset-0 z-[1300] flex items-center justify-center p-4 ${containerClassName}`.trim()}
+      className={`fixed inset-0 z-[10000] flex items-center justify-center p-4 ${containerClassName}`.trim()}
+      style={{ zIndex: 10000, ...containerStyle }}
     >
       {/* Backdrop */}
       <div
@@ -116,6 +119,8 @@ export function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
 
 Modal.propTypes = {
@@ -130,6 +135,7 @@ Modal.propTypes = {
   headerClassName: PropTypes.string,
   contentClassName: PropTypes.string,
   closeButtonClassName: PropTypes.string,
+  containerStyle: PropTypes.object,
 };
 
 export default Modal;
