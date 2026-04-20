@@ -432,8 +432,11 @@ export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
   // Normalise to string Set — handles numeric IDs from GraphQL
   const excludedSet = new Set([...(excludedIds || [])].map(uid));
 
-  // All sections referenced in this formation's zone orders
-  const seenSections = new Set(Object.values(zoneOrders).flat().filter(Boolean));
+  // All sections referenced in the active zones for this formation type.
+  // SINGLE formations keep BLOQUE_ATRAS in state/defaults, but that hidden
+  // zone must not split front-block musicians into an unrendered back chunk.
+  const activeZoneOrders = activeZones.map((zone) => zoneOrders[zone] || []);
+  const seenSections = new Set(activeZoneOrders.flat().filter(Boolean));
 
   // ── Pre-build member chunks per section ────────────────────────────────────
   // Key format:
@@ -477,11 +480,8 @@ export function buildZones({ zoneOrders, sectionGroups, excludedIds, type }) {
     }
 
     // Non-block section or SINGLE type:
-    // chunk by total occurrences across ALL zones so repeated entries work
-    const totalOcc =
-      Object.values(zoneOrders)
-        .flat()
-        .filter((s) => s === sec).length || 1;
+    // chunk by total occurrences across active zones so repeated entries work
+    const totalOcc = activeZoneOrders.flat().filter((s) => s === sec).length || 1;
     sectionChunks[sec] = splitMembersEvenly(eligible, totalOcc);
     sectionChunkIndex[sec] = 0;
   }

@@ -2049,6 +2049,7 @@ function FormationRoomContent({
   zoneRows,
   zonePatterns,
   zoneOrders,
+  formType,
   canExclude,
   onExclude,
   onInclude,
@@ -2219,7 +2220,7 @@ function FormationRoomContent({
           columns={columns}
           zoneColumns={zoneColumns}
           onChange={handleGridChange}
-          formType={formation?.type || "DOUBLE"}
+          formType={formType || formation?.type || "DOUBLE"}
           zoneOrders={zoneOrders}
           canExclude={canExclude}
           onExclude={onExclude}
@@ -3007,6 +3008,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   zoneRows={zoneRows}
                   zonePatterns={zonePatterns}
                   zoneOrders={zoneOrders}
+                  formType={formType}
                   canExclude={isAdmin}
                   onExclude={handleExcludeFromGrid}
                   onInclude={handleIncludeToGrid}
@@ -3066,7 +3068,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
 
               {/* Bottom action bar — identical to original */}
               <div className="mt-4 flex items-center gap-2 flex-wrap">
-                {isAdmin && !isEdit && (
+                {isAdmin && (
                   <button
                     onClick={() => setStep(3)}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
@@ -3074,7 +3076,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ← Exclusiones
                   </button>
                 )}
-                {isAdmin && !isEdit && (
+                {isAdmin && (
                   <button
                     onClick={() => setStep(2)}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
@@ -3082,7 +3084,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ← Orden de zonas
                   </button>
                 )}
-                {isAdmin && !isEdit && sections.length > 0 && (
+                {isAdmin && sections.length > 0 && (
                   <button
                     onClick={handleComputeGrid}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
