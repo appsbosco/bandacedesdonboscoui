@@ -142,13 +142,13 @@ export function EvaluationFormModal({
       size="lg"
       containerClassName="items-end sm:items-center p-0 sm:p-4"
       overlayClassName="bg-black/40"
-      panelClassName="max-h-[95dvh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl flex flex-col"
+      panelClassName="h-[95dvh] max-h-[95dvh] sm:h-[90vh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl flex flex-col"
       headerClassName="border-b border-slate-200 px-5 py-4 sm:px-6"
-      contentClassName="p-0 flex-1 min-h-0 overflow-hidden"
+      contentClassName="p-0 flex flex-1 min-h-0 overflow-hidden"
       closeButtonClassName="hover:bg-slate-100"
     >
-      <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-2 sm:px-6 sm:pt-5">
+      <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4 pt-2 sm:px-6 sm:pt-5">
           <div className="flex justify-center mb-4 sm:hidden">
             <div className="w-10 h-1 rounded-full bg-slate-200" />
           </div>

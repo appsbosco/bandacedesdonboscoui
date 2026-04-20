@@ -153,11 +153,14 @@ export function EvidenceUploader({ onUpload, onError, disabled, inputId }) {
       {state === "success" && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
           {preview ? (
-            <img
-              src={preview}
-              alt="Evidencia"
-              className="w-full max-h-28 object-contain rounded-lg mb-2 sm:max-h-40"
-            />
+            <div className="mb-2 h-24 overflow-hidden rounded-lg bg-white/70 sm:h-32">
+              <img
+                src={preview}
+                alt="Evidencia"
+                className="h-full w-full object-contain"
+                style={{ maxHeight: 128 }}
+              />
+            </div>
           ) : (
             <div className="flex min-w-0 items-center gap-2 mb-2">
               <svg
