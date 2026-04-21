@@ -387,137 +387,205 @@ export function SubjectPeriodManager({
   closePeriodModal,
   onCreateSubject,
   onUpdateSubject,
+  onDeleteSubject,
   onCreatePeriod,
   onUpdatePeriod,
   creatingSubject,
   updatingSubject,
+  deletingSubject,
   creatingPeriod,
   updatingPeriod,
 }) {
+  const [deleteModal, setDeleteModal] = useState({ open: false, subject: null });
+
+  function openDeleteModal(subject) {
+    setDeleteModal({ open: true, subject });
+  }
+
+  function closeDeleteModal() {
+    setDeleteModal({ open: false, subject: null });
+  }
+
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      {/* Subjects */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Materias</h3>
-          <button
-            onClick={() => openSubjectModal("create")}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nueva
-          </button>
-        </div>
-        <div className="space-y-1.5 max-h-64 overflow-y-auto">
-          {subjects.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-4">No hay materias</p>
-          )}
-          {subjects.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
+    <>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Subjects */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Materias</h3>
+            <button
+              onClick={() => openSubjectModal("create")}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
             >
-              <div>
-                <p className="text-sm text-gray-900 font-medium">{s.name}</p>
-                {s.grades?.length > 0 && (
-                  <p className="text-xs text-gray-500">{s.grades.join(", ")}</p>
-                )}
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nueva
+            </button>
+          </div>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {subjects.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">No hay materias</p>
+            )}
+            {subjects.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
+              >
+                <div>
+                  <p className="text-sm text-gray-900 font-medium">{s.name}</p>
+                  {s.grades?.length > 0 && (
+                    <p className="text-xs text-gray-500">{s.grades.join(", ")}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs ${s.isActive ? "text-emerald-600" : "text-gray-400"}`}>
+                    {s.isActive ? "Activa" : "Inactiva"}
+                  </span>
+                  <button
+                    onClick={() => openSubjectModal("edit", s)}
+                    className="p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
+                    title="Editar materia"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => openDeleteModal(s)}
+                    className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                    title="Eliminar materia"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs ${s.isActive ? "text-emerald-600" : "text-gray-400"}`}>
-                  {s.isActive ? "Activa" : "Inactiva"}
-                </span>
-                <button
-                  onClick={() => openSubjectModal("edit", s)}
-                  className="p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {/* Periods */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Períodos</h3>
+            <button
+              onClick={() => openPeriodModal("create")}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nuevo
+            </button>
+          </div>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {periods.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">No hay períodos</p>
+            )}
+            {periods.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
+              >
+                <div>
+                  <p className="text-sm text-gray-900 font-medium">{p.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {p.year} · Orden {p.order}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs ${p.isActive ? "text-emerald-600" : "text-gray-400"}`}>
+                    {p.isActive ? "Activo" : "Inactivo"}
+                  </span>
+                  <button
+                    onClick={() => openPeriodModal("edit", p)}
+                    className="p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Modals */}
+        <SubjectModal
+          isOpen={subjectModal.open}
+          onClose={closeSubjectModal}
+          mode={subjectModal.mode}
+          subject={subjectModal.subject}
+          onSave={(id, input) => (id ? onUpdateSubject(id, input) : onCreateSubject(input))}
+          loading={creatingSubject || updatingSubject}
+        />
+        <PeriodModal
+          isOpen={periodModal.open}
+          onClose={closePeriodModal}
+          mode={periodModal.mode}
+          period={periodModal.period}
+          onSave={(id, input) => (id ? onUpdatePeriod(id, input) : onCreatePeriod(input))}
+          loading={creatingPeriod || updatingPeriod}
+        />
       </div>
 
-      {/* Periods */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Períodos</h3>
-          <button
-            onClick={() => openPeriodModal("create")}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo
-          </button>
-        </div>
-        <div className="space-y-1.5 max-h-64 overflow-y-auto">
-          {periods.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-4">No hay períodos</p>
-          )}
-          {periods.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg"
+      <Modal
+        isOpen={deleteModal.open}
+        onClose={closeDeleteModal}
+        title="Eliminar materia"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            ¿Seguro que deseas eliminar la materia{" "}
+            <span className="font-semibold text-gray-900">{deleteModal.subject?.name}</span>?
+          </p>
+          <p className="text-xs text-gray-400">
+            Si la materia ya tiene evaluaciones registradas, el sistema bloqueará la eliminación y
+            deberás dejarla inactiva.
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={closeDeleteModal}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              <div>
-                <p className="text-sm text-gray-900 font-medium">{p.name}</p>
-                <p className="text-xs text-gray-500">
-                  {p.year} · Orden {p.order}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs ${p.isActive ? "text-emerald-600" : "text-gray-400"}`}>
-                  {p.isActive ? "Activo" : "Inactivo"}
-                </span>
-                <button
-                  onClick={() => openPeriodModal("edit", p)}
-                  className="p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={deletingSubject}
+              onClick={async () => {
+                if (!deleteModal.subject?.id) return;
+                await onDeleteSubject(deleteModal.subject.id);
+                closeDeleteModal();
+              }}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
+            >
+              {deletingSubject ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Modals */}
-      <SubjectModal
-        isOpen={subjectModal.open}
-        onClose={closeSubjectModal}
-        mode={subjectModal.mode}
-        subject={subjectModal.subject}
-        onSave={(id, input) => (id ? onUpdateSubject(id, input) : onCreateSubject(input))}
-        loading={creatingSubject || updatingSubject}
-      />
-      <PeriodModal
-        isOpen={periodModal.open}
-        onClose={closePeriodModal}
-        mode={periodModal.mode}
-        period={periodModal.period}
-        onSave={(id, input) => (id ? onUpdatePeriod(id, input) : onCreatePeriod(input))}
-        loading={creatingPeriod || updatingPeriod}
-      />
-    </div>
+      </Modal>
+    </>
   );
 }
 
@@ -532,10 +600,12 @@ SubjectPeriodManager.propTypes = {
   closePeriodModal: PropTypes.func.isRequired,
   onCreateSubject: PropTypes.func.isRequired,
   onUpdateSubject: PropTypes.func.isRequired,
+  onDeleteSubject: PropTypes.func.isRequired,
   onCreatePeriod: PropTypes.func.isRequired,
   onUpdatePeriod: PropTypes.func.isRequired,
   creatingSubject: PropTypes.bool,
   updatingSubject: PropTypes.bool,
+  deletingSubject: PropTypes.bool,
   creatingPeriod: PropTypes.bool,
   updatingPeriod: PropTypes.bool,
 };

@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { GET_USERS } from "graphql/queries";
 import {
   GET_ACADEMIC_SUBJECTS,
   GET_ACADEMIC_PERIODS,
   GET_ADMIN_ACADEMIC_DASHBOARD,
   GET_ADMIN_RISK_RANKING,
   GET_ADMIN_PENDING_EVALUATIONS,
+  GET_ADMIN_ACADEMIC_STUDENTS,
   GET_STUDENT_ACADEMIC_EVALUATIONS,
   GET_STUDENT_ACADEMIC_PERFORMANCE,
   CREATE_ACADEMIC_SUBJECT,
   UPDATE_ACADEMIC_SUBJECT,
+  DELETE_ACADEMIC_SUBJECT,
   CREATE_ACADEMIC_PERIOD,
   UPDATE_ACADEMIC_PERIOD,
+  UPDATE_ACADEMIC_EVALUATION_AS_ADMIN,
+  DELETE_ACADEMIC_EVALUATION_AS_ADMIN,
   REVIEW_ACADEMIC_EVALUATION,
 } from "../academic.gql";
 
@@ -26,16 +29,19 @@ export function useAcademicDashboard() {
 
   // ─── Queries ─────────────────────────────────────────────────────────────────
 
-  const usersQuery = useQuery(GET_USERS, {
+  const studentsQuery = useQuery(GET_ADMIN_ACADEMIC_STUDENTS, {
+    variables: { filter: buildApiFilter(filter) },
     fetchPolicy: "cache-and-network",
   });
 
   const subjectsQuery = useQuery(GET_ACADEMIC_SUBJECTS, {
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const periodsQuery = useQuery(GET_ACADEMIC_PERIODS, {
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const dashboardQuery = useQuery(GET_ADMIN_ACADEMIC_DASHBOARD, {
@@ -92,6 +98,14 @@ export function useAcademicDashboard() {
     onError: (e) => showToast(e.message, "error"),
   });
 
+  const [deleteSubjectMutation, { loading: deletingSubject }] = useMutation(DELETE_ACADEMIC_SUBJECT, {
+    onCompleted: () => {
+      showToast("Materia eliminada", "success");
+      subjectsQuery.refetch();
+    },
+    onError: (e) => showToast(e.message, "error"),
+  });
+
   const [createPeriodMutation, { loading: creatingPeriod }] = useMutation(CREATE_ACADEMIC_PERIOD, {
     onCompleted: () => {
       showToast("Período creado", "success");
@@ -111,25 +125,37 @@ export function useAcademicDashboard() {
   });
 
   const [reviewMutation, { loading: reviewing }] = useMutation(REVIEW_ACADEMIC_EVALUATION, {
-    onCompleted: () => {
-      showToast("Evaluación revisada correctamente", "success");
-      closeReviewModal();
-      dashboardQuery.refetch();
-      riskRankingQuery.refetch();
-      pendingEvalsQuery.refetch();
-      if (studentDrawer.studentId) {
-        studentEvalsQuery.refetch();
-        studentPerfQuery.refetch();
-      }
-    },
     onError: (e) => showToast(e.message, "error"),
   });
+
+  const [updateEvaluationAsAdminMutation, { loading: updatingEvaluation }] = useMutation(
+    UPDATE_ACADEMIC_EVALUATION_AS_ADMIN,
+    {
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
+  const [deleteEvaluationAsAdminMutation, { loading: deletingEvaluation }] = useMutation(
+    DELETE_ACADEMIC_EVALUATION_AS_ADMIN,
+    {
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   function showToast(message, type = "info") {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  }
+
+  async function refreshAcademicData() {
+    await Promise.all([
+      dashboardQuery.refetch(),
+      riskRankingQuery.refetch(),
+      pendingEvalsQuery.refetch(),
+      ...(studentDrawer.studentId ? [studentEvalsQuery.refetch(), studentPerfQuery.refetch()] : []),
+    ]);
   }
 
   function openReviewModal(evaluation) {
@@ -168,6 +194,10 @@ export function useAcademicDashboard() {
     await updateSubjectMutation({ variables: { id, input } });
   }
 
+  async function handleDeleteSubject(id) {
+    await deleteSubjectMutation({ variables: { id } });
+  }
+
   async function handleCreatePeriod(input) {
     await createPeriodMutation({ variables: { input } });
   }
@@ -178,11 +208,29 @@ export function useAcademicDashboard() {
 
   async function handleReview(id, status, reviewComment) {
     await reviewMutation({ variables: { id, status, reviewComment } });
+    showToast("Evaluación revisada correctamente", "success");
+    closeReviewModal();
+    await refreshAcademicData();
+  }
+
+  async function handleUpdateEvaluationAsAdmin(id, input, options = {}) {
+    const { refresh = true, toastMessage = "Nota actualizada" } = options;
+    await updateEvaluationAsAdminMutation({ variables: { id, input } });
+    if (toastMessage) showToast(toastMessage, "success");
+    if (refresh) {
+      await refreshAcademicData();
+    }
+  }
+
+  async function handleDeleteEvaluationAsAdmin(id) {
+    await deleteEvaluationAsAdminMutation({ variables: { id } });
+    showToast("Evaluación eliminada", "success");
+    await refreshAcademicData();
   }
 
   return {
     // Data
-    allUsers: usersQuery.data?.getUsers || [],
+    allUsers: studentsQuery.data?.adminAcademicStudents || [],
     subjects: subjectsQuery.data?.academicSubjects || [],
     periods: periodsQuery.data?.academicPeriods || [],
     dashboard: dashboardQuery.data?.adminAcademicDashboard || null,
@@ -192,15 +240,18 @@ export function useAcademicDashboard() {
     studentPerformance: studentPerfQuery.data?.studentAcademicPerformance || null,
 
     // Loading
-    loadingUsers: usersQuery.loading,
+    loadingUsers: studentsQuery.loading,
     loadingDashboard: dashboardQuery.loading,
     loadingRiskRanking: riskRankingQuery.loading,
     loadingPendingEvals: pendingEvalsQuery.loading,
     loadingStudentEvals: studentEvalsQuery.loading,
     loadingStudentPerf: studentPerfQuery.loading,
     reviewing,
+    updatingEvaluation,
+    deletingEvaluation,
     creatingSubject,
     updatingSubject,
+    deletingSubject,
     creatingPeriod,
     updatingPeriod,
 
@@ -228,9 +279,12 @@ export function useAcademicDashboard() {
     // Actions
     handleCreateSubject,
     handleUpdateSubject,
+    handleDeleteSubject,
     handleCreatePeriod,
     handleUpdatePeriod,
     handleReview,
+    handleUpdateEvaluationAsAdmin,
+    handleDeleteEvaluationAsAdmin,
 
     // Toast
     toast,

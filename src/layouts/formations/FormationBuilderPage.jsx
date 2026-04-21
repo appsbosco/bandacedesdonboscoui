@@ -114,6 +114,21 @@ function getSlotsSignature(slots = []) {
     .join("||");
 }
 
+function getLayoutSignature(columns, zoneColumns = {}, zoneRows = {}, zonePatterns = {}) {
+  const serialize = (value) =>
+    Object.keys(value || {})
+      .sort()
+      .map((key) => `${key}:${value[key] ?? ""}`)
+      .join("|");
+
+  return [
+    `columns:${columns}`,
+    `zoneColumns:${serialize(zoneColumns)}`,
+    `zoneRows:${serialize(zoneRows)}`,
+    `zonePatterns:${serialize(zonePatterns)}`,
+  ].join("||");
+}
+
 // Overlay fresh avatar URLs onto slots for display.  The stored slot.avatar
 // is a denormalized copy that goes stale when a user updates their profile.
 // This function produces a NEW array only when at least one avatar differs,
@@ -2110,15 +2125,17 @@ function FormationRoomContent({
   useEffect(() => {
     if (isLoading || !slots.length) return;
 
+    const layoutSignature = getLayoutSignature(columns, zoneColumns, zoneRows, zonePatterns);
+    if (normalizedLayoutRef.current === layoutSignature) return;
+
     const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
     const normalizedSignature = getSlotsSignature(normalized);
     if (normalizedSignature === getSlotsSignature(slots)) {
-      normalizedLayoutRef.current = normalizedSignature;
+      normalizedLayoutRef.current = layoutSignature;
       return;
     }
-    if (normalizedLayoutRef.current === normalizedSignature) return;
 
-    normalizedLayoutRef.current = normalizedSignature;
+    normalizedLayoutRef.current = layoutSignature;
     setSlots(normalized);
   }, [isLoading, slots, columns, zoneColumns, zoneRows, zonePatterns, setSlots]);
 
@@ -2458,15 +2475,17 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   useEffect(() => {
     if (isEdit || step !== 4 || !slots.length) return;
 
+    const layoutSignature = getLayoutSignature(columns, zoneColumns, zoneRows, zonePatterns);
+    if (createNormalizedRef.current === layoutSignature) return;
+
     const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
     const normalizedSig = getSlotsSignature(normalized);
     if (normalizedSig === getSlotsSignature(slots)) {
-      createNormalizedRef.current = normalizedSig;
+      createNormalizedRef.current = layoutSignature;
       return;
     }
-    if (createNormalizedRef.current === normalizedSig) return;
 
-    createNormalizedRef.current = normalizedSig;
+    createNormalizedRef.current = layoutSignature;
     setSlots(normalized);
   }, [isEdit, step, slots, columns, zoneColumns, zoneRows, zonePatterns]);
 

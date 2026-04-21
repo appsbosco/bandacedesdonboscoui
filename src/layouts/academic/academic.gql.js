@@ -10,6 +10,7 @@ const EVAL_BASIC_USER_FRAGMENT = gql`
     email
     grade
     instrument
+    avatar
   }
 `;
 
@@ -260,6 +261,21 @@ export const GET_ADMIN_PENDING_EVALUATIONS = gql`
   }
 `;
 
+export const GET_ADMIN_ACADEMIC_STUDENTS = gql`
+  query GetAdminAcademicStudents($filter: AcademicDashboardFilter) {
+    adminAcademicStudents(filter: $filter) {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      grade
+      instrument
+      avatar
+    }
+  }
+`;
+
 export const GET_ADMIN_RISK_RANKING = gql`
   query GetAdminAcademicRiskRanking($filter: AcademicDashboardFilter, $limit: Int) {
     adminAcademicRiskRanking(filter: $filter, limit: $limit) {
@@ -366,6 +382,12 @@ export const UPDATE_ACADEMIC_SUBJECT = gql`
   }
 `;
 
+export const DELETE_ACADEMIC_SUBJECT = gql`
+  mutation DeleteAcademicSubject($id: ID!) {
+    deleteAcademicSubject(id: $id)
+  }
+`;
+
 export const CREATE_ACADEMIC_PERIOD = gql`
   ${ACADEMIC_PERIOD_FRAGMENT}
   mutation CreateAcademicPeriod($input: AcademicPeriodInput!) {
@@ -399,6 +421,21 @@ export const UPDATE_OWN_PENDING_EVALUATION = gql`
     updateOwnPendingAcademicEvaluation(id: $id, input: $input) {
       ...EvaluationFields
     }
+  }
+`;
+
+export const UPDATE_ACADEMIC_EVALUATION_AS_ADMIN = gql`
+  ${EVALUATION_FRAGMENT}
+  mutation UpdateAcademicEvaluationAsAdmin($id: ID!, $input: UpdateAcademicEvaluationInput!) {
+    updateAcademicEvaluationAsAdmin(id: $id, input: $input) {
+      ...EvaluationFields
+    }
+  }
+`;
+
+export const DELETE_ACADEMIC_EVALUATION_AS_ADMIN = gql`
+  mutation DeleteAcademicEvaluationAsAdmin($id: ID!) {
+    deleteAcademicEvaluationAsAdmin(id: $id)
   }
 `;
 

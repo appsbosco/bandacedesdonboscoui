@@ -20,10 +20,20 @@ const STATUS_CONFIG = {
 
 export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) {
   const [reviewComment, setReviewComment] = useState("");
+  const [scoreRaw, setScoreRaw] = useState("");
+  const [scaleMin, setScaleMin] = useState("0");
+  const [scaleMax, setScaleMax] = useState("100");
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
-    if (isOpen) setReviewComment("");
-  }, [isOpen]);
+    if (isOpen) {
+      setReviewComment(evaluation?.reviewComment || "");
+      setScoreRaw(String(evaluation?.scoreRaw ?? ""));
+      setScaleMin(String(evaluation?.scaleMin ?? "0"));
+      setScaleMax(String(evaluation?.scaleMax ?? "100"));
+      setFormError(null);
+    }
+  }, [isOpen, evaluation]);
 
   if (!evaluation) return null;
 
@@ -31,15 +41,67 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
     evaluation.evidenceResourceType === "raw" || evaluation.evidenceOriginalName?.endsWith(".pdf");
 
   const st = STATUS_CONFIG[evaluation.status] || STATUS_CONFIG.pending;
+  const parsedScaleMin = parseFloat(scaleMin) || 0;
+  const parsedScaleMax = parseFloat(scaleMax) || 100;
+  const parsedScoreRaw = parseFloat(scoreRaw);
+  const normalizedPreview =
+    !Number.isNaN(parsedScoreRaw) && parsedScaleMax > parsedScaleMin
+      ? Math.round(((parsedScoreRaw - parsedScaleMin) / (parsedScaleMax - parsedScaleMin)) * 10000) /
+        100
+      : null;
+  const hasScoreChanges =
+    parsedScoreRaw !== Number(evaluation.scoreRaw) ||
+    parsedScaleMin !== Number(evaluation.scaleMin) ||
+    parsedScaleMax !== Number(evaluation.scaleMax);
+
+  async function handleAction(status) {
+    setFormError(null);
+
+    if (scoreRaw === "" || Number.isNaN(parsedScoreRaw)) {
+      setFormError("Ingresa una nota válida");
+      return;
+    }
+
+    if (parsedScaleMax <= parsedScaleMin) {
+      setFormError("La escala máxima debe ser mayor que la mínima");
+      return;
+    }
+
+    await onReview(
+      evaluation.id,
+      status,
+      reviewComment,
+      hasScoreChanges
+        ? {
+            scoreRaw: parsedScoreRaw,
+            scaleMin: parsedScaleMin,
+            scaleMax: parsedScaleMax,
+          }
+        : null
+    );
+  }
+
+  async function handleSaveOnly() {
+    await handleAction(null);
+  }
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Revisar evaluación"
+      title={
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Revisar evaluación</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Puedes corregir la nota antes de aprobar o rechazar.
+          </p>
+        </div>
+      }
       size="lg"
       containerClassName="!z-[10020]"
       containerStyle={{ zIndex: 10020 }}
+      headerClassName="border-b border-gray-200"
+      closeButtonClassName="hover:bg-gray-100"
     >
       <div className="space-y-4">
         {/* Student + Subject info */}
@@ -63,29 +125,80 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
         </div>
 
         {/* Score */}
-        <div className="flex items-center gap-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Nota</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {evaluation.scoreRaw}
-              <span className="text-sm text-gray-400 font-normal">/{evaluation.scaleMax}</span>
-            </p>
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Nota registrada</p>
+              <p className="text-sm font-medium text-gray-700">
+                {evaluation.scoreRaw}/{evaluation.scaleMax}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 mb-0.5">Normalizado actual</p>
+              <p
+                className={`text-lg font-bold ${
+                  evaluation.scoreNormalized100 >= 80
+                    ? "text-emerald-600"
+                    : evaluation.scoreNormalized100 >= 70
+                    ? "text-amber-600"
+                    : "text-red-600"
+                }`}
+              >
+                {evaluation.scoreNormalized100?.toFixed(1)}
+                <span className="text-sm text-gray-400 font-normal">/100</span>
+              </p>
+            </div>
           </div>
-          <div className="w-px h-10 bg-gray-300" />
-          <div>
-            <p className="text-xs text-gray-500 mb-0.5">Normalizado</p>
-            <p
-              className={`text-2xl font-bold ${
-                evaluation.scoreNormalized100 >= 80
-                  ? "text-emerald-600"
-                  : evaluation.scoreNormalized100 >= 70
-                  ? "text-amber-600"
-                  : "text-red-600"
-              }`}
-            >
-              {evaluation.scoreNormalized100?.toFixed(1)}
-              <span className="text-sm text-gray-400 font-normal">/100</span>
-            </p>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nota</label>
+              <input
+                type="number"
+                step="0.01"
+                value={scoreRaw}
+                onChange={(e) => setScoreRaw(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Escala mínima</label>
+              <input
+                type="number"
+                step="0.01"
+                value={scaleMin}
+                onChange={(e) => setScaleMin(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Escala máxima</label>
+              <input
+                type="number"
+                step="0.01"
+                value={scaleMax}
+                onChange={(e) => setScaleMax(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Normalizado nuevo</p>
+              <p
+                className={`text-xl font-bold ${
+                  normalizedPreview >= 80
+                    ? "text-emerald-600"
+                    : normalizedPreview >= 70
+                    ? "text-amber-600"
+                    : "text-red-600"
+                }`}
+              >
+                {normalizedPreview?.toFixed(1) ?? "—"}
+                <span className="text-sm text-gray-400 font-normal">/100</span>
+              </p>
+            </div>
           </div>
           <div className="ml-auto">
             <span
@@ -149,6 +262,12 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
           />
         </div>
 
+        {formError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {formError}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3 pt-2">
           <button
@@ -158,14 +277,21 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
             Cancelar
           </button>
           <button
-            onClick={() => onReview(evaluation.id, "rejected", reviewComment)}
+            onClick={handleSaveOnly}
+            disabled={loading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
+          >
+            {loading ? "..." : "Guardar cambios"}
+          </button>
+          <button
+            onClick={() => handleAction("rejected")}
             disabled={loading}
             className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
           >
             {loading ? "..." : "Rechazar"}
           </button>
           <button
-            onClick={() => onReview(evaluation.id, "approved", reviewComment)}
+            onClick={() => handleAction("approved")}
             disabled={loading}
             className="flex-1 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 disabled:opacity-50 transition-colors"
           >

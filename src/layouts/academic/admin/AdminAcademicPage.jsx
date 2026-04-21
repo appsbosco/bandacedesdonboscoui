@@ -6,6 +6,7 @@ import SoftBox from "components/SoftBox";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import { Modal } from "components/ui/Modal";
 import Avatar from "../components/Avatar";
 import { useAcademicDashboard } from "../hooks/useAcademicDashboard";
 import ReviewModal from "./components/ReviewModal";
@@ -103,8 +104,9 @@ function EvidenceLink({ ev }) {
 
 // ─── Pending evaluations tab ───────────────────────────────────────────────────
 
-function PendingEvaluationsTab({ evaluations, loading, onReview, reviewing }) {
+function PendingEvaluationsTab({ evaluations, loading, onReview, onDelete, reviewing, deleting }) {
   const [reviewingEval, setReviewingEval] = useState(null);
+  const [deletingEval, setDeletingEval] = useState(null);
 
   if (loading) {
     return (
@@ -170,7 +172,12 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, reviewing }) {
               <tr key={ev.id} className="bg-white hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Avatar name={`${ev.student?.name} ${ev.student?.firstSurName}`} size="sm" />
+                    <Avatar
+                      src={ev.student?.avatar}
+                      name={`${ev.student?.name} ${ev.student?.firstSurName}`}
+                      size="sm"
+                      zoomable
+                    />
                     <div>
                       <p className="font-medium text-gray-900 whitespace-nowrap">
                         {ev.student?.name} {ev.student?.firstSurName}
@@ -208,31 +215,39 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, reviewing }) {
                   {fmtDate(ev.submittedByStudentAt)}
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button
-                    onClick={() => setReviewingEval(ev)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      onClick={() => setReviewingEval(ev)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                    Revisar
-                  </button>
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                      Gestionar
+                    </button>
+                    <button
+                      onClick={() => setDeletingEval(ev)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-medium transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -244,12 +259,48 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, reviewing }) {
         isOpen={!!reviewingEval}
         onClose={() => setReviewingEval(null)}
         evaluation={reviewingEval}
-        onReview={async (id, status, comment) => {
-          await onReview(id, status, comment);
-          setReviewingEval(null);
+        onReview={async (id, status, comment, input) => {
+          await onReview(id, status, comment, input);
+          if (status) {
+            setReviewingEval(null);
+          }
         }}
         loading={reviewing}
       />
+
+      <Modal
+        isOpen={!!deletingEval}
+        onClose={() => setDeletingEval(null)}
+        title="Eliminar evaluación"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            ¿Seguro que deseas eliminar la evaluación de{" "}
+            <span className="font-semibold text-gray-900">{deletingEval?.student?.name} {deletingEval?.student?.firstSurName}</span>{" "}
+            en <span className="font-semibold text-gray-900">{deletingEval?.subject?.name}</span>?
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeletingEval(null)}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                if (!deletingEval?.id) return;
+                await onDelete(deletingEval.id);
+                setDeletingEval(null);
+              }}
+              disabled={deleting}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -842,17 +893,21 @@ function StudentDetailDrawer({
   onClose,
   onReview,
   reviewing,
+  onDelete,
+  deleting,
 }) {
   const [drawerTab, setDrawerTab] = useState("resumen");
   const [reviewingEval, setReviewingEval] = useState(null);
+  const [deletingEval, setDeletingEval] = useState(null);
 
   if (!drawer.open) return null;
 
   // Find user data for avatar
   const userRecord = allUsers.find((u) => u.id === drawer.studentId);
+  const firstEvaluationStudent = evaluations[0]?.student || null;
   const fullName =
     drawer.studentName || (userRecord ? `${userRecord.name} ${userRecord.firstSurName}` : "");
-  const avatarSrc = userRecord?.avatar;
+  const avatarSrc = userRecord?.avatar || firstEvaluationStudent?.avatar;
   const risk = performance ? RISK_CONFIG[performance.riskLevel] || RISK_CONFIG.GREEN : null;
 
   return (
@@ -867,14 +922,14 @@ function StudentDetailDrawer({
               <div>
                 <h2 className="text-base font-bold text-gray-900 leading-tight">{fullName}</h2>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  {userRecord?.grade && (
+                  {(userRecord?.grade || firstEvaluationStudent?.grade) && (
                     <span className="text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-                      {userRecord.grade}
+                      {userRecord?.grade || firstEvaluationStudent?.grade}
                     </span>
                   )}
-                  {userRecord?.instrument && (
+                  {(userRecord?.instrument || firstEvaluationStudent?.instrument) && (
                     <span className="text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-                      {userRecord.instrument}
+                      {userRecord?.instrument || firstEvaluationStudent?.instrument}
                     </span>
                   )}
                   {risk && (
@@ -1141,14 +1196,20 @@ function StudentDetailDrawer({
                               {fmtDate(ev.submittedByStudentAt)}
                             </td>
                             <td className="px-3 py-3 text-right">
-                              {ev.status === "pending" && (
+                              <div className="inline-flex items-center gap-3">
                                 <button
                                   onClick={() => setReviewingEval(ev)}
                                   className="text-xs text-blue-600 hover:text-blue-500 font-medium underline transition-colors"
                                 >
-                                  Revisar
+                                  Gestionar
                                 </button>
-                              )}
+                                <button
+                                  onClick={() => setDeletingEval(ev)}
+                                  className="text-xs text-red-600 hover:text-red-500 font-medium underline transition-colors"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1166,12 +1227,48 @@ function StudentDetailDrawer({
         isOpen={!!reviewingEval}
         onClose={() => setReviewingEval(null)}
         evaluation={reviewingEval}
-        onReview={async (id, status, comment) => {
-          await onReview(id, status, comment);
-          setReviewingEval(null);
+        onReview={async (id, status, comment, input) => {
+          await onReview(id, status, comment, input);
+          if (status) {
+            setReviewingEval(null);
+          }
         }}
         loading={reviewing}
       />
+
+      <Modal
+        isOpen={!!deletingEval}
+        onClose={() => setDeletingEval(null)}
+        title="Eliminar evaluación"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            ¿Seguro que deseas eliminar la evaluación de{" "}
+            <span className="font-semibold text-gray-900">{deletingEval?.subject?.name}</span>?
+            Esta acción aplica aunque ya esté aprobada.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeletingEval(null)}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                if (!deletingEval?.id) return;
+                await onDelete(deletingEval.id);
+                setDeletingEval(null);
+              }}
+              disabled={deleting}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -1218,8 +1315,11 @@ export default function AdminAcademicPage() {
     loadingStudentEvals,
     loadingStudentPerf,
     reviewing,
+    updatingEvaluation,
+    deletingEvaluation,
     creatingSubject,
     updatingSubject,
+    deletingSubject,
     creatingPeriod,
     updatingPeriod,
     filter,
@@ -1235,11 +1335,16 @@ export default function AdminAcademicPage() {
     closePeriodModal,
     handleCreateSubject,
     handleUpdateSubject,
+    handleDeleteSubject,
     handleCreatePeriod,
     handleUpdatePeriod,
     handleReview,
+    handleUpdateEvaluationAsAdmin,
+    handleDeleteEvaluationAsAdmin,
     toast,
   } = useAcademicDashboard();
+
+  const studentUsers = useMemo(() => allUsers.filter((u) => u.grade), [allUsers]);
 
   // Unique sorted instrument list derived from all users
   const instrumentOptions = useMemo(() => {
@@ -1334,9 +1439,9 @@ export default function AdminAcademicPage() {
                       {pendingEvaluations.length > 99 ? "99+" : pendingEvaluations.length}
                     </span>
                   )}
-                  {tab.id === "students" && allUsers.filter((u) => u.grade).length > 0 && (
+                  {tab.id === "students" && studentUsers.length > 0 && (
                     <span className="text-xs text-gray-400 font-normal">
-                      ({allUsers.filter((u) => u.grade).length})
+                      ({studentUsers.length})
                     </span>
                   )}
                 </button>
@@ -1348,8 +1453,20 @@ export default function AdminAcademicPage() {
               <PendingEvaluationsTab
                 evaluations={pendingEvaluations}
                 loading={loadingPendingEvals}
-                onReview={handleReview}
-                reviewing={reviewing}
+                onReview={async (id, status, reviewComment, input) => {
+                  if (input) {
+                    await handleUpdateEvaluationAsAdmin(id, input, {
+                      refresh: !status,
+                      toastMessage: status ? null : "Nota actualizada",
+                    });
+                  }
+                  if (status) {
+                    await handleReview(id, status, reviewComment);
+                  }
+                }}
+                reviewing={reviewing || updatingEvaluation}
+                onDelete={handleDeleteEvaluationAsAdmin}
+                deleting={deletingEvaluation}
               />
             )}
 
@@ -1394,10 +1511,12 @@ export default function AdminAcademicPage() {
                 closePeriodModal={closePeriodModal}
                 onCreateSubject={handleCreateSubject}
                 onUpdateSubject={handleUpdateSubject}
+                onDeleteSubject={handleDeleteSubject}
                 onCreatePeriod={handleCreatePeriod}
                 onUpdatePeriod={handleUpdatePeriod}
                 creatingSubject={creatingSubject}
                 updatingSubject={updatingSubject}
+                deletingSubject={deletingSubject}
                 creatingPeriod={creatingPeriod}
                 updatingPeriod={updatingPeriod}
               />
@@ -1415,8 +1534,20 @@ export default function AdminAcademicPage() {
         loadingPerf={loadingStudentPerf}
         allUsers={allUsers}
         onClose={closeStudentDrawer}
-        onReview={handleReview}
-        reviewing={reviewing}
+        onReview={async (id, status, reviewComment, input) => {
+          if (input) {
+            await handleUpdateEvaluationAsAdmin(id, input, {
+              refresh: !status,
+              toastMessage: status ? null : "Nota actualizada",
+            });
+          }
+          if (status) {
+            await handleReview(id, status, reviewComment);
+          }
+        }}
+        reviewing={reviewing || updatingEvaluation}
+        onDelete={handleDeleteEvaluationAsAdmin}
+        deleting={deletingEvaluation}
       />
 
       <Toast toast={toast} />
