@@ -27,6 +27,8 @@ export function EvaluationFormModal({
   const [evidence, setEvidence] = useState(null);
   const [evidenceError, setEvidenceError] = useState(null);
   const [formError, setFormError] = useState(null);
+  const isEdit = mode === "edit";
+  const requiresFreshEvidence = isEdit && evaluation?.status === "rejected";
 
   useEffect(() => {
     if (isOpen) {
@@ -38,12 +40,16 @@ export function EvaluationFormModal({
           scaleMin: String(evaluation.scaleMin ?? "0"),
           scaleMax: String(evaluation.scaleMax ?? "100"),
         });
-        setEvidence({
-          url: evaluation.evidenceUrl,
-          publicId: evaluation.evidencePublicId,
-          resourceType: evaluation.evidenceResourceType || "image",
-          originalName: evaluation.evidenceOriginalName || "evidencia",
-        });
+        setEvidence(
+          evaluation.status === "rejected"
+            ? null
+            : {
+                url: evaluation.evidenceUrl,
+                publicId: evaluation.evidencePublicId,
+                resourceType: evaluation.evidenceResourceType || "image",
+                originalName: evaluation.evidenceOriginalName || "evidencia",
+              }
+        );
       } else {
         setForm({
           ...INITIAL,
@@ -56,8 +62,6 @@ export function EvaluationFormModal({
       setEvidenceError(null);
     }
   }, [isOpen, mode, evaluation, initialSelection]);
-
-  const isEdit = mode === "edit";
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -99,7 +103,11 @@ export function EvaluationFormModal({
       return;
     }
     if (!evidence) {
-      setFormError("Debes subir evidencia de la nota");
+      setFormError(
+        requiresFreshEvidence
+          ? "Debes volver a subir la evidencia para reenviar una evaluación rechazada"
+          : "Debes subir evidencia de la nota"
+      );
       return;
     }
 
@@ -277,6 +285,29 @@ export function EvaluationFormModal({
               >
                 Evidencia (imagen o PDF) *
               </label>
+              {requiresFreshEvidence && (
+                <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                  <svg
+                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="text-xs text-amber-700">
+                    <p className="font-medium">Esta evaluación fue rechazada.</p>
+                    <p>
+                      Revísala y vuelve a subir una nueva evidencia para reenviarla a aprobación.
+                    </p>
+                  </div>
+                </div>
+              )}
               <EvidenceUploader
                 inputId="evaluation-evidence"
                 onUpload={handleEvidenceUpload}
@@ -284,7 +315,7 @@ export function EvaluationFormModal({
                 disabled={loading}
               />
               {evidenceError && <p className="text-xs text-red-600 mt-1">{evidenceError}</p>}
-              {isEdit && evidence && !evidenceError && (
+              {isEdit && evidence && !evidenceError && !requiresFreshEvidence && (
                 <p className="text-xs text-gray-400 mt-1">
                   Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
                 </p>
