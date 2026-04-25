@@ -140,14 +140,47 @@ export const DELETE_TOUR_PARTICIPANT = gql`
     deleteTourParticipant(id: $id) {
       success
       deletedId
+      deletionMode
+      participantStillExists
       cascadeResults {
         itineraryAssignments
         routeAssignments
-        roomsModified
+        flightsModified
+        roomOccupantsModified
+        roomResponsiblesCleared
+        itinerariesModified
         payments
         installments
         financialAccounts
       }
+    }
+  }
+`;
+
+export const CREATE_TOUR_PARTICIPANT = gql`
+  mutation CreateTourParticipant($tourId: ID!, $input: CreateTourParticipantInput!) {
+    createTourParticipant(tourId: $tourId, input: $input) {
+      id
+      firstName
+      firstSurname
+      secondSurname
+      identification
+      email
+      phone
+      birthDate
+      instrument
+      grade
+      status
+      role
+      linkedUser {
+        id
+        name
+        firstSurName
+        secondSurName
+        email
+      }
+      isRemoved
+      removedAt
     }
   }
 `;

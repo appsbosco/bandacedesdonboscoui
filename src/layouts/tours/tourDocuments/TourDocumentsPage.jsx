@@ -81,6 +81,34 @@ const QUICK_FILTERS = [
     test: (p) => p.hasVisa,
   },
   {
+    key: "visaDenied",
+    label: "Visa negada",
+    emoji: "🛑",
+    category: "visa",
+    test: (p) => p.visaStatus === "DENIED",
+  },
+  {
+    key: "visaDeniedFirst",
+    label: "1ra negativa",
+    emoji: "1️⃣",
+    category: "visa",
+    test: (p) => p.visaStatus === "DENIED" && p.visaDeniedCount === 1,
+  },
+  {
+    key: "visaDeniedSecond",
+    label: "2da negativa",
+    emoji: "2️⃣",
+    category: "visa",
+    test: (p) => p.visaStatus === "DENIED" && p.visaDeniedCount === 2,
+  },
+  {
+    key: "visaDeniedMulti",
+    label: "3+ negativas",
+    emoji: "3️⃣",
+    category: "visa",
+    test: (p) => p.visaStatus === "DENIED" && p.visaDeniedCount >= 3,
+  },
+  {
     key: "visaExpired",
     label: "Visa vencida",
     emoji: "❌",
@@ -256,6 +284,53 @@ function StatusBadge({ status }) {
       />
       {cfg.label}
     </span>
+  );
+}
+
+function VisaStatusBadge({ participant }) {
+  const isDenied = participant.visaStatus === "DENIED";
+  const label =
+    participant.visaStatus === "DENIED"
+      ? "Visa negada"
+      : participant.visaStatus === "APPROVED"
+      ? "Aprobada"
+      : participant.visaStatus === "EXPIRED"
+      ? "Vencida"
+      : participant.visaStatus === "PENDING"
+      ? "Pendiente"
+      : "Sin definir";
+
+  const palette = isDenied
+    ? { bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA" }
+    : participant.visaStatus === "APPROVED"
+    ? { bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" }
+    : { bg: "#F9FAFB", color: "#6B7280", border: "#E5E7EB" };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "3px 8px",
+          borderRadius: "9999px",
+          border: `1px solid ${palette.border}`,
+          background: palette.bg,
+          color: palette.color,
+          fontSize: "10px",
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
+      {participant._visaDeniedLabel && (
+        <span style={{ fontSize: "10px", color: isDenied ? "#B91C1C" : "#9CA3AF", fontWeight: 700 }}>
+          {participant._visaDeniedLabel}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -679,16 +754,22 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                     key={p.id}
                     style={{
                       borderBottom: idx < filtered.length - 1 ? "1px solid #F9FAFB" : "none",
+                      background: p._visaDenied ? "#FFF5F5" : "transparent",
                       transition: "background 0.1s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F9FAFB")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = p._visaDenied ? "#FEE2E2" : "#F9FAFB")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = p._visaDenied ? "#FFF5F5" : "transparent")}
                   >
                     {/* Participant */}
                     <td style={{ padding: "10px 12px" }}>
                       <p style={{ margin: 0, fontWeight: 600, color: "#111827", fontSize: "13px" }}>
                         {participantName(p)}
                       </p>
+                      {p._visaDenied && (
+                        <p style={{ margin: "3px 0 0", fontSize: "10px", color: "#B91C1C", fontWeight: 700 }}>
+                          Visa negada{p._visaDeniedLabel ? ` · ${p._visaDeniedLabel}` : ""}
+                        </p>
+                      )}
                       <p style={{ margin: "1px 0 0", fontSize: "11px", color: "#9CA3AF" }}>
                         {p.identification}
                       </p>
@@ -727,16 +808,16 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
 
                     {/* Visa */}
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                      {p.hasVisa ? (
-                        <span style={{ color: "#059669", fontWeight: 700, fontSize: "14px" }}>✓</span>
-                      ) : (
-                        <span style={{ color: "#D1D5DB", fontSize: "13px" }}>—</span>
-                      )}
+                      <VisaStatusBadge participant={p} />
                     </td>
 
                     {/* Visa expiry */}
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                      {p.hasVisa ? (
+                      {p.visaStatus === "DENIED" ? (
+                        <span style={{ color: "#DC2626", fontSize: "10px", fontWeight: 700 }}>
+                          Bloqueada
+                        </span>
+                      ) : p.hasVisa ? (
                         <ExpiryCell date={p.visaExpiry} />
                       ) : (
                         <span style={{ color: "#D1D5DB", fontSize: "12px" }}>—</span>

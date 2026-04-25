@@ -439,6 +439,7 @@ const UserDetailsModal = ({
   const [tab, setTab] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Local avatar override — updated after a successful upload so the drawer
   // reflects the new photo immediately without waiting for a cache refetch.
@@ -450,6 +451,7 @@ const UserDetailsModal = ({
       setZoomOpen(false);
       setConfirmOpen(false);
       setLocalAvatar(null);
+      setIsDeleting(false);
     }
   }, [open]);
 
@@ -480,13 +482,21 @@ const UserDetailsModal = ({
   const zoomSrc = localAvatar || user?.avatar;
 
   const handleConfirmDelete = async () => {
-    const ok = await onConfirmDelete({
-      userId: user?.id,
-      medicalRecordId: medicalRecord?.id || null,
-    });
-    if (ok) {
-      setConfirmOpen(false);
-      onClose();
+    if (isDeleting || !user?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const ok = await onConfirmDelete({
+        userId: user.id,
+        medicalRecordId: medicalRecord?.id || null,
+      });
+
+      if (ok) {
+        setConfirmOpen(false);
+        onClose();
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -500,7 +510,7 @@ const UserDetailsModal = ({
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(3px)" }}
-        onClick={onClose}
+        onClick={() => !isDeleting && onClose()}
       />
 
       {/* Drawer panel */}
@@ -518,14 +528,16 @@ const UserDetailsModal = ({
             <div className="flex items-center gap-2">
               {showDelete && (
                 <button
-                  onClick={() => setConfirmOpen(true)}
+                  onClick={() => !isDeleting && setConfirmOpen(true)}
+                  disabled={isDeleting}
                   className="px-3 py-1.5 rounded-xl border border-red-100 text-red-600 text-xs font-semibold hover:bg-red-50 transition-all"
                 >
-                  Eliminar
+                  {isDeleting ? "Eliminando..." : "Eliminar"}
                 </button>
               )}
               <button
-                onClick={onClose}
+                onClick={() => !isDeleting && onClose()}
+                disabled={isDeleting}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
               >
                 ✕
@@ -599,7 +611,10 @@ const UserDetailsModal = ({
 
       {/* Delete confirm */}
       {confirmOpen && (
-        <ConfirmDialog onConfirm={handleConfirmDelete} onCancel={() => setConfirmOpen(false)} />
+        <ConfirmDialog
+          onConfirm={handleConfirmDelete}
+          onCancel={() => !isDeleting && setConfirmOpen(false)}
+        />
       )}
     </>
   );

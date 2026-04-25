@@ -208,9 +208,47 @@ export function useAcademicDashboard() {
 
   async function handleReview(id, status, reviewComment) {
     await reviewMutation({ variables: { id, status, reviewComment } });
-    showToast("Evaluación revisada correctamente", "success");
+    const successMessage =
+      status === "approved"
+        ? "Evaluacion aprobada correctamente"
+        : status === "rejected"
+        ? "Evaluacion rechazada correctamente"
+        : "Evaluacion revisada correctamente";
+    showToast(successMessage, "success");
     closeReviewModal();
     await refreshAcademicData();
+  }
+
+  async function handleReviewEvaluationAsAdmin(id, status, reviewComment, input = null) {
+    if (input && status) {
+      await Promise.all([
+        updateEvaluationAsAdminMutation({ variables: { id, input } }),
+        reviewMutation({ variables: { id, status, reviewComment } }),
+      ]);
+
+      const successMessage =
+        status === "approved"
+          ? "Evaluacion aprobada correctamente"
+          : status === "rejected"
+          ? "Evaluacion rechazada correctamente"
+          : "Evaluacion revisada correctamente";
+
+      showToast(successMessage, "success");
+      closeReviewModal();
+      await refreshAcademicData();
+      return;
+    }
+
+    if (input) {
+      await handleUpdateEvaluationAsAdmin(id, input, {
+        refresh: !status,
+        toastMessage: status ? null : "Nota actualizada",
+      });
+    }
+
+    if (status) {
+      await handleReview(id, status, reviewComment);
+    }
   }
 
   async function handleUpdateEvaluationAsAdmin(id, input, options = {}) {
@@ -283,6 +321,7 @@ export function useAcademicDashboard() {
     handleCreatePeriod,
     handleUpdatePeriod,
     handleReview,
+    handleReviewEvaluationAsAdmin,
     handleUpdateEvaluationAsAdmin,
     handleDeleteEvaluationAsAdmin,
 

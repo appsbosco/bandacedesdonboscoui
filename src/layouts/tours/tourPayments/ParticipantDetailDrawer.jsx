@@ -67,6 +67,11 @@ export function ParticipantDetailDrawer({
                   <h3 className="text-base font-bold text-gray-900 truncate">
                     {participant.fullName}
                   </h3>
+                  {participant.isRemoved && (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-red-50 text-red-700 border-red-200">
+                      Retirado de la gira
+                    </span>
+                  )}
                   <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.badge}`}
                   >
@@ -74,6 +79,15 @@ export function ParticipantDetailDrawer({
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">{participant.identification}</p>
+                {participant.linkedUserName && (
+                  <p className="text-xs text-gray-400 mt-0.5">{participant.linkedUserName}</p>
+                )}
+                {participant.isRemoved && participant.removedAt && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Retirado el {fmtDate(participant.removedAt)}
+                    {participant.removedByName ? ` · por ${participant.removedByName}` : ""}
+                  </p>
+                )}
               </div>
               <button
                 onClick={onClose}
@@ -160,9 +174,10 @@ export function ParticipantDetailDrawer({
                 onClose();
                 onRegisterPayment(participant);
               }}
-              className="flex-1 py-2.5 rounded-2xl bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold transition-all"
+              disabled={participant.isRemoved}
+              className="flex-1 py-2.5 rounded-2xl bg-gray-900 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all"
             >
-              + Registrar pago
+              {participant.isRemoved ? "Participante retirado" : "+ Registrar pago"}
             </button>
           </div>
         </div>
@@ -572,6 +587,8 @@ export function AccountAdjustModal({
   participantId,
   row,
   tourId,
+  plans = [],
+  defaultPlan = null,
   onClose,
   onSubmit,
   loading,
@@ -580,10 +597,12 @@ export function AccountAdjustModal({
     baseAmount: "",
     discount: "",
     scholarship: "",
+    paymentPlanId: "",
     adjustmentConcept: "",
     adjustmentAmount: "",
   });
   const [mode, setMode] = useState("amounts"); // "amounts" | "adjustment"
+  const hasFinancialAccount = Boolean(row?.hasFinancialAccount);
 
   useEffect(() => {
     if (!isOpen || !row) return;
@@ -591,11 +610,12 @@ export function AccountAdjustModal({
       baseAmount: String(row.finalAmount || ""),
       discount: "0",
       scholarship: "0",
+      paymentPlanId: defaultPlan?.id || "",
       adjustmentConcept: "",
       adjustmentAmount: "",
     });
     setMode("amounts");
-  }, [isOpen, row]);
+  }, [defaultPlan?.id, isOpen, row]);
 
   if (!isOpen || !row) return null;
 
@@ -603,14 +623,16 @@ export function AccountAdjustModal({
 
   const handleSubmit = () => {
     if (mode === "amounts") {
-      onSubmit(row.accountId, {
+      onSubmit(row, {
         baseAmount: Number(form.baseAmount) || 0,
         discount: Number(form.discount) || 0,
         scholarship: Number(form.scholarship) || 0,
+        paymentPlanId: form.paymentPlanId || undefined,
+        currency: "USD",
       });
     } else {
       if (!form.adjustmentConcept.trim() || !form.adjustmentAmount) return;
-      onSubmit(row.accountId, {
+      onSubmit(row, {
         adjustment: {
           concept: form.adjustmentConcept.trim(),
           amount: Number(form.adjustmentAmount),
@@ -627,7 +649,9 @@ export function AccountAdjustModal({
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex-shrink-0">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Ajustar cuenta</h3>
+            <h3 className="text-base font-bold text-slate-900">
+              {hasFinancialAccount ? "Ajustar cuenta" : "Crear cuenta financiera"}
+            </h3>
             <p className="text-xs text-slate-500 mt-0.5">{row.fullName}</p>
           </div>
           <button
@@ -641,7 +665,7 @@ export function AccountAdjustModal({
         <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
           {/* Modo */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
-            {["amounts", "adjustment"].map((m) => (
+            {["amounts", ...(hasFinancialAccount ? ["adjustment"] : [])].map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
@@ -678,6 +702,11 @@ export function AccountAdjustModal({
 
           {mode === "amounts" ? (
             <>
+              {!hasFinancialAccount && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+                  Esta cuenta todavía no existe. Podés crearla aquí mismo para este participante.
+                </div>
+              )}
               <PlanField
                 label="Monto base (USD)"
                 value={form.baseAmount}
@@ -695,6 +724,25 @@ export function AccountAdjustModal({
                 onChange={(v) => set("scholarship", v)}
                 hint="Se resta del monto base"
               />
+              {plans.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Plan de pagos
+                  </label>
+                  <select
+                    value={form.paymentPlanId}
+                    onChange={(e) => set("paymentPlanId", e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+                  >
+                    <option value="">Sin plan asignado</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} · {fmtAmount(plan.totalAmount)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-600">
                 <span className="font-semibold">Total final = </span>
                 {fmtAmount(
@@ -744,7 +792,11 @@ export function AccountAdjustModal({
             disabled={loading}
             className="flex-1 py-2.5 rounded-2xl bg-gray-900 hover:bg-gray-700 text-white font-bold text-sm disabled:opacity-50 transition-all"
           >
-            {loading ? "Guardando…" : "Aplicar cambio"}
+            {loading
+              ? "Guardando…"
+              : hasFinancialAccount
+              ? "Aplicar cambio"
+              : "Crear cuenta"}
           </button>
         </div>
       </div>

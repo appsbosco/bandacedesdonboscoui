@@ -1,8 +1,12 @@
 import { useCallback, useMemo } from "react";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { DELETE_USER, DELETE_MEDICAL_RECORD } from "../graphql/mutations";
-import { GET_MEDICAL_RECORDS } from "../graphql/queries/members";
+import {
+  GET_MEDICAL_RECORDS,
+  PARENTS_PAGINATED_FOR_MEMBERS,
+  USERS_PAGINATED_FOR_MEMBERS,
+} from "../graphql/queries/members";
 
 /**
  * Provides member-page utilities WITHOUT loading the full user list.
@@ -11,6 +15,7 @@ import { GET_MEDICAL_RECORDS } from "../graphql/queries/members";
  * - deleteUserAndMedicalRecord: delete a user + their medical record
  */
 export function useMembersUtils() {
+  const client = useApolloClient();
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
     fetchPolicy: "cache-first",
   });
@@ -46,13 +51,19 @@ export function useMembersUtils() {
   const deleteUserAndMedicalRecord = useCallback(
     async ({ userId, medicalRecordId }) => {
       if (!userId) return false;
-      await deleteUser({ variables: { deleteUserId: userId } });
+
       if (medicalRecordId) {
         await deleteMedicalRecord({ variables: { deleteMedicalRecordId: medicalRecordId } });
       }
+
+      await deleteUser({ variables: { deleteUserId: userId } });
+      await client.refetchQueries({
+        include: [GET_MEDICAL_RECORDS, USERS_PAGINATED_FOR_MEMBERS, PARENTS_PAGINATED_FOR_MEMBERS],
+      });
+
       return true;
     },
-    [deleteUser, deleteMedicalRecord]
+    [client, deleteUser, deleteMedicalRecord]
   );
 
   return { userRole, getMedicalRecordForUserId, deleteUserAndMedicalRecord };

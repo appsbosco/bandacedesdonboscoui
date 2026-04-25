@@ -94,6 +94,17 @@ function sortDocumentsByFreshness(documents) {
   });
 }
 
+function useDebouncedValue(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timeoutId);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 function getOwnerLabel(owner) {
   if (!owner) return "Sin propietario";
   const fullName = [owner.name, owner.firstSurName, owner.secondSurName]
@@ -309,6 +320,37 @@ const ROW_STATUS_BORDER_COLOR = {
   REJECTED: "#DC2626",
 };
 
+const ADMIN_QUEUE_TABS = [
+  { value: "ALL", label: "Todos" },
+  { value: "PENDING", label: "Pendientes" },
+  { value: "ATTACHMENTS", label: "Adjuntos pendientes" },
+  { value: "URGENT", label: "Urgentes" },
+  { value: "PERSON", label: "Por integrante" },
+];
+
+const ADMIN_PRESET_CONFIG = {
+  ALL: {
+    label: "Todos",
+    description: "Universo completo visible con revisión progresiva.",
+  },
+  PENDING: {
+    label: "Pendientes",
+    description: "Solo integrantes con algo por revisar.",
+  },
+  ATTACHMENTS: {
+    label: "Adjuntos pendientes",
+    description: "Cola operativa para comprobantes y anexos.",
+  },
+  URGENT: {
+    label: "Urgentes",
+    description: "Vencidos o próximos a vencer.",
+  },
+  PERSON: {
+    label: "Por integrante",
+    description: "Búsqueda enfocada para revisar un caso específico.",
+  },
+};
+
 // ─── Small UI components ───────────────────────────────────────────────────────
 
 function TabButton({ active, onClick, children, count }) {
@@ -343,6 +385,61 @@ TabButton.propTypes = {
   onClick: PropTypes.func.isRequired,
   children: PropTypes.node.isRequired,
   count: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+};
+
+function FilterChip({ label, onRemove, tone = "default" }) {
+  const toneClasses =
+    tone === "priority"
+      ? "bg-amber-100 text-amber-800 ring-amber-200"
+      : "bg-slate-100 text-slate-700 ring-slate-200";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${toneClasses}`}
+    >
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded-full text-current opacity-70 transition-opacity hover:opacity-100"
+        aria-label={`Eliminar filtro ${label}`}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+FilterChip.propTypes = {
+  label: PropTypes.string.isRequired,
+  onRemove: PropTypes.func.isRequired,
+  tone: PropTypes.oneOf(["default", "priority"]),
+};
+
+function MetricCard({ label, value, hint, tone = "slate" }) {
+  const valueColor = {
+    slate: "text-slate-900",
+    emerald: "text-emerald-700",
+    sky: "text-sky-700",
+    violet: "text-violet-700",
+    amber: "text-amber-700",
+    red: "text-red-600",
+  }[tone];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${valueColor}`}>{value}</p>
+      <p className="text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
+MetricCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  hint: PropTypes.string.isRequired,
+  tone: PropTypes.oneOf(["slate", "emerald", "sky", "violet", "amber", "red"]),
 };
 
 function AggregateStatusBadge({ status }) {
@@ -1017,7 +1114,14 @@ CriticalDocBlock.defaultProps = {
 
 // ─── UserDetailPanel: slide-in panel with full user document detail ───────────
 
-function UserDetailPanel({ row, onClose }) {
+function UserDetailPanel({
+  row,
+  selectedIndex,
+  totalRows,
+  onClose,
+  onSelectPrevious,
+  onSelectNext,
+}) {
   const criticalDocs = row.documents.filter((d) => SENSITIVE_DOCUMENT_TYPES.includes(d.type));
   const otherDocs = row.documents.filter((d) => d.type === "OTHER");
 
@@ -1038,6 +1142,9 @@ function UserDetailPanel({ row, onClose }) {
           <p className="text-xs text-slate-500 truncate mt-0.5">
             {row.owner?.email || "Sin correo"}
           </p>
+          <p className="mt-1 text-[11px] font-medium text-slate-400">
+            Registro {selectedIndex + 1} de {totalRows}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
               {getOwnerRoleLabel(row.owner)}
@@ -1050,21 +1157,48 @@ function UserDetailPanel({ row, onClose }) {
             <AggregateStatusBadge status={row.aggregateStatus} />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          aria-label="Cerrar panel"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSelectPrevious}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Registro anterior"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onSelectNext}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Siguiente registro"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Cerrar panel"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Scrollable body */}
@@ -1126,7 +1260,11 @@ UserDetailPanel.propTypes = {
     owner: PropTypes.shape({ email: PropTypes.string }),
     documents: PropTypes.array,
   }).isRequired,
+  selectedIndex: PropTypes.number.isRequired,
+  totalRows: PropTypes.number.isRequired,
   onClose: PropTypes.func.isRequired,
+  onSelectPrevious: PropTypes.func.isRequired,
+  onSelectNext: PropTypes.func.isRequired,
 };
 
 // ─── MobileSummaryItem ────────────────────────────────────────────────────────
@@ -1595,27 +1733,46 @@ function MyDocumentsView() {
 // ─── AdminDocumentsView: master-detail layout for admins ──────────────────────
 
 function AdminDocumentsView() {
+  const getInitialFilters = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      rowStatusFilter: params.get("docStatus") || "ALL",
+      typeFilter: params.get("docType") || "",
+      ownerSearch: params.get("docQuery") || "",
+      roleFilter: params.get("docRole") || "",
+      instrumentFilter: params.get("docInstrument") || "",
+      otherReviewFilter: params.get("docOther") || "ALL",
+      sortBy: params.get("docSort") || "name",
+      activeQueue: params.get("docQueue") || "ALL",
+    };
+  }, []);
+
+  const initialFilters = useMemo(() => getInitialFilters(), [getInitialFilters]);
   const [pagination] = useState({ limit: 100, skip: 0 });
-  const [rowStatusFilter, setRowStatusFilter] = useState("ALL");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [ownerSearch, setOwnerSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [instrumentFilter, setInstrumentFilter] = useState("");
-  const [otherReviewFilter, setOtherReviewFilter] = useState("ALL");
-  const [expandedRowId, setExpandedRowId] = useState(null); // mobile expand
-  const [selectedRow, setSelectedRow] = useState(null); // desktop panel
-  const [sortBy, setSortBy] = useState("name"); // "name" | "recent"
+  const [rowStatusFilter, setRowStatusFilter] = useState(initialFilters.rowStatusFilter);
+  const [typeFilter, setTypeFilter] = useState(initialFilters.typeFilter);
+  const [ownerSearch, setOwnerSearch] = useState(initialFilters.ownerSearch);
+  const [roleFilter, setRoleFilter] = useState(initialFilters.roleFilter);
+  const [instrumentFilter, setInstrumentFilter] = useState(initialFilters.instrumentFilter);
+  const [otherReviewFilter, setOtherReviewFilter] = useState(initialFilters.otherReviewFilter);
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [sortBy, setSortBy] = useState(initialFilters.sortBy);
+  const [activeQueue, setActiveQueue] = useState(initialFilters.activeQueue);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const tableTopRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const loadMoreSentinelRef = useRef(null);
+  const debouncedOwnerSearch = useDebouncedValue(ownerSearch.trim(), 280);
 
-  // Scroll to the table top whenever a new row is selected so the panel is always visible
   useEffect(() => {
     if (!selectedRow || !tableTopRef.current) return;
     const rect = tableTopRef.current.getBoundingClientRect();
     if (rect.top < 20) {
       tableTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [selectedRow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedRow?.id]);
 
   const { data, loading, error, fetchMore } = useQuery(ALL_DOCUMENTS, {
     variables: { pagination },
@@ -1697,7 +1854,7 @@ function AdminDocumentsView() {
 
   const filteredRows = useMemo(() => {
     return groupedRows.filter((row) => {
-      const search = ownerSearch.trim().toLowerCase();
+      const search = debouncedOwnerSearch.toLowerCase();
 
       if (search) {
         const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
@@ -1711,10 +1868,7 @@ function AdminDocumentsView() {
       if (typeFilter === "PASSPORT" && !row.passport) return false;
       if (typeFilter === "VISA" && !row.visa) return false;
       if (typeFilter === "PERMISO_SALIDA" && !row.exitPermit) return false;
-      if (typeFilter === "OTHER") {
-        const hasOtherDocs = row.documents.some((document) => document.type === "OTHER");
-        if (!hasOtherDocs) return false;
-      }
+      if (typeFilter === "OTHER" && row.counts.other === 0) return false;
 
       if (otherReviewFilter === "WITH_OTHER" && row.counts.other === 0) return false;
       if (otherReviewFilter === "PENDING" && row.otherPendingCount === 0) return false;
@@ -1726,16 +1880,26 @@ function AdminDocumentsView() {
         return false;
       if (otherReviewFilter === "REJECTED" && row.otherReviewStatus !== "REJECTED") return false;
 
+      if (activeQueue === "PENDING" && row.aggregateStatus !== "INCOMPLETE") return false;
+      if (activeQueue === "ATTACHMENTS" && row.otherPendingCount === 0) return false;
+      if (
+        activeQueue === "URGENT" &&
+        row.aggregateStatus !== "EXPIRED" &&
+        row.aggregateStatus !== "EXPIRING"
+      )
+        return false;
+
       return true;
     });
   }, [
+    activeQueue,
+    debouncedOwnerSearch,
     groupedRows,
-    ownerSearch,
-    roleFilter,
     instrumentFilter,
+    otherReviewFilter,
+    roleFilter,
     rowStatusFilter,
     typeFilter,
-    otherReviewFilter,
   ]);
 
   const roleOptions = useMemo(
@@ -1752,6 +1916,23 @@ function AdminDocumentsView() {
         (a, b) => a.localeCompare(b, "es")
       ),
     [groupedRows]
+  );
+
+  const queueCounts = useMemo(
+    () => ({
+      ALL: groupedRows.length,
+      PENDING: groupedRows.filter((row) => row.aggregateStatus === "INCOMPLETE").length,
+      ATTACHMENTS: groupedRows.filter((row) => row.otherPendingCount > 0).length,
+      URGENT: groupedRows.filter(
+        (row) => row.aggregateStatus === "EXPIRED" || row.aggregateStatus === "EXPIRING"
+      ).length,
+      PERSON: groupedRows.filter((row) => {
+        if (!debouncedOwnerSearch) return true;
+        const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(debouncedOwnerSearch.toLowerCase());
+      }).length,
+    }),
+    [debouncedOwnerSearch, groupedRows]
   );
 
   const tableStats = useMemo(
@@ -1782,6 +1963,17 @@ function AdminDocumentsView() {
     [filteredRows]
   );
 
+  const searchSuggestions = useMemo(() => {
+    if (!ownerSearch.trim()) return [];
+    const search = ownerSearch.trim().toLowerCase();
+    return groupedRows
+      .filter((row) => {
+        const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(search);
+      })
+      .slice(0, 6);
+  }, [groupedRows, ownerSearch]);
+
   const handleLoadMore = useCallback(() => {
     if (!hasMore) return;
     fetchMore({
@@ -1793,7 +1985,114 @@ function AdminDocumentsView() {
     });
   }, [documents.length, fetchMore, hasMore, pagination]);
 
-  const clearFilters = () => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const entries = {
+      docStatus: rowStatusFilter !== "ALL" ? rowStatusFilter : "",
+      docType: typeFilter,
+      docQuery: ownerSearch.trim(),
+      docRole: roleFilter,
+      docInstrument: instrumentFilter,
+      docOther: otherReviewFilter !== "ALL" ? otherReviewFilter : "",
+      docSort: sortBy !== "name" ? sortBy : "",
+      docQueue: activeQueue !== "ALL" ? activeQueue : "",
+    };
+
+    Object.entries(entries).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${
+      window.location.hash
+    }`;
+    window.history.replaceState({}, "", nextUrl);
+  }, [
+    activeQueue,
+    instrumentFilter,
+    otherReviewFilter,
+    ownerSearch,
+    roleFilter,
+    rowStatusFilter,
+    sortBy,
+    typeFilter,
+  ]);
+
+  useEffect(() => {
+    setSelectedRow((current) => {
+      if (!filteredRows.length) return null;
+      if (!current) return filteredRows[0];
+      const nextMatch = filteredRows.find((row) => row.id === current.id);
+      return nextMatch || filteredRows[0];
+    });
+  }, [filteredRows]);
+
+  useEffect(() => {
+    if (!hasMore || !loadMoreSentinelRef.current) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) handleLoadMore();
+        });
+      },
+      { rootMargin: "240px 0px" }
+    );
+
+    observer.observe(loadMoreSentinelRef.current);
+    return () => observer.disconnect();
+  }, [handleLoadMore, hasMore]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const tagName = event.target?.tagName;
+      const isTypingTarget =
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT" ||
+        event.target?.isContentEditable;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (isTypingTarget) return;
+
+      if (event.key === "Escape") {
+        setSelectedRow(null);
+        return;
+      }
+
+      if (!filteredRows.length) return;
+
+      if (event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        setSelectedRow((current) => {
+          const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+          const nextIndex =
+            currentIndex >= 0 ? Math.min(filteredRows.length - 1, currentIndex + 1) : 0;
+          return filteredRows[nextIndex];
+        });
+      }
+
+      if (event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSelectedRow((current) => {
+          const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+          const nextIndex = currentIndex >= 0 ? Math.max(0, currentIndex - 1) : 0;
+          return filteredRows[nextIndex];
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredRows]);
+
+  const clearFilters = useCallback(() => {
     setRowStatusFilter("ALL");
     setTypeFilter("");
     setOwnerSearch("");
@@ -1801,18 +2100,106 @@ function AdminDocumentsView() {
     setInstrumentFilter("");
     setOtherReviewFilter("ALL");
     setSortBy("name");
-    setSelectedRow(null);
+    setActiveQueue("ALL");
     setExpandedRowId(null);
-  };
+  }, []);
 
-  const hasActiveFilters =
-    rowStatusFilter !== "ALL" ||
-    typeFilter ||
-    ownerSearch ||
-    roleFilter ||
-    instrumentFilter ||
-    otherReviewFilter !== "ALL" ||
-    sortBy !== "name";
+  const activeFilterChips = useMemo(() => {
+    const chips = [];
+
+    if (activeQueue !== "ALL") {
+      chips.push({
+        key: "queue",
+        label: `Vista: ${ADMIN_PRESET_CONFIG[activeQueue]?.label || activeQueue}`,
+        tone: "priority",
+        onRemove: () => setActiveQueue("ALL"),
+      });
+    }
+    if (rowStatusFilter !== "ALL") {
+      const match = TABLE_STATUS_FILTERS.find((option) => option.value === rowStatusFilter);
+      chips.push({
+        key: "status",
+        label: `Estado: ${match?.label || rowStatusFilter}`,
+        onRemove: () => setRowStatusFilter("ALL"),
+      });
+    }
+    if (typeFilter) {
+      const match = TYPE_OPTIONS.find((option) => option.value === typeFilter);
+      chips.push({
+        key: "type",
+        label: `Tipo: ${match?.label || typeFilter}`,
+        onRemove: () => setTypeFilter(""),
+      });
+    }
+    if (ownerSearch.trim()) {
+      chips.push({
+        key: "query",
+        label: `Integrante: ${ownerSearch.trim()}`,
+        onRemove: () => setOwnerSearch(""),
+      });
+    }
+    if (roleFilter) {
+      chips.push({
+        key: "role",
+        label: `Rol: ${roleFilter}`,
+        onRemove: () => setRoleFilter(""),
+      });
+    }
+    if (instrumentFilter) {
+      chips.push({
+        key: "instrument",
+        label: `Instrumento: ${instrumentFilter}`,
+        onRemove: () => setInstrumentFilter(""),
+      });
+    }
+    if (otherReviewFilter !== "ALL") {
+      const match = OTHER_REVIEW_FILTERS.find((option) => option.value === otherReviewFilter);
+      chips.push({
+        key: "other",
+        label: `Adjuntos: ${match?.label || otherReviewFilter}`,
+        onRemove: () => setOtherReviewFilter("ALL"),
+      });
+    }
+    if (sortBy !== "name") {
+      chips.push({
+        key: "sort",
+        label: "Orden: Más reciente",
+        onRemove: () => setSortBy("name"),
+      });
+    }
+
+    return chips;
+  }, [
+    activeQueue,
+    instrumentFilter,
+    otherReviewFilter,
+    ownerSearch,
+    roleFilter,
+    rowStatusFilter,
+    sortBy,
+    typeFilter,
+  ]);
+
+  const selectedRowIndex = selectedRow
+    ? filteredRows.findIndex((row) => row.id === selectedRow.id)
+    : -1;
+
+  const selectPreviousRow = useCallback(() => {
+    if (!filteredRows.length) return;
+    setSelectedRow((current) => {
+      const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+      return filteredRows[currentIndex > 0 ? currentIndex - 1 : 0];
+    });
+  }, [filteredRows]);
+
+  const selectNextRow = useCallback(() => {
+    if (!filteredRows.length) return;
+    setSelectedRow((current) => {
+      const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+      if (currentIndex < 0) return filteredRows[0];
+      return filteredRows[Math.min(filteredRows.length - 1, currentIndex + 1)];
+    });
+  }, [filteredRows]);
 
   const handleSelectRow = (row) => {
     setSelectedRow((current) => (current?.id === row.id ? null : row));
@@ -1820,254 +2207,281 @@ function AdminDocumentsView() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-700">Vista por integrante</span>
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-            >
-              Limpiar filtros
-            </button>
+      <div className="sticky top-4 z-10 rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-200/70 backdrop-blur">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="documents-admin-owner-search"
+                className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+              >
+                Buscar integrante
+              </label>
+              <div className="relative">
+                <input
+                  ref={searchInputRef}
+                  id="documents-admin-owner-search"
+                  type="text"
+                  value={ownerSearch}
+                  onChange={(e) => setOwnerSearch(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
+                  placeholder="Nombre, apellido o correo"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
+                />
+                {searchFocused && searchSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/80">
+                    {searchSuggestions.map((row) => (
+                      <button
+                        key={row.id}
+                        type="button"
+                        onMouseDown={() => {
+                          setOwnerSearch(row.ownerLabel);
+                          setActiveQueue("PERSON");
+                          setSelectedRow(row);
+                        }}
+                        className="flex w-full items-start justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-50"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-slate-900">
+                            {row.ownerLabel}
+                          </span>
+                          <span className="block truncate text-xs text-slate-500">
+                            {row.owner?.email || "Sin correo"}
+                          </span>
+                        </span>
+                        <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                          {row.counts.total}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveQueue("ATTACHMENTS");
+                  setTypeFilter("OTHER");
+                  setOtherReviewFilter("PENDING");
+                  setSortBy("recent");
+                }}
+                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-700"
+              >
+                Cola de adjuntos
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveQueue("URGENT");
+                  setSortBy("recent");
+                }}
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Solo urgentes
+              </button>
+              {activeFilterChips.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-6">
+            <div>
+              <label
+                htmlFor="documents-admin-status-filter"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Estado general
+              </label>
+              <select
+                id="documents-admin-status-filter"
+                value={rowStatusFilter}
+                onChange={(e) => setRowStatusFilter(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                {TABLE_STATUS_FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="documents-admin-type-filter"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Tipo de documento
+              </label>
+              <select
+                id="documents-admin-type-filter"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                {TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="documents-admin-role-filter"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Rol
+              </label>
+              <select
+                id="documents-admin-role-filter"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                <option value="">Todos los roles</option>
+                {roleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="documents-admin-instrument-filter"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Instrumento
+              </label>
+              <select
+                id="documents-admin-instrument-filter"
+                value={instrumentFilter}
+                onChange={(e) => setInstrumentFilter(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                <option value="">Todos los instrumentos</option>
+                {instrumentOptions.map((instrument) => (
+                  <option key={instrument} value={instrument}>
+                    {instrument}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="documents-admin-sort"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Ordenar por
+              </label>
+              <select
+                id="documents-admin-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                <option value="name">Nombre (A–Z)</option>
+                <option value="recent">Más reciente primero</option>
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="documents-admin-other-filter"
+                className="block text-xs text-slate-500 mb-1 font-medium"
+              >
+                Adjuntos
+              </label>
+              <select
+                id="documents-admin-other-filter"
+                value={otherReviewFilter}
+                onChange={(e) => setOtherReviewFilter(e.target.value)}
+                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
+              >
+                {OTHER_REVIEW_FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {activeFilterChips.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {activeFilterChips.map((chip) => (
+                <FilterChip
+                  key={chip.key}
+                  label={chip.label}
+                  tone={chip.tone}
+                  onRemove={chip.onRemove}
+                />
+              ))}
+            </div>
           )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
-          <div>
-            <label
-              htmlFor="documents-admin-status-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Estado general
-            </label>
-            <select
-              id="documents-admin-status-filter"
-              value={rowStatusFilter}
-              onChange={(e) => setRowStatusFilter(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              {TABLE_STATUS_FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                  {option.value !== "ALL" && tableStats[option.value] != null
-                    ? ` (${tableStats[option.value]})`
-                    : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-type-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Tipo de documento
-            </label>
-            <select
-              id="documents-admin-type-filter"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              {TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-owner-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Buscar integrante
-            </label>
-            <input
-              id="documents-admin-owner-filter"
-              type="text"
-              value={ownerSearch}
-              onChange={(e) => setOwnerSearch(e.target.value)}
-              placeholder="Nombre, apellido o correo"
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-role-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Rol
-            </label>
-            <select
-              id="documents-admin-role-filter"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              <option value="">Todos los roles</option>
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-instrument-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Instrumento
-            </label>
-            <select
-              id="documents-admin-instrument-filter"
-              value={instrumentFilter}
-              onChange={(e) => setInstrumentFilter(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              <option value="">Todos los instrumentos</option>
-              {instrumentOptions.map((instrument) => (
-                <option key={instrument} value={instrument}>
-                  {instrument}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-sort"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Ordenar por
-            </label>
-            <select
-              id="documents-admin-sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              <option value="name">Nombre (A–Z)</option>
-              <option value="recent">Más reciente primero</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="documents-admin-other-filter"
-              className="block text-xs text-slate-500 mb-1 font-medium"
-            >
-              Adjuntos
-            </label>
-            <select
-              id="documents-admin-other-filter"
-              value={otherReviewFilter}
-              onChange={(e) => setOtherReviewFilter(e.target.value)}
-              className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-            >
-              {OTHER_REVIEW_FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setTypeFilter("OTHER");
-              setOtherReviewFilter("PENDING");
-              setSortBy("recent");
-            }}
-            className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-700"
-          >
-            Cola de adjuntos pendientes
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTypeFilter("OTHER");
-              setOtherReviewFilter("WITH_OTHER");
-            }}
-            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            Solo integrantes con adjuntos
-          </button>
         </div>
       </div>
 
-      {/* Stats cards */}
       {!loading && !error && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
-                Integrantes
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">{filteredRows.length}</p>
-              <p className="text-xs text-slate-500">con documentos</p>
-            </div>
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
-                Pasaportes
-              </p>
-              <p className="mt-1 text-2xl font-bold text-emerald-700">{tableStats.passport}</p>
-              <p className="text-xs text-slate-500">cargados</p>
-            </div>
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">Visas</p>
-              <p className="mt-1 text-2xl font-bold text-sky-700">{tableStats.visa}</p>
-              <p className="text-xs text-slate-500">cargadas</p>
-            </div>
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
-                Permisos
-              </p>
-              <p className="mt-1 text-2xl font-bold text-violet-700">{tableStats.exitPermit}</p>
-              <p className="text-xs text-slate-500">cargados</p>
-            </div>
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
-                Adjuntos pendientes
-              </p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">{tableStats.otherPending}</p>
-              <p className="text-xs text-slate-500">por revisar</p>
-            </div>
-            <div className="bg-white rounded-2xl ring-1 ring-slate-200 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
-                Vencidos / Urgentes
-              </p>
-              <p className="mt-1 text-2xl font-bold text-red-600">
-                {(tableStats.EXPIRED || 0) + (tableStats.EXPIRING || 0)}
-              </p>
-              <p className="text-xs text-slate-500">requieren atención</p>
-            </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            <MetricCard
+              label="Integrantes"
+              value={filteredRows.length}
+              hint="visibles en esta cola"
+            />
+            <MetricCard
+              label="Pasaportes"
+              value={tableStats.passport}
+              hint="cargados"
+              tone="emerald"
+            />
+            <MetricCard label="Visas" value={tableStats.visa} hint="cargadas" tone="sky" />
+            <MetricCard
+              label="Permisos"
+              value={tableStats.exitPermit}
+              hint="cargados"
+              tone="violet"
+            />
+            <MetricCard
+              label="Adjuntos pendientes"
+              value={tableStats.otherPending}
+              hint="por revisar"
+              tone="amber"
+            />
+            <MetricCard
+              label="Vencidos / Urgentes"
+              value={(tableStats.EXPIRED || 0) + (tableStats.EXPIRING || 0)}
+              hint="requieren atención"
+              tone="red"
+            />
           </div>
 
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-sm text-slate-500">
-              {documents.length} de {total} documento{total !== 1 ? "s" : ""} en memoria
+          <div className="flex flex-wrap items-center gap-2 px-1">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
+              {documents.length} de {total} documento{total !== 1 ? "s" : ""} en memoria activa
             </span>
-            {hasActiveFilters && (
+            {activeFilterChips.length > 0 && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
                 Filtros activos
               </span>
             )}
+            <span className="text-xs text-slate-400">
+              La lista precarga más filas al acercarte al final.
+            </span>
           </div>
         </>
       )}
 
-      {/* Content */}
       {loading && documents.length === 0 ? (
         <DocumentList
           documents={[]}
@@ -2092,12 +2506,11 @@ function AdminDocumentsView() {
         <div className="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm p-10 text-center">
           <h3 className="text-lg font-semibold text-slate-900">No se encontraron integrantes</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Ajusta los filtros o carga más documentos para ampliar la tabla.
+            Ajusta los filtros o deja que la cola cargue más registros.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Mobile: stack cards */}
           <div className="space-y-4 lg:hidden">
             {filteredRows.map((row) => (
               <MobileRowCard
@@ -2109,13 +2522,11 @@ function AdminDocumentsView() {
             ))}
           </div>
 
-          {/* Desktop: master-detail layout */}
           <div ref={tableTopRef} className="hidden lg:flex gap-4 items-start scroll-mt-4">
-            {/* Table */}
             <div className="flex-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="sticky top-0 z-[1] bg-slate-50 border-b border-slate-200">
                     <tr>
                       {[
                         { label: "Integrante", align: "left" },
@@ -2124,6 +2535,7 @@ function AdminDocumentsView() {
                         { label: "Visa", align: "center" },
                         { label: "Permiso de salida", align: "center" },
                         { label: "Adjuntos", align: "center" },
+                        { label: "Actualizado", align: "center" },
                         { label: "", align: "right" },
                       ].map((col) => (
                         <th
@@ -2151,7 +2563,6 @@ function AdminDocumentsView() {
                           `}
                           onClick={() => handleSelectRow(row)}
                         >
-                          {/* Integrante */}
                           <td className="px-4 py-4 align-middle">
                             <p className="text-sm font-semibold text-slate-900 leading-tight">
                               {row.ownerLabel}
@@ -2172,19 +2583,10 @@ function AdminDocumentsView() {
                                 </span>
                               )}
                             </div>
-                            {sortBy === "recent" && row.lastUploadDate > 0 && (
-                              <p className="mt-0.5 text-[10px] text-slate-400">
-                                Último: {formatDate(new Date(row.lastUploadDate).toISOString())}
-                              </p>
-                            )}
                           </td>
-
-                          {/* Estado */}
                           <td className="px-4 py-4 text-center align-middle">
                             <AggregateStatusBadge status={row.aggregateStatus} />
                           </td>
-
-                          {/* Pasaporte */}
                           <td className="px-4 py-4 text-center align-middle">
                             <DocumentSlot
                               doc={row.passport}
@@ -2192,8 +2594,6 @@ function AdminDocumentsView() {
                               showExpiry
                             />
                           </td>
-
-                          {/* Visa */}
                           <td className="px-4 py-4 text-center align-middle">
                             <DocumentSlot
                               doc={row.visa}
@@ -2201,8 +2601,6 @@ function AdminDocumentsView() {
                               showExpiry
                             />
                           </td>
-
-                          {/* Permiso de salida */}
                           <td className="px-4 py-4 text-center align-middle">
                             <DocumentSlot
                               doc={row.exitPermit}
@@ -2210,36 +2608,58 @@ function AdminDocumentsView() {
                               showExpiry={false}
                             />
                           </td>
-
-                          {/* Adjuntos (Other) — neutral badge, never competes */}
                           <td className="px-4 py-4 text-center align-middle">
-                            <OtherDocsBadge count={row.counts.other} />
+                            <div className="flex flex-col items-center gap-1.5">
+                              <OtherDocsBadge count={row.counts.other} />
+                              {row.otherPendingCount > 0 && (
+                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200">
+                                  {row.otherPendingCount} pendiente(s)
+                                </span>
+                              )}
+                            </div>
                           </td>
-
-                          {/* Chevron / select indicator */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <span className="text-xs text-slate-500">
+                              {row.lastUploadDate > 0
+                                ? formatDate(new Date(row.lastUploadDate).toISOString())
+                                : "—"}
+                            </span>
+                          </td>
                           <td className="px-4 py-4 text-right align-middle">
-                            <div
-                              className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all ${
-                                isSelected
-                                  ? "bg-blue-600 text-white"
-                                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                              }`}
-                            >
-                              <svg
-                                className={`w-4 h-4 transition-transform ${
-                                  isSelected ? "rotate-90" : ""
-                                }`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedRow(row);
+                                }}
+                                className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
+                                Revisar
+                              </button>
+                              <div
+                                className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                                  isSelected
+                                    ? "bg-blue-600 text-white"
+                                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-transform ${
+                                    isSelected ? "rotate-90" : ""
+                                  }`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5l7 7-7 7"
+                                  />
+                                </svg>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -2253,21 +2673,22 @@ function AdminDocumentsView() {
                 <span className="text-xs text-slate-500">
                   {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
                   {selectedRow
-                    ? " · Haz clic en otra fila para cambiar el detalle"
+                    ? " · Usa J/K para cambiar de registro"
                     : " · Haz clic en una fila para ver el detalle"}
                 </span>
                 {hasMore && (
                   <button
+                    type="button"
                     onClick={handleLoadMore}
-                    className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 transition-colors"
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
                   >
-                    Cargar más
+                    Cargar siguiente bloque
                   </button>
                 )}
               </div>
+              <div ref={loadMoreSentinelRef} className="h-2 w-full" />
             </div>
 
-            {/* Detail panel */}
             {selectedRow && (
               <div
                 className="w-96 flex-shrink-0 sticky top-4"
@@ -2276,7 +2697,11 @@ function AdminDocumentsView() {
                 <UserDetailPanel
                   key={selectedRow.id}
                   row={selectedRow}
+                  selectedIndex={Math.max(selectedRowIndex, 0)}
+                  totalRows={filteredRows.length}
                   onClose={() => setSelectedRow(null)}
+                  onSelectPrevious={selectPreviousRow}
+                  onSelectNext={selectNextRow}
                 />
               </div>
             )}

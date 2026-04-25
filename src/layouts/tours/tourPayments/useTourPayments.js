@@ -36,7 +36,8 @@
 
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { DELETE_TOUR_PARTICIPANT } from "../tours.gql";
+import { GET_USERS } from "graphql/queries";
+import { CREATE_TOUR_PARTICIPANT, DELETE_TOUR_PARTICIPANT } from "../tours.gql";
 import {
   GET_FINANCIAL_TABLE,
   GET_FINANCIAL_SUMMARY,
@@ -45,6 +46,7 @@ import {
   GET_PAYMENTS_BY_PARTICIPANT,
   GET_INSTALLMENTS_BY_PARTICIPANT,
   GET_PAYMENT_FLOW,
+  CREATE_FINANCIAL_ACCOUNT,
   CREATE_PAYMENT_PLAN,
   UPDATE_PAYMENT_PLAN,
   DELETE_PAYMENT_PLAN,
@@ -174,6 +176,7 @@ export function useTourPayments(tourId) {
   const [registerModal, setRegisterModal] = useState({ open: false, participant: null });
   const [deletePayModal, setDeletePayModal] = useState({ open: false, payment: null });
   const [deleteParticipantModal, setDeleteParticipantModal] = useState({ open: false, participant: null });
+  const [createParticipantModal, setCreateParticipantModal] = useState({ open: false });
   const [accountModal, setAccountModal] = useState({ open: false, account: null });
   const [planModal, setPlanModal] = useState({ open: false, plan: null, mode: "create" });
   const [setupModal, setSetupModal] = useState({ open: false });
@@ -246,6 +249,11 @@ const { data: accountsData, loading: accountsLoading, refetch: refetchAccounts }
   const { data: flowData, loading: flowLoading } = useQuery(GET_PAYMENT_FLOW, {
     variables: { tourId },
     skip: !tourId || activeView !== "summary",
+    fetchPolicy: "cache-and-network",
+  });
+
+  const { data: usersData, loading: usersLoading } = useQuery(GET_USERS, {
+    skip: !createParticipantModal.open,
     fetchPolicy: "cache-and-network",
   });
 
@@ -408,6 +416,18 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     }
   );
 
+  const [createFinancialAccount, { loading: creatingAccount }] = useMutation(
+    CREATE_FINANCIAL_ACCOUNT,
+    {
+      onCompleted: () => {
+        showToast("Cuenta financiera creada");
+        setAccountModal({ open: false, participantId: null, row: null });
+        refetchAfterAccountChange();
+      },
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
   const [assignPlanToAll, { loading: assigningPlan }] = useMutation(ASSIGN_DEFAULT_PLAN_TO_ALL, {
     onCompleted: (data) => {
       const r = data.assignDefaultPlanToAll;
@@ -428,11 +448,36 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     }
   );
 
+  const [createParticipantMutation, { loading: creatingParticipant }] = useMutation(
+    CREATE_TOUR_PARTICIPANT,
+    {
+      refetchQueries: [
+        "GetFinancialTable",
+        "GetFinancialSummary",
+        "GetTourParticipantsPlanner",
+        "GetTourParticipantsForRooms",
+        "GetParticipantsForPayment",
+      ],
+      awaitRefetchQueries: true,
+      onCompleted: () => {
+        showToast("Participante agregado correctamente");
+        setCreateParticipantModal({ open: false });
+        refetchAll();
+      },
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
   const [deleteParticipantMutation, { loading: deletingParticipant }] = useMutation(
     DELETE_TOUR_PARTICIPANT,
     {
-      onCompleted: () => {
-        showToast("Participante eliminado correctamente");
+      onCompleted: (data) => {
+        const result = data?.deleteTourParticipant;
+        const message =
+          result?.deletionMode === "SOFT"
+            ? "Participante retirado de la gira. Se conservó el historial financiero."
+            : "Participante eliminado correctamente";
+        showToast(message);
         setDeleteParticipantModal({ open: false, participant: null });
         refetchAll();
       },
@@ -560,10 +605,27 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
   }, [deletePayment, deletePayModal.payment]);
 
   const handleUpdateAccount = useCallback(
-    async (id, input) => {
-      await updateAccount({ variables: { id, input } });
+    async (row, input) => {
+      if (!row?.hasFinancialAccount) {
+        await createFinancialAccount({
+          variables: {
+            input: {
+              tourId,
+              participantId: row.participantId,
+              paymentPlanId: input.paymentPlanId || undefined,
+              currency: input.currency || "USD",
+              baseAmount: input.baseAmount ?? 0,
+              discount: input.discount ?? 0,
+              scholarship: input.scholarship ?? 0,
+            },
+          },
+        });
+        return;
+      }
+
+      await updateAccount({ variables: { id: row.accountId, input } });
     },
-    [updateAccount]
+    [createFinancialAccount, tourId, updateAccount]
   );
 
   const handleCreatePlan = useCallback(
@@ -612,6 +674,18 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     });
   }, [deleteParticipantMutation, deleteParticipantModal.participant]);
 
+  const handleCreateParticipant = useCallback(
+    async (input) => {
+      await createParticipantMutation({
+        variables: {
+          tourId,
+          input,
+        },
+      });
+    },
+    [createParticipantMutation, tourId]
+  );
+
   const loading = tableLoading || summaryLoading;
 
   return {
@@ -642,6 +716,8 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     setStatusFilter,
     toast,
     setToast,
+    users: usersData?.getUsers ?? EMPTY_ARRAY,
+    usersLoading,
 
     // ── Modals ────────────────────────────────────────────────────────────────
     registerModal,
@@ -650,6 +726,8 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     setDeletePayModal,
     deleteParticipantModal,
     setDeleteParticipantModal,
+    createParticipantModal,
+    setCreateParticipantModal,
     accountModal,
     setAccountModal,
     planModal,
@@ -663,6 +741,7 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     handleRegisterPayment,
     handleDeletePayment,
     handleDeleteParticipant,
+    handleCreateParticipant,
     handleUpdateAccount,
     handleCreatePlan,
     handleUpdatePlan,
@@ -680,7 +759,8 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     registering,
     deletingPay,
     deletingParticipant,
-    updatingAccount,
+    creatingParticipant,
+    updatingAccount: updatingAccount || creatingAccount,
     creatingPlan,
     updatingPlan,
     deletingPlan,

@@ -267,6 +267,86 @@ function Field({ label, placeholder, value, onChange, readOnly = false }) {
   );
 }
 
+function TextArea({ label, placeholder, value, onChange, rows = 3 }) {
+  return (
+    <div>
+      <label
+        style={{
+          display: "block",
+          fontSize: "11px",
+          fontWeight: 600,
+          color: "#6B7280",
+          marginBottom: "6px",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}
+      >
+        {label}
+      </label>
+      <textarea
+        value={value}
+        placeholder={placeholder}
+        rows={rows}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          fontSize: "14px",
+          border: "1px solid #E5E7EB",
+          borderRadius: "10px",
+          outline: "none",
+          boxSizing: "border-box",
+          resize: "vertical",
+          fontFamily: "inherit",
+        }}
+        onFocus={(e) => (e.target.style.borderColor = "#111827")}
+        onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+      />
+    </div>
+  );
+}
+
+function VisaStatusSelect({ value, onChange }) {
+  return (
+    <div>
+      <label
+        style={{
+          display: "block",
+          fontSize: "11px",
+          fontWeight: 600,
+          color: "#6B7280",
+          marginBottom: "6px",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}
+      >
+        Estado operativo de visa
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          fontSize: "14px",
+          border: "1px solid #E5E7EB",
+          borderRadius: "10px",
+          outline: "none",
+          background: "#fff",
+        }}
+        onFocus={(e) => (e.target.style.borderColor = "#111827")}
+        onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+      >
+        <option value="UNKNOWN">Sin definir</option>
+        <option value="PENDING">Pendiente</option>
+        <option value="APPROVED">Aprobada</option>
+        <option value="DENIED">Negada</option>
+        <option value="EXPIRED">Vencida</option>
+      </select>
+    </div>
+  );
+}
+
 // ── Section wrapper ───────────────────────────────────────────────────────────
 
 function Section({ title, children }) {
@@ -307,6 +387,9 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
   const [visaDate, setVisaDate] = useState({ day: "", month: "", year: "" });
   const [hasExitPermit, setHasExitPermit] = useState(false);
   const [notes, setNotes] = useState("");
+  const [visaStatus, setVisaStatus] = useState("UNKNOWN");
+  const [visaStatusReason, setVisaStatusReason] = useState("");
+  const [visaStatusNotes, setVisaStatusNotes] = useState("");
 
   useEffect(() => {
     if (!participant) return;
@@ -316,6 +399,9 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
     setVisaDate(isoToParts(participant.visaExpiry));
     setHasExitPermit(participant.hasExitPermit || false);
     setNotes(participant.notes || "");
+    setVisaStatus(participant.visaStatus || "UNKNOWN");
+    setVisaStatusReason(participant.visaLastDeniedReason || "");
+    setVisaStatusNotes(participant.visaNotes || "");
   }, [participant]);
 
   if (!participant) return null;
@@ -339,6 +425,11 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
         (!hasVisa || !visaDate.day || visaIso)
       );
 
+  const visaStatusChanged =
+    visaStatus !== (participant.visaStatus || "UNKNOWN") ||
+    visaStatusReason !== (participant.visaLastDeniedReason || "") ||
+    visaStatusNotes !== (participant.visaNotes || "");
+
   const handleSubmit = () => {
     if (!canSave) return;
     const input = isSyncedFromDocuments
@@ -353,6 +444,13 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
           hasExitPermit,
           notes: notes.trim() || null,
         };
+    if (visaStatusChanged) {
+      input.visaStatusUpdate = {
+        status: visaStatus,
+        reason: visaStatusReason.trim() || null,
+        notes: visaStatusNotes.trim() || null,
+      };
+    }
     onSave(participant.id, input);
   };
 
@@ -544,6 +642,62 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
             )}
           </Section>
 
+          <Section title="Estado operativo de visa">
+            <VisaStatusSelect value={visaStatus} onChange={setVisaStatus} />
+
+            {participant.visaDeniedCount > 0 && (
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  color: "#991B1B",
+                  fontSize: "12px",
+                  lineHeight: 1.5,
+                }}
+              >
+                Historial: {participant.visaDeniedCount} negativa
+                {participant.visaDeniedCount !== 1 ? "s" : ""}.
+                {participant.visaLastDeniedAt
+                  ? ` Última el ${new Date(participant.visaLastDeniedAt).toLocaleDateString("es-CR")}.`
+                  : ""}
+              </div>
+            )}
+
+            <Field
+              label="Motivo / referencia"
+              placeholder="Ej: Negada en entrevista consular"
+              value={visaStatusReason}
+              onChange={setVisaStatusReason}
+            />
+
+            <TextArea
+              label="Notas de estado"
+              placeholder="Detalle operativo o seguimiento interno"
+              value={visaStatusNotes}
+              onChange={setVisaStatusNotes}
+              rows={3}
+            />
+
+            {visaStatus === "DENIED" && (
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  color: "#991B1B",
+                  fontSize: "12px",
+                  lineHeight: 1.5,
+                }}
+              >
+                Al marcar visa negada, el participante queda bloqueado para vuelos, habitaciones,
+                rutas e itinerarios, y se limpia automáticamente de asignaciones activas.
+              </div>
+            )}
+          </Section>
+
           {/* Exit permit — only show for minors or when age is unknown */}
           {isAdult !== true && (
             <Section title="Permiso de salida de menores">
@@ -676,7 +830,11 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
               if (!saving && canSave) e.currentTarget.style.background = "#111827";
             }}
           >
-            {saving ? "Guardando…" : isSyncedFromDocuments ? "Guardar notas" : "Guardar cambios"}
+            {saving
+              ? "Guardando…"
+              : isSyncedFromDocuments && !visaStatusChanged
+              ? "Guardar notas"
+              : "Guardar cambios"}
           </button>
         </div>
       </div>

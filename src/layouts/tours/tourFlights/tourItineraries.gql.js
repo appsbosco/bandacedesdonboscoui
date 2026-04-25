@@ -29,6 +29,8 @@ const ITINERARY_CORE = gql`
       secondSurname
       identification
       instrument
+      visaStatus
+      visaDeniedCount
     }
     leaders {
       id

@@ -20,6 +20,8 @@ const GET_TOUR_PARTICIPANTS_MODAL = gql`
       secondSurname
       identification
       instrument
+      visaStatus
+      visaDeniedCount
     }
   }
 `;
@@ -30,6 +32,13 @@ function participantName(p) {
 
 function resultsLabel(n) {
   return `${n} resultado${n !== 1 ? "s" : ""}`;
+}
+
+function getVisaDeniedLabel(count) {
+  if (!count) return null;
+  if (count === 1) return "1ra negativa";
+  if (count === 2) return "2da negativa";
+  return `${count} negativas`;
 }
 
 export default function ItineraryPassengersModal({
@@ -437,14 +446,38 @@ export default function ItineraryPassengersModal({
                       />
                       <div className="space-y-2">
                         {inOtherItinerary.map((p) => (
-                          <div key={p.id} className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-2xl opacity-80">
-                            <Avatar participant={p} color="amber" />
+                          <div
+                            key={p.id}
+                            className={`flex items-center gap-3 p-3 rounded-2xl opacity-80 ${
+                              p.visaStatus === "DENIED"
+                                ? "bg-rose-50 border border-rose-100"
+                                : "bg-amber-50 border border-amber-100"
+                            }`}
+                          >
+                            <Avatar participant={p} color={p.visaStatus === "DENIED" ? "rose" : "amber"} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{participantName(p)}</p>
-                              <p className="text-xs text-amber-700">{inOtherItineraryMap.get(p.id)}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className={`text-sm font-semibold truncate ${p.visaStatus === "DENIED" ? "text-rose-900" : "text-gray-900"}`}>
+                                  {participantName(p)}
+                                </p>
+                                {p.visaStatus === "DENIED" && (
+                                  <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                                    Visa negada
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-xs ${p.visaStatus === "DENIED" ? "text-rose-700" : "text-amber-700"}`}>
+                                {inOtherItineraryMap.get(p.id)}
+                              </p>
                             </div>
-                            <span className="text-xs text-amber-600 font-semibold px-2 py-1 bg-amber-100 rounded-lg flex-shrink-0">
-                              Bloqueado
+                            <span
+                              className={`text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0 ${
+                                p.visaStatus === "DENIED"
+                                  ? "text-rose-700 bg-rose-100"
+                                  : "text-amber-600 bg-amber-100"
+                              }`}
+                            >
+                              {p.visaStatus === "DENIED" ? "Visa negada" : "Bloqueado"}
                             </span>
                           </div>
                         ))}
@@ -528,6 +561,9 @@ export default function ItineraryPassengersModal({
 // ── Internal components ───────────────────────────────────────────────────────
 
 function ParticipantRow({ participant, selected, onToggle, removeMode = false, disabled = false }) {
+  const visaDenied = participant.visaStatus === "DENIED";
+  const visaDeniedLabel = getVisaDeniedLabel(participant.visaDeniedCount);
+
   return (
     <div
       onClick={disabled ? undefined : onToggle}
@@ -538,6 +574,8 @@ function ParticipantRow({ participant, selected, onToggle, removeMode = false, d
           ? removeMode
             ? "bg-red-50 border-red-300 cursor-pointer"
             : "bg-blue-50 border-blue-300 cursor-pointer"
+          : visaDenied
+          ? "bg-rose-50 border-rose-200 hover:border-rose-300 cursor-pointer"
           : "bg-gray-50 border-gray-100 hover:border-gray-200 cursor-pointer"
       }`}
     >
@@ -556,19 +594,33 @@ function ParticipantRow({ participant, selected, onToggle, removeMode = false, d
           </svg>
         )}
       </div>
-      <Avatar participant={participant} />
+      <Avatar participant={participant} color={visaDenied ? "rose" : "gray"} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 truncate">
-          {[participant.firstName, participant.firstSurname, participant.secondSurname]
-            .filter(Boolean)
-            .join(" ")}
-        </p>
-        <p className="text-xs text-gray-500">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className={`text-sm font-semibold truncate ${visaDenied ? "text-rose-900" : "text-gray-900"}`}>
+            {[participant.firstName, participant.firstSurname, participant.secondSurname]
+              .filter(Boolean)
+              .join(" ")}
+          </p>
+          {visaDenied && (
+            <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+              Visa negada
+            </span>
+          )}
+        </div>
+        <p className={`text-xs ${visaDenied ? "text-rose-700" : "text-gray-500"}`}>
           {participant.identification}
           {participant.instrument && (
-            <span className="ml-2 text-gray-400">{participant.instrument}</span>
+            <span className={`ml-2 ${visaDenied ? "text-rose-500" : "text-gray-400"}`}>
+              {participant.instrument}
+            </span>
           )}
         </p>
+        {visaDenied && (
+          <p className="text-[11px] font-semibold text-rose-700 mt-0.5">
+            {visaDeniedLabel || "Visa negada"}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -579,6 +631,7 @@ function Avatar({ participant, color = "gray" }) {
     gray:  "bg-gray-200 text-gray-600",
     amber: "bg-amber-200 text-amber-800",
     blue:  "bg-blue-200 text-blue-800",
+    rose:  "bg-rose-200 text-rose-800",
   };
   return (
     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${colors[color] || colors.gray}`}>

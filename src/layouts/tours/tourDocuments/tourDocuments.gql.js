@@ -29,6 +29,31 @@ export const GET_TOUR_PARTICIPANTS_DOCS = gql`
       passportExpiry
       hasVisa
       visaExpiry
+      visaStatus
+      visaDecisionDate
+      visaDeniedCount
+      visaLastDeniedAt
+      visaLastDeniedReason
+      visaBlockedAt
+      visaNotes
+      visaBlockedBy {
+        id
+        name
+        firstSurName
+      }
+      visaHistory {
+        id
+        status
+        reason
+        notes
+        decidedAt
+        denialOrdinal
+        decidedBy {
+          id
+          name
+          firstSurName
+        }
+      }
       hasExitPermit
       # Audit
       createdAt
@@ -54,6 +79,42 @@ export const UPDATE_PARTICIPANT_DOCS = gql`
       visaExpiry
       hasExitPermit
       notes
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_PARTICIPANT_VISA_STATUS = gql`
+  mutation UpdateParticipantVisaStatus($participantId: ID!, $input: UpdateTourParticipantVisaStatusInput!) {
+    updateTourParticipantVisaStatus(participantId: $participantId, input: $input) {
+      id
+      hasVisa
+      visaExpiry
+      visaStatus
+      visaDecisionDate
+      visaDeniedCount
+      visaLastDeniedAt
+      visaLastDeniedReason
+      visaBlockedAt
+      visaNotes
+      visaBlockedBy {
+        id
+        name
+        firstSurName
+      }
+      visaHistory {
+        id
+        status
+        reason
+        notes
+        decidedAt
+        denialOrdinal
+        decidedBy {
+          id
+          name
+          firstSurName
+        }
+      }
       updatedAt
     }
   }

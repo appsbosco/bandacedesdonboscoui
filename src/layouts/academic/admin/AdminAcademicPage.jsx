@@ -1338,8 +1338,7 @@ export default function AdminAcademicPage() {
     handleDeleteSubject,
     handleCreatePeriod,
     handleUpdatePeriod,
-    handleReview,
-    handleUpdateEvaluationAsAdmin,
+    handleReviewEvaluationAsAdmin,
     handleDeleteEvaluationAsAdmin,
     toast,
   } = useAcademicDashboard();
@@ -1453,17 +1452,7 @@ export default function AdminAcademicPage() {
               <PendingEvaluationsTab
                 evaluations={pendingEvaluations}
                 loading={loadingPendingEvals}
-                onReview={async (id, status, reviewComment, input) => {
-                  if (input) {
-                    await handleUpdateEvaluationAsAdmin(id, input, {
-                      refresh: !status,
-                      toastMessage: status ? null : "Nota actualizada",
-                    });
-                  }
-                  if (status) {
-                    await handleReview(id, status, reviewComment);
-                  }
-                }}
+                onReview={handleReviewEvaluationAsAdmin}
                 reviewing={reviewing || updatingEvaluation}
                 onDelete={handleDeleteEvaluationAsAdmin}
                 deleting={deletingEvaluation}
@@ -1534,17 +1523,7 @@ export default function AdminAcademicPage() {
         loadingPerf={loadingStudentPerf}
         allUsers={allUsers}
         onClose={closeStudentDrawer}
-        onReview={async (id, status, reviewComment, input) => {
-          if (input) {
-            await handleUpdateEvaluationAsAdmin(id, input, {
-              refresh: !status,
-              toastMessage: status ? null : "Nota actualizada",
-            });
-          }
-          if (status) {
-            await handleReview(id, status, reviewComment);
-          }
-        }}
+        onReview={handleReviewEvaluationAsAdmin}
         reviewing={reviewing || updatingEvaluation}
         onDelete={handleDeleteEvaluationAsAdmin}
         deleting={deletingEvaluation}

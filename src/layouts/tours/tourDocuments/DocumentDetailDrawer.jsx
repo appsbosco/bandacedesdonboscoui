@@ -129,6 +129,7 @@ function Card({ children }) {
 export default function DocumentDetailDrawer({ participant, refDate, onClose, onEdit }) {
   if (!participant) return null;
 
+  const visaDenied = participant.visaStatus === "DENIED";
   const ageAtTour =
     refDate && participant.birthDate
       ? getAgeAtDate(participant.birthDate, refDate)
@@ -292,15 +293,42 @@ export default function DocumentDetailDrawer({ participant, refDate, onClose, on
               <Card>
                 <DetailRow
                   label="Tiene visa"
+                  value={visaDenied ? (
+                    <span style={{ color: "#DC2626", fontWeight: 700 }}>Visa negada</span>
+                  ) : participant.hasVisa ? (
+                    <span style={{ color: "#059669", fontWeight: 700 }}>Sí</span>
+                  ) : (
+                    <span style={{ color: "#9CA3AF" }}>No</span>
+                  )}
+                />
+                <DetailRow
+                  label="Estado operativo"
                   value={
-                    participant.hasVisa ? (
-                      <span style={{ color: "#059669", fontWeight: 700 }}>Sí</span>
+                    visaDenied ? (
+                      <span style={{ color: "#DC2626", fontWeight: 700 }}>
+                        Negada
+                        {participant.visaDeniedCount > 0
+                          ? ` · ${participant.visaDeniedCount} negativa${participant.visaDeniedCount !== 1 ? "s" : ""}`
+                          : ""}
+                      </span>
+                    ) : participant.visaStatus === "APPROVED" ? (
+                      <span style={{ color: "#059669", fontWeight: 700 }}>Aprobada</span>
+                    ) : participant.visaStatus === "EXPIRED" ? (
+                      <span style={{ color: "#D97706", fontWeight: 700 }}>Vencida</span>
+                    ) : participant.visaStatus === "PENDING" ? (
+                      <span style={{ color: "#6B7280", fontWeight: 700 }}>Pendiente</span>
                     ) : (
-                      <span style={{ color: "#9CA3AF" }}>No</span>
+                      <span style={{ color: "#9CA3AF" }}>Sin definir</span>
                     )
                   }
                 />
-                {participant.hasVisa && (
+                {participant.visaLastDeniedReason && (
+                  <DetailRow
+                    label="Motivo negativa"
+                    value={<span style={{ color: "#991B1B" }}>{participant.visaLastDeniedReason}</span>}
+                  />
+                )}
+                {participant.hasVisa && !visaDenied && (
                   <DetailRow
                     label="Vencimiento"
                     value={

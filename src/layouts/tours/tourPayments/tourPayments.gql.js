@@ -359,9 +359,18 @@ export const GET_FINANCIAL_TABLE = gql`
       rows {
         accountId
         participantId
+        hasFinancialAccount
         fullName
         identification
         instrument
+        visaStatus
+        visaDeniedCount
+        linkedUserName
+        linkedUserEmail
+        isRemoved
+        removedAt
+        removedByName
+        removalHadPayments
         finalAmount
         totalPaid
         balance

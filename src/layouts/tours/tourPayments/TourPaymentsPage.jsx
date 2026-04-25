@@ -3,7 +3,7 @@
  * TourPaymentsPage — sistema financiero completo por participante.
  * Vistas: Tabla financiera | Cuentas | Resumen | Configuración
  */
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   useTourPayments,
   FINANCIAL_STATUS_CONFIG,
@@ -41,6 +41,7 @@ const VIEWS = [
 const EMPTY_REGISTER_MODAL = { open: false, participant: null };
 const EMPTY_DELETE_PAYMENT_MODAL = { open: false, payment: null };
 const EMPTY_DELETE_PARTICIPANT_MODAL = { open: false, participant: null };
+const EMPTY_CREATE_PARTICIPANT_MODAL = { open: false };
 const EMPTY_ACCOUNT_MODAL = { open: false, participantId: null, row: null };
 const EMPTY_PLAN_MODAL = { open: false, plan: null, mode: "create" };
 const EMPTY_SETUP_MODAL = { open: false };
@@ -73,8 +74,27 @@ function getBalanceClassName(balance) {
   return "text-gray-400";
 }
 
+function formatLinkedUserLabel(row) {
+  if (!row.linkedUserName) return "Sin usuario vinculado";
+  return row.linkedUserEmail
+    ? `${row.linkedUserName} · ${row.linkedUserEmail}`
+    : row.linkedUserName;
+}
+
+function getVisaDeniedLabel(count) {
+  if (!count) return null;
+  if (count === 1) return "1ra negativa";
+  if (count === 2) return "2da negativa";
+  return `${count} negativas`;
+}
+
 function isKeyboardActivationKey(event) {
   return event.key === "Enter" || event.key === " ";
+}
+
+function toDateTimeValue(dateString) {
+  if (!dateString) return undefined;
+  return `${dateString}T12:00:00.000Z`;
 }
 
 export default function TourPaymentsPage({ tourId, tourName }) {
@@ -96,6 +116,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     statusFilter,
     setStatusFilter,
     toast,
+    users,
+    usersLoading,
     openDetailDrawer,
     openAccountModal,
     setToast,
@@ -105,6 +127,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     setDeletePayModal,
     deleteParticipantModal,
     setDeleteParticipantModal,
+    createParticipantModal,
+    setCreateParticipantModal,
     accountModal,
     setAccountModal,
     planModal,
@@ -116,6 +140,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     handleRegisterPayment,
     handleDeletePayment,
     handleDeleteParticipant,
+    handleCreateParticipant,
     handleUpdateAccount,
     handleCreatePlan,
     handleUpdatePlan,
@@ -127,6 +152,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     registering,
     deletingPay,
     deletingParticipant,
+    creatingParticipant,
     updatingAccount,
     creatingPlan,
     updatingPlan,
@@ -138,6 +164,9 @@ export default function TourPaymentsPage({ tourId, tourName }) {
   const openRegisterModal = useCallback(() => {
     setRegisterModal({ open: true, participant: null });
   }, [setRegisterModal]);
+  const openCreateParticipantModal = useCallback(() => {
+    setCreateParticipantModal({ open: true });
+  }, [setCreateParticipantModal]);
   const openSetupModal = useCallback(() => {
     setSetupModal({ open: true });
   }, [setSetupModal]);
@@ -145,27 +174,42 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     setActiveView("setup");
     openSetupModal();
   }, [openSetupModal, setActiveView]);
-  const handleSearchChange = useCallback((event) => {
-    setSearch(event.target.value);
-  }, [setSearch]);
-  const handleStatusChange = useCallback((value) => {
-    setStatusFilter(value);
-  }, [setStatusFilter]);
-  const handleOpenRegisterForRow = useCallback((row) => {
-    setRegisterModal({
-      open: true,
-      participant: { id: row.participantId, fullName: row.fullName },
-    });
-  }, [setRegisterModal]);
-  const handleDeleteParticipantRequest = useCallback((row) => {
-    setDeleteParticipantModal({ open: true, participant: row });
-  }, [setDeleteParticipantModal]);
+  const handleSearchChange = useCallback(
+    (event) => {
+      setSearch(event.target.value);
+    },
+    [setSearch]
+  );
+  const handleStatusChange = useCallback(
+    (value) => {
+      setStatusFilter(value);
+    },
+    [setStatusFilter]
+  );
+  const handleOpenRegisterForRow = useCallback(
+    (row) => {
+      setRegisterModal({
+        open: true,
+        participant: { id: row.participantId, fullName: row.fullName },
+      });
+    },
+    [setRegisterModal]
+  );
+  const handleDeleteParticipantRequest = useCallback(
+    (row) => {
+      setDeleteParticipantModal({ open: true, participant: row });
+    },
+    [setDeleteParticipantModal]
+  );
   const handleCreatePlanRequest = useCallback(() => {
     setPlanModal({ open: true, plan: null, mode: "create" });
   }, [setPlanModal]);
-  const handleEditPlanRequest = useCallback((plan) => {
-    setPlanModal({ open: true, plan, mode: "edit" });
-  }, [setPlanModal]);
+  const handleEditPlanRequest = useCallback(
+    (plan) => {
+      setPlanModal({ open: true, plan, mode: "edit" });
+    },
+    [setPlanModal]
+  );
   const handleCloseRegisterModal = useCallback(() => {
     setRegisterModal(EMPTY_REGISTER_MODAL);
   }, [setRegisterModal]);
@@ -175,6 +219,9 @@ export default function TourPaymentsPage({ tourId, tourName }) {
   const handleCloseDeleteParticipantModal = useCallback(() => {
     setDeleteParticipantModal(EMPTY_DELETE_PARTICIPANT_MODAL);
   }, [setDeleteParticipantModal]);
+  const handleCloseCreateParticipantModal = useCallback(() => {
+    setCreateParticipantModal(EMPTY_CREATE_PARTICIPANT_MODAL);
+  }, [setCreateParticipantModal]);
   const handleCloseAccountModal = useCallback(() => {
     setAccountModal(EMPTY_ACCOUNT_MODAL);
   }, [setAccountModal]);
@@ -187,21 +234,30 @@ export default function TourPaymentsPage({ tourId, tourName }) {
   const handleCloseDetailDrawer = useCallback(() => {
     setDetailDrawer(EMPTY_DETAIL_DRAWER);
   }, [setDetailDrawer]);
-  const handleDrawerRegisterPayment = useCallback((participant) => {
-    setDetailDrawer(EMPTY_DETAIL_DRAWER);
-    setRegisterModal({ open: true, participant });
-  }, [setDetailDrawer, setRegisterModal]);
-  const handleDrawerDeletePayment = useCallback((payment) => {
-    setDetailDrawer(EMPTY_DETAIL_DRAWER);
-    setDeletePayModal({ open: true, payment });
-  }, [setDetailDrawer, setDeletePayModal]);
-  const handlePlanSubmit = useCallback((input) => {
-    if (planModal.mode === "create") {
-      return handleCreatePlan(input);
-    }
+  const handleDrawerRegisterPayment = useCallback(
+    (participant) => {
+      setDetailDrawer(EMPTY_DETAIL_DRAWER);
+      setRegisterModal({ open: true, participant });
+    },
+    [setDetailDrawer, setRegisterModal]
+  );
+  const handleDrawerDeletePayment = useCallback(
+    (payment) => {
+      setDetailDrawer(EMPTY_DETAIL_DRAWER);
+      setDeletePayModal({ open: true, payment });
+    },
+    [setDetailDrawer, setDeletePayModal]
+  );
+  const handlePlanSubmit = useCallback(
+    (input) => {
+      if (planModal.mode === "create") {
+        return handleCreatePlan(input);
+      }
 
-    return handleUpdatePlan(planModal.plan.id, input);
-  }, [handleCreatePlan, handleUpdatePlan, planModal.mode, planModal.plan]);
+      return handleUpdatePlan(planModal.plan.id, input);
+    },
+    [handleCreatePlan, handleUpdatePlan, planModal.mode, planModal.plan]
+  );
 
   return (
     <div className="space-y-5">
@@ -213,15 +269,36 @@ export default function TourPaymentsPage({ tourId, tourName }) {
             Deudas y pagos de <span className="font-semibold">{tourName}</span>
           </p>
         </div>
-        <button
-          onClick={openRegisterModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Registrar pago
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={openCreateParticipantModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Gestionar participante
+          </button>
+          <button
+            onClick={openRegisterModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Registrar pago
+          </button>
+        </div>
       </div>
 
       {/* ── Sin configuración warning ─────────────────────────────────────── */}
@@ -321,11 +398,22 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         loading={deletingParticipant}
       />
 
+      <CreateParticipantModal
+        isOpen={createParticipantModal.open}
+        users={users}
+        usersLoading={usersLoading}
+        onClose={handleCloseCreateParticipantModal}
+        onSubmit={handleCreateParticipant}
+        loading={creatingParticipant}
+      />
+
       <AccountAdjustModal
         isOpen={accountModal.open}
         participantId={accountModal.participantId}
         row={accountModal.row}
         tourId={tourId}
+        plans={plans}
+        defaultPlan={state.defaultPlan}
         onClose={handleCloseAccountModal}
         onSubmit={handleUpdateAccount}
         loading={updatingAccount}
@@ -466,20 +554,6 @@ const FinancialTableView = memo(function FinancialTableView({
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[180px]">
-          <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-
           <input
             type="text"
             placeholder="Buscar participante..."
@@ -555,7 +629,11 @@ const FinancialTableView = memo(function FinancialTableView({
               ))}
             </tbody>
 
-            <FinancialTableFooter columns={columns} footerTotals={footerTotals} rowCount={tableRows.length} />
+            <FinancialTableFooter
+              columns={columns}
+              footerTotals={footerTotals}
+              rowCount={tableRows.length}
+            />
           </table>
         </div>
       )}
@@ -576,6 +654,8 @@ const FinancialTableRow = memo(function FinancialTableRow({
     FINANCIAL_STATUS_CONFIG[row.financialStatus] || FINANCIAL_STATUS_CONFIG.PENDING;
   const initials = getParticipantInitials(row.fullName);
   const balanceClassName = getBalanceClassName(row.balance);
+  const visaDenied = row.visaStatus === "DENIED";
+  const visaDeniedLabel = getVisaDeniedLabel(row.visaDeniedCount);
   const handleOpenDetail = useCallback(() => {
     onOpenDetail(row);
   }, [onOpenDetail, row]);
@@ -594,22 +674,89 @@ const FinancialTableRow = memo(function FinancialTableRow({
 
   return (
     <tr
-      className="hover:bg-gray-50 transition-colors cursor-pointer"
+      className={`transition-colors cursor-pointer ${
+        row.isRemoved
+          ? "bg-red-50/70 hover:bg-red-50"
+          : visaDenied
+          ? "bg-rose-50/80 hover:bg-rose-50"
+          : "hover:bg-gray-50"
+      }`}
       onClick={handleOpenDetail}
     >
-      <td className="px-4 py-3 sticky left-0 bg-white hover:bg-gray-50 transition-colors">
+      <td
+        className={`px-4 py-3 sticky left-0 transition-colors ${
+          row.isRemoved
+            ? "bg-red-50/90 hover:bg-red-50"
+            : visaDenied
+            ? "bg-rose-50/90 hover:bg-rose-50"
+            : "bg-white hover:bg-gray-50"
+        }`}
+      >
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+              row.isRemoved
+                ? "bg-red-100 text-red-700"
+                : visaDenied
+                ? "bg-rose-100 text-rose-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate max-w-[130px]">{row.fullName}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p
+                className={`font-semibold truncate max-w-[180px] ${
+                  row.isRemoved ? "text-red-900" : "text-gray-900"
+                }`}
+              >
+                {row.fullName}
+              </p>
+              {visaDenied && !row.isRemoved && (
+                <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-700">
+                  Visa negada
+                </span>
+              )}
+              {row.isRemoved && (
+                <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700">
+                  Retirado
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusConfig.dot}`} />
-              <span className="text-gray-400 truncate">
-                {row.instrument} • {statusConfig.label}
+              <span
+                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                  row.isRemoved ? "bg-red-500" : visaDenied ? "bg-rose-500" : statusConfig.dot
+                }`}
+              />
+              <span
+                className={`truncate ${
+                  row.isRemoved ? "text-red-600" : visaDenied ? "text-rose-600" : "text-gray-400"
+                }`}
+              >
+                {row.instrument} • {row.identification}
               </span>
             </div>
+            <div
+              className={`mt-0.5 truncate text-[11px] ${
+                row.isRemoved ? "text-red-500" : visaDenied ? "text-rose-500" : "text-gray-400"
+              }`}
+            >
+              {formatLinkedUserLabel(row)}
+              {row.isRemoved && row.removedByName && ` · eliminado por ${row.removedByName}`}
+              {row.isRemoved && row.removedAt && ` · ${fmtDate(row.removedAt)}`}
+            </div>
+            {!row.hasFinancialAccount && (
+              <div className="mt-1 text-[11px] font-semibold text-amber-700">
+                Sin cuenta financiera configurada
+              </div>
+            )}
+            {visaDenied && (
+              <div className="mt-1 text-[11px] font-semibold text-rose-700">
+                Visa negada{visaDeniedLabel ? ` · ${visaDeniedLabel}` : ""}
+              </div>
+            )}
           </div>
         </div>
       </td>
@@ -646,16 +793,23 @@ const FinancialTableRow = memo(function FinancialTableRow({
           <button
             onClick={handleRegisterPayment}
             title="Registrar pago"
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+            disabled={row.isRemoved || !row.hasFinancialAccount}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
           </button>
           <button
             onClick={handleAdjustAccount}
             title="Ajustar cuenta"
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+            disabled={!row.hasFinancialAccount}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -669,7 +823,8 @@ const FinancialTableRow = memo(function FinancialTableRow({
           <button
             onClick={handleDeleteParticipant}
             title="Eliminar participante"
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all"
+            disabled={row.isRemoved}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -686,7 +841,11 @@ const FinancialTableRow = memo(function FinancialTableRow({
   );
 });
 
-const FinancialTableFooter = memo(function FinancialTableFooter({ columns, footerTotals, rowCount }) {
+const FinancialTableFooter = memo(function FinancialTableFooter({
+  columns,
+  footerTotals,
+  rowCount,
+}) {
   if (!footerTotals) return null;
 
   return (
@@ -827,7 +986,13 @@ const SummaryView = memo(function SummaryView({ summary, paymentFlow }) {
 // SETUP VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SetupView = memo(function SetupView({ plans, onCreatePlan, onEditPlan, onDeletePlan, onSetupAll }) {
+const SetupView = memo(function SetupView({
+  plans,
+  onCreatePlan,
+  onEditPlan,
+  onDeletePlan,
+  onSetupAll,
+}) {
   return (
     <div className="space-y-4">
       {/* Planes de pago */}
@@ -899,11 +1064,14 @@ const PlanCard = memo(function PlanCard({ plan, onEdit, onDelete }) {
   const toggleExpanded = useCallback(() => {
     setExpanded((value) => !value);
   }, []);
-  const handleToggleKeyDown = useCallback((event) => {
-    if (!isKeyboardActivationKey(event)) return;
-    event.preventDefault();
-    toggleExpanded();
-  }, [toggleExpanded]);
+  const handleToggleKeyDown = useCallback(
+    (event) => {
+      if (!isKeyboardActivationKey(event)) return;
+      event.preventDefault();
+      toggleExpanded();
+    },
+    [toggleExpanded]
+  );
   const stopPropagation = useCallback((event) => {
     event.stopPropagation();
   }, []);
@@ -1013,17 +1181,23 @@ const PlanCard = memo(function PlanCard({ plan, onEdit, onDelete }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
-  const handleBackdropClick = useCallback((event) => {
-    if (event.target === event.currentTarget) {
+  const handleBackdropClick = useCallback(
+    (event) => {
+      if (event.target === event.currentTarget) {
+        onCancel();
+      }
+    },
+    [onCancel]
+  );
+  const handleBackdropKeyDown = useCallback(
+    (event) => {
+      if (event.target !== event.currentTarget) return;
+      if (!isKeyboardActivationKey(event) && event.key !== "Escape") return;
+      event.preventDefault();
       onCancel();
-    }
-  }, [onCancel]);
-  const handleBackdropKeyDown = useCallback((event) => {
-    if (event.target !== event.currentTarget) return;
-    if (!isKeyboardActivationKey(event) && event.key !== "Escape") return;
-    event.preventDefault();
-    onCancel();
-  }, [onCancel]);
+    },
+    [onCancel]
+  );
   if (!participant) return null;
 
   return (
@@ -1038,19 +1212,37 @@ function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="px-6 pt-6 pb-4 border-b border-slate-100">
           <h3 className="text-base font-bold text-slate-900">Eliminar participante</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Esta acción no se puede deshacer</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {participant?.totalPaid > 0
+              ? "Se retirará de la gira, pero el historial financiero quedará guardado."
+              : "Esta acción no se puede deshacer."}
+          </p>
         </div>
         <div className="p-6 space-y-4">
           <div className="bg-gray-50 rounded-2xl p-4 space-y-1">
             <p className="text-sm font-bold text-gray-900">{participant.fullName}</p>
             <p className="text-xs text-gray-500">{participant.identification}</p>
+            {participant.linkedUserName && (
+              <p className="text-xs text-gray-400">{participant.linkedUserName}</p>
+            )}
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 space-y-1">
-            <p className="font-bold">Se eliminarán también:</p>
+            <p className="font-bold">
+              {participant?.totalPaid > 0 ? "Se removerá de:" : "Se eliminarán también:"}
+            </p>
             <p>• Asignaciones de vuelos e itinerarios</p>
             <p>• Asignaciones de habitaciones</p>
-            <p>• Historial de pagos y cuotas</p>
-            <p>• Cuenta financiera</p>
+            {participant?.totalPaid > 0 ? (
+              <>
+                <p>• Se conservarán pagos, cuotas y cuenta financiera</p>
+                <p>• La fila quedará marcada en rojo para auditoría</p>
+              </>
+            ) : (
+              <>
+                <p>• Historial de pagos y cuotas</p>
+                <p>• Cuenta financiera</p>
+              </>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -1064,13 +1256,358 @@ function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
               disabled={loading}
               className="flex-1 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm disabled:opacity-50 transition-all"
             >
-              {loading ? "Eliminando…" : "Eliminar"}
+              {loading ? "Procesando…" : participant?.totalPaid > 0 ? "Retirar" : "Eliminar"}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function CreateParticipantModal({ isOpen, users, usersLoading, onClose, onSubmit, loading }) {
+  const EMPTY_FORM = {
+    linkedUserId: "",
+    firstName: "",
+    firstSurname: "",
+    secondSurname: "",
+    identification: "",
+    email: "",
+    phone: "",
+    birthDate: "",
+    instrument: "",
+    grade: "",
+    role: "MUSICIAN",
+    notes: "",
+  };
+
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setSearch("");
+  }, [isOpen]);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((user) => {
+      const text = [
+        user.name,
+        user.firstSurName,
+        user.secondSurName,
+        user.email,
+        user.carnet,
+        user.instrument,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return text.includes(q);
+    });
+  }, [search, users]);
+
+  if (!isOpen) return null;
+
+  const set = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleSelectUser = (user) => {
+    setForm((prev) => ({
+      ...prev,
+      linkedUserId: user.id,
+      firstName: user.name || prev.firstName,
+      firstSurname: user.firstSurName || prev.firstSurname,
+      secondSurname: user.secondSurName || prev.secondSurname,
+      identification: prev.identification || user.carnet || "",
+      email: user.email || prev.email,
+      phone: user.phone || prev.phone,
+      birthDate: user.birthday ? String(user.birthday).slice(0, 10) : prev.birthDate,
+      instrument: user.instrument || prev.instrument,
+      grade: user.grade || prev.grade,
+    }));
+    setErrors((prev) => ({ ...prev, linkedUserId: undefined }));
+  };
+
+  const validate = () => {
+    const next = {};
+    if (!form.firstName.trim()) next.firstName = "Nombre requerido";
+    if (!form.firstSurname.trim()) next.firstSurname = "Primer apellido requerido";
+    if (!form.identification.trim()) next.identification = "Identificación requerida";
+    return next;
+  };
+
+  const handleSubmit = () => {
+    const next = validate();
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      return;
+    }
+
+    onSubmit({
+      linkedUserId: form.linkedUserId || undefined,
+      firstName: form.firstName.trim(),
+      firstSurname: form.firstSurname.trim(),
+      secondSurname: form.secondSurname.trim() || undefined,
+      identification: form.identification.trim(),
+      email: form.email.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      birthDate: toDateTimeValue(form.birthDate),
+      instrument: form.instrument.trim() || undefined,
+      grade: form.grade.trim() || undefined,
+      role: form.role,
+      notes: form.notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Agregar participante</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Vincular un usuario es opcional. También podés crear el participante manualmente.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-all"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="border-b border-gray-100 p-6 lg:border-b-0 lg:border-r">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+                Vincular usuario
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                Opcional. Si no seleccionás uno, se guarda igual como participante manual.
+              </p>
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nombre, correo, carnet o instrumento"
+                className="mt-3 w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              />
+            </div>
+
+            <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+              {usersLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  {[1, 2, 3, 4].map((row) => (
+                    <div key={row} className="h-16 rounded-2xl bg-gray-100" />
+                  ))}
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
+                  No hay usuarios que coincidan.
+                </div>
+              ) : (
+                filteredUsers.map((user) => {
+                  const fullName = [user.name, user.firstSurName, user.secondSurName]
+                    .filter(Boolean)
+                    .join(" ");
+                  const isSelected = form.linkedUserId === user.id;
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => handleSelectUser(user)}
+                      className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                        isSelected
+                          ? "border-emerald-300 bg-emerald-50"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-gray-900">{fullName}</p>
+                          <p className="truncate text-xs text-gray-500">
+                            {user.email || "Sin correo"} {user.carnet ? `· ${user.carnet}` : ""}
+                          </p>
+                          <p className="truncate text-xs text-gray-400">
+                            {user.instrument || "Sin instrumento"}{" "}
+                            {user.grade ? `· ${user.grade}` : ""}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                            Vinculado
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="p-6">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+              Datos del participante
+            </p>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Nombre" error={errors.firstName}>
+                <input
+                  type="text"
+                  value={form.firstName}
+                  onChange={(event) => set("firstName", event.target.value)}
+                  className={inputClass(errors.firstName)}
+                />
+              </Field>
+              <Field label="Primer apellido" error={errors.firstSurname}>
+                <input
+                  type="text"
+                  value={form.firstSurname}
+                  onChange={(event) => set("firstSurname", event.target.value)}
+                  className={inputClass(errors.firstSurname)}
+                />
+              </Field>
+              <Field label="Segundo apellido">
+                <input
+                  type="text"
+                  value={form.secondSurname}
+                  onChange={(event) => set("secondSurname", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Identificación / carnet" error={errors.identification}>
+                <input
+                  type="text"
+                  value={form.identification}
+                  onChange={(event) => set("identification", event.target.value)}
+                  className={inputClass(errors.identification)}
+                />
+              </Field>
+              <Field label="Correo">
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => set("email", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Teléfono">
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(event) => set("phone", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Nacimiento">
+                <input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(event) => set("birthDate", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Instrumento">
+                <input
+                  type="text"
+                  value={form.instrument}
+                  onChange={(event) => set("instrument", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Grado">
+                <input
+                  type="text"
+                  value={form.grade}
+                  onChange={(event) => set("grade", event.target.value)}
+                  className={inputClass()}
+                />
+              </Field>
+              <Field label="Rol">
+                <select
+                  value={form.role}
+                  onChange={(event) => set("role", event.target.value)}
+                  className={inputClass()}
+                >
+                  <option value="MUSICIAN">Músico</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="DIRECTOR">Director</option>
+                  <option value="GUEST">Invitado</option>
+                </select>
+              </Field>
+              <Field label="Estado">
+                <select
+                  value={form.status}
+                  onChange={(event) => set("status", event.target.value)}
+                  className={inputClass()}
+                >
+                  <option value="PENDING">Pendiente</option>
+                  <option value="CONFIRMED">Confirmado</option>
+                  <option value="CANCELLED">Cancelado</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Notas" className="mt-3">
+              <textarea
+                rows={3}
+                value={form.notes}
+                onChange={(event) => set("notes", event.target.value)}
+                className={inputClass()}
+              />
+            </Field>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-2xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 rounded-2xl bg-gray-900 py-2.5 text-sm font-bold text-white transition-all hover:bg-gray-700 disabled:opacity-50"
+              >
+                {loading ? "Guardando…" : "Agregar participante"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, error, className = "", children }) {
+  return (
+    <div className={className}>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </label>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+function inputClass(hasError = false) {
+  return `w-full rounded-2xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 ${
+    hasError ? "border-red-400 bg-red-50" : "border-gray-200"
+  }`;
 }
 
 function TableSkeleton() {
