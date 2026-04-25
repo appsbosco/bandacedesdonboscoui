@@ -285,6 +285,12 @@ export const RESEND_IMPORTED_TICKET_EMAIL = gql`
   }
 `;
 
+export const RESEND_TICKET_EMAIL = gql`
+  mutation ResendTicketEmail($ticketId: ID!) {
+    resendTicketEmail(ticketId: $ticketId)
+  }
+`;
+
 export const CANCEL_TICKET = gql`
   mutation CancelTicket($ticketId: ID!, $reason: String, $cancelledBy: ID) {
     cancelTicket(ticketId: $ticketId, reason: $reason, cancelledBy: $cancelledBy) {

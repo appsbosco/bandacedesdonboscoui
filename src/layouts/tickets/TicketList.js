@@ -15,7 +15,7 @@ import {
   UPDATE_TICKET_QUANTITY,
   CANCEL_TICKET,
   DELETE_TICKET,
-  RESEND_IMPORTED_TICKET_EMAIL,
+  RESEND_TICKET_EMAIL,
   StatusBadge,
   StatCard,
   EmptyState,
@@ -210,14 +210,16 @@ export default function TicketList() {
       setError(mutationError.message || "No se pudo actualizar la cantidad");
     },
   });
-  const [resendImportedTicketEmail, { loading: resending }] = useMutation(
-    RESEND_IMPORTED_TICKET_EMAIL,
+  const [resendTicketEmail, { loading: resending }] = useMutation(
+    RESEND_TICKET_EMAIL,
     {
       onCompleted: () => {
         setResendingId(null);
+        setSuccess("Entradas reenviadas correctamente.");
       },
-      onError: () => {
+      onError: (mutationError) => {
         setResendingId(null);
+        setError(mutationError.message || "No se pudieron reenviar las entradas");
       },
     }
   );
@@ -802,22 +804,22 @@ export default function TicketList() {
                                   </div>
                                 </div>
 
-                                {canAdministerTicketEmails &&
-                                  ticket.source === "excel_import" &&
-                                  ticket.paid && (
-                                    <button
-                                      onClick={() => {
-                                        setResendingId(ticket.id);
-                                        resendImportedTicketEmail({
-                                          variables: { ticketId: ticket.id },
-                                        });
-                                      }}
-                                      disabled={isResending}
-                                      className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                                    >
-                                      {isResending ? <Spinner /> : "Reenviar entradas"}
-                                    </button>
-                                  )}
+                                {canAdministerTicketEmails && ticket.status !== "cancelled" && (
+                                  <button
+                                    onClick={() => {
+                                      setError(null);
+                                      setSuccess(null);
+                                      setResendingId(ticket.id);
+                                      resendTicketEmail({
+                                        variables: { ticketId: ticket.id },
+                                      });
+                                    }}
+                                    disabled={isResending}
+                                    className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                                  >
+                                    {isResending ? <Spinner /> : "Reenviar entradas"}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
