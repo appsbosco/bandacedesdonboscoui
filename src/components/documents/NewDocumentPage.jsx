@@ -22,7 +22,7 @@ import WizardStep3 from "./WizardStep3";
 import { isDocumentAdmin, SENSITIVE_DOCUMENT_TYPES } from "./documentAccess";
 
 const STEPS = ["Tipo", "Captura", "Revisión"];
-const DIRECT_UPLOAD_COMPLETE_TYPES = new Set(["OTHER"]);
+const DIRECT_UPLOAD_COMPLETE_TYPES = new Set(["PERMISO_SALIDA", "OTHER"]);
 const SUCCESS_REDIRECT_MS = 1800;
 
 async function uploadToCloudinary(blob, signedData) {

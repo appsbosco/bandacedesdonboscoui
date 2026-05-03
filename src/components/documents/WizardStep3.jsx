@@ -28,11 +28,11 @@ const FIELDS_BY_TYPE = {
     { key: "issueDate", label: "Fecha de emisión", type: "date", required: true },
   ],
   PERMISO_SALIDA: [
-    { key: "fullName", label: "Nombre del menor", type: "text", required: true },
-    { key: "documentNumber", label: "N° Documento", type: "text", required: true },
-    { key: "expirationDate", label: "Vencimiento", type: "date", required: true },
-    { key: "destination", label: "Destino", type: "text", required: true },
-    { key: "authorizerName", label: "Autoriza", type: "text", required: true },
+    { key: "fullName", label: "Nombre en el permiso", type: "text" },
+    { key: "documentNumber", label: "Número de solicitud o referencia", type: "text" },
+    { key: "expirationDate", label: "Vencimiento si aparece en el permiso", type: "date" },
+    { key: "destination", label: "Destino si aparece en el permiso", type: "text" },
+    { key: "authorizerName", label: "Persona que autoriza si aparece en el permiso", type: "text" },
   ],
   OTHER: [
     { key: "fullName", label: "Nombre", type: "text", required: true },
@@ -116,6 +116,13 @@ function DataForm({ fields, values, onChange, missingKeys = [] }) {
       ))}
     </div>
   );
+}
+
+function getOptionalReviewCopy(documentType) {
+  if (documentType === "PERMISO_SALIDA") {
+    return "Estos datos son opcionales. Si el permiso es permanente o no muestra vencimiento, destino o número de solicitud, deja esos campos en blanco.";
+  }
+  return "Corrige cualquier campo si es necesario.";
 }
 
 // ─── Shared CTA footer ────────────────────────────────────────────────────────
@@ -376,7 +383,7 @@ function WizardStep3({ documentId, documentType, preloadedDocument, onConfirm, o
                 </button>
               )}
             </div>
-            <p className="text-sm text-slate-500">Corrige cualquier campo si es necesario.</p>
+            <p className="text-sm text-slate-500">{getOptionalReviewCopy(documentType)}</p>
             <DataForm
               fields={fields}
               values={form}
