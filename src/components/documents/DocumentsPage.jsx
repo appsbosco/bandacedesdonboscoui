@@ -351,6 +351,8 @@ const ADMIN_PRESET_CONFIG = {
   },
 };
 
+const ADMIN_PAGE_SIZE = 100;
+
 // ─── Small UI components ───────────────────────────────────────────────────────
 
 function TabButton({ active, onClick, children, count }) {
@@ -988,7 +990,7 @@ FullDocumentCard.propTypes = {
 
 // ─── CriticalDocBlock: one row inside UserDetailPanel ─────────────────────────
 
-function CriticalDocBlock({ typeLabel, icon, doc, extraDocs }) {
+function CriticalDocBlock({ typeLabel, icon, doc, extraDocs, onComplete, completingDocumentId }) {
   if (!doc) {
     return (
       <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
@@ -1052,12 +1054,24 @@ function CriticalDocBlock({ typeLabel, icon, doc, extraDocs }) {
             )}
           </div>
         </div>
-        <Link
-          to={`/documents/${doc.id}`}
-          className="flex-shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
-        >
-          Abrir
-        </Link>
+        <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+          {doc.status !== "VERIFIED" && (
+            <button
+              type="button"
+              onClick={() => onComplete(doc)}
+              disabled={completingDocumentId === doc.id}
+              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {completingDocumentId === doc.id ? "Marcando..." : "Completar"}
+            </button>
+          )}
+          <Link
+            to={`/documents/${doc.id}`}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+          >
+            Abrir
+          </Link>
+        </div>
       </div>
 
       {extraDocs?.length > 0 && (
@@ -1088,6 +1102,8 @@ function CriticalDocBlock({ typeLabel, icon, doc, extraDocs }) {
 CriticalDocBlock.propTypes = {
   typeLabel: PropTypes.string.isRequired,
   icon: PropTypes.string.isRequired,
+  onComplete: PropTypes.func.isRequired,
+  completingDocumentId: PropTypes.string,
   doc: PropTypes.shape({
     id: PropTypes.string,
     status: PropTypes.string,
@@ -1110,6 +1126,7 @@ CriticalDocBlock.propTypes = {
 CriticalDocBlock.defaultProps = {
   doc: null,
   extraDocs: [],
+  completingDocumentId: null,
 };
 
 // ─── UserDetailPanel: slide-in panel with full user document detail ───────────
@@ -1121,6 +1138,8 @@ function UserDetailPanel({
   onClose,
   onSelectPrevious,
   onSelectNext,
+  onCompleteDocument,
+  completingDocumentId,
 }) {
   const criticalDocs = row.documents.filter((d) => SENSITIVE_DOCUMENT_TYPES.includes(d.type));
   const otherDocs = row.documents.filter((d) => d.type === "OTHER");
@@ -1213,18 +1232,24 @@ function UserDetailPanel({
             icon="🛂"
             doc={passportDocs[0] || null}
             extraDocs={passportDocs.slice(1)}
+            onComplete={onCompleteDocument}
+            completingDocumentId={completingDocumentId}
           />
           <CriticalDocBlock
             typeLabel="Visa"
             icon="🌍"
             doc={visaDocs[0] || null}
             extraDocs={visaDocs.slice(1)}
+            onComplete={onCompleteDocument}
+            completingDocumentId={completingDocumentId}
           />
           <CriticalDocBlock
             typeLabel="Permiso de salida"
             icon="📋"
             doc={permitDocs[0] || null}
             extraDocs={permitDocs.slice(1)}
+            onComplete={onCompleteDocument}
+            completingDocumentId={completingDocumentId}
           />
         </div>
 
@@ -1265,6 +1290,8 @@ UserDetailPanel.propTypes = {
   onClose: PropTypes.func.isRequired,
   onSelectPrevious: PropTypes.func.isRequired,
   onSelectNext: PropTypes.func.isRequired,
+  onCompleteDocument: PropTypes.func.isRequired,
+  completingDocumentId: PropTypes.string,
 };
 
 // ─── MobileSummaryItem ────────────────────────────────────────────────────────
@@ -1481,14 +1508,6 @@ function FinancieroView() {
     () =>
       Array.from(new Set(groupedRows.map((row) => row.owner?.role).filter(Boolean))).sort((a, b) =>
         a.localeCompare(b, "es")
-      ),
-    [groupedRows]
-  );
-
-  const instrumentOptions = useMemo(
-    () =>
-      Array.from(new Set(groupedRows.map((row) => row.owner?.instrument).filter(Boolean))).sort(
-        (a, b) => a.localeCompare(b, "es")
       ),
     [groupedRows]
   );
@@ -1748,7 +1767,7 @@ function AdminDocumentsView() {
   }, []);
 
   const initialFilters = useMemo(() => getInitialFilters(), [getInitialFilters]);
-  const [pagination] = useState({ limit: 100, skip: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
   const [rowStatusFilter, setRowStatusFilter] = useState(initialFilters.rowStatusFilter);
   const [typeFilter, setTypeFilter] = useState(initialFilters.typeFilter);
   const [ownerSearch, setOwnerSearch] = useState(initialFilters.ownerSearch);
@@ -1760,10 +1779,10 @@ function AdminDocumentsView() {
   const [sortBy, setSortBy] = useState(initialFilters.sortBy);
   const [activeQueue, setActiveQueue] = useState(initialFilters.activeQueue);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [completingDocumentId, setCompletingDocumentId] = useState(null);
 
   const tableTopRef = useRef(null);
   const searchInputRef = useRef(null);
-  const loadMoreSentinelRef = useRef(null);
   const debouncedOwnerSearch = useDebouncedValue(ownerSearch.trim(), 280);
 
   useEffect(() => {
@@ -1774,10 +1793,31 @@ function AdminDocumentsView() {
     }
   }, [selectedRow?.id]);
 
-  const { data, loading, error, fetchMore } = useQuery(ALL_DOCUMENTS, {
-    variables: { pagination },
+  const adminFilters = useMemo(() => {
+    const filters = {};
+    if (debouncedOwnerSearch) filters.ownerName = debouncedOwnerSearch;
+    if (instrumentFilter.trim()) filters.ownerInstrument = instrumentFilter.trim();
+    if (typeFilter) filters.type = typeFilter;
+    return filters;
+  }, [debouncedOwnerSearch, instrumentFilter, typeFilter]);
+
+  const queryVariables = useMemo(
+    () => ({
+      filters: Object.keys(adminFilters).length > 0 ? adminFilters : undefined,
+      pagination: {
+        limit: ADMIN_PAGE_SIZE,
+        skip: (currentPage - 1) * ADMIN_PAGE_SIZE,
+      },
+    }),
+    [adminFilters, currentPage]
+  );
+
+  const { data, loading, error, refetch } = useQuery(ALL_DOCUMENTS, {
+    variables: queryVariables,
     fetchPolicy: "cache-and-network",
   });
+
+  const [setDocumentStatus] = useMutation(SET_DOCUMENT_STATUS);
 
   const documents = data?.allDocuments?.documents || [];
   const paginationInfo = data?.allDocuments?.pagination;
@@ -1974,16 +2014,36 @@ function AdminDocumentsView() {
       .slice(0, 6);
   }, [groupedRows, ownerSearch]);
 
-  const handleLoadMore = useCallback(() => {
-    if (!hasMore) return;
-    fetchMore({
-      variables: {
-        pagination: { ...pagination, skip: documents.length },
-      },
-      updateQuery: (previousResult, { fetchMoreResult }) =>
-        mergeDocumentsResult(previousResult, fetchMoreResult, "allDocuments"),
-    });
-  }, [documents.length, fetchMore, hasMore, pagination]);
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    activeQueue,
+    debouncedOwnerSearch,
+    instrumentFilter,
+    otherReviewFilter,
+    roleFilter,
+    rowStatusFilter,
+    sortBy,
+    typeFilter,
+  ]);
+
+  const handleCompleteDocument = useCallback(
+    async (document) => {
+      if (!document?.id || document.status === "VERIFIED") return;
+      setCompletingDocumentId(document.id);
+      try {
+        await setDocumentStatus({
+          variables: { documentId: document.id, status: "VERIFIED" },
+        });
+        await refetch(queryVariables);
+      } finally {
+        setCompletingDocumentId(null);
+      }
+    },
+    [queryVariables, refetch, setDocumentStatus]
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2027,22 +2087,6 @@ function AdminDocumentsView() {
       return nextMatch || filteredRows[0];
     });
   }, [filteredRows]);
-
-  useEffect(() => {
-    if (!hasMore || !loadMoreSentinelRef.current) return undefined;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) handleLoadMore();
-        });
-      },
-      { rootMargin: "240px 0px" }
-    );
-
-    observer.observe(loadMoreSentinelRef.current);
-    return () => observer.disconnect();
-  }, [handleLoadMore, hasMore]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -2207,6 +2251,19 @@ function AdminDocumentsView() {
 
   return (
     <div className="space-y-4">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {ADMIN_QUEUE_TABS.map((tab) => (
+          <TabButton
+            key={tab.value}
+            active={activeQueue === tab.value}
+            count={queueCounts[tab.value]}
+            onClick={() => setActiveQueue(tab.value)}
+          >
+            {tab.label}
+          </TabButton>
+        ))}
+      </div>
+
       <div className="sticky top-4 z-10 rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-200/70 backdrop-blur">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -2363,19 +2420,14 @@ function AdminDocumentsView() {
               >
                 Instrumento
               </label>
-              <select
+              <input
                 id="documents-admin-instrument-filter"
+                type="text"
                 value={instrumentFilter}
                 onChange={(e) => setInstrumentFilter(e.target.value)}
+                placeholder="Ej: clarinete, trompeta..."
                 className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                <option value="">Todos los instrumentos</option>
-                {instrumentOptions.map((instrument) => (
-                  <option key={instrument} value={instrument}>
-                    {instrument}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label
@@ -2468,16 +2520,15 @@ function AdminDocumentsView() {
 
           <div className="flex flex-wrap items-center gap-2 px-1">
             <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
-              {documents.length} de {total} documento{total !== 1 ? "s" : ""} en memoria activa
+              Página {currentPage} de {totalPages} · {documents.length} de {total} documento
+              {total !== 1 ? "s" : ""}
             </span>
             {activeFilterChips.length > 0 && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
                 Filtros activos
               </span>
             )}
-            <span className="text-xs text-slate-400">
-              La lista precarga más filas al acercarte al final.
-            </span>
+            <span className="text-xs text-slate-400">Los filtros de nombre e instrumento se aplican en el servidor.</span>
           </div>
         </>
       )}
@@ -2669,24 +2720,35 @@ function AdminDocumentsView() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
                 <span className="text-xs text-slate-500">
                   {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
                   {selectedRow
                     ? " · Usa J/K para cambiar de registro"
                     : " · Haz clic en una fila para ver el detalle"}
                 </span>
-                {hasMore && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleLoadMore}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage <= 1 || loading}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Cargar siguiente bloque
+                    Anterior
                   </button>
-                )}
+                  <span className="text-xs font-semibold text-slate-500">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={!hasMore || currentPage >= totalPages || loading}
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
               </div>
-              <div ref={loadMoreSentinelRef} className="h-2 w-full" />
             </div>
 
             {selectedRow && (
@@ -2702,6 +2764,8 @@ function AdminDocumentsView() {
                   onClose={() => setSelectedRow(null)}
                   onSelectPrevious={selectPreviousRow}
                   onSelectNext={selectNextRow}
+                  onCompleteDocument={handleCompleteDocument}
+                  completingDocumentId={completingDocumentId}
                 />
               </div>
             )}
@@ -2723,7 +2787,7 @@ function DocumentsPage() {
   const userIsAdmin = isDocumentAdmin(currentUser);
   const isFinanciero = userRole === "CEDES Financiero";
   const canUploadDocuments = !isFinanciero;
-  const [activeTab, setActiveTab] = useState("mine");
+  const [activeTab, setActiveTab] = useState("all");
 
   return (
     <DashboardLayout>

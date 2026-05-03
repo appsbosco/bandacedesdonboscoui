@@ -5,13 +5,14 @@ import PropTypes from "prop-types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr) {
+function formatDate(dateStr, timeZone = "America/Costa_Rica") {
   if (!dateStr) return null;
   try {
     return new Intl.DateTimeFormat("es-CR", {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone,
     }).format(new Date(dateStr));
   } catch {
     return null;
@@ -312,8 +313,8 @@ export function DocumentCard({ document, showOwner, actions }) {
                 </svg>
                 <span className={`text-xs font-medium truncate ${expirationColor}`}>
                   {isExpired
-                    ? `Expirado · ${formatDate(extracted.expirationDate)}`
-                    : `Vence ${formatDate(extracted.expirationDate)}`}
+                    ? `Expirado · ${formatDate(extracted.expirationDate, "UTC")}`
+                    : `Vence ${formatDate(extracted.expirationDate, "UTC")}`}
                 </span>
               </div>
             ) : (

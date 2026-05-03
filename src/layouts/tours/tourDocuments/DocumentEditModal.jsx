@@ -589,7 +589,9 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                 <div style={{ fontSize: "12px", color: "#6B7280" }}>
                   Vence:{" "}
                   {participant.passportExpiry
-                    ? new Date(participant.passportExpiry).toLocaleDateString("es-CR")
+                    ? new Date(participant.passportExpiry).toLocaleDateString("es-CR", {
+                        timeZone: "UTC",
+                      })
                     : "—"}
                 </div>
               </>
@@ -620,7 +622,9 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                 <div>
                   Vence:{" "}
                   {participant.hasVisa && participant.visaExpiry
-                    ? new Date(participant.visaExpiry).toLocaleDateString("es-CR")
+                    ? new Date(participant.visaExpiry).toLocaleDateString("es-CR", {
+                        timeZone: "UTC",
+                      })
                     : "—"}
                 </div>
               </div>

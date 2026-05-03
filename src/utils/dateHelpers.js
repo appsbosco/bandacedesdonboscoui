@@ -11,6 +11,7 @@ export function formatDate(date) {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -29,6 +30,7 @@ export function formatDateTime(date) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Costa_Rica",
   });
 }
 

@@ -37,6 +37,10 @@ const STATUS_TABS = [
 
 const TICKET_ADMIN_ROLES = new Set(["Admin", "Director", "Dirección Logística", "Tickets Admin"]);
 
+function canResendTicketEmail(ticket) {
+  return Boolean(ticket) && ticket.status !== "cancelled" && (ticket.paid || ticket.type === "courtesy");
+}
+
 function formatEventDate(date) {
   if (!date) return "Fecha pendiente";
   const parsed = new Date(date);
@@ -804,7 +808,7 @@ export default function TicketList() {
                                   </div>
                                 </div>
 
-                                {canAdministerTicketEmails && ticket.status !== "cancelled" && (
+                                {canAdministerTicketEmails && canResendTicketEmail(ticket) && (
                                   <button
                                     onClick={() => {
                                       setError(null);

@@ -75,7 +75,13 @@ export default function TourSelfServiceDocuments({ participant }) {
           <DocField label="Número de pasaporte" value={participant.passportNumber} />
           <DocField
             label="Vencimiento"
-            value={participant.passportExpiry ? new Date(participant.passportExpiry).toLocaleDateString("es-CR") : null}
+            value={
+              participant.passportExpiry
+                ? new Date(participant.passportExpiry).toLocaleDateString("es-CR", {
+                    timeZone: "UTC",
+                  })
+                : null
+            }
             status={participant.passportNumber ? passportStatus : null}
           />
         </div>
@@ -93,7 +99,13 @@ export default function TourSelfServiceDocuments({ participant }) {
           {participant.hasVisa && (
             <DocField
               label="Vencimiento de visa"
-              value={participant.visaExpiry ? new Date(participant.visaExpiry).toLocaleDateString("es-CR") : null}
+              value={
+                participant.visaExpiry
+                  ? new Date(participant.visaExpiry).toLocaleDateString("es-CR", {
+                      timeZone: "UTC",
+                    })
+                  : null
+              }
               status={visaStatus}
             />
           )}
