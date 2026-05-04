@@ -1,10 +1,11 @@
 // AttendanceHistoryTable.jsx
-import { useQuery, useLazyQuery } from "@apollo/client";
+import { useQuery, useLazyQuery, useMutation } from "@apollo/client";
 import {
   GET_ALL_ATTENDANCES_REHEARSAL,
   GET_USERS_BY_ID,
   GET_USER_ATTENDANCE_STATS,
 } from "graphql/queries";
+import { UPDATE_SINGLE_ATTENDANCE } from "graphql/mutations";
 import { useState, useRef, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
@@ -40,6 +41,7 @@ const ATTENDANCE_STATUS_CONFIG = {
 };
 
 const RECORDS_PER_PAGE = 50;
+const ATTENDANCE_FETCH_PAGE_SIZE = 1000;
 
 const STATUS_KEYS = [
   "PRESENT",
@@ -256,11 +258,11 @@ const buildUserStatsMap = (records) => {
 // CUSTOM HOOK: useUserAttendanceStats
 // ============================================================================
 
-const useUserAttendanceStats = (userId, pickerDate) => {
+const useUserAttendanceStats = (userId, pickerDate, refreshKey = 0) => {
   const { startDate, endDate } = getDateRangeFromPicker(pickerDate);
 
   const [fetchStats, { data, loading, error }] = useLazyQuery(GET_USER_ATTENDANCE_STATS, {
-    fetchPolicy: "cache-first",
+    fetchPolicy: "network-only",
   });
 
   useEffect(() => {
@@ -271,7 +273,7 @@ const useUserAttendanceStats = (userId, pickerDate) => {
         ...(startDate ? { startDate, endDate } : {}),
       },
     });
-  }, [userId, startDate, endDate, fetchStats]);
+  }, [userId, startDate, endDate, refreshKey, fetchStats]);
 
   return {
     stats: data?.getUserAttendanceStats ?? null,
@@ -381,13 +383,34 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
 // SUBCOMPONENT: AttendanceDetailModal
 // ============================================================================
 
-const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => {
+const AttendanceDetailModal = ({
+  isOpen,
+  onClose,
+  userStats,
+  selectedDate,
+  canEdit,
+  onUpdateAttendance,
+  statsRefreshKey,
+}) => {
   const panelRef = useRef(null);
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState({ status: "", notes: "" });
+  const [savingId, setSavingId] = useState(null);
+  const [saveError, setSaveError] = useState("");
 
   const { stats: backendStats, loading: statsLoading } = useUserAttendanceStats(
     isOpen ? userStats?.userId : null,
-    selectedDate
+    selectedDate,
+    statsRefreshKey
   );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setEditingId(null);
+      setDraft({ status: "", notes: "" });
+      setSaveError("");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -434,6 +457,36 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
   );
 
   const displayCredits = backendStats?.attendanceCredits ?? attendanceCreditsLocal ?? 0;
+
+  const startEdit = (record) => {
+    setEditingId(record.id);
+    setDraft({ status: record.status || "PRESENT", notes: record.notes || "" });
+    setSaveError("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft({ status: "", notes: "" });
+    setSaveError("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !draft.status || !onUpdateAttendance) return;
+    setSavingId(editingId);
+    setSaveError("");
+    try {
+      await onUpdateAttendance({
+        id: editingId,
+        status: draft.status,
+        notes: draft.notes,
+      });
+      cancelEdit();
+    } catch (err) {
+      setSaveError(err?.message || "No se pudo actualizar la asistencia.");
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[1300] bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -594,7 +647,7 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                Desglose por estado (registros cargados)
+                Desglose por estado
               </p>
             </div>
             <div className="px-4 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -623,44 +676,122 @@ const AttendanceDetailModal = ({ isOpen, onClose, userStats, selectedDate }) => 
           <div className="mt-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                Últimos registros
+                Historial del estudiante
               </p>
               <p className="text-xs text-gray-500">{records?.length || 0}</p>
             </div>
 
             <div className="divide-y divide-gray-100">
-              {(records || []).slice(0, 50).map((r) => {
+              {(records || []).map((r) => {
                 const cfg = getAttendanceConfig(r.status);
                 const date = getDisplayDateFromRecord(r);
+                const isEditing = editingId === r.id;
+                const isSaving = savingId === r.id;
 
                 return (
-                  <div key={r.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-gray-900 font-medium">
-                        {date || "—"}{" "}
-                        <span className="text-xs text-gray-500">
-                          {r?.session?.section ? `• ${r.session.section}` : ""}
+                  <div key={r.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-900 font-medium">
+                          {date || "—"}{" "}
+                          <span className="text-xs text-gray-500">
+                            {r?.session?.section ? `• ${r.session.section}` : ""}
+                          </span>
+                        </p>
+                        {r?.notes ? (
+                          <p className="text-xs text-gray-600 mt-1 italic break-words">
+                            {r.notes}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">Sin notas</p>
+                        )}
+                      </div>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${cfg.color} text-white`}
+                        >
+                          {cfg.label}
                         </span>
-                      </p>
-                      {r?.notes ? (
-                        <p className="text-xs text-gray-600 mt-1 italic break-words">{r.notes}</p>
-                      ) : (
-                        <p className="text-xs text-gray-400 mt-1">Sin notas</p>
-                      )}
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(r)}
+                            className="px-2.5 py-1 text-xs font-medium rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          >
+                            Editar
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <span
-                      className={`shrink-0 inline-flex px-3 py-1 text-xs font-medium rounded-full ${cfg.color} text-white`}
-                    >
-                      {cfg.label}
-                    </span>
+
+                    {isEditing && (
+                      <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <label className="text-xs font-semibold text-gray-600 sm:col-span-1">
+                            Estado
+                            <select
+                              value={draft.status}
+                              onChange={(e) =>
+                                setDraft((prev) => ({ ...prev, status: e.target.value }))
+                              }
+                              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={isSaving}
+                            >
+                              {STATUS_KEYS.map((status) => (
+                                <option key={status} value={status}>
+                                  {getAttendanceConfig(status).label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="text-xs font-semibold text-gray-600 sm:col-span-2">
+                            Notas
+                            <textarea
+                              value={draft.notes}
+                              onChange={(e) =>
+                                setDraft((prev) => ({ ...prev, notes: e.target.value }))
+                              }
+                              className="mt-1 w-full min-h-[72px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              maxLength={500}
+                              disabled={isSaving}
+                              placeholder="Sin notas"
+                            />
+                          </label>
+                        </div>
+
+                        {saveError && (
+                          <p className="mt-2 text-xs font-medium text-red-600">{saveError}</p>
+                        )}
+
+                        <div className="mt-3 flex flex-wrap justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            disabled={isSaving}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            disabled={isSaving || !draft.status}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {isSaving ? "Guardando..." : "Guardar"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {(records || []).length > 50 && (
-              <div className="px-4 py-3 text-xs text-gray-500 bg-white border-t">
-                Mostrando 50 más recientes.
+            {(records || []).length === 0 && (
+              <div className="px-4 py-5 text-sm text-gray-500 bg-white">
+                No hay registros para este estudiante en el período seleccionado.
               </div>
             )}
           </div>
@@ -916,6 +1047,19 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
             </option>
           ))}
         </select>
+
+        <select
+          value={filters.section}
+          onChange={(e) => onFilterChange("section", e.target.value)}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">Todas las secciones</option>
+          {filters.sections.map((section) => (
+            <option key={section} value={section}>
+              {section}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -1000,17 +1144,75 @@ const AttendanceHistoryTable = () => {
 
   const [detailUserId, setDetailUserId] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [allPagesLoaded, setAllPagesLoaded] = useState(false);
+  const [isFetchingAllPages, setIsFetchingAllPages] = useState(false);
+  const [paginationError, setPaginationError] = useState("");
+  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
 
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const currentUser = userData?.getUser || null;
   const isAdmin = String(currentUser?.role || "").toUpperCase() === "ADMIN";
   const userInstrument = currentUser?.instrument;
 
-  const { loading, error, data } = useQuery(GET_ALL_ATTENDANCES_REHEARSAL, {
-    variables: { limit: 1000, offset: 0 },
+  const { loading, error, data, fetchMore } = useQuery(GET_ALL_ATTENDANCES_REHEARSAL, {
+    variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, offset: 0 },
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
   });
+
+  const [updateSingleAttendance] = useMutation(UPDATE_SINGLE_ATTENDANCE);
+
+  useEffect(() => {
+    const loadedCount = data?.getAllAttendancesRehearsal?.length || 0;
+    if (loading || allPagesLoaded || isFetchingAllPages) return;
+    if (loadedCount === 0 || loadedCount % ATTENDANCE_FETCH_PAGE_SIZE !== 0) {
+      setAllPagesLoaded(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchRemainingPages = async () => {
+      setIsFetchingAllPages(true);
+      let offset = loadedCount;
+
+      try {
+        while (!cancelled) {
+          const result = await fetchMore({
+            variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, offset },
+            updateQuery: (previousResult, { fetchMoreResult }) => {
+              const previous = previousResult?.getAllAttendancesRehearsal || [];
+              const next = fetchMoreResult?.getAllAttendancesRehearsal || [];
+
+              return {
+                getAllAttendancesRehearsal: [...previous, ...next],
+              };
+            },
+          });
+
+          const page = result?.data?.getAllAttendancesRehearsal || [];
+          if (page.length < ATTENDANCE_FETCH_PAGE_SIZE) {
+            setAllPagesLoaded(true);
+            break;
+          }
+
+          offset += page.length;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPaginationError(err?.message || "No se pudo cargar todo el historial.");
+        }
+      } finally {
+        if (!cancelled) setIsFetchingAllPages(false);
+      }
+    };
+
+    fetchRemainingPages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allPagesLoaded, data, fetchMore, isFetchingAllPages, loading]);
 
   const validAttendances = useMemo(() => {
     const arr = data?.getAllAttendancesRehearsal || [];
@@ -1146,12 +1348,48 @@ const AttendanceHistoryTable = () => {
     setDetailUserId(null);
   };
 
-  const selectedUserStats = detailUserId ? statsByUserId[detailUserId] : null;
+  const handleUpdateAttendance = async ({ id, status, notes }) => {
+    if (!isAdmin) throw new Error("No tenés permisos para editar asistencias.");
+
+    await updateSingleAttendance({
+      variables: {
+        id,
+        status,
+        notes: notes ?? "",
+      },
+    });
+
+    setStatsRefreshKey((value) => value + 1);
+  };
+
+  const selectedUserStats = useMemo(() => {
+    if (!detailUserId) return null;
+
+    const selectedYmd = selectedDate ? getPickerYmd(selectedDate) : null;
+    const detailRecords = statsBaseRecords.filter((record) => {
+      const userMatch = String(record?.user?.id || "") === detailUserId;
+      if (!userMatch) return false;
+      if (!selectedYmd) return true;
+      return getYmdInCR(getRecordRawDate(record)) === selectedYmd;
+    });
+
+    return buildUserStatsMap(detailRecords)[detailUserId] || null;
+  }, [detailUserId, selectedDate, statsBaseRecords]);
 
   if (error) {
     return (
       <div className="py-16 px-4 text-center">
         <p className="text-red-600 font-medium">Error al cargar el historial: {error.message}</p>
+      </div>
+    );
+  }
+
+  if (paginationError && validAttendances.length === 0) {
+    return (
+      <div className="py-16 px-4 text-center">
+        <p className="text-red-600 font-medium">
+          Error al cargar todo el historial: {paginationError}
+        </p>
       </div>
     );
   }
@@ -1181,6 +1419,12 @@ const AttendanceHistoryTable = () => {
 
       <div className="px-0 sm:px-4 py-4 sm:py-2">
         <div className="bg-white rounded-none sm:rounded-lg shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+          {paginationError && validAttendances.length > 0 && (
+            <div className="px-4 py-3 text-sm text-amber-700 bg-amber-50 border-b border-amber-100">
+              Se cargó parte del historial, pero faltan páginas por recuperar: {paginationError}
+            </div>
+          )}
+
           {loading && validAttendances.length === 0 ? (
             <div className="flex items-center justify-center py-16 bg-white">
               <div className="text-center">
@@ -1290,7 +1534,7 @@ const AttendanceHistoryTable = () => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Actualizando...
+                  {isFetchingAllPages ? "Cargando historial completo..." : "Actualizando..."}
                 </div>
               )}
             </>
@@ -1303,6 +1547,9 @@ const AttendanceHistoryTable = () => {
         onClose={closeDetails}
         userStats={selectedUserStats}
         selectedDate={selectedDate}
+        canEdit={isAdmin}
+        onUpdateAttendance={handleUpdateAttendance}
+        statsRefreshKey={statsRefreshKey}
       />
 
       <style>{`
@@ -1336,6 +1583,9 @@ AttendanceDetailModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   selectedDate: PropTypes.instanceOf(Date),
+  canEdit: PropTypes.bool,
+  onUpdateAttendance: PropTypes.func,
+  statsRefreshKey: PropTypes.number,
   userStats: PropTypes.shape({
     userId: PropTypes.string,
     user: PropTypes.object,
