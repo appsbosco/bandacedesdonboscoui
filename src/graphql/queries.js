@@ -653,6 +653,13 @@ export const GET_USER_ATTENDANCE_STATS = gql`
   query GetUserAttendanceStats($userId: ID!, $startDate: String, $endDate: String) {
     getUserAttendanceStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
       userId
+      user {
+        id
+        name
+        firstSurName
+        secondSurName
+        instrument
+      }
       totalSessions
       present
       late

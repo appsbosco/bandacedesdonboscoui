@@ -98,7 +98,10 @@ const getMobileSelectorPosition = (buttonEl) => {
 };
 
 const normalizeFullName = (u) =>
-  `${u?.name || ""} ${u?.firstSurName || ""} ${u?.secondSurName || ""}`.trim();
+  [u?.name, u?.firstSurName, u?.secondSurName]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
 
 const buildRecordsFromSession = (students, session) => {
   const byUserId = new Map(
@@ -317,7 +320,9 @@ const StudentRow = ({ student, attendance, onStatusChange, onEditNotes, searchTe
 
         <div className="flex-1 min-w-0">
           <p
-            className="text-sm font-semibold text-gray-900 truncate"
+            className="text-sm font-semibold text-gray-900 text-left break-words"
+            dir="ltr"
+            style={{ unicodeBidi: "isolate" }}
             dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
           />
           <p className="text-xs text-gray-500 mt-0.5">{student.instrument}</p>
@@ -724,7 +729,7 @@ const AttendancePage = () => {
 
   const currentUser = userData?.getUser || null;
   const userSection = mapInstrumentToSection(currentUser?.instrument);
-  const isAdmin = currentUser?.role === "ADMIN";
+  const isAdmin = String(currentUser?.role || "").toUpperCase() === "ADMIN";
 
   // Congelar fecha para consulta/guardar (evita mismatch por medianoche)
   const [queryDate] = useState(() => new Date().toISOString());
@@ -788,8 +793,6 @@ const AttendancePage = () => {
 
       const sameSection = studentSection === userSection;
       const includeEuphoniums = isTrombonesUser && studentInstrument === "EUFONIO";
-
-      console.log(studentInstrument);
 
       return (
         (sameSection || includeEuphoniums) &&

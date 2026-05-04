@@ -2,6 +2,7 @@
 import { useQuery, useLazyQuery, useMutation } from "@apollo/client";
 import {
   GET_ALL_ATTENDANCES_REHEARSAL,
+  GET_USERS,
   GET_USERS_BY_ID,
   GET_USER_ATTENDANCE_STATS,
 } from "graphql/queries";
@@ -166,6 +167,12 @@ const getSortDateValue = (attendance) => {
   return d ? d.getTime() : 0;
 };
 
+const getUserFullName = (user) =>
+  [user?.name, user?.firstSurName, user?.secondSurName]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
+
 // ── Helpers de riesgo ────────────────────────────────────────────────────────
 
 const getRiskBadges = ({ hasThreeUnjustified, exceedsLimit } = {}) => {
@@ -325,15 +332,19 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
               equivalentAbsencesLocal,
               hasThreeUnjustifiedLocal,
             }) => {
-              const fullName = `${user?.name || ""} ${user?.firstSurName || ""} ${
-                user?.secondSurName || ""
-              }`.trim();
+              const fullName = getUserFullName(user);
               const mood = getMoodConfig(percentage);
 
               return (
                 <div key={userId} className="px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
+                    <p
+                      className="text-sm font-semibold text-gray-900 text-left break-words"
+                      dir="ltr"
+                      style={{ unicodeBidi: "isolate" }}
+                    >
+                      {fullName}
+                    </p>
                     <p className="text-xs text-gray-500">{user?.instrument || "—"}</p>
                   </div>
 
@@ -443,9 +454,8 @@ const AttendanceDetailModal = ({
     records,
   } = userStats;
 
-  const fullName = `${user?.name || ""} ${user?.firstSurName || ""} ${
-    user?.secondSurName || ""
-  }`.trim();
+  const displayUser = backendStats?.user || user;
+  const fullName = getUserFullName(displayUser);
 
   const displayPercentage = backendStats?.attendancePercentage ?? percentage;
   const displayMood = getMoodConfig(displayPercentage);
@@ -497,11 +507,15 @@ const AttendanceDetailModal = ({
         <div className="px-4 sm:px-6 py-4 border-b bg-white">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              <h2
+                className="text-lg sm:text-xl font-bold text-gray-900 text-left break-words"
+                dir="ltr"
+                style={{ unicodeBidi: "isolate" }}
+              >
                 {fullName || "Detalle"}
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                {user?.instrument ? `Instrumento: ${user.instrument}` : "—"}
+                {displayUser?.instrument ? `Instrumento: ${displayUser.instrument}` : "—"}
               </p>
 
               {riskBadges.length > 0 && (
@@ -555,7 +569,7 @@ const AttendanceDetailModal = ({
         </div>
 
         <div className="px-4 sm:px-6 py-4 max-h-[70vh] sm:max-h-[75vh] overflow-auto bg-gray-50">
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
+          {/* <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
             <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                 Métricas reales
@@ -642,7 +656,7 @@ const AttendanceDetailModal = ({
                 </p>
               )
             )}
-          </div>
+          </div> */}
 
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50">
@@ -699,9 +713,7 @@ const AttendanceDetailModal = ({
                           </span>
                         </p>
                         {r?.notes ? (
-                          <p className="text-xs text-gray-600 mt-1 italic break-words">
-                            {r.notes}
-                          </p>
+                          <p className="text-xs text-gray-600 mt-1 italic break-words">{r.notes}</p>
                         ) : (
                           <p className="text-xs text-gray-400 mt-1">Sin notas</p>
                         )}
@@ -828,11 +840,7 @@ const MetricCard = ({ label, value, sub, highlight }) => {
 // ============================================================================
 
 const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
-  const userName =
-    record.userName ||
-    `${record.user?.name || ""} ${record.user?.firstSurName || ""} ${
-      record.user?.secondSurName || ""
-    }`.trim();
+  const userName = record.userName || getUserFullName(record.user);
 
   const attendanceConfig = getAttendanceConfig(record.status);
   const percentageValue = typeof record.percentage === "number" ? record.percentage : 0;
@@ -876,7 +884,9 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p
-                className="text-sm font-semibold text-gray-900 truncate"
+                className="text-sm font-semibold text-gray-900 text-left break-words"
+                dir="ltr"
+                style={{ unicodeBidi: "isolate" }}
                 dangerouslySetInnerHTML={{ __html: highlightText(userName) }}
               />
               {showUnjustifiedBadge && (
@@ -924,7 +934,9 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p
-                className="text-sm font-semibold text-gray-900 truncate"
+                className="text-sm font-semibold text-gray-900 text-left break-words"
+                dir="ltr"
+                style={{ unicodeBidi: "isolate" }}
                 dangerouslySetInnerHTML={{ __html: highlightText(userName) }}
               />
               {showUnjustifiedBadge && (
@@ -1150,6 +1162,13 @@ const AttendanceHistoryTable = () => {
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
 
   const { data: userData } = useQuery(GET_USERS_BY_ID);
+  const {
+    data: usersData,
+    loading: usersLoading,
+    error: usersError,
+  } = useQuery(GET_USERS, {
+    fetchPolicy: "network-only",
+  });
   const currentUser = userData?.getUser || null;
   const isAdmin = String(currentUser?.role || "").toUpperCase() === "ADMIN";
   const userInstrument = currentUser?.instrument;
@@ -1214,10 +1233,34 @@ const AttendanceHistoryTable = () => {
     };
   }, [allPagesLoaded, data, fetchMore, isFetchingAllPages, loading]);
 
+  const usersById = useMemo(() => {
+    const map = new Map();
+    (usersData?.getUsers || []).forEach((user) => {
+      if (user?.id) map.set(String(user.id), user);
+    });
+    return map;
+  }, [usersData]);
+
   const validAttendances = useMemo(() => {
     const arr = data?.getAllAttendancesRehearsal || [];
-    return arr.filter((a) => a?.user?.id);
-  }, [data]);
+    const hasUserCatalog = Array.isArray(usersData?.getUsers);
+
+    if (!hasUserCatalog && !usersError) return [];
+
+    return arr
+      .filter((a) => a?.user?.id)
+      .map((attendance) => {
+        const completeUser = usersById.get(String(attendance.user.id));
+        if (!completeUser) return attendance;
+        return {
+          ...attendance,
+          user: {
+            ...attendance.user,
+            ...completeUser,
+          },
+        };
+      });
+  }, [data, usersById, usersData, usersError]);
 
   useEffect(() => {
     if (validAttendances.length > 0) {
@@ -1259,9 +1302,7 @@ const AttendanceHistoryTable = () => {
 
   const processedRecords = useMemo(() => {
     return accessibleRecords.map((attendance) => {
-      const userName = `${attendance.user?.name || ""} ${attendance.user?.firstSurName || ""} ${
-        attendance.user?.secondSurName || ""
-      }`.trim();
+      const userName = getUserFullName(attendance.user);
 
       const userId = attendance.user?.id ? String(attendance.user.id) : "";
       const userStat = userId ? statsByUserId[userId] : null;
@@ -1321,6 +1362,7 @@ const AttendanceHistoryTable = () => {
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const endIndex = startIndex + RECORDS_PER_PAGE;
   const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+  const isInitialLoading = (loading || usersLoading) && validAttendances.length === 0;
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -1425,7 +1467,7 @@ const AttendanceHistoryTable = () => {
             </div>
           )}
 
-          {loading && validAttendances.length === 0 ? (
+          {isInitialLoading ? (
             <div className="flex items-center justify-center py-16 bg-white">
               <div className="text-center">
                 <svg
@@ -1449,7 +1491,7 @@ const AttendanceHistoryTable = () => {
                   />
                 </svg>
                 <p className="text-gray-600 font-medium text-sm sm:text-base">
-                  Cargando historial...
+                  {usersLoading ? "Cargando estudiantes..." : "Cargando historial..."}
                 </p>
               </div>
             </div>
