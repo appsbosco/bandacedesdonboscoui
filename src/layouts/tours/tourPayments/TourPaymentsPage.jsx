@@ -20,15 +20,22 @@ import {
 } from "./ParticipantDetailDrawer";
 import DeletePaymentModal from "./ParticipantDetailDrawer";
 import { Toast } from "../TourHelpers";
+import {
+  buildTourPaymentsWhatsappText,
+  openTourPaymentsPrint,
+} from "./tourPaymentExports";
 
 // ─── Status filter tabs ───────────────────────────────────────────────────────
 const STATUS_FILTERS = [
   { value: "ALL", label: "Todos" },
+  { value: "UP_TO_DATE", label: "Al día" },
+  { value: "PENDING", label: "Sin pago" },
   { value: "LATE", label: "Atrasados" },
   { value: "PARTIAL", label: "Parciales" },
-  { value: "PENDING", label: "Sin pago" },
-  { value: "UP_TO_DATE", label: "Al día" },
   { value: "PAID", label: "Pagados" },
+  { value: "WITHOUT_ACCOUNT", label: "Sin cuenta" },
+  { value: "WITHOUT_PLAN", label: "Sin plan" },
+  { value: "WITH_PLAN", label: "Con plan" },
 ];
 
 // ─── View tabs ────────────────────────────────────────────────────────────────
@@ -95,6 +102,23 @@ function isKeyboardActivationKey(event) {
 function toDateTimeValue(dateString) {
   if (!dateString) return undefined;
   return `${dateString}T12:00:00.000Z`;
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
 }
 
 export default function TourPaymentsPage({ tourId, tourName }) {
@@ -258,6 +282,34 @@ export default function TourPaymentsPage({ tourId, tourName }) {
     },
     [handleCreatePlan, handleUpdatePlan, planModal.mode, planModal.plan]
   );
+  const handleOpenPaymentPrint = useCallback(() => {
+    const opened = openTourPaymentsPrint({
+      rows: financialTable?.rows ?? [],
+      tourName,
+    });
+
+    if (!opened) {
+      setToast({
+        type: "error",
+        message: "El navegador bloqueó la ventana del reporte. Permití ventanas emergentes.",
+      });
+    }
+  }, [financialTable?.rows, setToast, tourName]);
+  const handleCopyWhatsappReport = useCallback(async () => {
+    try {
+      const text = buildTourPaymentsWhatsappText({
+        rows: financialTable?.rows ?? [],
+        tourName,
+      });
+      await copyTextToClipboard(text);
+      setToast({ type: "success", message: "Lista financiera copiada para WhatsApp" });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: "No se pudo copiar la lista. Intentá de nuevo.",
+      });
+    }
+  }, [financialTable?.rows, setToast, tourName]);
 
   return (
     <div className="space-y-5">
@@ -270,6 +322,36 @@ export default function TourPaymentsPage({ tourId, tourName }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleOpenPaymentPrint}
+            disabled={!financialTable?.rows?.length}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 9V2h12v7m-2 8h2a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2h2m2 5h8v-8h-8v8z"
+              />
+            </svg>
+            PDF financiero
+          </button>
+          <button
+            onClick={handleCopyWhatsappReport}
+            disabled={!financialTable?.rows?.length}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 10h8M8 14h5m8-2a9 9 0 11-4.22-7.63L21 3l-1.37 4.22A8.96 8.96 0 0121 12z"
+              />
+            </svg>
+            Lista WhatsApp
+          </button>
           <button
             onClick={openCreateParticipantModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
@@ -545,6 +627,21 @@ const FinancialTableView = memo(function FinancialTableView({
   onAdjustAccount,
   onDeleteParticipant,
 }) {
+  const filterCounts = useMemo(() => {
+    const rows = financialTable?.rows ?? [];
+    return STATUS_FILTERS.reduce((counts, filter) => {
+      counts[filter.value] = rows.filter((row) => {
+        const hasInstallments = row.installments?.length > 0;
+        if (filter.value === "ALL") return true;
+        if (filter.value === "WITHOUT_ACCOUNT") return !row.hasFinancialAccount;
+        if (filter.value === "WITHOUT_PLAN") return row.hasFinancialAccount && !hasInstallments;
+        if (filter.value === "WITH_PLAN") return row.hasFinancialAccount && hasInstallments;
+        return row.financialStatus === filter.value;
+      }).length;
+      return counts;
+    }, {});
+  }, [financialTable?.rows]);
+
   if (loading) return <TableSkeleton />;
   if (error) return <ErrorState message={error.message} />;
   if (!financialTable) return <EmptyTableState />;
@@ -574,6 +671,7 @@ const FinancialTableView = memo(function FinancialTableView({
               }`}
             >
               {f.label}
+              <span className="ml-1 opacity-70">{filterCounts[f.value] ?? 0}</span>
             </button>
           ))}
         </div>
@@ -656,6 +754,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
   const balanceClassName = getBalanceClassName(row.balance);
   const visaDenied = row.visaStatus === "DENIED";
   const visaDeniedLabel = getVisaDeniedLabel(row.visaDeniedCount);
+  const hasInstallments = row.installments.length > 0;
   const handleOpenDetail = useCallback(() => {
     onOpenDetail(row);
   }, [onOpenDetail, row]);
@@ -752,6 +851,11 @@ const FinancialTableRow = memo(function FinancialTableRow({
                 Sin cuenta financiera configurada
               </div>
             )}
+            {row.hasFinancialAccount && row.installments.length === 0 && (
+              <div className="mt-1 text-[11px] font-semibold text-amber-700">
+                Sin plan de pagos asignado
+              </div>
+            )}
             {visaDenied && (
               <div className="mt-1 text-[11px] font-semibold text-rose-700">
                 Visa negada{visaDeniedLabel ? ` · ${visaDeniedLabel}` : ""}
@@ -793,7 +897,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
           <button
             onClick={handleRegisterPayment}
             title="Registrar pago"
-            disabled={row.isRemoved || !row.hasFinancialAccount}
+            disabled={row.isRemoved || !row.hasFinancialAccount || !hasInstallments}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -807,8 +911,8 @@ const FinancialTableRow = memo(function FinancialTableRow({
           </button>
           <button
             onClick={handleAdjustAccount}
-            title="Ajustar cuenta"
-            disabled={!row.hasFinancialAccount}
+            title={row.hasFinancialAccount ? "Ajustar cuenta" : "Crear cuenta financiera"}
+            disabled={row.isRemoved}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
