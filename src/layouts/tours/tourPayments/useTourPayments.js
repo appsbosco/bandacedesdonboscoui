@@ -515,7 +515,13 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
           row.fullName.toLowerCase().includes(lowerSearch) ||
           row.identification.toLowerCase().includes(lowerSearch);
 
-        const matchStatus = statusFilter === "ALL" || row.financialStatus === statusFilter;
+        const hasInstallments = row.installments?.length > 0;
+        const matchStatus =
+          statusFilter === "ALL" ||
+          (statusFilter === "WITHOUT_ACCOUNT" && !row.hasFinancialAccount) ||
+          (statusFilter === "WITHOUT_PLAN" && row.hasFinancialAccount && !hasInstallments) ||
+          (statusFilter === "WITH_PLAN" && row.hasFinancialAccount && hasInstallments) ||
+          row.financialStatus === statusFilter;
 
         return matchSearch && matchStatus;
       })
@@ -653,7 +659,7 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     async (baseAmount, planId) => {
       await createAccountsForAll({ variables: { tourId, baseAmount, planId } });
       if (planId) {
-        await assignPlanToAll({ variables: { tourId } });
+        await assignPlanToAll({ variables: { tourId, planId } });
       }
       setSetupModal({ open: false });
     },

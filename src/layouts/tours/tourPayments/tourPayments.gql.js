@@ -223,8 +223,8 @@ export const ASSIGN_PAYMENT_PLAN = gql`
 `;
 
 export const ASSIGN_DEFAULT_PLAN_TO_ALL = gql`
-  mutation AssignDefaultPlanToAll($tourId: ID!) {
-    assignDefaultPlanToAll(tourId: $tourId) {
+  mutation AssignDefaultPlanToAll($tourId: ID!, $planId: ID) {
+    assignDefaultPlanToAll(tourId: $tourId, planId: $planId) {
       assigned
       skipped
       total

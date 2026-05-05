@@ -189,6 +189,28 @@ function getOwnerInstrumentLabel(owner) {
   return owner?.instrument || "Sin instrumento";
 }
 
+function ownerMatchesInstrumentFilter(owner, instrumentFilter) {
+  if (!instrumentFilter) return true;
+
+  const instrument = String(owner?.instrument || "").trim();
+  const normalizedInstrument = instrument.toLowerCase();
+  const normalizedRole = String(owner?.role || "").trim().toLowerCase();
+
+  if (instrumentFilter === "Staff") {
+    return normalizedInstrument === "staff" || normalizedRole === "staff";
+  }
+
+  if (instrumentFilter === OTHER_INSTRUMENT_FILTER) {
+    return (
+      Boolean(normalizedInstrument) &&
+      normalizedRole !== "staff" &&
+      !DOCUMENT_KNOWN_INSTRUMENTS.has(normalizedInstrument)
+    );
+  }
+
+  return normalizedInstrument === instrumentFilter.toLowerCase();
+}
+
 function buildExtractedFields(document) {
   const extracted = document?.extracted || {};
   return [
@@ -351,7 +373,32 @@ const ADMIN_PRESET_CONFIG = {
   },
 };
 
-const ADMIN_PAGE_SIZE = 100;
+const ADMIN_DOCUMENT_BATCH_SIZE = 200;
+const ADMIN_ROWS_PER_PAGE = 20;
+const OTHER_INSTRUMENT_FILTER = "__OTHER__";
+const DOCUMENT_INSTRUMENT_FILTER_OPTIONS = [
+  { value: "", label: "Todos los instrumentos" },
+  { value: "No Aplica", label: "No Aplica" },
+  { value: "Flauta", label: "Flauta" },
+  { value: "Clarinete", label: "Clarinete" },
+  { value: "Saxofón", label: "Saxofón" },
+  { value: "Trompeta", label: "Trompeta" },
+  { value: "Trombón", label: "Trombón" },
+  { value: "Tuba", label: "Tuba" },
+  { value: "Eufonio", label: "Eufonio" },
+  { value: "Corno Francés", label: "Corno Francés" },
+  { value: "Mallets", label: "Mallets" },
+  { value: "Percusión", label: "Percusión" },
+  { value: "Color Guard", label: "Color Guard" },
+  { value: "Danza", label: "Danza" },
+  { value: "Staff", label: "Staff" },
+  { value: OTHER_INSTRUMENT_FILTER, label: "Otro" },
+];
+const DOCUMENT_KNOWN_INSTRUMENTS = new Set(
+  DOCUMENT_INSTRUMENT_FILTER_OPTIONS.filter(
+    (option) => option.value && option.value !== OTHER_INSTRUMENT_FILTER
+  ).map((option) => option.value.toLowerCase())
+);
 
 // ─── Small UI components ───────────────────────────────────────────────────────
 
@@ -1488,7 +1535,7 @@ function FinancieroView() {
       const haystack = [row.ownerLabel, row.owner?.email].filter(Boolean).join(" ").toLowerCase();
       if (search && !haystack.includes(search)) return false;
       if (roleFilter && row.owner?.role !== roleFilter) return false;
-      if (instrumentFilter && row.owner?.instrument !== instrumentFilter) return false;
+      if (!ownerMatchesInstrumentFilter(row.owner, instrumentFilter)) return false;
 
       if (reviewFilter === "PENDING") {
         return row.documents.some((doc) => isReviewPendingStatus(doc.status));
@@ -1598,10 +1645,9 @@ function FinancieroView() {
               onChange={(e) => setInstrumentFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
             >
-              <option value="">Todos los instrumentos</option>
-              {instrumentOptions.map((instrument) => (
-                <option key={instrument} value={instrument}>
-                  {instrument}
+              {DOCUMENT_INSTRUMENT_FILTER_OPTIONS.map((option) => (
+                <option key={option.value || "all"} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -1805,14 +1851,14 @@ function AdminDocumentsView() {
     () => ({
       filters: Object.keys(adminFilters).length > 0 ? adminFilters : undefined,
       pagination: {
-        limit: ADMIN_PAGE_SIZE,
-        skip: (currentPage - 1) * ADMIN_PAGE_SIZE,
+        limit: ADMIN_DOCUMENT_BATCH_SIZE,
+        skip: 0,
       },
     }),
-    [adminFilters, currentPage]
+    [adminFilters]
   );
 
-  const { data, loading, error, refetch } = useQuery(ALL_DOCUMENTS, {
+  const { data, loading, error, fetchMore, refetch } = useQuery(ALL_DOCUMENTS, {
     variables: queryVariables,
     fetchPolicy: "cache-and-network",
   });
@@ -1823,6 +1869,22 @@ function AdminDocumentsView() {
   const paginationInfo = data?.allDocuments?.pagination;
   const hasMore = paginationInfo?.hasMore || false;
   const total = paginationInfo?.total ?? documents.length;
+
+  useEffect(() => {
+    if (loading || !hasMore || documents.length >= total) return;
+
+    fetchMore({
+      variables: {
+        filters: Object.keys(adminFilters).length > 0 ? adminFilters : undefined,
+        pagination: {
+          limit: ADMIN_DOCUMENT_BATCH_SIZE,
+          skip: documents.length,
+        },
+      },
+      updateQuery: (previousResult, { fetchMoreResult }) =>
+        mergeDocumentsResult(previousResult, fetchMoreResult, "allDocuments"),
+    });
+  }, [adminFilters, documents.length, fetchMore, hasMore, loading, total]);
 
   const groupedRows = useMemo(() => {
     const ownersMap = new Map();
@@ -1950,14 +2012,6 @@ function AdminDocumentsView() {
     [groupedRows]
   );
 
-  const instrumentOptions = useMemo(
-    () =>
-      Array.from(new Set(groupedRows.map((row) => row.owner?.instrument).filter(Boolean))).sort(
-        (a, b) => a.localeCompare(b, "es")
-      ),
-    [groupedRows]
-  );
-
   const queueCounts = useMemo(
     () => ({
       ALL: groupedRows.length,
@@ -2014,7 +2068,11 @@ function AdminDocumentsView() {
       .slice(0, 6);
   }, [groupedRows, ownerSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ADMIN_ROWS_PER_PAGE));
+  const visibleRows = useMemo(() => {
+    const start = (currentPage - 1) * ADMIN_ROWS_PER_PAGE;
+    return filteredRows.slice(start, start + ADMIN_ROWS_PER_PAGE);
+  }, [currentPage, filteredRows]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -2028,6 +2086,10 @@ function AdminDocumentsView() {
     sortBy,
     typeFilter,
   ]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const handleCompleteDocument = useCallback(
     async (document) => {
@@ -2081,12 +2143,12 @@ function AdminDocumentsView() {
 
   useEffect(() => {
     setSelectedRow((current) => {
-      if (!filteredRows.length) return null;
-      if (!current) return filteredRows[0];
-      const nextMatch = filteredRows.find((row) => row.id === current.id);
-      return nextMatch || filteredRows[0];
+      if (!visibleRows.length) return null;
+      if (!current) return visibleRows[0];
+      const nextMatch = visibleRows.find((row) => row.id === current.id);
+      return nextMatch || visibleRows[0];
     });
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -2110,31 +2172,31 @@ function AdminDocumentsView() {
         return;
       }
 
-      if (!filteredRows.length) return;
+      if (!visibleRows.length) return;
 
       if (event.key.toLowerCase() === "j") {
         event.preventDefault();
         setSelectedRow((current) => {
-          const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+          const currentIndex = visibleRows.findIndex((row) => row.id === current?.id);
           const nextIndex =
-            currentIndex >= 0 ? Math.min(filteredRows.length - 1, currentIndex + 1) : 0;
-          return filteredRows[nextIndex];
+            currentIndex >= 0 ? Math.min(visibleRows.length - 1, currentIndex + 1) : 0;
+          return visibleRows[nextIndex];
         });
       }
 
       if (event.key.toLowerCase() === "k") {
         event.preventDefault();
         setSelectedRow((current) => {
-          const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
+          const currentIndex = visibleRows.findIndex((row) => row.id === current?.id);
           const nextIndex = currentIndex >= 0 ? Math.max(0, currentIndex - 1) : 0;
-          return filteredRows[nextIndex];
+          return visibleRows[nextIndex];
         });
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   const clearFilters = useCallback(() => {
     setRowStatusFilter("ALL");
@@ -2190,9 +2252,12 @@ function AdminDocumentsView() {
       });
     }
     if (instrumentFilter) {
+      const match = DOCUMENT_INSTRUMENT_FILTER_OPTIONS.find(
+        (option) => option.value === instrumentFilter
+      );
       chips.push({
         key: "instrument",
-        label: `Instrumento: ${instrumentFilter}`,
+        label: `Instrumento: ${match?.label || instrumentFilter}`,
         onRemove: () => setInstrumentFilter(""),
       });
     }
@@ -2225,25 +2290,25 @@ function AdminDocumentsView() {
   ]);
 
   const selectedRowIndex = selectedRow
-    ? filteredRows.findIndex((row) => row.id === selectedRow.id)
+    ? visibleRows.findIndex((row) => row.id === selectedRow.id)
     : -1;
 
   const selectPreviousRow = useCallback(() => {
-    if (!filteredRows.length) return;
+    if (!visibleRows.length) return;
     setSelectedRow((current) => {
-      const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
-      return filteredRows[currentIndex > 0 ? currentIndex - 1 : 0];
+      const currentIndex = visibleRows.findIndex((row) => row.id === current?.id);
+      return visibleRows[currentIndex > 0 ? currentIndex - 1 : 0];
     });
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   const selectNextRow = useCallback(() => {
-    if (!filteredRows.length) return;
+    if (!visibleRows.length) return;
     setSelectedRow((current) => {
-      const currentIndex = filteredRows.findIndex((row) => row.id === current?.id);
-      if (currentIndex < 0) return filteredRows[0];
-      return filteredRows[Math.min(filteredRows.length - 1, currentIndex + 1)];
+      const currentIndex = visibleRows.findIndex((row) => row.id === current?.id);
+      if (currentIndex < 0) return visibleRows[0];
+      return visibleRows[Math.min(visibleRows.length - 1, currentIndex + 1)];
     });
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   const handleSelectRow = (row) => {
     setSelectedRow((current) => (current?.id === row.id ? null : row));
@@ -2420,14 +2485,18 @@ function AdminDocumentsView() {
               >
                 Instrumento
               </label>
-              <input
+              <select
                 id="documents-admin-instrument-filter"
-                type="text"
                 value={instrumentFilter}
                 onChange={(e) => setInstrumentFilter(e.target.value)}
-                placeholder="Ej: clarinete, trompeta..."
                 className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              />
+              >
+                {DOCUMENT_INSTRUMENT_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value || "all"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label
@@ -2520,15 +2589,18 @@ function AdminDocumentsView() {
 
           <div className="flex flex-wrap items-center gap-2 px-1">
             <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
-              Página {currentPage} de {totalPages} · {documents.length} de {total} documento
-              {total !== 1 ? "s" : ""}
+              Página {currentPage} de {totalPages} · {visibleRows.length} de{" "}
+              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
             </span>
             {activeFilterChips.length > 0 && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
                 Filtros activos
               </span>
             )}
-            <span className="text-xs text-slate-400">Los filtros de nombre e instrumento se aplican en el servidor.</span>
+            <span className="text-xs text-slate-400">
+              {documents.length} de {total} documento{total !== 1 ? "s" : ""} cargado
+              {documents.length !== 1 ? "s" : ""}.
+            </span>
           </div>
         </>
       )}
@@ -2563,7 +2635,7 @@ function AdminDocumentsView() {
       ) : (
         <div className="space-y-4">
           <div className="space-y-4 lg:hidden">
-            {filteredRows.map((row) => (
+            {visibleRows.map((row) => (
               <MobileRowCard
                 key={row.id}
                 row={row}
@@ -2599,7 +2671,7 @@ function AdminDocumentsView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRows.map((row, index) => {
+                    {visibleRows.map((row, index) => {
                       const isSelected = selectedRow?.id === row.id;
                       const borderColor = ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
 
@@ -2608,7 +2680,7 @@ function AdminDocumentsView() {
                           key={row.id}
                           style={{ borderLeft: `4px solid ${borderColor}` }}
                           className={`
-                            ${index < filteredRows.length - 1 ? "border-b border-slate-100" : ""}
+                            ${index < visibleRows.length - 1 ? "border-b border-slate-100" : ""}
                             ${isSelected ? "bg-blue-50/50" : "hover:bg-slate-50"}
                             cursor-pointer transition-colors
                           `}
@@ -2722,7 +2794,8 @@ function AdminDocumentsView() {
 
               <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-slate-50 border-t border-slate-200">
                 <span className="text-xs text-slate-500">
-                  {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
+                  {visibleRows.length} de {filteredRows.length} integrante
+                  {filteredRows.length !== 1 ? "s" : ""}
                   {selectedRow
                     ? " · Usa J/K para cambiar de registro"
                     : " · Haz clic en una fila para ver el detalle"}
@@ -2742,7 +2815,7 @@ function AdminDocumentsView() {
                   <button
                     type="button"
                     onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                    disabled={!hasMore || currentPage >= totalPages || loading}
+                    disabled={currentPage >= totalPages || loading}
                     className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Siguiente
@@ -2760,7 +2833,7 @@ function AdminDocumentsView() {
                   key={selectedRow.id}
                   row={selectedRow}
                   selectedIndex={Math.max(selectedRowIndex, 0)}
-                  totalRows={filteredRows.length}
+                  totalRows={visibleRows.length}
                   onClose={() => setSelectedRow(null)}
                   onSelectPrevious={selectPreviousRow}
                   onSelectNext={selectNextRow}

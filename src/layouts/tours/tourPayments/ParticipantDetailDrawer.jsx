@@ -607,7 +607,7 @@ export function AccountAdjustModal({
   useEffect(() => {
     if (!isOpen || !row) return;
     setForm({
-      baseAmount: String(row.finalAmount || ""),
+      baseAmount: String(row.hasFinancialAccount ? row.finalAmount || "" : defaultPlan?.totalAmount || ""),
       discount: "0",
       scholarship: "0",
       paymentPlanId: defaultPlan?.id || "",
@@ -731,7 +731,14 @@ export function AccountAdjustModal({
                   </label>
                   <select
                     value={form.paymentPlanId}
-                    onChange={(e) => set("paymentPlanId", e.target.value)}
+                    onChange={(e) => {
+                      const nextPlanId = e.target.value;
+                      set("paymentPlanId", nextPlanId);
+                      if (!hasFinancialAccount) {
+                        const plan = plans.find((item) => item.id === nextPlanId);
+                        if (plan) set("baseAmount", String(plan.totalAmount));
+                      }
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
                   >
                     <option value="">Sin plan asignado</option>
