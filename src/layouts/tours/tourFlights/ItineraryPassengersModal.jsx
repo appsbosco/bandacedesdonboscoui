@@ -41,6 +41,17 @@ function getVisaDeniedLabel(count) {
   return `${count} negativas`;
 }
 
+function conflictText(conflict) {
+  if (!conflict) return null;
+  if (conflict.reason === "CAPACITY_EXCEEDED") return "No hay cupos disponibles.";
+  if (conflict.reason === "ALREADY_ASSIGNED") {
+    return conflict.conflictingItinerary
+      ? `Ya está en "${conflict.conflictingItinerary}".`
+      : "Ya está en otro itinerario.";
+  }
+  return conflict.reason || "No se pudo asignar este participante.";
+}
+
 export default function ItineraryPassengersModal({
   isOpen,
   itinerary,
@@ -157,8 +168,15 @@ export default function ItineraryPassengersModal({
   };
 
   // Conflicts breakdown for result banner
-  const capacityConflicts = (result?.conflicts || []).filter((c) => c.reason === "CAPACITY_EXCEEDED");
-  const assignConflicts   = (result?.conflicts || []).filter((c) => c.reason === "ALREADY_ASSIGNED");
+  const resultConflicts = result?.conflicts || [];
+  const conflictByParticipantId = new Map(
+    resultConflicts.filter((c) => c.participantId).map((c) => [c.participantId, c])
+  );
+  const capacityConflicts = resultConflicts.filter((c) => c.reason === "CAPACITY_EXCEEDED");
+  const assignConflicts = resultConflicts.filter((c) => c.reason === "ALREADY_ASSIGNED");
+  const otherConflicts = resultConflicts.filter(
+    (c) => c.reason !== "CAPACITY_EXCEEDED" && c.reason !== "ALREADY_ASSIGNED"
+  );
 
   return (
     <div
@@ -292,6 +310,16 @@ export default function ItineraryPassengersModal({
                 ))}
               </div>
             )}
+            {otherConflicts.length > 0 && (
+              <div className="mt-2 space-y-1">
+                <p className="text-amber-700 font-semibold">No asignados ({otherConflicts.length}):</p>
+                {otherConflicts.map((c, i) => (
+                  <p key={`other-${c.participantId}-${i}`} className="text-amber-700">
+                    ⚠ <strong>{c.participantName}</strong> — {conflictText(c)}
+                  </p>
+                ))}
+              </div>
+            )}
             <button
               onClick={onClearResult}
               className="mt-2 text-gray-400 hover:text-gray-600 underline"
@@ -416,6 +444,8 @@ export default function ItineraryPassengersModal({
                               participant={p}
                               selected={isSelected}
                               disabled={isDisabled}
+                              disabledReason="Límite de cupos seleccionado."
+                              conflict={conflictByParticipantId.get(p.id)}
                               onToggle={() => toggleSelect(p.id)}
                             />
                           );
@@ -560,9 +590,18 @@ export default function ItineraryPassengersModal({
 
 // ── Internal components ───────────────────────────────────────────────────────
 
-function ParticipantRow({ participant, selected, onToggle, removeMode = false, disabled = false }) {
+function ParticipantRow({
+  participant,
+  selected,
+  onToggle,
+  removeMode = false,
+  disabled = false,
+  disabledReason,
+  conflict,
+}) {
   const visaDenied = participant.visaStatus === "DENIED";
   const visaDeniedLabel = getVisaDeniedLabel(participant.visaDeniedCount);
+  const conflictMessage = conflictText(conflict);
 
   return (
     <div
@@ -619,6 +658,16 @@ function ParticipantRow({ participant, selected, onToggle, removeMode = false, d
         {visaDenied && (
           <p className="text-[11px] font-semibold text-rose-700 mt-0.5">
             {visaDeniedLabel || "Visa negada"}
+          </p>
+        )}
+        {conflictMessage && (
+          <p className="text-[11px] font-semibold text-amber-700 mt-1">
+            No asignado: {conflictMessage}
+          </p>
+        )}
+        {disabled && disabledReason && !conflictMessage && (
+          <p className="text-[11px] font-semibold text-gray-500 mt-1">
+            {disabledReason}
           </p>
         )}
       </div>

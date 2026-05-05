@@ -20,10 +20,8 @@ import {
 } from "./ParticipantDetailDrawer";
 import DeletePaymentModal from "./ParticipantDetailDrawer";
 import { Toast } from "../TourHelpers";
-import {
-  buildTourPaymentsWhatsappText,
-  openTourPaymentsPrint,
-} from "./tourPaymentExports";
+import { buildTourPaymentsWhatsappText, openTourPaymentsPrint } from "./tourPaymentExports";
+import TourParticipantModal from "../TourParticipantModal";
 
 // ─── Status filter tabs ───────────────────────────────────────────────────────
 const STATUS_FILTERS = [
@@ -97,11 +95,6 @@ function getVisaDeniedLabel(count) {
 
 function isKeyboardActivationKey(event) {
   return event.key === "Enter" || event.key === " ";
-}
-
-function toDateTimeValue(dateString) {
-  if (!dateString) return undefined;
-  return `${dateString}T12:00:00.000Z`;
 }
 
 async function copyTextToClipboard(text) {
@@ -352,7 +345,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
             </svg>
             Lista WhatsApp
           </button>
-          <button
+          {/* <button
             onClick={openCreateParticipantModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
           >
@@ -365,7 +358,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
               />
             </svg>
             Gestionar participante
-          </button>
+          </button> */}
           <button
             onClick={openRegisterModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
@@ -480,13 +473,14 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         loading={deletingParticipant}
       />
 
-      <CreateParticipantModal
+      <TourParticipantModal
         isOpen={createParticipantModal.open}
         users={users}
         usersLoading={usersLoading}
         onClose={handleCloseCreateParticipantModal}
         onSubmit={handleCreateParticipant}
-        loading={creatingParticipant}
+        creating={creatingParticipant}
+        showRemoveTab={false}
       />
 
       <AccountAdjustModal
@@ -1367,351 +1361,6 @@ function DeleteParticipantModal({ participant, onConfirm, onCancel, loading }) {
       </div>
     </div>
   );
-}
-
-function CreateParticipantModal({ isOpen, users, usersLoading, onClose, onSubmit, loading }) {
-  const EMPTY_FORM = {
-    linkedUserId: "",
-    firstName: "",
-    firstSurname: "",
-    secondSurname: "",
-    identification: "",
-    email: "",
-    phone: "",
-    birthDate: "",
-    instrument: "",
-    grade: "",
-    role: "MUSICIAN",
-    notes: "",
-  };
-
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [errors, setErrors] = useState({});
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setForm(EMPTY_FORM);
-    setErrors({});
-    setSearch("");
-  }, [isOpen]);
-
-  const filteredUsers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((user) => {
-      const text = [
-        user.name,
-        user.firstSurName,
-        user.secondSurName,
-        user.email,
-        user.carnet,
-        user.instrument,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return text.includes(q);
-    });
-  }, [search, users]);
-
-  if (!isOpen) return null;
-
-  const set = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const handleSelectUser = (user) => {
-    setForm((prev) => ({
-      ...prev,
-      linkedUserId: user.id,
-      firstName: user.name || prev.firstName,
-      firstSurname: user.firstSurName || prev.firstSurname,
-      secondSurname: user.secondSurName || prev.secondSurname,
-      identification: prev.identification || user.carnet || "",
-      email: user.email || prev.email,
-      phone: user.phone || prev.phone,
-      birthDate: user.birthday ? String(user.birthday).slice(0, 10) : prev.birthDate,
-      instrument: user.instrument || prev.instrument,
-      grade: user.grade || prev.grade,
-    }));
-    setErrors((prev) => ({ ...prev, linkedUserId: undefined }));
-  };
-
-  const validate = () => {
-    const next = {};
-    if (!form.firstName.trim()) next.firstName = "Nombre requerido";
-    if (!form.firstSurname.trim()) next.firstSurname = "Primer apellido requerido";
-    if (!form.identification.trim()) next.identification = "Identificación requerida";
-    return next;
-  };
-
-  const handleSubmit = () => {
-    const next = validate();
-    if (Object.keys(next).length > 0) {
-      setErrors(next);
-      return;
-    }
-
-    onSubmit({
-      linkedUserId: form.linkedUserId || undefined,
-      firstName: form.firstName.trim(),
-      firstSurname: form.firstSurname.trim(),
-      secondSurname: form.secondSurname.trim() || undefined,
-      identification: form.identification.trim(),
-      email: form.email.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      birthDate: toDateTimeValue(form.birthDate),
-      instrument: form.instrument.trim() || undefined,
-      grade: form.grade.trim() || undefined,
-      role: form.role,
-      notes: form.notes.trim() || undefined,
-    });
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
-      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Agregar participante</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Vincular un usuario es opcional. También podés crear el participante manualmente.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-all"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="border-b border-gray-100 p-6 lg:border-b-0 lg:border-r">
-            <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
-                Vincular usuario
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                Opcional. Si no seleccionás uno, se guarda igual como participante manual.
-              </p>
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar por nombre, correo, carnet o instrumento"
-                className="mt-3 w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-              />
-            </div>
-
-            <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
-              {usersLoading ? (
-                <div className="space-y-2 animate-pulse">
-                  {[1, 2, 3, 4].map((row) => (
-                    <div key={row} className="h-16 rounded-2xl bg-gray-100" />
-                  ))}
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
-                  No hay usuarios que coincidan.
-                </div>
-              ) : (
-                filteredUsers.map((user) => {
-                  const fullName = [user.name, user.firstSurName, user.secondSurName]
-                    .filter(Boolean)
-                    .join(" ");
-                  const isSelected = form.linkedUserId === user.id;
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      onClick={() => handleSelectUser(user)}
-                      className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
-                        isSelected
-                          ? "border-emerald-300 bg-emerald-50"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-gray-900">{fullName}</p>
-                          <p className="truncate text-xs text-gray-500">
-                            {user.email || "Sin correo"} {user.carnet ? `· ${user.carnet}` : ""}
-                          </p>
-                          <p className="truncate text-xs text-gray-400">
-                            {user.instrument || "Sin instrumento"}{" "}
-                            {user.grade ? `· ${user.grade}` : ""}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                            Vinculado
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="p-6">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
-              Datos del participante
-            </p>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Nombre" error={errors.firstName}>
-                <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={(event) => set("firstName", event.target.value)}
-                  className={inputClass(errors.firstName)}
-                />
-              </Field>
-              <Field label="Primer apellido" error={errors.firstSurname}>
-                <input
-                  type="text"
-                  value={form.firstSurname}
-                  onChange={(event) => set("firstSurname", event.target.value)}
-                  className={inputClass(errors.firstSurname)}
-                />
-              </Field>
-              <Field label="Segundo apellido">
-                <input
-                  type="text"
-                  value={form.secondSurname}
-                  onChange={(event) => set("secondSurname", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Identificación / carnet" error={errors.identification}>
-                <input
-                  type="text"
-                  value={form.identification}
-                  onChange={(event) => set("identification", event.target.value)}
-                  className={inputClass(errors.identification)}
-                />
-              </Field>
-              <Field label="Correo">
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => set("email", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Teléfono">
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(event) => set("phone", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Nacimiento">
-                <input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={(event) => set("birthDate", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Instrumento">
-                <input
-                  type="text"
-                  value={form.instrument}
-                  onChange={(event) => set("instrument", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Grado">
-                <input
-                  type="text"
-                  value={form.grade}
-                  onChange={(event) => set("grade", event.target.value)}
-                  className={inputClass()}
-                />
-              </Field>
-              <Field label="Rol">
-                <select
-                  value={form.role}
-                  onChange={(event) => set("role", event.target.value)}
-                  className={inputClass()}
-                >
-                  <option value="MUSICIAN">Músico</option>
-                  <option value="STAFF">Staff</option>
-                  <option value="DIRECTOR">Director</option>
-                  <option value="GUEST">Invitado</option>
-                </select>
-              </Field>
-              <Field label="Estado">
-                <select
-                  value={form.status}
-                  onChange={(event) => set("status", event.target.value)}
-                  className={inputClass()}
-                >
-                  <option value="PENDING">Pendiente</option>
-                  <option value="CONFIRMED">Confirmado</option>
-                  <option value="CANCELLED">Cancelado</option>
-                </select>
-              </Field>
-            </div>
-
-            <Field label="Notas" className="mt-3">
-              <textarea
-                rows={3}
-                value={form.notes}
-                onChange={(event) => set("notes", event.target.value)}
-                className={inputClass()}
-              />
-            </Field>
-
-            <div className="mt-5 flex gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 rounded-2xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex-1 rounded-2xl bg-gray-900 py-2.5 text-sm font-bold text-white transition-all hover:bg-gray-700 disabled:opacity-50"
-              >
-                {loading ? "Guardando…" : "Agregar participante"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, error, className = "", children }) {
-  return (
-    <div className={className}>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </label>
-      {children}
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-function inputClass(hasError = false) {
-  return `w-full rounded-2xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 ${
-    hasError ? "border-red-400 bg-red-50" : "border-gray-200"
-  }`;
 }
 
 function TableSkeleton() {

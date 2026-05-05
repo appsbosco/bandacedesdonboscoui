@@ -2597,7 +2597,9 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
   const stats = useMemo(() => {
     const paidEntries = chargeableRoster.filter((entry) => entry.transportPaid);
     const exemptEntries = chargeableRoster.filter((entry) => entry.transportExempt);
-    const pendingEntries = chargeableRoster.filter((entry) => !entry.transportPaid && !entry.transportExempt);
+    const pendingEntries = chargeableRoster.filter(
+      (entry) => !entry.transportPaid && !entry.transportExempt
+    );
     const cashEntries = paidEntries.filter((entry) => entry.transportPaymentMethod === "CASH");
     const sinpeEntries = paidEntries.filter((entry) => entry.transportPaymentMethod === "SINPE");
     return {
@@ -2605,8 +2607,14 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
       paid: paidEntries.length,
       exempt: exemptEntries.length,
       pending: pendingEntries.length,
-      cashAmount: cashEntries.reduce((sum, entry) => sum + (Number(entry.transportAmountPaid) || 0), 0),
-      sinpeAmount: sinpeEntries.reduce((sum, entry) => sum + (Number(entry.transportAmountPaid) || 0), 0),
+      cashAmount: cashEntries.reduce(
+        (sum, entry) => sum + (Number(entry.transportAmountPaid) || 0),
+        0
+      ),
+      sinpeAmount: sinpeEntries.reduce(
+        (sum, entry) => sum + (Number(entry.transportAmountPaid) || 0),
+        0
+      ),
       collected: paidEntries.reduce(
         (sum, entry) => sum + (Number(entry.transportAmountPaid) || transportFeeAmount || 0),
         0
@@ -2711,9 +2719,21 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
               <StatCard label="Pagados" value={stats.paid} color="text-emerald-600" />
               <StatCard label="Exonerados" value={stats.exempt} color="text-sky-600" />
               <StatCard label="Pendientes" value={stats.pending} color="text-amber-600" />
-              <StatCard label="Efectivo" value={formatCurrency(stats.cashAmount)} color="text-emerald-700" />
-              <StatCard label="SINPE" value={formatCurrency(stats.sinpeAmount)} color="text-blue-700" />
-              <StatCard label="Total" value={formatCurrency(stats.collected)} color="text-violet-700" />
+              <StatCard
+                label="Efectivo"
+                value={formatCurrency(stats.cashAmount)}
+                color="text-emerald-700"
+              />
+              <StatCard
+                label="SINPE"
+                value={formatCurrency(stats.sinpeAmount)}
+                color="text-blue-700"
+              />
+              <StatCard
+                label="Total"
+                value={formatCurrency(stats.collected)}
+                color="text-violet-700"
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -2831,7 +2851,11 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
                       className="relative rounded-xl border border-gray-200 bg-white px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <UserAvatar user={entry.user} size="sm" busNumber={entry.busNumber || null} />
+                        <UserAvatar
+                          user={entry.user}
+                          size="sm"
+                          busNumber={entry.busNumber || null}
+                        />
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-900 truncate">
                             {fullName(entry.user)}
@@ -3002,7 +3026,10 @@ const PaymentTab = ({ eventId, roster, eventDetails, canManagePayments, onRefetc
       </div>
 
       {showPendingModal && (
-        <Modal title={`Pendientes de pago (${pendingFiltered.length})`} onClose={() => setShowPendingModal(false)}>
+        <Modal
+          title={`Pendientes de pago (${pendingFiltered.length})`}
+          onClose={() => setShowPendingModal(false)}
+        >
           <div className="space-y-2 max-h-[70vh] overflow-y-auto">
             {pendingFiltered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
@@ -3559,7 +3586,10 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
   const highlight = (text) => {
     if (!searchTerm) return text;
     const esc = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return String(text).replace(new RegExp(`(${esc})`, "gi"), '<mark class="bg-yellow-200 rounded-sm px-0.5">$1</mark>');
+    return String(text).replace(
+      new RegExp(`(${esc})`, "gi"),
+      '<mark class="bg-yellow-200 rounded-sm px-0.5">$1</mark>'
+    );
   };
 
   const rowAccent = isPresent
@@ -3592,7 +3622,9 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
   };
 
   return (
-    <div className={`border-l-4 border-b border-b-gray-100 last:border-b-0 transition-colors duration-150 ${rowAccent}`}>
+    <div
+      className={`border-l-4 border-b border-b-gray-100 last:border-b-0 transition-colors duration-150 ${rowAccent}`}
+    >
       {/* Main row */}
       <div className="px-3 py-3 flex items-center gap-3">
         {/* Avatar + status dot */}
@@ -3620,7 +3652,9 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
               {SECTION_LABELS[entry.assignmentGroup] || entry.assignmentGroup}
             </span>
             {plannedBuses.length === 1 && <BusBadge busNumber={plannedBuses[0]} small />}
-            {isMultiBus && draft.busNumber && !requiresBusChoice && <BusBadge busNumber={draft.busNumber} small />}
+            {isMultiBus && draft.busNumber && !requiresBusChoice && (
+              <BusBadge busNumber={draft.busNumber} small />
+            )}
             {busMissing && (
               <span className="text-[11px] text-amber-600 font-semibold">elegir bus ↓</span>
             )}
@@ -3640,7 +3674,13 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
                   : "bg-gray-100 text-gray-400 hover:bg-emerald-50 hover:text-emerald-500"
               }`}
             >
-              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2.2}>
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.2}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5l4 4 7-7" />
               </svg>
             </button>
@@ -3654,7 +3694,13 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
                   : "bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
               }`}
             >
-              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2.2}>
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.2}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 5l10 10M15 5L5 15" />
               </svg>
             </button>
@@ -3662,7 +3708,11 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
         ) : (
           <span
             className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-              isPresent ? "bg-emerald-100 text-emerald-700" : isAbsent ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-400"
+              isPresent
+                ? "bg-emerald-100 text-emerald-700"
+                : isAbsent
+                ? "bg-red-100 text-red-600"
+                : "bg-gray-100 text-gray-400"
             }`}
           >
             {isPresent ? "Presente" : isAbsent ? "Ausente" : "—"}
@@ -3673,7 +3723,9 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
       {/* Bus selection row — full width, only when needed */}
       {canEdit && requiresBusChoice && (
         <div className="px-3 pb-3 -mt-1">
-          <div className={`grid gap-2 ${plannedBuses.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+          <div
+            className={`grid gap-2 ${plannedBuses.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}
+          >
             {plannedBuses.map((bus) => {
               const bp = BUS_PALETTE[bus] || BUS_PALETTE[1];
               const isSelected = draft.busNumber === bus;
@@ -3688,14 +3740,30 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
                       : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-100"
                   }`}
                 >
-                  <svg className={`w-4 h-4 ${isSelected ? "" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 6v2m8-2v2M6 10h12m-9 8v-2m6 2v-2m-8 2h10a2 2 0 002-2V8a2 2 0 00-2-2H7a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  <svg
+                    className={`w-4 h-4 ${isSelected ? "" : "text-gray-400"}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 6v2m8-2v2M6 10h12m-9 8v-2m6 2v-2m-8 2h10a2 2 0 002-2V8a2 2 0 00-2-2H7a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
                   </svg>
                   <span className={isSelected ? bp.badge.split(" ")[1] || "text-gray-800" : ""}>
                     Bus {bus}
                   </span>
                   {isSelected && (
-                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.2}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5l4 4 7-7" />
                     </svg>
                   )}
@@ -3798,7 +3866,10 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
       );
     });
     if (missingBus.length > 0) {
-      setToast({ message: "Falta elegir el bus para algunas personas con sección dividida", type: "warning" });
+      setToast({
+        message: "Falta elegir el bus para algunas personas con sección dividida",
+        type: "warning",
+      });
       return;
     }
     setIsSaving(true);
@@ -3819,11 +3890,18 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
     }
   };
 
-  const getSectionStats = useCallback((entries) => {
-    const present = entries.filter((e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "PRESENT").length;
-    const absent = entries.filter((e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "ABSENT").length;
-    return { present, absent, total: entries.length };
-  }, [localAttendance]);
+  const getSectionStats = useCallback(
+    (entries) => {
+      const present = entries.filter(
+        (e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "PRESENT"
+      ).length;
+      const absent = entries.filter(
+        (e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "ABSENT"
+      ).length;
+      return { present, absent, total: entries.length };
+    },
+    [localAttendance]
+  );
 
   const statsVisible = useMemo(() => {
     const get = (entry) => getAttendanceDraft(entry, localAttendance).attendanceStatus;
@@ -3850,7 +3928,13 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
             onClick={() => handleMarkAll("PRESENT")}
             className="py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
           >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5l4 4 7-7" />
             </svg>
             Todos presentes
@@ -3859,7 +3943,13 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
             onClick={() => handleMarkAll("ABSENT")}
             className="py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
           >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 5l10 10M15 5L5 15" />
             </svg>
             Todos ausentes
@@ -3875,8 +3965,18 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
           </div>
         )}
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
           <input
             type="text"
@@ -3886,9 +3986,17 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
             className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
@@ -3898,24 +4006,34 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
             <button
               onClick={() => setGroupFilter("ALL")}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                groupFilter === "ALL" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                groupFilter === "ALL"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
               }`}
             >
               Todos
             </button>
             {groups.map((g) => {
               const sectionEntries = eligible.filter((e) => e.assignmentGroup === g);
-              const presentCount = sectionEntries.filter((e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "PRESENT").length;
+              const presentCount = sectionEntries.filter(
+                (e) => getAttendanceDraft(e, localAttendance).attendanceStatus === "PRESENT"
+              ).length;
               return (
                 <button
                   key={g}
                   onClick={() => setGroupFilter(g)}
                   className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                    groupFilter === g ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    groupFilter === g
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}
                 >
                   {SECTION_LABELS[g] || g}
-                  <span className={`text-[10px] font-mono ${groupFilter === g ? "text-blue-100" : "text-gray-400"}`}>
+                  <span
+                    className={`text-[10px] font-mono ${
+                      groupFilter === g ? "text-blue-100" : "text-gray-400"
+                    }`}
+                  >
                     {presentCount}/{sectionEntries.length}
                   </span>
                 </button>
@@ -3924,7 +4042,9 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
           </div>
         )}
         {search && (
-          <p className="text-xs text-gray-500">{displayed.length} resultado{displayed.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-gray-500">
+            {displayed.length} resultado{displayed.length !== 1 ? "s" : ""}
+          </p>
         )}
       </div>
 
@@ -3945,7 +4065,11 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
                       <span className="text-xs font-bold text-gray-700">
                         {SECTION_LABELS[group] || group}
                       </span>
-                      <span className={`text-[11px] font-mono font-semibold ${allPresent ? "text-emerald-600" : "text-gray-400"}`}>
+                      <span
+                        className={`text-[11px] font-mono font-semibold ${
+                          allPresent ? "text-emerald-600" : "text-gray-400"
+                        }`}
+                      >
                         {present}/{total}
                       </span>
                       {absent > 0 && (
@@ -3954,7 +4078,9 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
                     </div>
                     {canEdit && (
                       <button
-                        onClick={() => handleMarkSection(entries, allPresent ? "ABSENT" : "PRESENT")}
+                        onClick={() =>
+                          handleMarkSection(entries, allPresent ? "ABSENT" : "PRESENT")
+                        }
                         className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-colors ${
                           allPresent
                             ? "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -3982,7 +4108,9 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
           )
         ) : displayed.length === 0 ? (
           <div className="py-14 text-center text-sm text-gray-400">
-            {eligible.length === 0 ? "Roster vacío o sin inicializar" : `Sin resultados para "${search}"`}
+            {eligible.length === 0
+              ? "Roster vacío o sin inicializar"
+              : `Sin resultados para "${search}"`}
           </div>
         ) : (
           displayed.map((e) => (
@@ -4106,21 +4234,6 @@ const EventLogisticsPage = () => {
 
   useEffect(() => {
     if (!selectedEvent) return;
-
-    console.log("[PerformanceAttendance] visibility check", {
-      selectedEvent,
-      selectedEventTitle: selectedEventDetails?.title || null,
-      currentUserId: currentUser?.id || null,
-      currentUserRole: currentUser?.role || null,
-      isAdmin,
-      rosterLoading,
-      rosterError: rosterError?.message || null,
-      rosterLength: roster.length,
-      rosterEmpty,
-      shouldShowInitializeBanner: Boolean(
-        isAdmin && selectedEvent && !rosterLoading && !rosterError && roster.length === 0
-      ),
-    });
   }, [
     selectedEvent,
     selectedEventDetails?.title,

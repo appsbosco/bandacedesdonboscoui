@@ -69,7 +69,6 @@ function DashboardNavbar({ absolute, light, isMini }) {
 
   const userId = userData?.getUser?.id;
 
-  console.log(userId);
   const {
     data: ordersData,
     loading: ordersLoading,
@@ -77,8 +76,6 @@ function DashboardNavbar({ absolute, light, isMini }) {
   } = useQuery(GET_ORDERS_BY_USER, {
     variables: { userId },
   });
-
-  console.log(ordersData);
 
   const route = useLocation().pathname.split("/").slice(1);
 

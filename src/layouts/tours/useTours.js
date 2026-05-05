@@ -11,8 +11,6 @@ export function useTours() {
     fetchPolicy: "cache-and-network",
   });
 
-  console.log("Date error", data);
-
   const [createTour, { loading: creating }] = useMutation(CREATE_TOUR, {
     onCompleted: () => {
       showToast("Gira creada correctamente", "success");

@@ -100,10 +100,14 @@ export function useTourItineraries(tourId) {
         const r = data?.assignPassengersToItinerary;
         const capacityConflicts = (r.conflicts || []).filter((c) => c.reason === "CAPACITY_EXCEEDED");
         const assignConflicts   = (r.conflicts || []).filter((c) => c.reason === "ALREADY_ASSIGNED");
+        const otherConflicts = (r.conflicts || []).filter(
+          (c) => c.reason !== "CAPACITY_EXCEEDED" && c.reason !== "ALREADY_ASSIGNED"
+        );
         const parts = [];
         if (r.assigned > 0) parts.push(`${r.assigned} asignado${r.assigned !== 1 ? "s" : ""}`);
         if (capacityConflicts.length > 0) parts.push(`${capacityConflicts.length} sin cupo`);
         if (assignConflicts.length > 0) parts.push(`${assignConflicts.length} en otro itinerario`);
+        if (otherConflicts.length > 0) parts.push(`${otherConflicts.length} no asignado${otherConflicts.length !== 1 ? "s" : ""}`);
         showToast(parts.join(" · ") || "Sin cambios", r.assigned > 0 ? "success" : "error");
         setAssignResult(r);
         refetchAll();
