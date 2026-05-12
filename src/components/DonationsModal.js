@@ -456,7 +456,7 @@ const DonationModal = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[1300] flex items-end justify-center bg-slate-900/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[1300] flex items-start justify-center overflow-y-auto bg-slate-900/80 p-0 backdrop-blur-sm sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -465,24 +465,24 @@ const DonationModal = ({ isOpen, onClose }) => {
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[95vh] w-full max-w-6xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl dark:bg-slate-900 sm:rounded-2xl"
+        className="relative flex max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-slate-900 sm:my-4 sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95 sm:px-8">
-          <div>
+        <div className="z-10 flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95 sm:px-8">
+          <div className="min-w-0 flex-1">
             <h2
               id="donation-modal-title"
-              className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl"
+              className="text-xl font-bold leading-tight text-slate-900 dark:text-white sm:text-3xl"
             >
               {t("donation.header.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-1 line-clamp-2 text-sm leading-snug text-slate-600 dark:text-slate-400 sm:line-clamp-none">
               {t("donation.header.subtitle")}
             </p>
           </div>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e4002b] dark:hover:bg-slate-800 dark:hover:text-white"
+            className="shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e4002b] dark:hover:bg-slate-800 dark:hover:text-white"
             aria-label={t("donation.modal.close")}
           >
             <svg
@@ -497,7 +497,7 @@ const DonationModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="p-5 sm:p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-8">
           <div
             className="mb-6 grid rounded-2xl bg-slate-100 p-1 dark:bg-slate-800 sm:inline-grid sm:grid-cols-2"
             role="tablist"
