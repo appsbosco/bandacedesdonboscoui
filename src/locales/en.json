@@ -211,6 +211,43 @@
       "close": "Close modal",
       "footer": "Every contribution, regardless of amount, directly supports the preparation of 280 young Costa Rican musicians for their performance at the Rose Parade 2027."
     },
+    "modal_tabs": {
+      "label": "Donation methods",
+      "card": "Card",
+      "bank": "SINPE or transfer"
+    },
+    "bank_transfer": {
+      "badge": "You can also donate without a card",
+      "title": "SINPE Mobile or bank transfer",
+      "description": "If you prefer to support directly from your bank, use any of these official options. You can copy the details and paste them into your banking app.",
+      "fields": {
+        "name": "Account holder"
+      },
+      "methods": {
+        "sinpe": {
+          "type": "SINPE Mobile",
+          "label": "Quick donation"
+        },
+        "crc": {
+          "type": "IBAN account in Costa Rican colones",
+          "label": "Transfer in colones"
+        },
+        "usd": {
+          "type": "IBAN account in US dollars",
+          "label": "Transfer in dollars"
+        }
+      },
+      "copy": {
+        "all": "Copy all details",
+        "single": "Copy detail",
+        "copied": "Copied",
+        "copied_all": "Details copied",
+        "single_aria": "Copy {{method}} detail",
+        "live_region": "Donation details copied to clipboard"
+      },
+      "how_to_label": "How to donate:",
+      "how_to": "Open your banking app, choose SINPE Mobile or bank transfer, enter the amount you want to donate, and confirm the recipient is Asociación de Oratorios Salesianos Don Bosco."
+    },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": {

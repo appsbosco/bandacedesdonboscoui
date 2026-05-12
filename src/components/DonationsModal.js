@@ -53,6 +53,59 @@ const DONATION_OPTIONS = [
   },
 ];
 
+const BANK_TRANSFER_OPTIONS = [
+  {
+    id: "sinpe",
+    typeKey: "donation.bank_transfer.methods.sinpe.type",
+    labelKey: "donation.bank_transfer.methods.sinpe.label",
+    value: "7135-4630",
+    copyValue: "7135-4630",
+    accent: "sky",
+  },
+  {
+    id: "crc",
+    typeKey: "donation.bank_transfer.methods.crc.type",
+    labelKey: "donation.bank_transfer.methods.crc.label",
+    value: "CR94 0151 0871 0010 0032 39",
+    copyValue: "CR94 0151 0871 0010 0032 39",
+    accent: "red",
+  },
+  {
+    id: "usd",
+    typeKey: "donation.bank_transfer.methods.usd.type",
+    labelKey: "donation.bank_transfer.methods.usd.label",
+    value: "CR50 0151 0001 0026 2301 41",
+    copyValue: "CR50 0151 0001 0026 2301 41",
+    accent: "slate",
+  },
+];
+
+const BANK_ACCOUNT_NAME = "Asociación de Oratorios Salesianos Don Bosco";
+
+const copyToClipboard = async (text) => {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return ok;
+  } catch (error) {
+    console.error("Unable to copy donation details:", error);
+    return false;
+  }
+};
+
 // ============================================
 // SUBCOMPONENTE: TARJETA COMPACTA
 // ============================================
@@ -199,11 +252,165 @@ CompactDonationCard.propTypes = {
 };
 
 // ============================================
+// SUBCOMPONENTE: TRANSFERENCIAS COMPACTAS
+// ============================================
+const CompactBankTransferPanel = () => {
+  const { t } = useTranslation();
+  const [copiedId, setCopiedId] = useState(null);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const showCopied = (id) => {
+    setCopiedId(id);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopiedId(null), 2200);
+  };
+
+  const handleCopy = async (id, text) => {
+    const ok = await copyToClipboard(text);
+    if (ok) showCopied(id);
+  };
+
+  const allDetails = [
+    `${t("donation.bank_transfer.fields.name")}: ${BANK_ACCOUNT_NAME}`,
+    ...BANK_TRANSFER_OPTIONS.map((option) => `${t(option.typeKey)}: ${option.copyValue}`),
+  ].join("\n");
+
+  return (
+    <div>
+      <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#e4002b]/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#e4002b] dark:bg-[#ff1744]/10 dark:text-[#ff5c7a]">
+              {t("donation.bank_transfer.badge")}
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {t("donation.bank_transfer.title")}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              {t("donation.bank_transfer.description")}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleCopy("all", allDetails)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all duration-200 hover:bg-[#e4002b] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#e4002b]/30 dark:bg-white dark:text-slate-900 dark:hover:bg-[#ff1744] dark:hover:text-white sm:w-auto"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+              <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+            </svg>
+            {copiedId === "all"
+              ? t("donation.bank_transfer.copy.copied_all")
+              : t("donation.bank_transfer.copy.all")}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {BANK_TRANSFER_OPTIONS.map((option) => {
+          const isCopied = copiedId === option.id;
+          const accentClass =
+            option.accent === "red"
+              ? "bg-[#e4002b]/10 text-[#e4002b] dark:bg-[#ff1744]/10 dark:text-[#ff5c7a]"
+              : option.accent === "sky"
+              ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+
+          return (
+            <article
+              key={option.id}
+              className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    {t(option.typeKey)}
+                  </p>
+                  <h4 className="mt-1 text-base font-bold text-slate-900 dark:text-white">
+                    {t(option.labelKey)}
+                  </h4>
+                </div>
+                <span className={`rounded-full p-2 ${accentClass}`}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm4.75 2.75a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5zM8 11a1 1 0 100 2h4a1 1 0 100-2H8z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+              </div>
+
+              <div className="rounded-lg bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-950/40 dark:ring-slate-700">
+                <p className="break-words text-2xl font-extrabold leading-tight text-slate-900 dark:text-white sm:text-3xl lg:text-2xl">
+                  {option.value}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleCopy(option.id, option.copyValue)}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition-colors duration-200 hover:border-[#e4002b] hover:text-[#e4002b] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#e4002b]/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-[#ff1744] dark:hover:text-[#ff5c7a]"
+                aria-label={t("donation.bank_transfer.copy.single_aria", {
+                  method: t(option.typeKey),
+                })}
+              >
+                {isCopied ? t("donation.bank_transfer.copy.copied") : t("donation.bank_transfer.copy.single")}
+              </button>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50/70 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {t("donation.bank_transfer.fields.name")}
+            </p>
+            <p className="mt-1 text-base font-bold leading-snug text-slate-900 dark:text-white">
+              {BANK_ACCOUNT_NAME}
+            </p>
+          </div>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+            <span className="font-semibold">{t("donation.bank_transfer.how_to_label")}</span>{" "}
+            {t("donation.bank_transfer.how_to")}
+          </p>
+        </div>
+        <p className="sr-only" aria-live="polite">
+          {copiedId ? t("donation.bank_transfer.copy.live_region") : ""}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
 // MODAL PRINCIPAL
 // ============================================
 const DonationModal = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(1);
+  const [activeTab, setActiveTab] = useState("card");
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
 
@@ -290,44 +497,101 @@ const DonationModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="p-6 sm:p-8">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:gap-8">
-            {DONATION_OPTIONS.map((option, index) => (
-              <CompactDonationCard
-                key={option.amount}
-                option={option}
-                isActive={activeIndex === index}
-                onClick={() => setActiveIndex(index)}
-              />
-            ))}
+        <div className="p-5 sm:p-8">
+          <div
+            className="mb-6 grid rounded-2xl bg-slate-100 p-1 dark:bg-slate-800 sm:inline-grid sm:grid-cols-2"
+            role="tablist"
+            aria-label={t("donation.modal_tabs.label")}
+          >
+            <button
+              id="donation-card-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "card"}
+              aria-controls="donation-card-panel"
+              onClick={() => setActiveTab("card")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${
+                activeTab === "card"
+                  ? "bg-white text-[#e4002b] shadow-sm dark:bg-slate-950 dark:text-[#ff5c7a]"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              {t("donation.modal_tabs.card")}
+            </button>
+            <button
+              id="donation-bank-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "bank"}
+              aria-controls="donation-bank-panel"
+              onClick={() => setActiveTab("bank")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${
+                activeTab === "bank"
+                  ? "bg-white text-[#e4002b] shadow-sm dark:bg-slate-950 dark:text-[#ff5c7a]"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              {t("donation.modal_tabs.bank")}
+            </button>
           </div>
 
-          <div className="mt-8 rounded-xl bg-sky-50/50 p-6 dark:bg-sky-900/20">
-            <div className="flex items-start gap-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="flex-1">
-                <p className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("donation.security.badge")}
-                </p>
-                <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                  {t("donation.security.description")}
-                </p>
-              </div>
-            </div>
+          <div
+            id="donation-card-panel"
+            role="tabpanel"
+            hidden={activeTab !== "card"}
+            aria-labelledby="donation-card-tab"
+          >
+            {activeTab === "card" && (
+              <>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:gap-8">
+                  {DONATION_OPTIONS.map((option, index) => (
+                    <CompactDonationCard
+                      key={option.amount}
+                      option={option}
+                      isActive={activeIndex === index}
+                      onClick={() => setActiveIndex(index)}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-8 rounded-xl bg-sky-50/50 p-6 dark:bg-sky-900/20">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {t("donation.security.badge")}
+                      </p>
+                      <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                        {t("donation.security.description")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+
+          <div
+            id="donation-bank-panel"
+            role="tabpanel"
+            hidden={activeTab !== "bank"}
+            aria-labelledby="donation-bank-tab"
+          >
+            {activeTab === "bank" && <CompactBankTransferPanel />}
+          </div>
+              </div>
       </div>
     </div>
   );
