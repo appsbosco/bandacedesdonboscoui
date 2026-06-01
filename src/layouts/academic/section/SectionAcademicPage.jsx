@@ -46,6 +46,12 @@ const STATUS_LABELS = {
   rejected: "Rechazada",
 };
 
+const TOAST_COLORS = {
+  success: "bg-emerald-50 border-emerald-300 text-emerald-800",
+  error: "bg-red-50 border-red-300 text-red-800",
+  info: "bg-blue-50 border-blue-300 text-blue-800",
+};
+
 function fmtDate(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("es-CR", {
@@ -53,6 +59,20 @@ function fmtDate(iso) {
     month: "short",
     year: "numeric",
   });
+}
+
+function ToastBar({ toast }) {
+  if (!toast) return null;
+
+  return (
+    <div
+      className={`fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl border px-4 py-3 text-sm font-medium shadow-lg ${
+        TOAST_COLORS[toast.type] || TOAST_COLORS.info
+      }`}
+    >
+      {toast.message}
+    </div>
+  );
 }
 
 function EvidenceLink({ evaluation }) {
@@ -82,6 +102,114 @@ function EvidenceLink({ evaluation }) {
         className="w-9 h-9 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
       />
     </a>
+  );
+}
+
+function PendingEvidence({ evaluation }) {
+  const isPdf =
+    evaluation.evidenceResourceType === "raw" || evaluation.evidenceOriginalName?.endsWith(".pdf");
+
+  if (isPdf) {
+    return (
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-red-600">
+        PDF
+      </div>
+    );
+  }
+
+  if (evaluation.evidenceThumbnailUrl) {
+    return (
+      <img
+        src={evaluation.evidenceThumbnailUrl}
+        alt="Vista previa de evidencia"
+        className="h-12 w-12 rounded-xl border border-gray-200 object-cover"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-400">
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.75}
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function PendingApprovalQueue({ evaluations, loading, onOpenReview }) {
+  return (
+    <section className="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-4 py-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+            <h2 className="text-base font-bold text-gray-900">Pendientes de aprobación</h2>
+          </div>
+        </div>
+        <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-amber-100 px-3 text-sm font-bold text-amber-700">
+          {evaluations.length}
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3 p-4">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="h-20 animate-pulse rounded-xl bg-gray-100" />
+          ))}
+        </div>
+      ) : evaluations.length === 0 ? (
+        <div className="p-6 text-center">
+          <p className="text-sm font-semibold text-emerald-700">No hay evaluaciones pendientes</p>
+          <p className="mt-1 text-sm text-gray-500">Todas las entregas visibles están revisadas.</p>
+        </div>
+      ) : (
+        <div className="max-h-96 divide-y divide-gray-100 overflow-y-auto">
+          {evaluations.map((evaluation) => (
+            <div
+              key={evaluation.id}
+              className="flex flex-col gap-3 p-4 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <PendingEvidence evaluation={evaluation} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-gray-900">
+                    {evaluation.student?.name} {evaluation.student?.firstSurName}
+                  </p>
+                  <p className="truncate text-sm text-gray-600">
+                    {evaluation.subject?.name || "Materia"} · {evaluation.period?.name || "Período"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Enviada {fmtDate(evaluation.submittedByStudentAt)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">Nota</p>
+                  <p className="text-base font-bold text-gray-900">
+                    {evaluation.scoreNormalized100?.toFixed?.(1) ?? "0.0"}
+                    <span className="text-xs font-medium text-gray-400">/100</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenReview(evaluation)}
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  Revisar y aprobar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -191,6 +319,7 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
           { id: "historial", label: "Historial" },
         ].map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -428,9 +557,7 @@ function MemberRow({ member, isSelected, onOpen }) {
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-3">
-          <span className="text-sm font-bold text-gray-900">
-            {average?.toFixed?.(1) ?? "0.0"}
-          </span>
+          <span className="text-sm font-bold text-gray-900">{average?.toFixed?.(1) ?? "0.0"}</span>
           <span className="text-xs text-gray-400">/100</span>
         </div>
       </td>
@@ -515,8 +642,10 @@ export default function SectionAcademicPage() {
     selectedMember,
     selectedMemberId,
     memberEvaluations,
+    pendingEvaluations,
     loadingOverview,
     loadingMemberEvaluations,
+    loadingPendingEvaluations,
     reviewing,
     errorOverview,
     selectedPeriodId,
@@ -543,24 +672,6 @@ export default function SectionAcademicPage() {
 
   function handleOpenReview(evaluation) {
     setReviewingEvaluation(evaluation);
-  }
-
-  function ToastBar() {
-    if (!toast) return null;
-    const colors = {
-      success: "bg-emerald-50 border-emerald-300 text-emerald-800",
-      error: "bg-red-50 border-red-300 text-red-800",
-      info: "bg-blue-50 border-blue-300 text-blue-800",
-    };
-    return (
-      <div
-        className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${
-          colors[toast.type] || colors.info
-        }`}
-      >
-        {toast.message}
-      </div>
-    );
   }
 
   return (
@@ -634,12 +745,19 @@ export default function SectionAcademicPage() {
               </select>
             </div>
 
+            <PendingApprovalQueue
+              evaluations={pendingEvaluations}
+              loading={loadingPendingEvaluations}
+              onOpenReview={handleOpenReview}
+            />
+
             {errorOverview && (
               <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-red-700 flex-1">
                   No fue posible cargar el seguimiento académico de la sección.
                 </p>
                 <button
+                  type="button"
                   onClick={() => refetch()}
                   className="text-xs text-red-700 font-medium underline"
                 >
@@ -759,7 +877,7 @@ export default function SectionAcademicPage() {
         loading={reviewing}
       />
 
-      <ToastBar />
+      <ToastBar toast={toast} />
 
       <Footer />
     </DashboardLayout>
