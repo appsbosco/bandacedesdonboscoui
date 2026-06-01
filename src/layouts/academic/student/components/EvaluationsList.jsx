@@ -12,37 +12,61 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString("es-CR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function EvidenceLink({ evaluation }) {
-  if (!evaluation?.evidenceUrl) return <span className="text-gray-300">—</span>;
+// Muestra thumbnail en lista. onViewDetail abre el modal con evidencia completa.
+// evidenceThumbnailUrl = 120×120 Cloudinary transform (~4-8 KB vs MB del original).
+// Para datos legacy sin thumbnail: muestra icono de vista, el modal carga la real.
+function EvidenceThumb({ evaluation, onViewDetail }) {
   const isPdf =
     evaluation.evidenceResourceType === "raw" || evaluation.evidenceOriginalName?.endsWith(".pdf");
+
+  if (!evaluation?.evidencePublicId) return <span className="text-gray-300">—</span>;
+
   if (isPdf) {
     return (
-      <a
-        href={evaluation.evidenceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={() => onViewDetail?.(evaluation)}
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs text-blue-700 hover:bg-blue-100 transition-colors"
+        title="Ver PDF"
       >
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
         PDF
-      </a>
+      </button>
     );
   }
+
+  // Imagen: muestra thumbnail 120×120 si existe, icono de vista si no (datos legacy)
+  if (evaluation.evidenceThumbnailUrl) {
+    return (
+      <button onClick={() => onViewDetail?.(evaluation)} title="Ver evidencia">
+        <img
+          src={evaluation.evidenceThumbnailUrl}
+          alt="Evidencia"
+          loading="lazy"
+          width={36}
+          height={36}
+          className="w-9 h-9 object-cover rounded-lg border border-gray-200 hover:opacity-80 hover:ring-2 hover:ring-blue-300 transition-all"
+        />
+      </button>
+    );
+  }
+
+  // Fallback para datos legacy sin evidenceThumbnailUrl
   return (
-    <a href={evaluation.evidenceUrl} target="_blank" rel="noopener noreferrer">
-      <img
-        src={evaluation.evidenceUrl}
-        alt="Evidencia"
-        className="w-9 h-9 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
-      />
-    </a>
+    <button
+      onClick={() => onViewDetail?.(evaluation)}
+      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+      title="Ver evidencia"
+    >
+      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </button>
   );
 }
 
-export function EvaluationsList({ evaluations, loading, onEdit, onDelete, readOnly = false }) {
+export function EvaluationsList({ evaluations, loading, onEdit, onDelete, onViewDetail, readOnly = false }) {
   if (loading) {
     return (
       <div className="space-y-2">
@@ -119,7 +143,7 @@ export function EvaluationsList({ evaluations, loading, onEdit, onDelete, readOn
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <EvidenceLink evaluation={ev} />
+                  <EvidenceThumb evaluation={ev} onViewDetail={onViewDetail} />
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                   {fmtDate(ev.submittedByStudentAt)}
