@@ -1,6 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
+
+const MODAL_SIZES = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  full: "max-w-full mx-4",
+};
+
+const EMPTY_STYLE = {};
 
 export function Modal({
   isOpen,
@@ -14,15 +24,10 @@ export function Modal({
   headerClassName = "",
   contentClassName = "",
   closeButtonClassName = "",
-  containerStyle = {},
+  containerStyle = EMPTY_STYLE,
 }) {
-  const sizes = {
-    sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-    full: "max-w-full mx-4",
-  };
+  const panelRef = useRef(null);
+  const previouslyFocusedRef = useRef(null);
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -54,6 +59,18 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
+  // Enfocar el diálogo al abrir y devolver el foco al elemento anterior al cerrar.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    previouslyFocusedRef.current = document.activeElement;
+    const focusFrame = window.requestAnimationFrame(() => panelRef.current?.focus());
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const modal = (
@@ -62,21 +79,22 @@ export function Modal({
       style={{ zIndex: 10000, ...containerStyle }}
     >
       {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in ${overlayClassName}`.trim()}
+      <button
+        type="button"
+        className={`absolute inset-0 border-0 bg-black/70 p-0 backdrop-blur-sm animate-fade-in ${overlayClassName}`.trim()}
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") onClose?.();
-        }}
-        role="button"
-        tabIndex={0}
         aria-label="Cerrar modal"
       />
 
       {/* Modal */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === "string" ? title : "Ventana modal"}
+        tabIndex={-1}
         className={`
-          relative w-full ${sizes[size]}
+          relative w-full ${MODAL_SIZES[size]}
           bg-white border 
           rounded-2xl shadow-2xl
           animate-slide-up
@@ -94,8 +112,10 @@ export function Modal({
               <div className="min-w-0 flex-1">{title}</div>
             )}
             <button
+              type="button"
               onClick={onClose}
-              className={`p-2 rounded-lg hover:bg-slate-800 transition-colors touch-target ${closeButtonClassName}`.trim()}
+              aria-label="Cerrar modal"
+              className={`flex h-11 w-11 items-center justify-center rounded-lg hover:bg-slate-800 transition-colors touch-target ${closeButtonClassName}`.trim()}
             >
               <svg
                 className="w-5 h-5 text-slate-400"

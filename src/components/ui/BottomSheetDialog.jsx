@@ -19,6 +19,8 @@ export function BottomSheetDialog({
   children,
   footer,
   maxWidth = "720px",
+  fillHeight = false,
+  zIndex = 9999,
 }) {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -58,7 +60,7 @@ export function BottomSheetDialog({
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 9998,
+          zIndex: zIndex - 1,
           background: "rgba(2,8,23,0.6)",
           backdropFilter: "blur(8px)",
         }}
@@ -71,7 +73,7 @@ export function BottomSheetDialog({
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 9999,
+          zIndex,
           display: "flex",
           alignItems: isMobile ? "flex-end" : "center",
           justifyContent: "center",
@@ -85,6 +87,7 @@ export function BottomSheetDialog({
             flexDirection: "column",
             width: "100%",
             maxWidth: isMobile ? "100%" : maxWidth,
+            height: fillHeight ? (isMobile ? "95dvh" : "90vh") : undefined,
             maxHeight: isMobile ? "95dvh" : "90vh",
             background: "#ffffff",
             borderRadius: isMobile ? "24px 24px 0 0" : "20px",
@@ -214,6 +217,8 @@ BottomSheetDialog.propTypes = {
   children: PropTypes.node,
   footer: PropTypes.node,
   maxWidth: PropTypes.string,
+  fillHeight: PropTypes.bool,
+  zIndex: PropTypes.number,
 };
 
 export default BottomSheetDialog;

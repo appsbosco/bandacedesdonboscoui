@@ -1,7 +1,11 @@
+/* eslint-disable react/prop-types */
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Modal } from "components/ui/Modal";
 import EvidenceUploader from "./EvidenceUploader";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const INITIAL = {
   subjectId: "",
@@ -10,6 +14,128 @@ const INITIAL = {
   scaleMin: "0",
   scaleMax: "100",
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function scoreTone(score) {
+  if (score == null || isNaN(score)) return "text-neutral-400";
+  if (score >= 80) return "text-emerald-600";
+  if (score >= 70) return "text-amber-600";
+  return "text-rose-600";
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function FieldLabel({ htmlFor, children, required }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400"
+    >
+      {children}
+      {required && <span className="ml-1 text-rose-400">*</span>}
+    </label>
+  );
+}
+
+function SelectField({ id, name, value, onChange, disabled, placeholder, children }) {
+  return (
+    <select
+      id={id}
+      name={name}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-full appearance-none rounded-2xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-sm font-medium text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <option value="">{placeholder}</option>
+      {children}
+    </select>
+  );
+}
+
+function NormalizedScorePreview({ normalized }) {
+  const tone = scoreTone(normalized);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+        <svg
+          className="h-4 w-4 text-neutral-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          />
+        </svg>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+          Nota normalizada
+        </p>
+        <div className="mt-0.5 flex items-baseline gap-1">
+          <span className={`text-xl font-bold tabular-nums ${tone}`}>{normalized.toFixed(1)}</span>
+          <span className="text-xs text-neutral-400">/100</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RejectedWarning() {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200">
+        <svg
+          className="h-3 w-3 text-amber-700"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+            d="M12 9v2m0 4h.01"
+          />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-amber-800">Evaluación rechazada</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-amber-700">
+          Revisa los cambios solicitados y vuelve a subir la evidencia para reenviarla.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FormErrorAlert({ message }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+      <svg
+        className="h-4 w-4 shrink-0 text-rose-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+      <p className="text-sm text-rose-700">{message}</p>
+    </div>
+  );
+}
+
+// ─── EvaluationFormModal ──────────────────────────────────────────────────────
 
 export function EvaluationFormModal({
   isOpen,
@@ -27,40 +153,40 @@ export function EvaluationFormModal({
   const [evidence, setEvidence] = useState(null);
   const [evidenceError, setEvidenceError] = useState(null);
   const [formError, setFormError] = useState(null);
+
   const isEdit = mode === "edit";
   const requiresFreshEvidence = isEdit && evaluation?.status === "rejected";
 
   useEffect(() => {
-    if (isOpen) {
-      if (mode === "edit" && evaluation) {
-        setForm({
-          subjectId: evaluation.subject?.id || "",
-          periodId: evaluation.period?.id || "",
-          scoreRaw: String(evaluation.scoreRaw ?? ""),
-          scaleMin: String(evaluation.scaleMin ?? "0"),
-          scaleMax: String(evaluation.scaleMax ?? "100"),
-        });
-        setEvidence(
-          evaluation.status === "rejected"
-            ? null
-            : {
-                url: evaluation.evidenceUrl,
-                publicId: evaluation.evidencePublicId,
-                resourceType: evaluation.evidenceResourceType || "image",
-                originalName: evaluation.evidenceOriginalName || "evidencia",
-              }
-        );
-      } else {
-        setForm({
-          ...INITIAL,
-          subjectId: initialSelection?.subjectId || "",
-          periodId: initialSelection?.periodId || "",
-        });
-        setEvidence(null);
-      }
-      setFormError(null);
-      setEvidenceError(null);
+    if (!isOpen) return;
+    if (isEdit && evaluation) {
+      setForm({
+        subjectId: evaluation.subject?.id || "",
+        periodId: evaluation.period?.id || "",
+        scoreRaw: String(evaluation.scoreRaw ?? ""),
+        scaleMin: String(evaluation.scaleMin ?? "0"),
+        scaleMax: String(evaluation.scaleMax ?? "100"),
+      });
+      setEvidence(
+        evaluation.status === "rejected"
+          ? null
+          : {
+              url: evaluation.evidenceUrl,
+              publicId: evaluation.evidencePublicId,
+              resourceType: evaluation.evidenceResourceType || "image",
+              originalName: evaluation.evidenceOriginalName || "evidencia",
+            }
+      );
+    } else {
+      setForm({
+        ...INITIAL,
+        subjectId: initialSelection?.subjectId || "",
+        periodId: initialSelection?.periodId || "",
+      });
+      setEvidence(null);
     }
+    setFormError(null);
+    setEvidenceError(null);
   }, [isOpen, mode, evaluation, initialSelection]);
 
   function handleChange(e) {
@@ -146,234 +272,147 @@ export function EvaluationFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? "Editar evaluación" : "Registrar evaluación"}
+      title={
+        <div>
+          <h2 className="text-base font-bold tracking-tight text-neutral-900">
+            {isEdit ? "Editar evaluación" : "Registrar evaluación"}
+          </h2>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            {isEdit
+              ? "Actualiza nota o reemplaza la evidencia."
+              : "Completa los datos y adjunta evidencia."}
+          </p>
+        </div>
+      }
       size="lg"
-      containerClassName="items-end sm:items-center p-0 sm:p-4"
-      overlayClassName="bg-black/40"
-      panelClassName="h-[95dvh] max-h-[95dvh] sm:h-[90vh] sm:max-h-[90vh] overflow-hidden rounded-t-[20px] rounded-b-none sm:rounded-2xl flex flex-col"
-      headerClassName="border-b border-slate-200 px-5 py-4 sm:px-6"
-      contentClassName="p-0 flex flex-1 min-h-0 overflow-hidden"
-      closeButtonClassName="hover:bg-slate-100"
+      containerClassName="items-end p-0 sm:items-center sm:p-4"
+      overlayClassName="bg-neutral-950/60 backdrop-blur-md"
+      panelClassName="flex h-[95dvh] max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-[32px] rounded-b-none border border-white/60 bg-white shadow-[0_32px_80px_rgba(0,0,0,0.18)] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-lg sm:rounded-[28px]"
+      headerClassName="!px-5 !py-4 border-b border-neutral-100 bg-white"
+      contentClassName="!p-0 flex min-h-0 flex-1 overflow-hidden bg-neutral-50"
+      closeButtonClassName="rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
     >
-      <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col">
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4 pt-2 sm:px-6 sm:pt-5">
-          <div className="flex justify-center mb-4 sm:hidden">
-            <div className="w-10 h-1 rounded-full bg-slate-200" />
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        {/* Scroll area */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-3 sm:px-6 sm:pt-5">
+          {/* Drag handle — mobile */}
+          <div className="mb-4 flex justify-center sm:hidden">
+            <div className="h-1 w-10 rounded-full bg-neutral-200" />
           </div>
 
           <div className="flex flex-col gap-4">
+            {/* Alerta evaluación rechazada */}
+            {requiresFreshEvidence && <RejectedWarning />}
+
             {/* Materia */}
             <div>
-              <label
-                htmlFor="evaluation-subject"
-                className="block text-xs font-medium text-gray-600 mb-1"
-              >
-                Materia *
-              </label>
-              <select
-                id="evaluation-subject"
+              <FieldLabel htmlFor="eval-subject" required>
+                Materia
+              </FieldLabel>
+              <SelectField
+                id="eval-subject"
                 name="subjectId"
                 value={form.subjectId}
                 onChange={handleChange}
                 disabled={isEdit}
-                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
+                placeholder="Selecciona una materia"
               >
-                <option value="">Selecciona una materia</option>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             {/* Período */}
             <div>
-              <label
-                htmlFor="evaluation-period"
-                className="block text-xs font-medium text-gray-600 mb-1"
-              >
-                Período *
-              </label>
-              <select
-                id="evaluation-period"
+              <FieldLabel htmlFor="eval-period" required>
+                Período
+              </FieldLabel>
+              <SelectField
+                id="eval-period"
                 name="periodId"
                 value={form.periodId}
                 onChange={handleChange}
                 disabled={isEdit}
-                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
+                placeholder="Selecciona un período"
               >
-                <option value="">Selecciona un período</option>
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — {p.year}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
-            {/* Escala + Nota */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Nota mínima</label>
-            <input
-              type="number"
-              name="scaleMin"
-              value={form.scaleMin}
-              onChange={handleChange}
-              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Nota máxima</label>
-            <input
-              type="number"
-              name="scaleMax"
-              value={form.scaleMax}
-              onChange={handleChange}
-              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div> */}
-              <div>
-                <label
-                  htmlFor="evaluation-score"
-                  className="block text-xs font-medium text-gray-600 mb-1"
-                >
-                  Tu nota *
-                </label>
-                <input
-                  id="evaluation-score"
-                  type="number"
-                  name="scoreRaw"
-                  value={form.scoreRaw}
-                  onChange={handleChange}
-                  step="0.01"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="85"
-                />
-              </div>
+            {/* Nota */}
+            <div>
+              <FieldLabel htmlFor="eval-score" required>
+                Tu nota
+              </FieldLabel>
+              <input
+                id="eval-score"
+                type="number"
+                name="scoreRaw"
+                value={form.scoreRaw}
+                onChange={handleChange}
+                step="0.01"
+                placeholder="85"
+                className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-sm font-semibold text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+              />
             </div>
 
-            {/* Preview normalizado */}
-            {normalized !== null && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <svg
-                  className="w-4 h-4 text-blue-500 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-xs text-blue-700">
-                  Equivale a <span className="font-semibold">{normalized}/100</span> en escala
-                  normalizada
-                </p>
-              </div>
-            )}
+            {/* Nota normalizada — preview */}
+            {normalized !== null && <NormalizedScorePreview normalized={normalized} />}
 
             {/* Evidencia */}
             <div>
-              <label
-                htmlFor="evaluation-evidence"
-                className="block text-xs font-medium text-gray-600 mb-2"
-              >
-                Evidencia (imagen o PDF) *
-              </label>
-              {requiresFreshEvidence && (
-                <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div className="text-xs text-amber-700">
-                    <p className="font-medium">Esta evaluación fue rechazada.</p>
-                    <p>
-                      Revísala y vuelve a subir una nueva evidencia para reenviarla a aprobación.
-                    </p>
-                  </div>
-                </div>
-              )}
+              <FieldLabel htmlFor="eval-evidence" required>
+                Evidencia{" "}
+                <span className="normal-case font-medium tracking-normal text-neutral-400">
+                  (imagen o PDF)
+                </span>
+              </FieldLabel>
+
               <EvidenceUploader
-                inputId="evaluation-evidence"
+                inputId="eval-evidence"
                 onUpload={handleEvidenceUpload}
                 onError={(msg) => setEvidenceError(msg)}
                 disabled={loading}
               />
-              {evidenceError && <p className="text-xs text-red-600 mt-1">{evidenceError}</p>}
+
+              {evidenceError && (
+                <p className="mt-1.5 text-xs font-medium text-rose-600">{evidenceError}</p>
+              )}
               {isEdit && evidence && !evidenceError && !requiresFreshEvidence && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="mt-1.5 text-xs text-neutral-400">
                   Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
                 </p>
               )}
             </div>
 
-            {/* Error */}
-            {formError && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                <svg
-                  className="w-4 h-4 text-red-500 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                <p className="text-xs text-red-600">{formError}</p>
-              </div>
-            )}
+            {/* Error global */}
+            {formError && <FormErrorAlert message={formError} />}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 border-t border-slate-200 bg-white px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_24px_rgba(15,23,42,0.06)] sm:px-6 sm:pb-4">
+        {/* Action bar sticky */}
+        <div className="flex gap-2.5 border-t border-neutral-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.07)] sm:px-6 sm:pb-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="h-12 flex-1 rounded-2xl border border-neutral-200 bg-neutral-100 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-200 active:scale-[0.98]"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading || !evidence}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-900 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading && (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
             {isEdit ? "Guardar cambios" : "Registrar evaluación"}
           </button>

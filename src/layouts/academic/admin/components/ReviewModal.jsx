@@ -1,32 +1,31 @@
 /* eslint-disable react/prop-types */
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { useLazyQuery } from "@apollo/client";
-import { Modal } from "components/ui/Modal";
+import BottomSheetDialog from "components/ui/BottomSheetDialog";
 import { cloudinaryOptimized } from "hooks/useImageUpload";
 import { GET_EVALUATION_DETAIL } from "../../academic.gql";
 
 const STATUS_CONFIG = {
   pending: {
     label: "Pendiente",
-    badgeClassName: "border-amber-200 bg-amber-50 text-amber-800",
-    accentClassName: "from-amber-100 via-white to-white",
+    dot: "bg-amber-400",
+    badge: "border-amber-200 bg-amber-50 text-amber-700",
   },
   approved: {
     label: "Aprobada",
-    badgeClassName: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    accentClassName: "from-emerald-100 via-white to-white",
+    dot: "bg-emerald-400",
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   rejected: {
     label: "Rechazada",
-    badgeClassName: "border-red-200 bg-red-50 text-red-800",
-    accentClassName: "from-red-100 via-white to-white",
+    dot: "bg-rose-400",
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
   },
 };
 
-function getScoreTone(score) {
-  if (score == null || Number.isNaN(score)) return "text-slate-400";
+function scoreTone(score) {
+  if (score == null || Number.isNaN(score)) return "text-neutral-400";
   if (score >= 80) return "text-emerald-600";
   if (score >= 70) return "text-amber-600";
   return "text-rose-600";
@@ -36,7 +35,7 @@ function formatStudentName(student) {
   return [student?.name, student?.firstSurName].filter(Boolean).join(" ") || "Estudiante";
 }
 
-function formatSubmittedDate(value) {
+function formatDate(value) {
   if (!value) return "Sin fecha";
   return new Date(value).toLocaleString("es-CR", {
     day: "2-digit",
@@ -47,148 +46,359 @@ function formatSubmittedDate(value) {
   });
 }
 
-function getOptimizedEvidenceUrl(evidenceUrl, resourceType, originalName) {
-  if (!evidenceUrl) return null;
+function parseNumber(value) {
+  if (value === "") return Number.NaN;
+  return Number(value);
+}
+
+function getOptimizedUrl(url, resourceType, originalName) {
+  if (!url) return null;
   const isPdf = resourceType === "raw" || originalName?.toLowerCase().endsWith(".pdf");
-  if (isPdf) return evidenceUrl;
-  return cloudinaryOptimized(evidenceUrl, { width: 640, height: 420 });
+  if (isPdf) return url;
+  return cloudinaryOptimized(url, { width: 640, height: 420 });
 }
 
-function MetaPill({ label, value, valueClassName = "text-slate-900" }) {
+function StatusBadge({ status }) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] shadow-sm">
-      <span className="font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</span>
-      <span className={`font-semibold ${valueClassName}`}>{value}</span>
-    </div>
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${config.badge}`}
+    >
+      <span className={`h-2 w-2 rounded-full ${config.dot}`} />
+      {config.label}
+    </span>
   );
 }
 
-MetaPill.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.node.isRequired,
-  valueClassName: PropTypes.string,
-};
-
-function SectionLabel({ eyebrow, title, trailing }) {
+function LoadingSpinner({ dark = false }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-2">
-      <div>
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-          {eyebrow}
-        </p>
-        <h3 className="mt-0.5 text-sm font-semibold text-slate-900">{title}</h3>
+    <span
+      className={`h-4 w-4 animate-spin rounded-full border-2 ${
+        dark ? "border-neutral-300 border-t-neutral-700" : "border-white border-t-transparent"
+      }`}
+    />
+  );
+}
+
+function SectionTitle({ children }) {
+  return <h3 className="mb-3 text-sm font-semibold text-neutral-700">{children}</h3>;
+}
+
+function StudentCard({ evaluation }) {
+  const submittedAt =
+    evaluation.submittedByStudentAt || evaluation.createdAt || evaluation.updatedAt;
+
+  return (
+    <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-neutral-500">Enviada {formatDate(submittedAt)}</p>
+          <h3 className="mt-2 truncate text-xl font-bold text-neutral-900">
+            {formatStudentName(evaluation.student)}
+          </h3>
+          <p className="mt-1 text-sm text-neutral-600">
+            {evaluation.subject?.name || "Materia"}
+            <span className="mx-1 text-neutral-300">·</span>
+            {evaluation.period?.name || "Período"}
+            {evaluation.period?.year ? ` ${evaluation.period.year}` : ""}
+          </p>
+        </div>
+        {evaluation.student?.grade && (
+          <div className="shrink-0 rounded-xl bg-neutral-100 px-3 py-2 text-center">
+            <p className="text-xs text-neutral-500">Grado</p>
+            <p className="text-sm font-bold text-neutral-800">{evaluation.student.grade}</p>
+          </div>
+        )}
       </div>
-      {trailing}
-    </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <div className="rounded-xl bg-neutral-100 px-3 py-2 text-sm text-neutral-600">
+          Nota{" "}
+          <strong className="text-neutral-900">
+            {evaluation.scoreRaw}/{evaluation.scaleMax}
+          </strong>
+        </div>
+        <div className="rounded-xl bg-neutral-100 px-3 py-2 text-sm text-neutral-600">
+          Normalizada{" "}
+          <strong className={scoreTone(evaluation.scoreNormalized100)}>
+            {evaluation.scoreNormalized100?.toFixed(1) ?? "–"}/100
+          </strong>
+        </div>
+      </div>
+    </section>
   );
 }
 
-SectionLabel.propTypes = {
-  eyebrow: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired,
-  trailing: PropTypes.node,
-};
-
-function EvidenceCard({ evaluation, detail, detailLoading, isPdf, previewUrl, compact = false }) {
+function EvidenceCard({ evaluation, detail, detailLoading, detailError, isPdf, previewUrl }) {
   const evidenceUrl = detail?.evidenceUrl ?? evaluation?.evidenceUrl;
-  const hasEvidence = !!(evidenceUrl || evaluation?.evidencePublicId);
+  const fileName = detail?.evidenceOriginalName ?? evaluation?.evidenceOriginalName;
+  const hasEvidence = Boolean(evidenceUrl || evaluation?.evidencePublicId);
+  const imageUrl = previewUrl || evidenceUrl;
 
-  // Spinner: mientras carga el detalle O mientras sabemos que hay evidencia pero aún no tenemos la URL
-  if (detailLoading || (!detail && hasEvidence)) {
+  if (detailLoading || (!detail && hasEvidence && !detailError)) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+      <div className="flex min-h-48 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50">
+        <div className="flex items-center gap-3 text-sm text-neutral-500">
+          <LoadingSpinner dark />
+          Cargando evidencia
+        </div>
+      </div>
+    );
+  }
+
+  if (detailError) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        No se pudo cargar la evidencia. Cierra el modal e intenta abrirlo de nuevo.
       </div>
     );
   }
 
   if (!hasEvidence) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-        No hay evidencia adjunta.
+      <div className="flex min-h-48 items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-500">
+        Sin evidencia adjunta
       </div>
     );
   }
 
-  // previewUrl puede ser null en datos legacy sin evidencePreviewUrl — fallback a evidenceUrl
-  const imgSrc = previewUrl || evidenceUrl;
-
   if (isPdf) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl bg-neutral-50 p-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={1.8}
+                strokeWidth={1.75}
                 d="M7 21h10a2 2 0 002-2V9l-6-6H7a2 2 0 00-2 2v14a2 2 0 002 2zm3-9h4m-4 4h4"
               />
             </svg>
           </div>
-          <p className="mt-3 line-clamp-2 text-sm font-semibold text-slate-900">
-            {(detail?.evidenceOriginalName ?? evaluation?.evidenceOriginalName) || "Documento PDF"}
+          <p className="mt-3 text-sm font-semibold text-neutral-800">
+            {fileName || "Documento PDF"}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Abre el archivo para revisar el contenido completo.
+          <p className="mt-1 text-sm text-neutral-500">
+            Revisa el archivo completo antes de decidir.
           </p>
         </div>
-
-        {evidenceUrl && (
-          <a
-            href={evidenceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Abrir evidencia
-          </a>
-        )}
+        {evidenceUrl && <EvidenceLink href={evidenceUrl} />}
       </div>
     );
   }
 
   return (
-    <a
-      href={evidenceUrl || "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block rounded-2xl border border-slate-200 bg-slate-50 p-2.5"
-      title="Abrir imagen completa"
-    >
-      <div className="flex items-center justify-between gap-2 px-1 pb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          Evidencia
-        </span>
-        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 transition group-hover:border-slate-300 group-hover:bg-slate-100">
-          Ampliar
-        </span>
-      </div>
-
-      <div
-        className={`overflow-hidden rounded-[18px] border border-slate-200 bg-white ${
-          compact ? "p-2" : "p-3"
-        }`}
-      >
+    <div className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+      <div className="flex justify-center overflow-hidden rounded-xl bg-neutral-50">
         <img
-          src={imgSrc}
-          alt="Evidencia de la evaluacion"
+          src={imageUrl}
+          alt="Evidencia de evaluación"
           loading="eager"
           decoding="async"
-          className={`block w-full object-contain ${compact ? "h-28 sm:h-32" : "h-44 xl:h-52"}`}
+          className="max-h-72 w-full object-contain lg:max-h-96"
         />
       </div>
+      {evidenceUrl && <EvidenceLink href={evidenceUrl} />}
+    </div>
+  );
+}
+
+function EvidenceLink({ href }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+    >
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+        />
+      </svg>
+      Abrir evidencia
     </a>
   );
 }
 
-EvidenceCard.propTypes = {
-  evaluation: PropTypes.object,
-  isPdf: PropTypes.bool.isRequired,
-  previewUrl: PropTypes.string,
-  compact: PropTypes.bool,
-};
+function ScoreCard({ scoreRaw, scaleMin, scaleMax, normalizedPreview, disabled, error, onChange }) {
+  const fields = [
+    { key: "scoreRaw", label: "Nota", value: scoreRaw },
+    { key: "scaleMin", label: "Mínima", value: scaleMin },
+    { key: "scaleMax", label: "Máxima", value: scaleMax },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <SectionTitle>Calificación</SectionTitle>
+        <div className="rounded-xl bg-neutral-100 px-3 py-2 text-sm text-neutral-600">
+          Previa{" "}
+          <strong className={scoreTone(normalizedPreview)}>
+            {normalizedPreview?.toFixed(1) ?? "–"}/100
+          </strong>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {fields.map(({ key, label, value }) => (
+          <label key={key} className="block">
+            <span className="mb-2 block text-sm font-medium text-neutral-600">{label}</span>
+            <input
+              type="number"
+              step="0.01"
+              value={value}
+              onChange={(event) => onChange(key, event.target.value)}
+              disabled={disabled}
+              aria-invalid={Boolean(error)}
+              className={`h-12 w-full rounded-xl border bg-neutral-50 px-3 text-sm font-semibold text-neutral-900 outline-none transition focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                error
+                  ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
+                  : "border-neutral-200 focus:border-neutral-400 focus:ring-neutral-100"
+              }`}
+            />
+          </label>
+        ))}
+      </div>
+      {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+    </section>
+  );
+}
+
+function CommentCard({ comment, onChange, disabled, rejectMode, textareaRef, sectionRef }) {
+  return (
+    <section
+      ref={sectionRef}
+      className={`rounded-2xl border p-4 shadow-sm ${
+        rejectMode ? "border-rose-200 bg-rose-50" : "border-neutral-200 bg-white"
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <SectionTitle>{rejectMode ? "Motivo de rechazo" : "Comentario"}</SectionTitle>
+        {rejectMode && (
+          <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+            Requerido
+          </span>
+        )}
+      </div>
+      {rejectMode && (
+        <p className="mb-3 text-sm text-rose-700">
+          Explica qué debe corregir el estudiante antes de volver a enviar.
+        </p>
+      )}
+      {/* <textarea
+        ref={textareaRef}
+        value={comment}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={
+          rejectMode
+            ? "Indica el motivo del rechazo"
+            : "Agrega una observación para el estudiante (opcional)"
+        }
+        rows={rejectMode ? 4 : 3}
+        disabled={disabled}
+        aria-label={rejectMode ? "Motivo de rechazo" : "Comentario para el estudiante"}
+        required={rejectMode}
+        className="w-full resize-none rounded-xl border border-neutral-200 bg-white p-3 text-sm leading-relaxed text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+      /> */}
+    </section>
+  );
+}
+
+function SummaryCard({
+  hasScoreChanges,
+  scoreRaw,
+  scaleMax,
+  originalScoreRaw,
+  originalScaleMax,
+  reviewComment,
+  previousComment,
+}) {
+  return (
+    <section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+      <SectionTitle>Resumen</SectionTitle>
+      <p className="text-sm leading-relaxed text-neutral-600">
+        {hasScoreChanges
+          ? `La nota cambiará de ${originalScoreRaw}/${originalScaleMax} a ${scoreRaw || "–"}/${
+              scaleMax || "–"
+            }.`
+          : "La nota se conserva sin cambios."}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+        {reviewComment.trim()
+          ? "Se enviará un comentario al estudiante."
+          : "Sin comentario adjunto."}
+      </p>
+      {previousComment && (
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
+          <p className="text-sm font-semibold text-neutral-700">Comentario anterior</p>
+          <p className="mt-1 text-sm leading-relaxed text-neutral-600">{previousComment}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActionBar({
+  activeAction,
+  isSubmitting,
+  rejectMode,
+  onApprove,
+  onReject,
+  onConfirmReject,
+  onCancelReject,
+}) {
+  if (rejectMode) {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={onCancelReject}
+          disabled={isSubmitting}
+          className="h-12 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+        >
+          Cancelar rechazo
+        </button>
+        <button
+          type="button"
+          onClick={onConfirmReject}
+          disabled={isSubmitting}
+          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+        >
+          {activeAction === "rejected" && <LoadingSpinner />}
+          {activeAction === "rejected" ? "Rechazando" : "Confirmar rechazo"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+      <button
+        type="button"
+        onClick={onApprove}
+        disabled={isSubmitting}
+        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+      >
+        {activeAction === "approved" && <LoadingSpinner />}
+        {activeAction === "approved" ? "Aprobando" : "Aprobar evaluación"}
+      </button>
+      <button
+        type="button"
+        onClick={onReject}
+        disabled={isSubmitting}
+        className="h-12 rounded-xl border border-rose-200 bg-white px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+      >
+        Rechazar
+      </button>
+    </div>
+  );
+}
 
 export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) {
   const [reviewComment, setReviewComment] = useState("");
@@ -197,13 +407,12 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
   const [scaleMax, setScaleMax] = useState("100");
   const [formError, setFormError] = useState(null);
   const [activeAction, setActiveAction] = useState(null);
+  const [rejectMode, setRejectMode] = useState(false);
+  const commentRef = useRef(null);
+  const commentSectionRef = useRef(null);
 
-  // Carga evidenceUrl + evidencePreviewUrl bajo demanda al abrir el modal.
-  // La query de lista ya no incluye evidenceUrl (optimización de ancho de banda).
-  const [fetchDetail, { data: detailData, loading: detailLoading }] = useLazyQuery(
-    GET_EVALUATION_DETAIL,
-    { fetchPolicy: "cache-first" }
-  );
+  const [fetchDetail, { data: detailData, loading: detailLoading, error: detailError }] =
+    useLazyQuery(GET_EVALUATION_DETAIL, { fetchPolicy: "cache-first" });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -213,23 +422,34 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
     setScaleMax(String(evaluation?.scaleMax ?? "100"));
     setFormError(null);
     setActiveAction(null);
-    if (evaluation?.id) {
-      fetchDetail({ variables: { id: evaluation.id } });
-    }
+    setRejectMode(false);
+    if (evaluation?.id) fetchDetail({ variables: { id: evaluation.id } });
   }, [isOpen, evaluation, fetchDetail]);
 
-  // Usa la evidenceUrl del detalle; mientras carga, evidenceUrl es undefined (modal muestra spinner de evidencia)
-  const detail = detailData?.evaluationDetail;
+  useEffect(() => {
+    if (!rejectMode) return undefined;
+    const focusTimer = window.setTimeout(() => {
+      commentSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      commentRef.current?.focus();
+    }, 80);
+    return () => window.clearTimeout(focusTimer);
+  }, [rejectMode]);
 
-  const parsedScaleMin = useMemo(() => parseFloat(scaleMin) || 0, [scaleMin]);
-  const parsedScaleMax = useMemo(() => parseFloat(scaleMax) || 100, [scaleMax]);
-  const parsedScoreRaw = useMemo(() => parseFloat(scoreRaw), [scoreRaw]);
+  const loadedDetail = detailData?.evaluationDetail;
+  const detail = loadedDetail && loadedDetail.id === evaluation?.id ? loadedDetail : null;
+  const parsedScaleMin = useMemo(() => parseNumber(scaleMin), [scaleMin]);
+  const parsedScaleMax = useMemo(() => parseNumber(scaleMax), [scaleMax]);
+  const parsedScoreRaw = useMemo(() => parseNumber(scoreRaw), [scoreRaw]);
 
   const normalizedPreview = useMemo(() => {
-    if (Number.isNaN(parsedScoreRaw) || parsedScaleMax <= parsedScaleMin) {
+    if (
+      !Number.isFinite(parsedScoreRaw) ||
+      !Number.isFinite(parsedScaleMin) ||
+      !Number.isFinite(parsedScaleMax) ||
+      parsedScaleMax <= parsedScaleMin
+    ) {
       return null;
     }
-
     return (
       Math.round(((parsedScoreRaw - parsedScaleMin) / (parsedScaleMax - parsedScaleMin)) * 10000) /
       100
@@ -241,347 +461,185 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
     parsedScaleMin !== Number(evaluation?.scaleMin) ||
     parsedScaleMax !== Number(evaluation?.scaleMax);
 
-  const modalStatus = STATUS_CONFIG[evaluation?.status] || STATUS_CONFIG.pending;
-  // isPdf y evidenceUrl vienen del detalle (lazy-loaded al abrir el modal)
   const isPdf =
     (detail?.evidenceResourceType ?? evaluation?.evidenceResourceType) === "raw" ||
     (detail?.evidenceOriginalName ?? evaluation?.evidenceOriginalName)
       ?.toLowerCase()
       .endsWith(".pdf");
+
   const evidencePreviewUrl = useMemo(
     () =>
-      getOptimizedEvidenceUrl(
+      getOptimizedUrl(
         detail?.evidencePreviewUrl || detail?.evidenceUrl,
         detail?.evidenceResourceType,
         detail?.evidenceOriginalName
       ),
     [detail]
   );
+
   const isSubmitting = loading || activeAction !== null;
+  const scaleError = useMemo(() => {
+    if (!scaleMin || !scaleMax) return "Completa la escala mínima y máxima.";
+    if (!Number.isFinite(parsedScaleMin) || !Number.isFinite(parsedScaleMax)) {
+      return "Ingresa valores válidos para la escala.";
+    }
+    if (parsedScaleMax <= parsedScaleMin) {
+      return "La escala máxima debe ser mayor que la mínima.";
+    }
+    return null;
+  }, [parsedScaleMax, parsedScaleMin, scaleMax, scaleMin]);
 
   if (!evaluation) return null;
 
-  const studentName = formatStudentName(evaluation.student);
-  const currentScoreTone = getScoreTone(evaluation.scoreNormalized100);
-  const previewScoreTone = getScoreTone(normalizedPreview);
+  function validate() {
+    if (scoreRaw === "" || !Number.isFinite(parsedScoreRaw)) {
+      setFormError("Ingresa una nota válida antes de continuar.");
+      return false;
+    }
+    if (scaleError) {
+      setFormError(scaleError);
+      return false;
+    }
+    if (parsedScoreRaw < parsedScaleMin || parsedScoreRaw > parsedScaleMax) {
+      setFormError("La nota debe estar dentro de la escala indicada.");
+      return false;
+    }
+    setFormError(null);
+    return true;
+  }
 
   async function submitReview(status, actionKey) {
-    setFormError(null);
-
-    if (scoreRaw === "" || Number.isNaN(parsedScoreRaw)) {
-      setFormError("Ingresa una nota valida antes de continuar.");
-      return;
-    }
-
-    if (parsedScaleMax <= parsedScaleMin) {
-      setFormError("La escala maxima debe ser mayor que la minima.");
-      return;
-    }
-
+    if (!validate()) return;
     setActiveAction(actionKey);
-
     try {
       await onReview(
         evaluation.id,
         status,
         reviewComment.trim(),
         hasScoreChanges
-          ? {
-              scoreRaw: parsedScoreRaw,
-              scaleMin: parsedScaleMin,
-              scaleMax: parsedScaleMax,
-            }
+          ? { scoreRaw: parsedScoreRaw, scaleMin: parsedScaleMin, scaleMax: parsedScaleMax }
           : null
       );
-
-      if (status) {
-        onClose();
-      }
+      if (status) onClose();
     } catch (error) {
-      setFormError(error?.message || "No se pudo completar la revision.");
+      setFormError(error?.message || "No se pudo completar la revisión.");
     } finally {
       setActiveAction(null);
     }
+  }
+
+  function handleConfirmReject() {
+    if (!reviewComment.trim()) {
+      setFormError("Escribe el motivo del rechazo antes de continuar.");
+      commentRef.current?.focus();
+      return;
+    }
+    submitReview("rejected", "rejected");
+  }
+
+  function handleScoreChange(key, value) {
+    if (key === "scoreRaw") setScoreRaw(value);
+    if (key === "scaleMin") setScaleMin(value);
+    if (key === "scaleMax") setScaleMax(value);
+    setFormError(null);
   }
 
   function handleModalClose() {
     if (!isSubmitting) onClose();
   }
 
+  function handleCancelReject() {
+    setRejectMode(false);
+    setFormError(null);
+  }
+
   return (
-    <Modal
+    <BottomSheetDialog
       isOpen={isOpen}
       onClose={handleModalClose}
       title={
-        <div className="pr-3">
-          <h2 className="text-lg font-semibold tracking-tight text-slate-900">
-            Revisar evaluacion
-          </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Ajusta la nota, valida evidencia y resuelve sin salir del flujo.
-          </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span>Revisar evaluación</span>
+          <StatusBadge status={evaluation.status || "pending"} />
         </div>
       }
-      size="full"
-      containerClassName="!z-[10020] items-start overflow-y-auto py-2 sm:py-4"
-      containerStyle={{ zIndex: 10020 }}
-      overlayClassName="bg-slate-950/55 backdrop-blur-md"
-      panelClassName="my-auto flex h-auto min-h-0 w-[min(96vw,68rem)] max-h-[calc(100vh-1rem)] max-w-[68rem] flex-col overflow-hidden border border-white/70 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.2)] sm:max-h-[calc(100vh-2rem)]"
-      headerClassName="!px-4 !py-3 border-b border-slate-200 bg-gradient-to-r from-stone-50 via-white to-rose-50/70 sm:!px-5"
-      closeButtonClassName="text-slate-500 hover:bg-white hover:text-slate-900"
-      contentClassName="!p-0 min-h-0 flex-1 overflow-hidden bg-[linear-gradient(180deg,#fff_0%,#fcfcfb_100%)]"
+      subtitle="Verifica la evidencia y registra tu decisión"
+      icon="📝"
+      maxWidth="1040px"
+      fillHeight
+      zIndex={10020}
+      footer={
+        <ActionBar
+          activeAction={activeAction}
+          isSubmitting={isSubmitting}
+          rejectMode={rejectMode}
+          onApprove={() => submitReview("approved", "approved")}
+          onReject={() => {
+            setRejectMode(true);
+            setFormError(null);
+          }}
+          onConfirmReject={handleConfirmReject}
+          onCancelReject={handleCancelReject}
+        />
+      }
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="grid min-h-0 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
-            <div className="grid min-h-0 gap-3">
-              <section
-                className={`rounded-[20px] border border-slate-200 bg-gradient-to-br ${modalStatus.accentClassName} px-3.5 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.05)] sm:px-4`}
-              >
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${modalStatus.badgeClassName}`}
-                      >
-                        {modalStatus.label}
-                      </span>
-                      <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                        {formatSubmittedDate(
-                          evaluation.createdAt || evaluation.updatedAt || evaluation.submittedAt
-                        )}
-                      </span>
-                    </div>
+      <main className="grid grid-cols-1 gap-4 bg-neutral-50 p-4 lg:grid-cols-2 lg:p-6">
+        <div className="space-y-4">
+          <section>
+            <SectionTitle>Evidencia</SectionTitle>
+            <EvidenceCard
+              evaluation={evaluation}
+              detail={detail}
+              detailLoading={detailLoading}
+              detailError={detailError}
+              isPdf={isPdf}
+              previewUrl={evidencePreviewUrl}
+            />
+          </section>
+        </div>
 
-                    <h3 className="mt-2.5 truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-                      {studentName}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {evaluation.subject?.name || "Materia sin nombre"} ·{" "}
-                      {evaluation.period?.name || "Sin periodo"}
-                      {evaluation.period?.year ? ` ${evaluation.period.year}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    <MetaPill label="Grado" value={evaluation.student?.grade || "No definido"} />
-                    <MetaPill
-                      label="Actual"
-                      value={`${evaluation.scoreRaw}/${evaluation.scaleMax}`}
-                    />
-                    <MetaPill
-                      label="Norm."
-                      value={
-                        <>
-                          {evaluation.scoreNormalized100?.toFixed(1) || "0.0"}
-                          <span className="ml-1 text-[10px] font-medium text-slate-400">/100</span>
-                        </>
-                      }
-                      valueClassName={currentScoreTone}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.05)] sm:p-4">
-                <div className="grid gap-3">
-                  <SectionLabel
-                    eyebrow="Calificacion"
-                    title="Ajuste rapido"
-                    trailing={
-                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-                        <span className="font-semibold uppercase tracking-[0.12em] text-slate-400">
-                          Vista previa
-                        </span>
-                        <span className={`font-semibold ${previewScoreTone}`}>
-                          {normalizedPreview?.toFixed(1) ?? "--"}
-                        </span>
-                        <span className="text-[11px] text-slate-400">/100</span>
-                      </div>
-                    }
-                  />
-
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <label className="block">
-                      <span className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                        Nota
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={scoreRaw}
-                        onChange={(e) => setScoreRaw(e.target.value)}
-                        disabled={isSubmitting}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                        Escala min.
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={scaleMin}
-                        onChange={(e) => setScaleMin(e.target.value)}
-                        disabled={isSubmitting}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                        Escala max.
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={scaleMax}
-                        onChange={(e) => setScaleMax(e.target.value)}
-                        disabled={isSubmitting}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]">
-                    <div className="min-w-0">
-                      <label className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                        Comentario para el estudiante
-                      </label>
-                      <textarea
-                        value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
-                        placeholder="Resume la decision o deja una observacion concreta."
-                        rows={3}
-                        disabled={isSubmitting}
-                        className="min-h-[4.75rem] w-full resize-none rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm leading-5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                          Resumen
-                        </p>
-                        <p className="mt-1.5 text-sm leading-5 text-slate-600">
-                          {hasScoreChanges
-                            ? "La nota actual se actualizara junto con la decision."
-                            : "La nota actual se conserva."}
-                        </p>
-                        <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
-                          {evaluation.scoreRaw}/{evaluation.scaleMax} a {scoreRaw || "--"}/
-                          {scaleMax || "--"}
-                        </div>
-                      </div>
-
-                      {evaluation.reviewComment && (
-                        <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5">
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                            Comentario previo
-                          </p>
-                          <p className="mt-1.5 line-clamp-4 text-sm leading-5 text-slate-700">
-                            {evaluation.reviewComment}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {formError && (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
-                      {formError}
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.05)] lg:hidden">
-                <SectionLabel eyebrow="Evidencia" title="Revision visual" />
-                <div className="mt-3">
-                  <EvidenceCard
-                    evaluation={evaluation}
-                    detail={detail}
-                    detailLoading={detailLoading}
-                    isPdf={isPdf}
-                    previewUrl={evidencePreviewUrl}
-                    compact
-                  />
-                </div>
-              </section>
+        <div className="space-y-4">
+          <StudentCard evaluation={evaluation} />
+          <ScoreCard
+            scoreRaw={scoreRaw}
+            scaleMin={scaleMin}
+            scaleMax={scaleMax}
+            normalizedPreview={normalizedPreview}
+            disabled={isSubmitting}
+            error={scaleError}
+            onChange={handleScoreChange}
+          />
+          {/* <CommentCard
+            comment={reviewComment}
+            onChange={(value) => {
+              setReviewComment(value);
+              setFormError(null);
+            }}
+            disabled={isSubmitting}
+            rejectMode={rejectMode}
+            textareaRef={commentRef}
+            sectionRef={commentSectionRef}
+          />
+          <SummaryCard
+            hasScoreChanges={hasScoreChanges}
+            scoreRaw={scoreRaw}
+            scaleMax={scaleMax}
+            originalScoreRaw={evaluation.scoreRaw}
+            originalScaleMax={evaluation.scaleMax}
+            reviewComment={reviewComment}
+            previousComment={evaluation.reviewComment}
+          /> */}
+          {formError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+            >
+              {formError}
             </div>
-
-            <aside className="hidden min-h-0 lg:grid lg:content-start lg:gap-3">
-              <section className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.05)]">
-                <SectionLabel eyebrow="Evidencia" title="Revision visual" />
-                <div className="mt-3">
-                  <EvidenceCard
-                    evaluation={evaluation}
-                    detail={detail}
-                    detailLoading={detailLoading}
-                    isPdf={isPdf}
-                    previewUrl={evidencePreviewUrl}
-                  />
-                </div>
-              </section>
-
-              <section className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.05)]">
-                <SectionLabel eyebrow="Decision" title="Checklist rapido" />
-                <div className="mt-3 grid gap-2">
-                  <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Revisa antes de enviar
-                    </p>
-                    <ul className="mt-2 space-y-1.5 text-sm text-slate-600">
-                      <li>Confirma que la evidencia coincida con la nota.</li>
-                      <li>Usa comentario corto y accionable.</li>
-                      <li>Aprueba, rechaza o guarda sin salir.</li>
-                    </ul>
-                  </div>
-                </div>
-              </section>
-            </aside>
-          </div>
+          )}
         </div>
-
-        <div className="border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur sm:px-4">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto]">
-            <button
-              onClick={() => submitReview("approved", "approved")}
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {activeAction === "approved" ? "Aprobando..." : "Aprobar"}
-            </button>
-
-            <button
-              onClick={() => submitReview("rejected", "rejected")}
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(225,29,72,0.18)] transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {activeAction === "rejected" ? "Rechazando..." : "Rechazar"}
-            </button>
-
-            <button
-              onClick={() => submitReview(null, "save")}
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {activeAction === "save" ? "Guardando..." : "Guardar"}
-            </button>
-
-            <button
-              onClick={handleModalClose}
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
+      </main>
+    </BottomSheetDialog>
   );
 }
 
