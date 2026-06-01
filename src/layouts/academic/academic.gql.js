@@ -35,6 +35,9 @@ const ACADEMIC_PERIOD_FRAGMENT = gql`
   }
 `;
 
+// Fragmento para LISTAS — no incluye evidenceUrl (imagen original pesada).
+// Usa evidenceThumbnailUrl (120×120) para el thumbnail en tabla.
+// Para datos legacy sin thumbnail, el componente hace fallback vacío o icono.
 const EVALUATION_FRAGMENT = gql`
   ${EVAL_BASIC_USER_FRAGMENT}
   ${ACADEMIC_SUBJECT_FRAGMENT}
@@ -54,10 +57,10 @@ const EVALUATION_FRAGMENT = gql`
     scaleMin
     scaleMax
     scoreNormalized100
-    evidenceUrl
     evidencePublicId
     evidenceResourceType
     evidenceOriginalName
+    evidenceThumbnailUrl
     status
     submittedByStudentAt
     reviewedByAdmin {
@@ -73,8 +76,50 @@ const EVALUATION_FRAGMENT = gql`
   }
 `;
 
+// Fragmento para DETALLE (modal) — incluye evidenceUrl original y evidencePreviewUrl.
+// Solo se usa en GET_EVALUATION_DETAIL (lazy, al abrir modal).
+const EVALUATION_DETAIL_FRAGMENT = gql`
+  ${EVAL_BASIC_USER_FRAGMENT}
+  ${ACADEMIC_SUBJECT_FRAGMENT}
+  ${ACADEMIC_PERIOD_FRAGMENT}
+  fragment EvaluationDetailFields on AcademicEvaluationDetail {
+    id
+    student {
+      ...EvalBasicUserFields
+    }
+    subject {
+      ...AcademicSubjectFields
+    }
+    period {
+      ...AcademicPeriodFields
+    }
+    scoreRaw
+    scaleMin
+    scaleMax
+    scoreNormalized100
+    evidenceUrl
+    evidencePublicId
+    evidenceResourceType
+    evidenceOriginalName
+    evidenceThumbnailUrl
+    evidencePreviewUrl
+    status
+    submittedByStudentAt
+    reviewedByAdmin {
+      ...EvalBasicUserFields
+    }
+    reviewedAt
+    reviewComment
+    parentAcknowledged
+    parentAcknowledgedAt
+    parentComment
+    createdAt
+    updatedAt
+  }
+`;
+
+// recentEvaluations usa campos mínimos — la evidencia se carga solo en modal de detalle
 const PERFORMANCE_FRAGMENT = gql`
-  ${EVALUATION_FRAGMENT}
   fragment PerformanceFields on StudentPerformance {
     studentId
     studentName
@@ -111,7 +156,19 @@ const PERFORMANCE_FRAGMENT = gql`
     riskScore
     riskLevel
     recentEvaluations {
-      ...EvaluationFields
+      id
+      scoreNormalized100
+      status
+      createdAt
+      subject {
+        id
+        name
+      }
+      period {
+        id
+        name
+        year
+      }
     }
   }
 `;
@@ -252,11 +309,38 @@ export const GET_ADMIN_ACADEMIC_DASHBOARD = gql`
   }
 `;
 
+// Detalle completo — llamar SOLO al abrir modal. Carga evidenceUrl + evidencePreviewUrl.
+export const GET_EVALUATION_DETAIL = gql`
+  ${EVALUATION_DETAIL_FRAGMENT}
+  query GetEvaluationDetail($id: ID!) {
+    evaluationDetail(id: $id) {
+      ...EvaluationDetailFields
+    }
+  }
+`;
+
 export const GET_ADMIN_PENDING_EVALUATIONS = gql`
   ${EVALUATION_FRAGMENT}
   query GetAdminPendingEvaluations($filter: AcademicDashboardFilter) {
     adminPendingEvaluations(filter: $filter) {
       ...EvaluationFields
+    }
+  }
+`;
+
+// Versión paginada — preferir esta en producción para no traer todos los pendientes
+export const GET_ADMIN_PENDING_EVALUATIONS_PAGINATED = gql`
+  ${EVALUATION_FRAGMENT}
+  query GetAdminPendingEvaluationsPaginated(
+    $filter: AcademicDashboardFilter
+    $pagination: PaginationCursorInput
+  ) {
+    adminPendingEvaluationsPaginated(filter: $filter, pagination: $pagination) {
+      hasNextPage
+      nextCursor
+      items {
+        ...EvaluationFields
+      }
     }
   }
 `;
@@ -303,7 +387,6 @@ export const GET_ADMIN_RISK_RANKING = gql`
 `;
 
 export const GET_PARENT_CHILDREN_ACADEMIC_OVERVIEW = gql`
-  ${EVALUATION_FRAGMENT}
   query GetParentChildrenAcademicOverview($periodId: ID, $year: Int) {
     parentChildrenAcademicOverview(periodId: $periodId, year: $year) {
       childId
@@ -332,11 +415,27 @@ export const GET_PARENT_CHILDREN_ACADEMIC_OVERVIEW = gql`
           evaluationCount
         }
         recentEvaluations {
-          ...EvaluationFields
+          id
+          scoreNormalized100
+          status
+          evidenceThumbnailUrl
+          subject { id name }
+          period { id name year }
         }
       }
       pendingAcknowledgements {
-        ...EvaluationFields
+        id
+        scoreRaw
+        scaleMax
+        scoreNormalized100
+        status
+        evidenceThumbnailUrl
+        evidencePublicId
+        evidenceResourceType
+        parentAcknowledged
+        createdAt
+        subject { id name }
+        period { id name year }
       }
     }
   }

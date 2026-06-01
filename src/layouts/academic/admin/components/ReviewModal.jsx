@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import { useLazyQuery } from "@apollo/client";
 import { Modal } from "components/ui/Modal";
 import { cloudinaryOptimized } from "hooks/useImageUpload";
+import { GET_EVALUATION_DETAIL } from "../../academic.gql";
 
 const STATUS_CONFIG = {
   pending: {
@@ -45,13 +47,11 @@ function formatSubmittedDate(value) {
   });
 }
 
-function getOptimizedEvidenceUrl(evaluation) {
-  if (!evaluation?.evidenceUrl) return null;
-  const isPdf =
-    evaluation.evidenceResourceType === "raw" ||
-    evaluation.evidenceOriginalName?.toLowerCase().endsWith(".pdf");
-  if (isPdf) return evaluation.evidenceUrl;
-  return cloudinaryOptimized(evaluation.evidenceUrl, { width: 640, height: 420 });
+function getOptimizedEvidenceUrl(evidenceUrl, resourceType, originalName) {
+  if (!evidenceUrl) return null;
+  const isPdf = resourceType === "raw" || originalName?.toLowerCase().endsWith(".pdf");
+  if (isPdf) return evidenceUrl;
+  return cloudinaryOptimized(evidenceUrl, { width: 640, height: 420 });
 }
 
 function MetaPill({ label, value, valueClassName = "text-slate-900" }) {
@@ -89,14 +89,29 @@ SectionLabel.propTypes = {
   trailing: PropTypes.node,
 };
 
-function EvidenceCard({ evaluation, isPdf, previewUrl, compact = false }) {
-  if (!evaluation?.evidenceUrl) {
+function EvidenceCard({ evaluation, detail, detailLoading, isPdf, previewUrl, compact = false }) {
+  const evidenceUrl = detail?.evidenceUrl ?? evaluation?.evidenceUrl;
+  const hasEvidence = !!(evidenceUrl || evaluation?.evidencePublicId);
+
+  // Spinner: mientras carga el detalle O mientras sabemos que hay evidencia pero aún no tenemos la URL
+  if (detailLoading || (!detail && hasEvidence)) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!hasEvidence) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
         No hay evidencia adjunta.
       </div>
     );
   }
+
+  // previewUrl puede ser null en datos legacy sin evidencePreviewUrl — fallback a evidenceUrl
+  const imgSrc = previewUrl || evidenceUrl;
 
   if (isPdf) {
     return (
@@ -113,28 +128,30 @@ function EvidenceCard({ evaluation, isPdf, previewUrl, compact = false }) {
             </svg>
           </div>
           <p className="mt-3 line-clamp-2 text-sm font-semibold text-slate-900">
-            {evaluation.evidenceOriginalName || "Documento PDF"}
+            {(detail?.evidenceOriginalName ?? evaluation?.evidenceOriginalName) || "Documento PDF"}
           </p>
           <p className="mt-1 text-xs text-slate-500">
             Abre el archivo para revisar el contenido completo.
           </p>
         </div>
 
-        <a
-          href={evaluation.evidenceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Abrir evidencia
-        </a>
+        {evidenceUrl && (
+          <a
+            href={evidenceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Abrir evidencia
+          </a>
+        )}
       </div>
     );
   }
 
   return (
     <a
-      href={evaluation.evidenceUrl}
+      href={evidenceUrl || "#"}
       target="_blank"
       rel="noopener noreferrer"
       className="group block rounded-2xl border border-slate-200 bg-slate-50 p-2.5"
@@ -155,7 +172,7 @@ function EvidenceCard({ evaluation, isPdf, previewUrl, compact = false }) {
         }`}
       >
         <img
-          src={previewUrl}
+          src={imgSrc}
           alt="Evidencia de la evaluacion"
           loading="eager"
           decoding="async"
@@ -181,6 +198,13 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
   const [formError, setFormError] = useState(null);
   const [activeAction, setActiveAction] = useState(null);
 
+  // Carga evidenceUrl + evidencePreviewUrl bajo demanda al abrir el modal.
+  // La query de lista ya no incluye evidenceUrl (optimización de ancho de banda).
+  const [fetchDetail, { data: detailData, loading: detailLoading }] = useLazyQuery(
+    GET_EVALUATION_DETAIL,
+    { fetchPolicy: "cache-first" }
+  );
+
   useEffect(() => {
     if (!isOpen) return;
     setReviewComment(evaluation?.reviewComment || "");
@@ -189,7 +213,13 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
     setScaleMax(String(evaluation?.scaleMax ?? "100"));
     setFormError(null);
     setActiveAction(null);
-  }, [isOpen, evaluation]);
+    if (evaluation?.id) {
+      fetchDetail({ variables: { id: evaluation.id } });
+    }
+  }, [isOpen, evaluation, fetchDetail]);
+
+  // Usa la evidenceUrl del detalle; mientras carga, evidenceUrl es undefined (modal muestra spinner de evidencia)
+  const detail = detailData?.evaluationDetail;
 
   const parsedScaleMin = useMemo(() => parseFloat(scaleMin) || 0, [scaleMin]);
   const parsedScaleMax = useMemo(() => parseFloat(scaleMax) || 100, [scaleMax]);
@@ -212,10 +242,21 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
     parsedScaleMax !== Number(evaluation?.scaleMax);
 
   const modalStatus = STATUS_CONFIG[evaluation?.status] || STATUS_CONFIG.pending;
+  // isPdf y evidenceUrl vienen del detalle (lazy-loaded al abrir el modal)
   const isPdf =
-    evaluation?.evidenceResourceType === "raw" ||
-    evaluation?.evidenceOriginalName?.toLowerCase().endsWith(".pdf");
-  const evidencePreviewUrl = useMemo(() => getOptimizedEvidenceUrl(evaluation), [evaluation]);
+    (detail?.evidenceResourceType ?? evaluation?.evidenceResourceType) === "raw" ||
+    (detail?.evidenceOriginalName ?? evaluation?.evidenceOriginalName)
+      ?.toLowerCase()
+      .endsWith(".pdf");
+  const evidencePreviewUrl = useMemo(
+    () =>
+      getOptimizedEvidenceUrl(
+        detail?.evidencePreviewUrl || detail?.evidenceUrl,
+        detail?.evidenceResourceType,
+        detail?.evidenceOriginalName
+      ),
+    [detail]
+  );
   const isSubmitting = loading || activeAction !== null;
 
   if (!evaluation) return null;
@@ -273,7 +314,9 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
       onClose={handleModalClose}
       title={
         <div className="pr-3">
-          <h2 className="text-lg font-semibold tracking-tight text-slate-900">Revisar evaluacion</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            Revisar evaluacion
+          </h2>
           <p className="mt-0.5 text-xs text-slate-500">
             Ajusta la nota, valida evidencia y resuelve sin salir del flujo.
           </p>
@@ -459,6 +502,8 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
                 <div className="mt-3">
                   <EvidenceCard
                     evaluation={evaluation}
+                    detail={detail}
+                    detailLoading={detailLoading}
                     isPdf={isPdf}
                     previewUrl={evidencePreviewUrl}
                     compact
@@ -471,7 +516,13 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
               <section className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.05)]">
                 <SectionLabel eyebrow="Evidencia" title="Revision visual" />
                 <div className="mt-3">
-                  <EvidenceCard evaluation={evaluation} isPdf={isPdf} previewUrl={evidencePreviewUrl} />
+                  <EvidenceCard
+                    evaluation={evaluation}
+                    detail={detail}
+                    detailLoading={detailLoading}
+                    isPdf={isPdf}
+                    previewUrl={evidencePreviewUrl}
+                  />
                 </div>
               </section>
 
