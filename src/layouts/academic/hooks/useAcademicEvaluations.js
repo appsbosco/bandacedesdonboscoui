@@ -5,6 +5,7 @@ import {
   GET_ACADEMIC_PERIODS,
   GET_MY_ACADEMIC_EVALUATIONS,
   GET_MY_ACADEMIC_PERFORMANCE,
+  GET_MY_ACADEMIC_EVALUATION_COVERAGE,
   SUBMIT_ACADEMIC_EVALUATION,
   UPDATE_OWN_PENDING_EVALUATION,
   DELETE_OWN_PENDING_EVALUATION,
@@ -43,6 +44,11 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     fetchPolicy: "cache-and-network",
   });
 
+  const coverageQuery = useQuery(GET_MY_ACADEMIC_EVALUATION_COVERAGE, {
+    variables: { year: year || null },
+    fetchPolicy: "cache-and-network",
+  });
+
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
   const [submitMutation, { loading: submitting }] = useMutation(SUBMIT_ACADEMIC_EVALUATION, {
@@ -51,6 +57,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       closeFormModal();
       evaluationsQuery.refetch();
       performanceQuery.refetch();
+      coverageQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -61,6 +68,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       closeFormModal();
       evaluationsQuery.refetch();
       performanceQuery.refetch();
+      coverageQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -71,6 +79,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       setDeleteModal({ open: false, evaluation: null });
       evaluationsQuery.refetch();
       performanceQuery.refetch();
+      coverageQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -126,12 +135,14 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     periods: periodsQuery.data?.academicPeriods || [],
     evaluations: evaluationsQuery.data?.myAcademicEvaluations || [],
     performance: performanceQuery.data?.myAcademicPerformance || null,
+    coverage: coverageQuery.data?.myAcademicEvaluationCoverage || null,
 
     // Loading
     loadingSubjects: subjectsQuery.loading,
     loadingPeriods: periodsQuery.loading,
     loadingEvaluations: evaluationsQuery.loading,
     loadingPerformance: performanceQuery.loading,
+    loadingCoverage: coverageQuery.loading,
     submitting,
     updating,
     deleting,
@@ -164,6 +175,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     refetch: () => {
       evaluationsQuery.refetch();
       performanceQuery.refetch();
+      coverageQuery.refetch();
     },
   };
 }

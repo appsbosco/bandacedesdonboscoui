@@ -59,8 +59,10 @@ export default function StudentAcademicPage() {
     periods,
     evaluations,
     performance,
+    coverage,
     loadingEvaluations,
     loadingPerformance,
+    loadingCoverage,
     submitting,
     updating,
     deleting,
@@ -79,22 +81,15 @@ export default function StudentAcademicPage() {
   } = useAcademicEvaluations({ grade: currentGrade });
 
   const riskBadge = performance ? (RISK_BADGE[performance.riskLevel] || RISK_BADGE.GREEN) : null;
+  const averageColor =
+    performance?.averageGeneral >= 80
+      ? "text-emerald-600"
+      : performance?.averageGeneral >= 70
+      ? "text-amber-600"
+      : "text-red-600";
 
-  // Compute missing evaluations (subjects without any evaluation in active periods)
-  const activePeriods = periods.filter((p) => p.isActive);
-  const missingCombos = [];
-  if (subjects.length > 0 && activePeriods.length > 0) {
-    for (const subject of subjects) {
-      for (const period of activePeriods) {
-        const hasEval = evaluations.some(
-          (e) => e.subject?.id === subject.id && e.period?.id === period.id
-        );
-        if (!hasEval) {
-          missingCombos.push({ subject, period });
-        }
-      }
-    }
-  }
+  const coverageByPeriod = coverage?.coverageByPeriod || [];
+  const missingCount = coverage?.missingEvaluationsCount || 0;
 
   return (
     <DashboardLayout>
@@ -137,7 +132,7 @@ export default function StudentAcademicPage() {
                 {performance && (
                   <div className="flex flex-wrap gap-4 mt-3">
                     <div className="text-center">
-                      <p className="text-lg font-bold text-gray-900">{performance.averageGeneral?.toFixed(1)}</p>
+                      <p className={`text-lg font-bold ${averageColor}`}>{performance.averageGeneral?.toFixed(1)}</p>
                       <p className="text-xs text-gray-400">Promedio</p>
                     </div>
                     <div className="w-px bg-gray-200" />
@@ -159,11 +154,13 @@ export default function StudentAcademicPage() {
                         </div>
                       </>
                     )}
-                    {missingCombos.length > 0 && (
+                    {coverage && (
                       <>
                         <div className="w-px bg-gray-200" />
                         <div className="text-center">
-                          <p className="text-lg font-bold text-gray-500">{missingCombos.length}</p>
+                          <p className={`text-lg font-bold ${missingCount > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {missingCount}
+                          </p>
                           <p className="text-xs text-gray-400">Faltantes</p>
                         </div>
                       </>
@@ -189,6 +186,7 @@ export default function StudentAcademicPage() {
             <div className="flex items-center gap-1 border-b border-gray-200 mb-6">
               {TABS.map((tab) => (
                 <button
+                  type="button"
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
@@ -209,6 +207,7 @@ export default function StudentAcademicPage() {
               {/* spacer + new evaluation button */}
               <div className="flex-1" />
               <button
+                type="button"
                 onClick={() => openFormModal("create")}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors mb-1"
               >
@@ -225,45 +224,61 @@ export default function StudentAcademicPage() {
                 <PerformanceSummary performance={performance} loading={loadingPerformance} />
 
                 {/* Missing evaluations panel */}
-                {missingCombos.length > 0 && (
+                {!loadingCoverage && coverageByPeriod.length > 0 && (
                   <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Evaluaciones faltantes ({missingCombos.length})
+                        Materias por subir según período ({missingCount})
                       </h3>
                       <button
+                        type="button"
                         onClick={() => openFormModal("create")}
                         className="text-xs text-blue-600 hover:text-blue-500 font-medium"
                       >
                         Registrar evaluación
                       </button>
                     </div>
-                    <div className="space-y-1.5">
-                      {missingCombos.map((combo) => (
-                        <div
-                          key={`${combo.subject.id}-${combo.period.id}`}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 px-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="min-w-0">
-                            <span className="text-sm text-gray-700 font-medium">{combo.subject.name}</span>
-                            <span className="text-xs text-gray-400 ml-2">{combo.period.name} {combo.period.year}</span>
-                          </div>
-                          <div className="flex items-center justify-between sm:justify-end gap-2">
-                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
-                              Sin registrar
+                    <div className="space-y-3">
+                      {coverageByPeriod.map((period) => (
+                        <div key={period.periodId} className="rounded-xl bg-gray-50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">
+                                {period.periodName} {period.year}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {period.submittedEvaluationsCount} de {period.expectedEvaluationsCount} subidas
+                              </p>
+                            </div>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              period.missingEvaluationsCount > 0
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}>
+                              {period.missingEvaluationsCount} faltantes
                             </span>
-                            <button
-                              onClick={() =>
-                                openFormModal("create", null, {
-                                  subjectId: combo.subject.id,
-                                  periodId: combo.period.id,
-                                })
-                              }
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
-                            >
-                              Registrar
-                            </button>
                           </div>
+                          {period.missingSubjects.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                              {period.missingSubjects.map((subject) => (
+                                <div key={subject.subjectId} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                                  <span className="text-sm font-medium text-gray-700">{subject.subjectName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openFormModal("create", null, {
+                                        subjectId: subject.subjectId,
+                                        periodId: period.periodId,
+                                      })
+                                    }
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
+                                  >
+                                    Registrar
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -354,12 +369,14 @@ export default function StudentAcademicPage() {
           </p>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={closeDeleteModal}
               className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={() => deleteModal.evaluation && handleDelete(deleteModal.evaluation.id)}
               disabled={deleting}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"

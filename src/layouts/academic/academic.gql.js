@@ -173,6 +173,27 @@ const PERFORMANCE_FRAGMENT = gql`
   }
 `;
 
+const ACADEMIC_COVERAGE_FRAGMENT = gql`
+  fragment AcademicCoverageFields on StudentAcademicCoverage {
+    allEvaluationsSubmitted
+    expectedEvaluationsCount
+    submittedEvaluationsCount
+    missingEvaluationsCount
+    coverageByPeriod {
+      periodId
+      periodName
+      year
+      expectedEvaluationsCount
+      submittedEvaluationsCount
+      missingEvaluationsCount
+      missingSubjects {
+        subjectId
+        subjectName
+      }
+    }
+  }
+`;
+
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export const GET_ACADEMIC_SUBJECTS = gql`
@@ -211,6 +232,15 @@ export const GET_MY_ACADEMIC_PERFORMANCE = gql`
   query GetMyAcademicPerformance($periodId: ID, $year: Int) {
     myAcademicPerformance(periodId: $periodId, year: $year) {
       ...PerformanceFields
+    }
+  }
+`;
+
+export const GET_MY_ACADEMIC_EVALUATION_COVERAGE = gql`
+  ${ACADEMIC_COVERAGE_FRAGMENT}
+  query GetMyAcademicEvaluationCoverage($year: Int) {
+    myAcademicEvaluationCoverage(year: $year) {
+      ...AcademicCoverageFields
     }
   }
 `;
@@ -356,6 +386,22 @@ export const GET_ADMIN_ACADEMIC_STUDENTS = gql`
       grade
       instrument
       avatar
+      allEvaluationsSubmitted
+      expectedEvaluationsCount
+      submittedEvaluationsCount
+      missingEvaluationsCount
+      coverageByPeriod {
+        periodId
+        periodName
+        year
+        expectedEvaluationsCount
+        submittedEvaluationsCount
+        missingEvaluationsCount
+        missingSubjects {
+          subjectId
+          subjectName
+        }
+      }
     }
   }
 `;
@@ -454,6 +500,18 @@ export const GET_SECTION_INSTRUMENT_ACADEMIC_OVERVIEW = gql`
       expectedEvaluationsCount
       submittedEvaluationsCount
       missingEvaluationsCount
+      coverageByPeriod {
+        periodId
+        periodName
+        year
+        expectedEvaluationsCount
+        submittedEvaluationsCount
+        missingEvaluationsCount
+        missingSubjects {
+          subjectId
+          subjectName
+        }
+      }
       performance {
         ...PerformanceFields
       }

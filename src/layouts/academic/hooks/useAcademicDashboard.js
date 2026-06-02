@@ -151,6 +151,7 @@ export function useAcademicDashboard() {
 
   async function refreshAcademicData() {
     await Promise.all([
+      studentsQuery.refetch(),
       dashboardQuery.refetch(),
       riskRankingQuery.refetch(),
       pendingEvalsQuery.refetch(),
@@ -330,6 +331,7 @@ export function useAcademicDashboard() {
 
     // Refetch
     refetch: () => {
+      studentsQuery.refetch();
       dashboardQuery.refetch();
       riskRankingQuery.refetch();
       pendingEvalsQuery.refetch();

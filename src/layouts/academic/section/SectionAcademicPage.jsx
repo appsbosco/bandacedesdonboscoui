@@ -51,6 +51,7 @@ const TOAST_COLORS = {
   error: "bg-red-50 border-red-300 text-red-800",
   info: "bg-blue-50 border-blue-300 text-blue-800",
 };
+const EMPTY_PERIODS = [];
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -71,6 +72,37 @@ function ToastBar({ toast }) {
       }`}
     >
       {toast.message}
+    </div>
+  );
+}
+
+function CoverageByPeriod({ periods = EMPTY_PERIODS, showSubjects = false }) {
+  if (periods.length === 0) return <span className="text-xs text-gray-300">Sin períodos activos</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {periods.map((period) => (
+        <span
+          key={period.periodId}
+          title={
+            period.missingSubjects.length > 0
+              ? `Faltan: ${period.missingSubjects.map((subject) => subject.subjectName).join(", ")}`
+              : "Todas las materias fueron subidas"
+          }
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
+            period.missingEvaluationsCount > 0
+              ? "bg-amber-100 text-amber-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
+          {period.periodName} {period.year}: {period.missingEvaluationsCount}
+          {showSubjects && period.missingSubjects.length > 0 && (
+            <span className="font-normal">
+              ({period.missingSubjects.map((subject) => subject.subjectName).join(", ")})
+            </span>
+          )}
+        </span>
+      ))}
     </div>
   );
 }
@@ -217,6 +249,12 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
   const [activeTab, setActiveTab] = useState("resumen");
   const performance = member?.performance || null;
   const risk = RISK_CONFIG[performance?.riskLevel] || RISK_CONFIG.GREEN;
+  const averageColor =
+    performance?.averageGeneral >= 80
+      ? "text-emerald-600"
+      : performance?.averageGeneral >= 70
+      ? "text-amber-600"
+      : "text-red-600";
 
   if (!member) return null;
 
@@ -249,7 +287,7 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
 
           <div className="flex flex-wrap gap-4 mt-3">
             <div className="text-center">
-              <p className="text-lg font-bold text-gray-900">
+              <p className={`text-lg font-bold ${averageColor}`}>
                 {performance?.averageGeneral?.toFixed?.(1) ?? "0.0"}
               </p>
               <p className="text-xs text-gray-400">Promedio</p>
@@ -313,6 +351,13 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
         </span>
       </div>
 
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Materias faltantes por período
+        </p>
+        <CoverageByPeriod periods={member.coverageByPeriod} showSubjects />
+      </div>
+
       <div className="flex border-b border-gray-200">
         {[
           { id: "resumen", label: "Resumen" },
@@ -356,7 +401,13 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
                         <span className="text-sm text-gray-700 truncate">
                           {subject.subjectName}
                         </span>
-                        <span className="text-sm font-bold text-gray-900 ml-2">
+                        <span className={`text-sm font-bold ml-2 ${
+                          subject.average >= 80
+                            ? "text-emerald-600"
+                            : subject.average >= 70
+                            ? "text-amber-600"
+                            : "text-red-600"
+                        }`}>
                           {subject.average.toFixed(1)}
                         </span>
                       </div>
@@ -510,6 +561,8 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
 function MemberRow({ member, isSelected, onOpen }) {
   const risk = RISK_CONFIG[member.performance?.riskLevel] || RISK_CONFIG.GREEN;
   const average = member.performance?.averageGeneral;
+  const averageColor =
+    average >= 80 ? "text-emerald-600" : average >= 70 ? "text-amber-600" : "text-red-600";
 
   return (
     <tr
@@ -533,16 +586,8 @@ function MemberRow({ member, isSelected, onOpen }) {
       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
         {member.memberInstrument || "—"}
       </td>
-      <td className="px-4 py-3 text-center">
-        <span
-          className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-full text-xs font-semibold ${
-            member.missingEvaluationsCount > 0
-              ? "bg-amber-100 text-amber-700"
-              : "bg-emerald-100 text-emerald-700"
-          }`}
-        >
-          {member.missingEvaluationsCount}
-        </span>
+      <td className="px-4 py-3 min-w-[240px]">
+        <CoverageByPeriod periods={member.coverageByPeriod} />
       </td>
       <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap">
         {member.submittedEvaluationsCount}/{member.expectedEvaluationsCount}
@@ -557,7 +602,7 @@ function MemberRow({ member, isSelected, onOpen }) {
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-3">
-          <span className="text-sm font-bold text-gray-900">{average?.toFixed?.(1) ?? "0.0"}</span>
+          <span className={`text-sm font-bold ${averageColor}`}>{average?.toFixed?.(1) ?? "0.0"}</span>
           <span className="text-xs text-gray-400">/100</span>
         </div>
       </td>
@@ -568,6 +613,8 @@ function MemberRow({ member, isSelected, onOpen }) {
 function MemberCard({ member, onOpen }) {
   const risk = RISK_CONFIG[member.performance?.riskLevel] || RISK_CONFIG.GREEN;
   const average = member.performance?.averageGeneral;
+  const averageColor =
+    average >= 80 ? "text-emerald-600" : average >= 70 ? "text-amber-600" : "text-red-600";
 
   return (
     <button
@@ -605,7 +652,7 @@ function MemberCard({ member, onOpen }) {
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="rounded-xl bg-gray-50 px-3 py-2">
               <p className="text-[11px] text-gray-400">Promedio</p>
-              <p className="text-sm font-bold text-gray-900">{average?.toFixed?.(1) ?? "0.0"}</p>
+              <p className={`text-sm font-bold ${averageColor}`}>{average?.toFixed?.(1) ?? "0.0"}</p>
             </div>
             <div className="rounded-xl bg-gray-50 px-3 py-2">
               <p className="text-[11px] text-gray-400">Subidas</p>
@@ -623,6 +670,10 @@ function MemberCard({ member, onOpen }) {
                 {member.missingEvaluationsCount}
               </p>
             </div>
+          </div>
+          <div className="mt-3">
+            <p className="mb-1.5 text-[11px] text-gray-400">Faltantes por período</p>
+            <CoverageByPeriod periods={member.coverageByPeriod} />
           </div>
         </div>
       </div>
@@ -800,7 +851,7 @@ export default function SectionAcademicPage() {
                           Instrumento
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          Pendientes
+                          Materias faltantes por período
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           Subidas

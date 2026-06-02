@@ -89,6 +89,12 @@ export function PerformanceSummary({ performance, loading }) {
 
   const risk = RISK_CONFIG[performance.riskLevel] || RISK_CONFIG.GREEN;
   const trend = TREND_CONFIG[performance.trendDirection] || TREND_CONFIG.STABLE;
+  const averageColor =
+    performance.averageGeneral >= 80
+      ? "text-emerald-600"
+      : performance.averageGeneral >= 70
+      ? "text-amber-600"
+      : "text-red-600";
 
   return (
     <div className="space-y-5">
@@ -112,7 +118,7 @@ export function PerformanceSummary({ performance, loading }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <p className="text-xs text-gray-500 mb-1.5">Promedio general</p>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className={`text-2xl font-bold ${averageColor}`}>
             {performance.averageGeneral?.toFixed(1)}
             <span className="text-sm text-gray-400 font-normal ml-0.5">/100</span>
           </p>

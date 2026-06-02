@@ -46,6 +46,7 @@ const STATUS_COLORS = {
   rejected: "text-red-700 bg-red-50 border-red-200",
 };
 const STATUS_LABELS = { pending: "Pendiente", approved: "Aprobada", rejected: "Rechazada" };
+const EMPTY_PERIODS = [];
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -70,6 +71,37 @@ function Toast({ toast }) {
       }`}
     >
       {toast.message}
+    </div>
+  );
+}
+
+function CoverageByPeriod({ periods = EMPTY_PERIODS, showSubjects = false }) {
+  if (periods.length === 0) return <span className="text-xs text-gray-300">Sin períodos activos</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {periods.map((period) => (
+        <span
+          key={period.periodId}
+          title={
+            period.missingSubjects.length > 0
+              ? `Faltan: ${period.missingSubjects.map((subject) => subject.subjectName).join(", ")}`
+              : "Todas las materias fueron subidas"
+          }
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
+            period.missingEvaluationsCount > 0
+              ? "bg-amber-100 text-amber-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
+          {period.periodName} {period.year}: {period.missingEvaluationsCount}
+          {showSubjects && period.missingSubjects.length > 0 && (
+            <span className="font-normal">
+              ({period.missingSubjects.map((subject) => subject.subjectName).join(", ")})
+            </span>
+          )}
+        </span>
+      ))}
     </div>
   );
 }
@@ -440,6 +472,9 @@ function StudentsTab({ allUsers, riskRanking, pendingEvaluations, onOpenDrawer, 
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Pendientes
                 </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Materias faltantes por período
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -508,6 +543,9 @@ function StudentsTab({ allUsers, riskRanking, pendingEvaluations, onOpenDrawer, 
                       ) : (
                         <span className="text-gray-300 text-xs">0</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 min-w-[240px]">
+                      <CoverageByPeriod periods={u.coverageByPeriod} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -704,7 +742,15 @@ function DashboardTab({ dashboard, loading, pendingCount, onSwitchToPending, onO
                     <span className="text-sm text-gray-700">
                       {p.periodName} {p.year}
                     </span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span
+                      className={`text-sm font-bold ${
+                        p.overallAverage >= 80
+                          ? "text-emerald-600"
+                          : p.overallAverage >= 70
+                          ? "text-amber-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {p.overallAverage?.toFixed(1)}
                     </span>
                   </div>
@@ -909,6 +955,12 @@ function StudentDetailDrawer({
     drawer.studentName || (userRecord ? `${userRecord.name} ${userRecord.firstSurName}` : "");
   const avatarSrc = userRecord?.avatar || firstEvaluationStudent?.avatar;
   const risk = performance ? RISK_CONFIG[performance.riskLevel] || RISK_CONFIG.GREEN : null;
+  const averageColor =
+    performance?.averageGeneral >= 80
+      ? "text-emerald-600"
+      : performance?.averageGeneral >= 70
+      ? "text-amber-600"
+      : "text-red-600";
 
   return (
     <>
@@ -965,7 +1017,7 @@ function StudentDetailDrawer({
             {performance && !loadingPerf && (
               <div className="flex flex-wrap gap-4 mt-3">
                 <div>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className={`text-lg font-bold ${averageColor}`}>
                     {performance.averageGeneral?.toFixed(1)}
                   </p>
                   <p className="text-xs text-gray-400">Promedio</p>
@@ -1037,6 +1089,13 @@ function StudentDetailDrawer({
               )}
               {!loadingPerf && performance && (
                 <>
+                  <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Materias faltantes por período
+                    </p>
+                    <CoverageByPeriod periods={userRecord?.coverageByPeriod} showSubjects />
+                  </div>
+
                   {/* Subject averages */}
                   {performance.averagesBySubject?.length > 0 && (
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
