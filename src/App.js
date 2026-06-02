@@ -7,6 +7,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { useQuery } from "@apollo/client";
 import PropTypes from "prop-types";
+import jwtDecode from "jwt-decode";
 import { useTranslation } from "react-i18next";
 
 import theme from "assets/theme";
@@ -185,9 +186,15 @@ export default function App() {
   });
   const currentUser = userData?.getUser || null;
   const userRole = currentUser?.role;
-  const userId = currentUser?.id ?? null;
+  const authenticatedEntityId = useMemo(() => {
+    try {
+      return token ? jwtDecode(token)?.id ?? null : null;
+    } catch {
+      return null;
+    }
+  }, [token]);
 
-  useFirebaseMessaging(userId);
+  useFirebaseMessaging(authenticatedEntityId);
 
   useEffect(() => {
     if (!isAuthenticated || !userRole) return;

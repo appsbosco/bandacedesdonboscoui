@@ -5,6 +5,7 @@ import { PermissionRequestCard } from "./components/PermissionRequestCard";
 import { PermissionReviewModal } from "./components/PermissionReviewModal";
 import { GET_ABSENCE_PERMISSIONS_FOR_SECTION } from "./absencePermissions.gql";
 import { GET_USERS_BY_ID } from "graphql/queries";
+import { mapInstrumentToSection } from "utils/sectionMapper";
 
 const SECTION_LABELS = {
   FLAUTAS: "Flautas",
@@ -21,32 +22,6 @@ const SECTION_LABELS = {
   DANZA: "Danza",
   NO_APLICA: "General",
 };
-
-const INSTRUMENT_TO_SECTION = {
-  Flauta: "FLAUTAS",
-  Clarinete: "CLARINETES",
-  Saxofón: "SAXOFONES",
-  Saxofon: "SAXOFONES",
-  Trompeta: "TROMPETAS",
-  Trombón: "TROMBONES",
-  Trombones: "TROMBONES",
-  Tuba: "TUBAS",
-  Eufonio: "EUFONIOS",
-  Corno: "CORNOS",
-  Mallets: "MALLETS",
-  Percusión: "PERCUSION",
-  "Color Guard": "COLOR_GUARD",
-  Danza: "DANZA",
-};
-
-function inferSection(instrument) {
-  if (!instrument) return null;
-  const lower = instrument.toLowerCase();
-  for (const [key, val] of Object.entries(INSTRUMENT_TO_SECTION)) {
-    if (lower.includes(key.toLowerCase())) return val;
-  }
-  return null;
-}
 
 function getDateRange() {
   const start = new Date();
@@ -67,7 +42,8 @@ export function SectionPermissionsView() {
   const currentUser = userData?.getUser;
 
   const userSection = useMemo(() => {
-    return currentUser?.section ?? inferSection(currentUser?.instrument) ?? null;
+    const section = mapInstrumentToSection(currentUser?.instrument);
+    return section === "NO_APLICA" ? null : section;
   }, [currentUser]);
 
   const { startDate, endDate } = getDateRange();
@@ -78,7 +54,10 @@ export function SectionPermissionsView() {
     fetchPolicy: "cache-and-network",
   });
 
-  const allPermissions = data?.getAbsencePermissionsForSection?.items ?? [];
+  const allPermissions = useMemo(
+    () => data?.getAbsencePermissionsForSection?.items ?? [],
+    [data],
+  );
 
   const filteredPermissions = useMemo(() => {
     if (!statusFilter) return allPermissions;
@@ -100,6 +79,7 @@ export function SectionPermissionsView() {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => refetch()}
           className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors flex-shrink-0"
         >
@@ -139,6 +119,7 @@ export function SectionPermissionsView() {
             { value: "REJECTED", label: "Rechazados" },
           ].map((f) => (
             <button
+              type="button"
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
