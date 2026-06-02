@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_ABSENCE_PERMISSION_REQUEST,
@@ -28,26 +28,20 @@ function fmtDateLong(value) {
   });
 }
 
-function isRecentOrUpcoming(isoDate) {
+function isUpcoming(isoDate) {
   const d = parsePermissionDate(isoDate);
   if (!d) return false;
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const sixMonthsAhead = new Date();
   sixMonthsAhead.setMonth(sixMonthsAhead.getMonth() + 6);
-  return d >= threeMonthsAgo && d <= sixMonthsAhead;
-}
-
-function isPast(isoDate) {
-  const date = parsePermissionDate(isoDate);
-  return date ? date < new Date() : false;
+  return d >= today && d <= sixMonthsAhead;
 }
 
 // ─── Event option card ────────────────────────────────────────────────────────
 
 function EventOptionCard({ event, isSelected, onSelect }) {
   const eventDate = parsePermissionDate(event.date);
-  const past = isPast(event.date);
   return (
     <button
       type="button"
@@ -86,11 +80,6 @@ function EventOptionCard({ event, isSelected, onSelect }) {
         {event.place && (
           <p className="text-xs text-gray-400 mt-0.5 truncate">📍 {event.place}</p>
         )}
-        {past && (
-          <span className="inline-block mt-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-            Pasado
-          </span>
-        )}
       </div>
 
       {/* Checkmark */}
@@ -123,6 +112,9 @@ export function PermissionRequestForm({
   const [attachment, setAttachment] = useState(null);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const eventListRef = useRef(null);
+  const reasonRef = useRef(null);
 
   // Load all events once — filter client-side by category
   const { data: eventsData, loading: eventsLoading } = useQuery(
@@ -135,15 +127,15 @@ export function PermissionRequestForm({
   const rehearsalEvents = useMemo(
     () =>
       allEvents
-        .filter((e) => e.category === "rehearsal" && isRecentOrUpcoming(e.date))
-        .sort((a, b) => parsePermissionDate(b.date) - parsePermissionDate(a.date)), // más reciente primero
+        .filter((e) => e.category === "rehearsal" && isUpcoming(e.date))
+        .sort((a, b) => parsePermissionDate(a.date) - parsePermissionDate(b.date)), // próximo primero
     [allEvents]
   );
 
   const presentationEvents = useMemo(
     () =>
       allEvents
-        .filter((e) => e.category === "presentation" && isRecentOrUpcoming(e.date))
+        .filter((e) => e.category === "presentation" && isUpcoming(e.date))
         .sort((a, b) => parsePermissionDate(a.date) - parsePermissionDate(b.date)), // próxima primero
     [allEvents]
   );
@@ -163,7 +155,7 @@ export function PermissionRequestForm({
       onError: (err) => setError(err.message),
     }
   );
-  const submitDisabled = submitting || uploadingEvidence || !selectedEventId;
+  const submitDisabled = submitting || uploadingEvidence;
   const submitLabel = submitting
     ? "Enviando…"
     : uploadingEvidence
@@ -177,6 +169,7 @@ export function PermissionRequestForm({
   function handleTypeChange(type) {
     setTargetType(type);
     setSelectedEventId("");
+    setFieldErrors((current) => ({ ...current, event: null }));
     setError(null);
   }
 
@@ -189,15 +182,20 @@ export function PermissionRequestForm({
       return;
     }
     if (!selectedEventId) {
-      setError(
+      const eventError =
         targetType === "REHEARSAL"
           ? "Seleccioná el ensayo para el que necesitás el permiso."
-          : "Seleccioná la presentación para la que necesitás el permiso."
-      );
+          : "Seleccioná la presentación para la que necesitás el permiso.";
+      setFieldErrors({ event: eventError });
+      setError(eventError);
+      eventListRef.current?.focus();
       return;
     }
     if (!reason.trim() || reason.trim().length < 5) {
-      setError("El motivo debe tener al menos 5 caracteres.");
+      const reasonError = "El motivo es obligatorio y debe tener al menos 5 caracteres.";
+      setFieldErrors({ reason: reasonError });
+      setError(reasonError);
+      reasonRef.current?.focus();
       return;
     }
     if (uploadingEvidence) {
@@ -274,9 +272,16 @@ export function PermissionRequestForm({
       </div>
 
       {/* Event list */}
-      <div>
+      <div
+        ref={eventListRef}
+        tabIndex={-1}
+        className={`rounded-xl outline-none transition-shadow ${
+          fieldErrors.event ? "ring-2 ring-red-400 ring-offset-2" : ""
+        }`}
+      >
         <p className="block text-sm font-medium text-gray-700 mb-2">
           {targetType === "REHEARSAL" ? "Seleccioná el ensayo" : "Seleccioná la presentación"}
+          <span className="ml-1 text-red-500">*</span>
         </p>
 
         {eventsLoading ? (
@@ -304,10 +309,17 @@ export function PermissionRequestForm({
                 key={ev.id}
                 event={ev}
                 isSelected={selectedEventId === ev.id}
-                onSelect={setSelectedEventId}
+                onSelect={(eventId) => {
+                  setSelectedEventId(eventId);
+                  setFieldErrors((current) => ({ ...current, event: null }));
+                  setError(null);
+                }}
               />
             ))}
           </div>
+        )}
+        {fieldErrors.event && (
+          <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors.event}</p>
         )}
       </div>
 
@@ -330,17 +342,33 @@ export function PermissionRequestForm({
       <div>
         <label htmlFor={`${formId ?? "permission-request"}-reason`} className="block text-sm font-medium text-gray-700 mb-1.5">
           {getPermissionReasonLabel(permissionType)}
+          <span className="ml-1 text-red-500">*</span>
+          <span className="ml-1 font-normal text-red-500">(obligatorio)</span>
         </label>
         <textarea
+          ref={reasonRef}
           id={`${formId ?? "permission-request"}-reason`}
           aria-label={getPermissionReasonLabel(permissionType)}
+          aria-invalid={Boolean(fieldErrors.reason)}
+          aria-required="true"
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setFieldErrors((current) => ({ ...current, reason: null }));
+            setError(null);
+          }}
           rows={3}
           maxLength={500}
           placeholder="Ej: Cita médica urgente, viaje familiar, compromiso académico…"
-          className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none placeholder-gray-400"
+          className={`w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none placeholder-gray-400 ${
+            fieldErrors.reason
+              ? "border-red-400 focus:ring-red-400"
+              : "border-gray-300 focus:ring-blue-500"
+          }`}
         />
+        {fieldErrors.reason && (
+          <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.reason}</p>
+        )}
         <p className="text-right text-xs text-gray-400 mt-1">{reason.length}/500</p>
       </div>
 
