@@ -398,21 +398,43 @@ export function EvaluationFormModal({
         </div>
 
         {/* Action bar sticky */}
-        <div className="flex gap-2.5 border-t border-neutral-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.07)] sm:px-6 sm:pb-4">
+        <div className="flex flex-col gap-2.5 border-t border-neutral-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.07)] sm:flex-row sm:px-6 sm:pb-4">
+          {evidence && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 sm:hidden"
+            >
+              <svg
+                className="h-4 w-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Comprobante listo. Registra tu evaluación.
+            </p>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="h-12 flex-1 rounded-2xl border border-neutral-200 bg-neutral-100 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-200 active:scale-[0.98]"
+            className="h-11 flex-1 rounded-2xl text-sm font-semibold text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700 active:scale-[0.98] sm:h-12 sm:border sm:border-neutral-200 sm:bg-neutral-100 sm:text-neutral-700 sm:hover:bg-neutral-200"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading || !evidence}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-900 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-[0_8px_24px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-white disabled:shadow-none"
           >
             {loading && (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white bg-black" />
             )}
             {isEdit ? "Guardar cambios" : "Registrar evaluación"}
           </button>
