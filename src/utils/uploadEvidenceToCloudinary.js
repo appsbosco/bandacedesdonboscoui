@@ -96,3 +96,48 @@ export function validateEvidenceFile(file, maxMb = 10) {
     throw new Error(`El archivo no puede superar ${maxMb} MB`);
   }
 }
+
+/**
+ * Reduce imágenes grandes antes de subirlas. Los PDF y GIF se conservan intactos.
+ * Esto disminuye transferencia y almacenamiento sin afectar documentos legibles.
+ */
+export async function optimizeEvidenceFile(file, options = {}) {
+  const { maxDimension = 1600, quality = 0.82 } = options;
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo procesar la imagen"));
+      img.src = objectUrl;
+    });
+
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const context = canvas.getContext("2d");
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => result ? resolve(result) : reject(new Error("No se pudo optimizar la imagen")),
+        "image/jpeg",
+        quality
+      );
+    });
+
+    if (blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}

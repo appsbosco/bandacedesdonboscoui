@@ -23,7 +23,9 @@ import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
+import EventBusyIcon from "@mui/icons-material/EventBusy";
 
+import AbsencePermissionsPage from "layouts/absencePermissions";
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
 import ParentsSignUp from "layouts/authentication/sign-up/parents";
@@ -512,6 +514,15 @@ const items = {
       route: "/formations/:formationId",
       component: <FormationDetailPage />,
     }),
+  absencePermissions: () =>
+    collapse({
+      name: "Permisos",
+      key: "absence-permissions",
+      route: "/absence-permissions",
+      icon: muiIcon12(EventBusyIcon),
+      component: <AbsencePermissionsPage />,
+    }),
+
   bookingRequests: () =>
     collapse({
       name: "Contrataciones",
@@ -662,6 +673,7 @@ export const adminRoutes = [
   items.performanceAttendance(),
   items.classAttendancePublic(),
   items.attendanceHistory(),
+  items.absencePermissions(),
 
   title("Almuerzos", "almuerzos-pages"),
   items.almuerzos(),
@@ -766,6 +778,9 @@ export const membersRoutes = [
   title("Académico", "academico-member"),
   items.academicStudent(),
 
+  title("Permisos", "permisos-member"),
+  items.absencePermissions(),
+
   title("Cuenta", "account-pages"),
   items.profile(),
 ];
@@ -784,6 +799,7 @@ export const sectionRoutes = [
   items.attendanceTake(),
   items.attendanceHistory(),
   items.performanceAttendance(),
+  items.absencePermissions(),
 
   title("Almuerzos", "almuerzos-pages"),
   items.almuerzos(),
@@ -804,6 +820,7 @@ export const parentsRoutes = [
 
   title("Asistencia", "attendance-pages"),
   items.parentDashboard(),
+  items.absencePermissions(),
 
   title("Académico", "academico-parent"),
   items.academicParent(),

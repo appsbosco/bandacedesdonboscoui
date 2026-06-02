@@ -153,7 +153,7 @@ export function BottomSheetDialog({
                   <p
                     style={{
                       margin: "2px 0 0",
-                      fontSize: 11,
+                      fontSize: 12,
                       color: "#94a3b8",
                       lineHeight: 1.3,
                     }}
@@ -165,6 +165,7 @@ export function BottomSheetDialog({
             </div>
 
             <button
+              type="button"
               onClick={onClose}
               aria-label="Cerrar"
               style={{
@@ -193,7 +194,9 @@ export function BottomSheetDialog({
                 position: "sticky",
                 bottom: 0,
                 flexShrink: 0,
-                padding: isMobile ? "14px 20px" : "14px 24px",
+                padding: isMobile
+                  ? "14px 20px max(14px, env(safe-area-inset-bottom))"
+                  : "14px 24px",
                 background: "#ffffff",
                 borderTop: "1px solid #f1f5f9",
               }}
