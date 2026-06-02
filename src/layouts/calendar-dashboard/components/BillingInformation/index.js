@@ -21,7 +21,7 @@ import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
 // Billing page components
-import Bill from "layouts/billing/components/Bill";
+import Bill from "layouts/calendar-dashboard/components/Bill";
 
 function BillingInformation() {
   return (

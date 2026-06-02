@@ -22,7 +22,7 @@ import SoftTypography from "components/SoftTypography";
 import SoftButton from "components/SoftButton";
 
 // Billing page components
-import Invoice from "layouts/billing/components/Invoice";
+import Invoice from "layouts/calendar-dashboard/components/Invoice";
 
 function Invoices() {
   return (

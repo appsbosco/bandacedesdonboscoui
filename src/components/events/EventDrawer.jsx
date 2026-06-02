@@ -1,14 +1,11 @@
-/**
- * EventDrawer.jsx — DEFINITIVO v3
- * Diseño premium: fondo oscuro para header, tipografía contrastada,
- * info grid limpio. Bottom sheet en mobile, slide-over en desktop.
- */
-
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
 import { getEventImage } from "utils/eventHelpers";
+import { getRoseParadeEventMeta } from "utils/roseParade";
+import RoseParadeEventBadge from "./RoseParadeEventBadge";
+import RoseParadeEventCountdown from "./RoseParadeEventCountdown";
 
 const CATEGORY_META = {
   presentation: { label: "Presentación", icon: "🎵", accent: "#3b82f6" },
@@ -20,9 +17,9 @@ const CATEGORY_META = {
 };
 
 const NOTIF_META = {
-  NONE: { label: "Sin notificación", bg: "#f1f5f9", color: "#64748b" },
-  DRY_RUN: { label: "Modo prueba", bg: "#fef3c7", color: "#92400e" },
-  LIVE: { label: "Envío real", bg: "#d1fae5", color: "#065f46" },
+  NONE: { label: "Sin notificación" },
+  DRY_RUN: { label: "Modo prueba" },
+  LIVE: { label: "Envío real" },
 };
 
 export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onDelete }) {
@@ -38,7 +35,6 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Animación de entrada/salida
   useEffect(() => {
     if (open) {
       requestAnimationFrame(() => setVisible(true));
@@ -66,221 +62,121 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   const cat = CATEGORY_META[catKey] ?? CATEGORY_META.other;
   const notif = NOTIF_META[event.notificationMode] ?? NOTIF_META.NONE;
   const imgSrc = getEventImage(event.type);
+  const roseParadeMeta = getRoseParadeEventMeta(event);
+  const formattedDate = formatDateEs(event.date);
+  const formattedTime = event.time ? normalizeTimeTo12h(event.time) : "";
+  const audience = Array.isArray(event.audience) ? event.audience : [];
 
-  const panelStyle = isMobile
-    ? {
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999,
-        maxHeight: "92dvh",
-        background: "#ffffff",
-        borderRadius: "22px 22px 0 0",
-        boxShadow: "0 -20px 60px rgba(0,0,0,0.2)",
-        display: "flex",
-        flexDirection: "column",
-        transform: visible ? "translateY(0)" : "translateY(100%)",
-        transition: "transform 0.28s cubic-bezier(0.32,0.72,0,1)",
-        overflowY: "auto",
-      }
-    : {
-        position: "fixed",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999,
-        width: "min(480px, 100vw)",
-        background: "#ffffff",
-        boxShadow: "-16px 0 60px rgba(0,0,0,0.12)",
-        display: "flex",
-        flexDirection: "column",
-        transform: visible ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.28s cubic-bezier(0.32,0.72,0,1)",
-        overflowY: "auto",
-      };
+  const panelClasses = isMobile
+    ? `fixed inset-x-0 bottom-0 z-[1300] flex max-h-[94dvh] flex-col overflow-hidden rounded-t-[32px] bg-[#FAFAFB] shadow-[0_-24px_72px_rgba(15,23,42,0.2)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        visible ? "translate-y-0" : "translate-y-full"
+      }`
+    : `fixed inset-y-0 right-0 z-[1300] flex w-full max-w-[560px] flex-col overflow-hidden bg-[#FAFAFB] shadow-[-24px_0_80px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        visible ? "translate-x-0" : "translate-x-full"
+      }`;
 
   return createPortal(
     <>
-      {/* Backdrop */}
       <div
         onClick={handleClose}
         aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9998,
-          background: "rgba(2,8,23,0.55)",
-          backdropFilter: "blur(4px)",
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.24s ease",
-        }}
+        className={`fixed inset-0 z-[1290] bg-slate-950/50 backdrop-blur-sm transition-opacity duration-200 ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
       />
 
-      <div role="dialog" aria-modal="true" aria-label={event.title} style={panelStyle}>
-        {/* Mobile drag handle */}
+      <div role="dialog" aria-modal="true" aria-label={event.title} className={panelClasses}>
         {isMobile && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              padding: "12px 0 8px",
-              flexShrink: 0,
-              background: "#ffffff",
-            }}
-          >
-            <div style={{ width: 38, height: 4, borderRadius: 99, background: "#e2e8f0" }} />
+          <div className="flex shrink-0 justify-center bg-[#FAFAFB] pb-1 pt-3">
+            <div className="h-1 w-10 rounded-full bg-slate-200" />
           </div>
         )}
 
-        {/* ── Hero imagen con overlay oscuro ───────────────────────────── */}
-        <div style={{ position: "relative", height: isMobile ? 180 : 220, flexShrink: 0 }}>
-          <img
-            src={imgSrc}
-            alt={event.type ?? "Evento"}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              display: "block",
-            }}
-          />
-
-          {/* Gradient overlay */}
+        <header className="relative flex h-16 shrink-0 items-center justify-between bg-[#FAFAFB] px-5">
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Cerrar detalle del evento"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-900 transition-colors duration-200 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 active:scale-95"
+          >
+            <BackIcon />
+          </button>
+          <p className="absolute left-1/2 max-w-[56%] -translate-x-1/2 truncate text-sm font-bold text-slate-900">
+            {roseParadeMeta ? "Desfile de las Rosas" : "Evento"}
+          </p>
           <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, rgba(2,8,23,0.25) 0%, rgba(2,8,23,0.7) 60%, rgba(2,8,23,0.88) 100%)",
-            }}
-          />
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-base shadow-sm ring-1 ring-slate-200/70"
+            aria-hidden="true"
+          >
+            {roseParadeMeta ? "🌹" : cat.icon}
+          </div>
+        </header>
 
-          {/* Botón cerrar */}
-          {!isMobile && (
-            <button
-              onClick={handleClose}
-              aria-label="Cerrar"
-              style={{
-                position: "absolute",
-                top: 16,
-                right: 16,
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                color: "#ffffff",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <CloseIcon />
-            </button>
-          )}
-
-          {/* Pill de categoría */}
-          <div style={{ position: "absolute", top: 16, left: 16 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 11,
-                fontWeight: 700,
-                padding: "4px 10px",
-                borderRadius: 99,
-                background: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.25)",
-                color: "#ffffff",
-              }}
-            >
-              {cat.icon} {cat.label}
-            </span>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 sm:px-6">
+          <div className="relative h-56 overflow-hidden rounded-[28px] bg-slate-100 shadow-sm sm:h-64">
+            <img
+              src={imgSrc}
+              alt={event.type ?? event.title}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/15 to-transparent" />
+            <div className="absolute left-4 top-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm backdrop-blur-md">
+                <span>{cat.icon}</span>
+                {cat.label}
+              </span>
+            </div>
           </div>
 
-          {/* Título + agrupación sobre imagen */}
-          <div
-            style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 20px 20px" }}
-          >
-            {event.type && (
-              <p
-                style={{
-                  margin: "0 0 4px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "rgba(255,255,255,0.6)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                {event.type}
-              </p>
+          <section className="px-1 pb-7 pt-6 text-center">
+            {roseParadeMeta && (
+              <div className="mb-3 flex justify-center">
+                <RoseParadeEventBadge event={event} />
+              </div>
             )}
-            <h2
-              style={{
-                margin: 0,
-                fontSize: isMobile ? 20 : 22,
-                fontWeight: 800,
-                color: "#ffffff",
-                lineHeight: 1.25,
-                textShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                fontFamily: "Georgia, serif",
-              }}
-            >
+            <h2 className="mx-auto max-w-md text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">
               {event.title}
             </h2>
-          </div>
-        </div>
-
-        {/* ── Acento de color de categoría ─────────────────────────────── */}
-        <div style={{ height: 3, background: cat.accent, flexShrink: 0 }} />
-
-        {/* ── Body ─────────────────────────────────────────────────────── */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "20px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
-          {/* Descripción */}
-          {event.description && (
-            <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.7 }}>
-              {event.description}
+            <p className="mt-3 text-sm font-medium text-slate-500 sm:text-base">
+              {formattedDate}
+              {formattedTime ? ` · ${formattedTime}` : ""}
             </p>
+          </section>
+
+          {roseParadeMeta?.isParadeDay && (
+            <div className="mb-6">
+              <RoseParadeEventCountdown event={event} />
+            </div>
           )}
 
-          {/* Info grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <Chip
-              icon={<CalIcon />}
-              label="Fecha"
-              value={formatDateEs(event.date)}
-              wide
-              accent={cat.accent}
-            />
-            {event.time && (
-              <Chip
+          <EventAvatarStack roseParadeMeta={roseParadeMeta} audience={audience} />
+
+          <MetaRow
+            left={roseParadeMeta ? "Rumbo a Pasadena" : event.type || cat.label}
+            right={`Fecha: ${formattedDate}`}
+          />
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <InfoCard icon={<CalIcon />} label="Fecha" value={formattedDate} accent={cat.accent} />
+            {formattedTime && (
+              <InfoCard
                 icon={<ClockIcon />}
                 label="Hora"
-                value={normalizeTimeTo12h(event.time)}
+                value={formattedTime}
                 accent={cat.accent}
               />
             )}
             {event.place && (
-              <Chip icon={<PinIcon />} label="Lugar" value={event.place} wide accent={cat.accent} />
+              <InfoCard
+                icon={<PinIcon />}
+                label="Lugar"
+                value={event.place}
+                accent={cat.accent}
+                wide
+              />
             )}
             {event.departure && (
-              <Chip
+              <InfoCard
                 icon={<BusIcon />}
                 label="Salida"
                 value={normalizeTimeTo12h(event.departure)}
@@ -288,142 +184,67 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
               />
             )}
             {event.arrival && (
-              <Chip
+              <InfoCard
                 icon={<HomeIcon />}
                 label="Llegada aprox."
                 value={normalizeTimeTo12h(event.arrival)}
                 accent={cat.accent}
               />
             )}
+            <InfoCard
+              icon={<BellIcon />}
+              label="Notificación"
+              value={notif.label}
+              accent={cat.accent}
+            />
+            {audience.length > 0 && (
+              <InfoCard
+                icon={<UsersIcon />}
+                label="Audiencia"
+                value={audience.join(", ")}
+                accent={cat.accent}
+                wide
+              />
+            )}
           </div>
 
-          {/* Notif badge */}
-          {event.notificationMode && event.notificationMode !== "NONE" && (
-            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "4px 12px",
-                  borderRadius: 99,
-                  background: notif.bg,
-                  color: notif.color,
-                }}
-              >
-                {notif.label}
-              </span>
-              {event.audience?.length > 0 && (
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>
-                  → {event.audience.join(", ")}
-                </span>
-              )}
-            </div>
+          {event.description && (
+            <section className="pb-2 pt-8">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                {roseParadeMeta ? "Pasadena 2027" : cat.label}
+              </p>
+              <h3 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+                {roseParadeMeta ? "Costa Rica marcha hacia Pasadena" : "Detalles del evento"}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                {event.description}
+              </p>
+            </section>
           )}
 
           {event.createdAt && (
-            <p style={{ margin: 0, fontSize: 11, color: "#cbd5e1" }}>
+            <p className="pt-5 text-xs text-slate-400">
               Creado el{" "}
               {new Date(Number(event.createdAt) || event.createdAt).toLocaleDateString("es-CR")}
             </p>
           )}
         </div>
 
-        {/* ── Footer ───────────────────────────────────────────────────── */}
         {isAdmin ? (
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "12px 20px",
-              borderTop: "1px solid #f8fafc",
-              display: "flex",
-              alignItems: "center",
-              background: "#ffffff",
-              gap: 10,
-            }}
-          >
-            {isMobile && (
-              <button
-                onClick={handleClose}
-                style={{
-                  flex: 1,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  padding: "10px",
-                  borderRadius: 12,
-                  border: "1.5px solid #f1f5f9",
-                  background: "#f8fafc",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                Cerrar
-              </button>
-            )}
-            <button
-              onClick={() => {
-                onDelete(event);
-                handleClose();
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "1.5px solid #fecaca",
-                background: "#fff1f2",
-                color: "#ef4444",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <TrashIcon /> Eliminar
-            </button>
-            <button
-              onClick={() => {
-                onEdit(event);
-                handleClose();
-              }}
-              style={{
-                flex: isMobile ? 1 : "none",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 700,
-                padding: "10px 20px",
-                borderRadius: 12,
-                border: "none",
-                background: "#0f172a",
-                color: "#ffffff",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <EditIcon /> Editar
-            </button>
-          </div>
+          <AdminFooter
+            event={event}
+            isMobile={isMobile}
+            onClose={handleClose}
+            onDelete={onDelete}
+            onEdit={onEdit}
+          />
         ) : (
           isMobile && (
-            <div style={{ flexShrink: 0, padding: "12px 20px", borderTop: "1px solid #f8fafc" }}>
+            <div className="sticky bottom-0 shrink-0 border-t border-slate-200/70 bg-white/90 px-5 py-3 backdrop-blur-xl">
               <button
+                type="button"
                 onClick={handleClose}
-                style={{
-                  width: "100%",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  padding: "11px",
-                  borderRadius: 12,
-                  border: "1.5px solid #f1f5f9",
-                  background: "#f8fafc",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
+                className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 active:scale-[0.98]"
               >
                 Cerrar
               </button>
@@ -436,93 +257,161 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   );
 }
 
-// ─── Chip (info cell) ─────────────────────────────────────────────────────────
-function Chip({ icon, label, value, wide, accent }) {
-  return (
-    <div
-      style={{
-        gridColumn: wide ? "span 2" : "span 1",
-        padding: "10px 12px",
-        borderRadius: 12,
-        background: "#f8fafc",
-        border: "1px solid #f1f5f9",
-        minWidth: 0,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
-        <span style={{ color: accent, display: "flex", opacity: 0.7 }}>{icon}</span>
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            color: "#94a3b8",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-          }}
-        >
-          {label}
-        </span>
+function EventAvatarStack({ roseParadeMeta, audience }) {
+  if (!roseParadeMeta && audience.length === 0) return null;
+
+  if (!roseParadeMeta) {
+    return (
+      <div className="flex flex-wrap justify-center gap-2 pb-5">
+        {audience.map((item) => (
+          <span
+            key={item}
+            className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-200/70"
+          >
+            {item}
+          </span>
+        ))}
       </div>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#0f172a",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </p>
+    );
+  }
+
+  return (
+    <div className="flex justify-center pb-5" aria-label="Banda CEDES Don Bosco rumbo a Pasadena">
+      {["🌹", "🎺", "🇨🇷", "BCDB", "2027"].map((item, index) => (
+        <span
+          key={item}
+          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#FAFAFB] bg-white text-sm font-black text-slate-700 shadow-sm ${
+            index ? "-ml-2" : ""
+          }`}
+        >
+          {item}
+        </span>
+      ))}
     </div>
   );
 }
-Chip.propTypes = {
+
+function MetaRow({ left, right }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-y border-slate-200/70 py-4 text-sm font-bold text-slate-900">
+      <span>{left}</span>
+      <span>{right}</span>
+    </div>
+  );
+}
+
+function InfoCard({ icon, label, value, accent, wide = false }) {
+  return (
+    <div
+      className={`min-w-0 rounded-2xl bg-white px-3.5 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-slate-200/70 ${
+        wide ? "col-span-2" : "col-span-1"
+      }`}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className="flex opacity-80" style={{ color: accent }}>
+          {icon}
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+          {label}
+        </span>
+      </div>
+      <p className="break-words text-sm font-bold leading-5 text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function AdminFooter({ event, isMobile, onClose, onDelete, onEdit }) {
+  return (
+    <div className="sticky bottom-0 flex shrink-0 items-center gap-2.5 border-t border-slate-200/70 bg-white/90 px-5 py-3 shadow-[0_-8px_28px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:px-6">
+      {isMobile && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-2xl bg-slate-100 p-3 text-sm font-bold text-slate-600 transition-all duration-200 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 active:scale-[0.98]"
+        >
+          Cerrar
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          onDelete(event);
+          onClose();
+        }}
+        className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-bold text-rose-600 ring-1 ring-inset ring-rose-200 transition-all duration-200 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 active:scale-[0.98]"
+      >
+        <TrashIcon /> Eliminar
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onEdit(event);
+          onClose();
+        }}
+        className={`inline-flex items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-sm shadow-slate-900/15 transition-all duration-200 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 active:scale-[0.98] ${
+          isMobile ? "flex-1" : ""
+        }`}
+      >
+        <EditIcon /> Editar
+      </button>
+    </div>
+  );
+}
+
+EventAvatarStack.propTypes = {
+  roseParadeMeta: PropTypes.object,
+  audience: PropTypes.arrayOf(PropTypes.string).isRequired,
+};
+
+MetaRow.propTypes = {
+  left: PropTypes.string.isRequired,
+  right: PropTypes.string.isRequired,
+};
+
+InfoCard.propTypes = {
   icon: PropTypes.node.isRequired,
   label: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,
-  wide: PropTypes.bool,
   accent: PropTypes.string,
+  wide: PropTypes.bool,
 };
 
-// Icons
-const CloseIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="2.5"
-    stroke="currentColor"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+AdminFooter.propTypes = {
+  event: PropTypes.object.isRequired,
+  isMobile: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+};
+
+const BackIcon = () => (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2.2" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
   </svg>
 );
+
 const CalIcon = () => (
   <svg
-    width="11"
-    height="11"
+    className="h-3.5 w-3.5"
     fill="none"
     viewBox="0 0 24 24"
-    strokeWidth="2.5"
+    strokeWidth="2.2"
     stroke="currentColor"
   >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25"
+      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M3 9.75h18"
     />
   </svg>
 );
+
 const ClockIcon = () => (
   <svg
-    width="11"
-    height="11"
+    className="h-3.5 w-3.5"
     fill="none"
     viewBox="0 0 24 24"
-    strokeWidth="2.5"
+    strokeWidth="2.2"
     stroke="currentColor"
   >
     <path
@@ -532,13 +421,13 @@ const ClockIcon = () => (
     />
   </svg>
 );
+
 const PinIcon = () => (
   <svg
-    width="11"
-    height="11"
+    className="h-3.5 w-3.5"
     fill="none"
     viewBox="0 0 24 24"
-    strokeWidth="2.5"
+    strokeWidth="2.2"
     stroke="currentColor"
   >
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -549,40 +438,79 @@ const PinIcon = () => (
     />
   </svg>
 );
+
 const BusIcon = () => (
   <svg
-    width="11"
-    height="11"
+    className="h-3.5 w-3.5"
     fill="none"
     viewBox="0 0 24 24"
-    strokeWidth="2.5"
+    strokeWidth="2.2"
     stroke="currentColor"
   >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
+      d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
     />
   </svg>
 );
+
 const HomeIcon = () => (
   <svg
-    width="11"
-    height="11"
+    className="h-3.5 w-3.5"
     fill="none"
     viewBox="0 0 24 24"
-    strokeWidth="2.5"
+    strokeWidth="2.2"
     stroke="currentColor"
   >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+      d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"
     />
   </svg>
 );
+
+const BellIcon = () => (
+  <svg
+    className="h-3.5 w-3.5"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.2"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M14.25 18.75a2.25 2.25 0 0 1-4.5 0m8.25-3V11.25a6 6 0 1 0-12 0v4.5l-1.5 1.5h15l-1.5-1.5Z"
+    />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg
+    className="h-3.5 w-3.5"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2.2"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.33 0-4.512-.645-6.374-1.766v-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+    />
+  </svg>
+);
+
 const EditIcon = () => (
-  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    className="h-3.5 w-3.5"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -590,8 +518,15 @@ const EditIcon = () => (
     />
   </svg>
 );
+
 const TrashIcon = () => (
-  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+  <svg
+    className="h-3.5 w-3.5"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="2"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"

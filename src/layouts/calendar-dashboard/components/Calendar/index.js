@@ -19,6 +19,7 @@ import DeleteConfirmModal from "components/events/DeleteConfirmModal";
 import EventDrawer from "components/events/EventDrawer";
 import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
 import { buildSortKey } from "utils/eventHelpers";
+import RoseParadeEventBadge from "components/events/RoseParadeEventBadge";
 import PropTypes from "prop-types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -203,8 +204,10 @@ export default function EventsCalendar({ currentUser }) {
   const navigate = (dir) => {
     // dir: -1 | 1
     const d = new Date(anchor);
-    if (view === "month") d.setMonth(d.getMonth() + dir);
-    else if (view === "week") d.setDate(d.getDate() + dir * 7);
+    if (view === "month" || view === "agenda") {
+      d.setDate(1);
+      d.setMonth(d.getMonth() + dir);
+    } else if (view === "week") d.setDate(d.getDate() + dir * 7);
     else d.setDate(d.getDate() + dir);
     setAnchor(d);
   };
@@ -652,6 +655,7 @@ function MonthView({ anchor, today, eventsForDay, onDayClick, onEventClick, onDa
                         style={{ backgroundColor: meta.dot }}
                       />
                       <span className="truncate">{event.title}</span>
+                      <RoseParadeEventBadge event={event} compact />
                     </button>
                   );
                 })}
@@ -724,6 +728,7 @@ function WeekView({ anchor, today, eventsForDay, onEventClick, onSlotClick }) {
                     >
                       {event.time && <p className="font-bold">{normalizeTimeTo12h(event.time)}</p>}
                       <p className="truncate mt-0.5">{event.title}</p>
+                      <RoseParadeEventBadge event={event} compact />
                     </button>
                   );
                 })}
@@ -829,6 +834,7 @@ function DayView({ anchor, today, eventsForDay, isAdmin, onEventClick, onAddClic
                         )}
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 mb-0.5">{event.title}</h4>
+                      <RoseParadeEventBadge event={event} compact />
                       {event.place && (
                         <p className="text-xs text-slate-500 flex items-center gap-1">
                           <PinIcon />
@@ -950,6 +956,7 @@ function AgendaView({ anchor, filteredEvents, today, onEventClick }) {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
+                      <RoseParadeEventBadge event={event} compact />
                       <p className="text-sm font-semibold text-slate-900 truncate">{event.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5 truncate">
                         {[event.time && normalizeTimeTo12h(event.time), event.place]

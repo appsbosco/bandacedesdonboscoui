@@ -23,7 +23,7 @@ import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 
 // Billing page components
-import Transaction from "layouts/billing/components/Transaction";
+import Transaction from "layouts/calendar-dashboard/components/Transaction";
 
 function Transactions() {
   return (

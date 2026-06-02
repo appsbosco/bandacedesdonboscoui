@@ -6,6 +6,7 @@
 import PropTypes from "prop-types";
 import { formatDateEs, normalizeTimeTo12h } from "utils/dateHelpers";
 import { getEventImage } from "utils/eventHelpers";
+import RoseParadeEventBadge from "./RoseParadeEventBadge";
 
 export default function PresentationCard({
   event,
@@ -155,6 +156,8 @@ export default function PresentationCard({
         >
           {event.title}
         </h4>
+
+        <RoseParadeEventBadge event={event} compact />
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <Row icon="📅" text={formatDateEs(event.date)} />

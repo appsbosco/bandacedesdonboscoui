@@ -30,7 +30,7 @@ import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
 import ParentsSignUp from "layouts/authentication/sign-up/parents";
 import PasswordReset from "layouts/authentication/password-reset/PasswordReset";
-import Billing from "layouts/billing";
+import Billing from "layouts/calendar-dashboard";
 import Dashboard from "layouts/dashboard";
 import Profile from "layouts/profile";
 import RTL from "layouts/rtl";
