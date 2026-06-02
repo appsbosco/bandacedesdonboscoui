@@ -23,16 +23,24 @@ const TYPE_FILTERS = [
   { value: "PERFORMANCE", label: "Presentaciones" },
 ];
 
+const PERMISSION_TYPE_FILTERS = [
+  { value: "", label: "Todas" },
+  { value: "ABSENCE", label: "Ausencias" },
+  { value: "LATE_ARRIVAL", label: "Llegadas tardías" },
+  { value: "EARLY_WITHDRAWAL", label: "Retiros anticipados" },
+];
+const EMPTY_PERMISSIONS = [];
+const METRIC_COLOR_MAP = {
+  yellow: "bg-amber-50 border-amber-200 text-amber-700",
+  green: "bg-emerald-50 border-emerald-200 text-emerald-700",
+  red: "bg-red-50 border-red-200 text-red-700",
+  blue: "bg-blue-50 border-blue-200 text-blue-700",
+  gray: "bg-gray-50 border-gray-200 text-gray-600",
+};
+
 function MetricCard({ label, value, color }) {
-  const colorMap = {
-    yellow: "bg-amber-50 border-amber-200 text-amber-700",
-    green: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    red: "bg-red-50 border-red-200 text-red-700",
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    gray: "bg-gray-50 border-gray-200 text-gray-600",
-  };
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${colorMap[color]}`}>
+    <div className={`rounded-2xl border px-4 py-3 ${METRIC_COLOR_MAP[color]}`}>
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs font-medium mt-0.5 opacity-80">{label}</p>
     </div>
@@ -42,6 +50,7 @@ function MetricCard({ label, value, color }) {
 export function AdminPermissionsView() {
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [permissionTypeFilter, setPermissionTypeFilter] = useState("");
   const [eventFilter, setEventFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -52,11 +61,12 @@ export function AdminPermissionsView() {
     const f = {};
     if (statusFilter) f.requestStatus = statusFilter;
     if (typeFilter) f.targetType = typeFilter;
+    if (permissionTypeFilter) f.permissionType = permissionTypeFilter;
     if (eventFilter) f.eventId = eventFilter;
     if (startDate) f.startDate = startDate;
     if (endDate) f.endDate = endDate;
     return Object.keys(f).length ? f : undefined;
-  }, [statusFilter, typeFilter, eventFilter, startDate, endDate]);
+  }, [statusFilter, typeFilter, permissionTypeFilter, eventFilter, startDate, endDate]);
 
   const { data: eventsData } = useQuery(GET_EVENTS_FOR_PERMISSION_FORM, {
     fetchPolicy: "cache-and-network",
@@ -73,7 +83,7 @@ export function AdminPermissionsView() {
     fetchPolicy: "cache-and-network",
   });
 
-  const permissions = data?.getAbsencePermissionsAdmin?.items ?? [];
+  const permissions = data?.getAbsencePermissionsAdmin?.items ?? EMPTY_PERMISSIONS;
   const total = data?.getAbsencePermissionsAdmin?.totalCount ?? 0;
 
   const metrics = useMemo(() => {
@@ -89,7 +99,7 @@ export function AdminPermissionsView() {
 
   const refetchQueries = [{ query: GET_ABSENCE_PERMISSIONS_ADMIN, variables: { filter, limit: 100 } }];
 
-  const activeFiltersCount = [statusFilter, typeFilter, eventFilter, startDate, endDate].filter(Boolean).length;
+  const activeFiltersCount = [statusFilter, typeFilter, permissionTypeFilter, eventFilter, startDate, endDate].filter(Boolean).length;
 
   function handleTypeFilterChange(value) {
     setTypeFilter(value);
@@ -101,12 +111,13 @@ export function AdminPermissionsView() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Permisos de ausencia</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Permisos de asistencia</h1>
           <p className="text-sm text-gray-500 mt-1">
             Revisá y gestioná todas las solicitudes de permiso.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => refetch()}
           className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors flex-shrink-0"
         >
@@ -128,6 +139,28 @@ export function AdminPermissionsView() {
 
       {/* Filter bar */}
       <div className="space-y-3">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Tipo de permiso
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {PERMISSION_TYPE_FILTERS.map((filterOption) => (
+              <button
+                key={filterOption.value}
+                type="button"
+                onClick={() => setPermissionTypeFilter(filterOption.value)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  permissionTypeFilter === filterOption.value
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {filterOption.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             Actividad
@@ -152,10 +185,11 @@ export function AdminPermissionsView() {
 
         {typeFilter && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">
+            <label htmlFor="permissions-event-filter" className="mb-1 block text-xs font-medium text-gray-500">
               {typeFilter === "REHEARSAL" ? "Ensayo específico" : "Presentación específica"}
             </label>
             <select
+              id="permissions-event-filter"
               value={eventFilter}
               onChange={(event) => setEventFilter(event.target.value)}
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -177,6 +211,7 @@ export function AdminPermissionsView() {
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
+                type="button"
                 onClick={() => setStatusFilter(f.value)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   statusFilter === f.value
@@ -189,6 +224,7 @@ export function AdminPermissionsView() {
             ))}
           </div>
           <button
+            type="button"
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               activeFiltersCount > 0
@@ -206,8 +242,9 @@ export function AdminPermissionsView() {
         {showFilters && (
           <div className="bg-gray-50 rounded-2xl p-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+              <label htmlFor="permissions-start-date" className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
               <input
+                id="permissions-start-date"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -215,8 +252,9 @@ export function AdminPermissionsView() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+              <label htmlFor="permissions-end-date" className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
               <input
+                id="permissions-end-date"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
@@ -224,7 +262,8 @@ export function AdminPermissionsView() {
               />
             </div>
             <button
-              onClick={() => { setTypeFilter(""); setEventFilter(""); setStartDate(""); setEndDate(""); }}
+              type="button"
+              onClick={() => { setPermissionTypeFilter(""); setTypeFilter(""); setEventFilter(""); setStartDate(""); setEndDate(""); }}
               className="text-xs text-gray-400 hover:text-gray-600 underline sm:col-span-2"
             >
               Limpiar filtros

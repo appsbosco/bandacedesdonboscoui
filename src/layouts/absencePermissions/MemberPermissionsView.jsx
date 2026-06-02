@@ -16,6 +16,7 @@ const STATUS_FILTERS = [
   { value: "APPROVED", label: "Aprobados" },
   { value: "REJECTED", label: "Rechazados" },
 ];
+const EMPTY_PERMISSIONS = [];
 
 function EmptyPermissions() {
   return (
@@ -27,7 +28,7 @@ function EmptyPermissions() {
       </div>
       <p className="font-semibold text-gray-700 mb-1">Sin permisos enviados</p>
       <p className="text-sm text-gray-400 max-w-xs">
-        Cuando necesités justificar una ausencia a un ensayo o presentación, podés hacerlo desde aquí.
+        Reportá una ausencia, una llegada tardía o un retiro anticipado desde aquí.
       </p>
     </div>
   );
@@ -56,7 +57,7 @@ export function MemberPermissionsView() {
     }
   );
 
-  const allPermissions = data?.getMyUserAbsencePermissions?.items ?? [];
+  const allPermissions = data?.getMyUserAbsencePermissions?.items ?? EMPTY_PERMISSIONS;
 
   const filteredPermissions = useMemo(() => {
     if (!statusFilter) return allPermissions;
@@ -72,8 +73,8 @@ export function MemberPermissionsView() {
         <h1 className="text-2xl font-bold text-gray-900">Mis permisos</h1>
         <p className="text-sm text-gray-500 mt-1">
           {isExalumno
-            ? "Solicitá permiso para ausentarte de un ensayo o presentación."
-            : "Revisá el estado de tus permisos de ausencia."}
+            ? "Reportá una ausencia, una llegada tardía o un retiro anticipado."
+            : "Revisá el estado de tus permisos de asistencia."}
         </p>
       </div>
 
@@ -82,6 +83,7 @@ export function MemberPermissionsView() {
         <div className="flex gap-1.5 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button
+              type="button"
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -97,6 +99,7 @@ export function MemberPermissionsView() {
 
         {isExalumno && (
           <button
+            type="button"
             onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-500 transition-colors"
           >
@@ -136,7 +139,7 @@ export function MemberPermissionsView() {
       <PermissionRequestDialog
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title="Solicitar permiso de ausencia"
+        title="Solicitar permiso"
         studentId={currentUser?.id}
         onSuccess={() => {
           setShowForm(false);
@@ -158,12 +161,14 @@ export function MemberPermissionsView() {
           </p>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => setCancelTarget(null)}
               className="flex-1 px-4 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
             >
               No, volver
             </button>
             <button
+              type="button"
               onClick={() => cancelPermission({ variables: { id: cancelTarget?.id } })}
               disabled={cancelling}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-500 disabled:opacity-50 transition-colors"

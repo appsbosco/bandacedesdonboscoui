@@ -19,6 +19,7 @@ const STATUS_FILTERS = [
   { value: "APPROVED", label: "Aprobados" },
   { value: "REJECTED", label: "Rechazados" },
 ];
+const EMPTY_PERMISSIONS = [];
 
 // ─── Child selector ───────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ function ChildCard({ child, isSelected, onSelect }) {
 
   return (
     <button
+      type="button"
       onClick={() => isActive && onSelect(child)}
       disabled={!isActive}
       className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left w-full ${
@@ -110,7 +112,7 @@ function EmptyState({ childSelected }) {
       </p>
       <p className="text-sm text-gray-400 max-w-xs">
         {childSelected
-          ? "Cuando necesités justificar una ausencia, podés hacerlo usando el botón de arriba."
+          ? "Reportá una ausencia, una llegada tardía o un retiro anticipado usando el botón de arriba."
           : "Elegí el hijo o hija para el que querés ver o solicitar permisos."}
       </p>
     </div>
@@ -156,7 +158,7 @@ export function ParentPermissionsView() {
     }
   );
 
-  const allPermissions = permissionsData?.getAbsencePermissionsForChild?.items ?? [];
+  const allPermissions = permissionsData?.getAbsencePermissionsForChild?.items ?? EMPTY_PERMISSIONS;
 
   const filteredPermissions = useMemo(() => {
     if (!statusFilter) return allPermissions;
@@ -177,7 +179,7 @@ export function ParentPermissionsView() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Permisos de ausencia</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Permisos de asistencia</h1>
         <p className="text-sm text-gray-500 mt-1">
           Solicitá y revisá permisos para tus hijos integrantes de la Banda.
         </p>
@@ -185,7 +187,7 @@ export function ParentPermissionsView() {
 
       {/* Child selector */}
       {children.length === 0 ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 text-sm text-amber-700">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-700">
           Tu cuenta no tiene integrantes asignados. Contactá a un administrador.
         </div>
       ) : (
@@ -212,6 +214,7 @@ export function ParentPermissionsView() {
           <div className="flex gap-1.5 flex-wrap">
             {STATUS_FILTERS.map((f) => (
               <button
+                type="button"
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -226,6 +229,7 @@ export function ParentPermissionsView() {
           </div>
 
           <button
+            type="button"
             onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-500 transition-colors flex-shrink-0"
           >
@@ -305,12 +309,14 @@ export function ParentPermissionsView() {
           </p>
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => setCancelTarget(null)}
               className="flex-1 px-4 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
             >
               No, volver
             </button>
             <button
+              type="button"
               onClick={() => cancelPermission({ variables: { id: cancelTarget?.id } })}
               disabled={cancelling}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-500 disabled:opacity-50 transition-colors"

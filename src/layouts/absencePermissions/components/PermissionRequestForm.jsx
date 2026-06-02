@@ -6,9 +6,16 @@ import {
   GET_EVENTS_FOR_PERMISSION_FORM,
 } from "../absencePermissions.gql";
 import { parsePermissionDate } from "../dateUtils";
+import {
+  getPermissionReasonLabel,
+  PERMISSION_TYPE_OPTIONS,
+} from "../permissionTypes";
 import { PermissionEvidenceUploader } from "./PermissionEvidenceUploader";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const EMPTY_EVENTS = [];
+const EMPTY_REFETCH_QUERIES = [];
 
 function fmtDateLong(value) {
   const date = parsePermissionDate(value);
@@ -104,11 +111,12 @@ export function PermissionRequestForm({
   studentId,
   onSuccess,
   onCancel,
-  refetchQueries = [],
+  refetchQueries = EMPTY_REFETCH_QUERIES,
   formId,
   hideActions = false,
   onSubmitStateChange,
 }) {
+  const [permissionType, setPermissionType] = useState("ABSENCE");
   const [targetType, setTargetType] = useState("REHEARSAL");
   const [selectedEventId, setSelectedEventId] = useState("");
   const [reason, setReason] = useState("");
@@ -122,7 +130,7 @@ export function PermissionRequestForm({
     { fetchPolicy: "cache-and-network" }
   );
 
-  const allEvents = eventsData?.getEvents ?? [];
+  const allEvents = eventsData?.getEvents ?? EMPTY_EVENTS;
 
   const rehearsalEvents = useMemo(
     () =>
@@ -201,6 +209,7 @@ export function PermissionRequestForm({
       variables: {
         input: {
           studentId,
+          permissionType,
           targetType,
           eventId: selectedEventId,
           reason: reason.trim(),
@@ -213,11 +222,35 @@ export function PermissionRequestForm({
   return (
     <form id={formId} onSubmit={handleSubmit} className="space-y-5">
 
-      {/* Type selector */}
+      {/* Attendance exception selector */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <p className="block text-sm font-medium text-gray-700 mb-2">
+          ¿Qué necesitás reportar?
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {PERMISSION_TYPE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setPermissionType(option.value)}
+              className={`rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
+                permissionType === option.value
+                  ? "border-blue-500 bg-blue-50 text-blue-800"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              <span className="block text-sm font-semibold">{option.label}</span>
+              <span className="mt-0.5 block text-xs opacity-75">{option.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity selector */}
+      <div>
+        <p className="block text-sm font-medium text-gray-700 mb-2">
           ¿Para qué actividad es el permiso?
-        </label>
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {[
             { value: "REHEARSAL", label: "Ensayo", icon: "🎵" },
@@ -242,9 +275,9 @@ export function PermissionRequestForm({
 
       {/* Event list */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <p className="block text-sm font-medium text-gray-700 mb-2">
           {targetType === "REHEARSAL" ? "Seleccioná el ensayo" : "Seleccioná la presentación"}
-        </label>
+        </p>
 
         {eventsLoading ? (
           <div className="space-y-2">
@@ -295,10 +328,12 @@ export function PermissionRequestForm({
 
       {/* Reason */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Motivo de la ausencia
+        <label htmlFor={`${formId ?? "permission-request"}-reason`} className="block text-sm font-medium text-gray-700 mb-1.5">
+          {getPermissionReasonLabel(permissionType)}
         </label>
         <textarea
+          id={`${formId ?? "permission-request"}-reason`}
+          aria-label={getPermissionReasonLabel(permissionType)}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
@@ -311,9 +346,9 @@ export function PermissionRequestForm({
 
       {/* Optional evidence */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <p className="block text-sm font-medium text-gray-700 mb-1.5">
           Evidencia <span className="font-normal text-gray-400">(opcional)</span>
-        </label>
+        </p>
         <PermissionEvidenceUploader
           attachment={attachment}
           onChange={setAttachment}

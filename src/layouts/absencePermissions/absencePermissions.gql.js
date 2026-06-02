@@ -22,6 +22,7 @@ const ABSENCE_PERMISSION_CORE = gql`
       ...PermissionUserFields
     }
     requesterType
+    permissionType
     requestedByParent {
       id
       name
@@ -171,6 +172,7 @@ export const GET_PERMISSIONS_FOR_SESSION = gql`
     getPermissionsForSession(sessionId: $sessionId) {
       id
       studentId
+      permissionType
       requestStatus
       justificationStatus
       reason
@@ -185,6 +187,22 @@ export const GET_PERMISSIONS_FOR_EVENT = gql`
     getPermissionsForEvent(eventId: $eventId) {
       id
       studentId
+      permissionType
+      requestStatus
+      justificationStatus
+      reason
+      requesterType
+      suggestedAttendanceStatus
+    }
+  }
+`;
+
+export const GET_PERMISSIONS_FOR_REHEARSAL_DATE = gql`
+  query GetPermissionsForRehearsalDate($date: String!) {
+    getPermissionsForRehearsalDate(date: $date) {
+      id
+      studentId
+      permissionType
       requestStatus
       justificationStatus
       reason

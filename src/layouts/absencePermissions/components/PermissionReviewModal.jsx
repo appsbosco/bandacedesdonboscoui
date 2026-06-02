@@ -5,6 +5,7 @@ import { Modal } from "components/ui/Modal";
 import { PermissionStatusBadge } from "./PermissionStatusBadge";
 import { JustificationBadge } from "./JustificationBadge";
 import { formatPermissionDate } from "../dateUtils";
+import { getPermissionTypeLabel } from "../permissionTypes";
 import {
   REVIEW_ABSENCE_PERMISSION_REQUEST,
   CANCEL_ABSENCE_PERMISSION_REQUEST,
@@ -12,6 +13,7 @@ import {
 } from "../absencePermissions.gql";
 
 const fmtDate = formatPermissionDate;
+const EMPTY_REFETCH_QUERIES = [];
 
 function DetailRow({ label, value }) {
   return (
@@ -26,7 +28,7 @@ const QUICK_ACTIONS = [
   {
     key: "approve-justify",
     label: "Aprobar y justificar",
-    description: "La ausencia queda aprobada y justificada.",
+    description: "La solicitud queda aprobada y justificada.",
     requestStatus: "APPROVED",
     justificationStatus: "JUSTIFIED",
     className: "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
@@ -35,7 +37,7 @@ const QUICK_ACTIONS = [
   {
     key: "approve-no-justify",
     label: "Aprobar sin justificar",
-    description: "Se aprueba la ausencia pero no queda justificada.",
+    description: "Se aprueba la solicitud pero no queda justificada.",
     requestStatus: "APPROVED",
     justificationStatus: "NOT_JUSTIFIED",
     className: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
@@ -44,7 +46,7 @@ const QUICK_ACTIONS = [
   {
     key: "reject",
     label: "Rechazar solicitud",
-    description: "La solicitud es rechazada y la ausencia no estará justificada.",
+    description: "La solicitud es rechazada y no quedará justificada.",
     requestStatus: "REJECTED",
     justificationStatus: "NOT_JUSTIFIED",
     className: "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
@@ -52,7 +54,7 @@ const QUICK_ACTIONS = [
   },
 ];
 
-export function PermissionReviewModal({ permission, isOpen, onClose, refetchQueries = [], isReadOnly = false }) {
+export function PermissionReviewModal({ permission, isOpen, onClose, refetchQueries = EMPTY_REFETCH_QUERIES, isReadOnly = false }) {
   const [selectedAction, setSelectedAction] = useState(null);
   const [adminNotes, setAdminNotes] = useState(permission?.adminNotes ?? "");
   const [error, setError] = useState(null);
@@ -165,7 +167,8 @@ export function PermissionReviewModal({ permission, isOpen, onClose, refetchQuer
         {/* Details */}
         <div className="grid grid-cols-2 gap-4">
           <DetailRow label="Actividad" value={targetLabel} />
-          <DetailRow label="Fecha de ausencia" value={fmtDate(permission.absenceDate)} />
+          <DetailRow label="Tipo de permiso" value={getPermissionTypeLabel(permission.permissionType)} />
+          <DetailRow label="Fecha de actividad" value={fmtDate(permission.absenceDate)} />
           <DetailRow label="Solicitado por" value={`${requesterName} (${permission.requesterType === "PARENT" ? "Padre/Madre" : "Integrante"})`} />
           <DetailRow label="Fecha de solicitud" value={fmtDate(permission.createdAt)} />
         </div>
@@ -214,8 +217,8 @@ export function PermissionReviewModal({ permission, isOpen, onClose, refetchQuer
               Historial
             </p>
             <div className="space-y-2">
-              {[...permission.statusHistory].reverse().map((entry, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
+              {[...permission.statusHistory].reverse().map((entry) => (
+                <div key={`${entry.changedAt}-${entry.requestStatus}-${entry.justificationStatus}`} className="flex items-center gap-2 text-xs text-gray-500">
                   <span className="text-gray-300">{fmtDate(entry.changedAt)}</span>
                   <PermissionStatusBadge status={entry.requestStatus} showDot={false} size="xs" />
                   {entry.notes && <span className="italic">· {entry.notes}</span>}
@@ -251,11 +254,12 @@ export function PermissionReviewModal({ permission, isOpen, onClose, refetchQuer
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="permission-admin-notes" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Observaciones administrativas{" "}
                 <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
               <textarea
+                id="permission-admin-notes"
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={2}

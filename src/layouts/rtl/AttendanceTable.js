@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { mapInstrumentToSection } from "utils/sectionMapper";
+import { GET_PERMISSIONS_FOR_REHEARSAL_DATE } from "layouts/absencePermissions/absencePermissions.gql";
+import { StudentPermissionBadge } from "layouts/absencePermissions/components/AttendancePermissionIndicator";
 
 // ============================================================================
 // CONSTANTS & UTILS
@@ -266,7 +268,15 @@ const MobileStatusSelector = ({
   return createPortal(menu, document.body);
 };
 
-const StudentRow = ({ student, attendance, onStatusChange, onEditNotes, searchTerm, canEdit }) => {
+const StudentRow = ({
+  student,
+  attendance,
+  permission,
+  onStatusChange,
+  onEditNotes,
+  searchTerm,
+  canEdit,
+}) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [moreOptionsPosition, setMoreOptionsPosition] = useState({
     top: 0,
@@ -326,6 +336,16 @@ const StudentRow = ({ student, attendance, onStatusChange, onEditNotes, searchTe
             dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
           />
           <p className="text-xs text-gray-500 mt-0.5">{student.instrument}</p>
+          <StudentPermissionBadge permission={permission} />
+          {canEdit && permission?.suggestedAttendanceStatus && (
+            <button
+              type="button"
+              onClick={() => onStatusChange(permission.suggestedAttendanceStatus)}
+              className="mt-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+            >
+              Aplicar permiso aprobado
+            </button>
+          )}
         </div>
       </div>
 
@@ -747,6 +767,10 @@ const AttendancePage = () => {
     skip: !userSection || userSection === "NO_APLICA",
     fetchPolicy: "cache-first",
   });
+  const { data: permissionsData } = useQuery(GET_PERMISSIONS_FOR_REHEARSAL_DATE, {
+    variables: { date: queryDate },
+    fetchPolicy: "cache-and-network",
+  });
 
   const [takeAttendance] = useMutation(TAKE_ATTENDANCE_REHEARSAL);
   const [closeSessionMutation] = useMutation(CLOSE_SESSION);
@@ -760,6 +784,16 @@ const AttendancePage = () => {
 
   const users = data?.getUsers || [];
   const activeSession = sessionData?.getActiveSession || null;
+  const permissionsByStudentId = useMemo(
+    () =>
+      new Map(
+        (permissionsData?.getPermissionsForRehearsalDate ?? []).map((permission) => [
+          String(permission.studentId),
+          permission,
+        ])
+      ),
+    [permissionsData]
+  );
 
   // Permisos (admin / owner / closed)
   const takenById = activeSession?.takenBy?.id ? String(activeSession.takenBy.id) : null;
@@ -1119,6 +1153,7 @@ const AttendancePage = () => {
                     key={student.id}
                     student={student}
                     attendance={attendance}
+                    permission={permissionsByStudentId.get(String(student.id))}
                     onStatusChange={(status) => handleStatusChange(student.id, status)}
                     onEditNotes={() => handleEditNotes(student.id)}
                     searchTerm={searchTerm}
@@ -1194,6 +1229,7 @@ StudentRow.propTypes = {
     notes: PropTypes.string,
     attendanceId: PropTypes.string,
   }),
+  permission: PropTypes.object,
   onStatusChange: PropTypes.func.isRequired,
   onEditNotes: PropTypes.func.isRequired,
   searchTerm: PropTypes.string,

@@ -3,6 +3,7 @@ import React from "react";
 import { PermissionStatusBadge } from "./PermissionStatusBadge";
 import { JustificationBadge } from "./JustificationBadge";
 import { formatPermissionDate } from "../dateUtils";
+import { PermissionTypeBadge } from "./PermissionTypeBadge";
 
 const fmtDate = formatPermissionDate;
 
@@ -84,11 +85,12 @@ export function PermissionRequestCard({ permission, onViewDetail, onCancel, show
       </div>
 
       {/* Justification badge (only when there's a concrete status) */}
-      {permission.justificationStatus !== "PENDING_REVIEW" && (
-        <div>
+      <div className="flex flex-wrap gap-1.5">
+        <PermissionTypeBadge type={permission.permissionType} size="xs" />
+        {permission.justificationStatus !== "PENDING_REVIEW" && (
           <JustificationBadge status={permission.justificationStatus} size="xs" />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Reason */}
       <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">{permission.reason}</p>
@@ -121,14 +123,16 @@ export function PermissionRequestCard({ permission, onViewDetail, onCancel, show
         <div className="flex items-center gap-2">
           {canCancel && (
             <button
+              type="button"
               onClick={() => onCancel(permission)}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+              className="text-xs text-red-600 hover:text-red-700 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
             >
               Cancelar
             </button>
           )}
           {onViewDetail && (
             <button
+              type="button"
               onClick={() => onViewDetail(permission)}
               className="text-xs font-medium text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
             >

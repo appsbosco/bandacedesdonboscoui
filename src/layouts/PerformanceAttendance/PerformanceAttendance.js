@@ -22,6 +22,8 @@ import SoftBox from "components/SoftBox";
 import SoftTypography from "components/SoftTypography";
 import { Card } from "@mui/material";
 import { mapInstrumentToSection } from "utils/sectionMapper";
+import { GET_PERMISSIONS_FOR_EVENT } from "layouts/absencePermissions/absencePermissions.gql";
+import { StudentPermissionBadge } from "layouts/absencePermissions/components/AttendancePermissionIndicator";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GQL — mover a graphql/queries.js y graphql/mutations.js en producción
@@ -3572,7 +3574,7 @@ const getAttendanceDraft = (entry, localAttendance) => {
 //  quick thumb-tapping in the field. High contrast, generous targets.
 // ─────────────────────────────────────────────────────────────────
 
-const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm }) => {
+const AttendancePersonRow = ({ entry, localValue, permission, onChange, canEdit, searchTerm }) => {
   const draft = getAttendanceDraft(entry, { [entry.user.id]: localValue });
   const status = draft.attendanceStatus;
   const plannedBuses = getPlannedBuses(entry);
@@ -3659,6 +3661,26 @@ const AttendancePersonRow = ({ entry, localValue, onChange, canEdit, searchTerm 
               <span className="text-[11px] text-amber-600 font-semibold">elegir bus ↓</span>
             )}
           </div>
+          <StudentPermissionBadge permission={permission} />
+          {canEdit &&
+            permission?.suggestedAttendanceStatus &&
+            ["ABSENT_JUSTIFIED", "ABSENT_UNJUSTIFIED", "LATE"].includes(
+              permission.suggestedAttendanceStatus
+            ) && (
+              <button
+                type="button"
+                onClick={() =>
+                  onChange(
+                    entry.user.id,
+                    permission.suggestedAttendanceStatus === "LATE" ? "LATE" : "ABSENT",
+                    null
+                  )
+                }
+                className="mt-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              >
+                Aplicar permiso aprobado
+              </button>
+            )}
         </div>
 
         {/* P / A buttons */}
@@ -3783,6 +3805,7 @@ AttendancePersonRow.propTypes = {
     attendanceStatus: PropTypes.string,
     busNumber: PropTypes.number,
   }),
+  permission: PropTypes.object,
   onChange: PropTypes.func.isRequired,
   canEdit: PropTypes.bool,
   searchTerm: PropTypes.string,
@@ -3796,7 +3819,22 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
   const [groupFilter, setGroupFilter] = useState("ALL");
 
   const [bulkMarkAttendance] = useMutation(BULK_MARK_ATTENDANCE);
+  const { data: permissionsData } = useQuery(GET_PERMISSIONS_FOR_EVENT, {
+    variables: { eventId },
+    skip: !eventId,
+    fetchPolicy: "cache-and-network",
+  });
   const canEdit = true;
+  const permissionsByStudentId = useMemo(
+    () =>
+      new Map(
+        (permissionsData?.getPermissionsForEvent ?? []).map((permission) => [
+          String(permission.studentId),
+          permission,
+        ])
+      ),
+    [permissionsData]
+  );
 
   const eligible = useMemo(() => {
     let list = (roster || []).filter((e) => !e.excludedFromEvent);
@@ -4097,6 +4135,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
                       key={e.id}
                       entry={e}
                       localValue={localAttendance[e.user.id]}
+                      permission={permissionsByStudentId.get(String(e.user.id))}
                       onChange={handleChange}
                       canEdit={canEdit}
                       searchTerm={search}
@@ -4118,6 +4157,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
               key={e.id}
               entry={e}
               localValue={localAttendance[e.user.id]}
+              permission={permissionsByStudentId.get(String(e.user.id))}
               onChange={handleChange}
               canEdit={canEdit}
               searchTerm={search}

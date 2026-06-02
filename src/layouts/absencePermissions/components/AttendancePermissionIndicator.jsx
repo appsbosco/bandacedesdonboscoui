@@ -3,6 +3,8 @@ import React from "react";
 import { useQuery } from "@apollo/client";
 import { PermissionStatusBadge } from "./PermissionStatusBadge";
 import { JustificationBadge } from "./JustificationBadge";
+import { PermissionTypeBadge } from "./PermissionTypeBadge";
+import { getPermissionTypeLabel } from "../permissionTypes";
 import { GET_PERMISSIONS_FOR_SESSION, GET_PERMISSIONS_FOR_EVENT } from "../absencePermissions.gql";
 
 // ─── Per-student indicator (receives pre-fetched data) ─────────────────────────
@@ -13,6 +15,7 @@ export function StudentPermissionBadge({ permission, onViewDetail }) {
   return (
     <div className="flex flex-col gap-1 mt-1">
       <div className="flex items-center gap-1.5 flex-wrap">
+        <PermissionTypeBadge type={permission.permissionType} size="xs" />
         <PermissionStatusBadge status={permission.requestStatus} size="xs" />
         {permission.justificationStatus !== "PENDING_REVIEW" && (
           <JustificationBadge status={permission.justificationStatus} size="xs" />
@@ -23,6 +26,7 @@ export function StudentPermissionBadge({ permission, onViewDetail }) {
       )}
       {onViewDetail && (
         <button
+          type="button"
           onClick={() => onViewDetail(permission)}
           className="self-start text-xs text-blue-600 hover:text-blue-700 hover:underline"
         >
@@ -73,11 +77,12 @@ export function SessionPermissionsIndicator({ sessionId, onViewPermission }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {permissions.map((p) => (
             <button
+              type="button"
               key={p.id}
               onClick={() => onViewPermission?.(p)}
               className="text-xs bg-white border border-amber-200 text-amber-700 rounded-full px-2.5 py-0.5 hover:bg-amber-100 transition-colors"
             >
-              Ver permiso
+              {getPermissionTypeLabel(p.permissionType)}
             </button>
           ))}
         </div>
@@ -117,11 +122,12 @@ export function EventPermissionsIndicator({ eventId, onViewPermission }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {permissions.map((p) => (
             <button
+              type="button"
               key={p.id}
               onClick={() => onViewPermission?.(p)}
               className="text-xs bg-white border border-blue-200 text-blue-700 rounded-full px-2.5 py-0.5 hover:bg-blue-100 transition-colors"
             >
-              Ver permiso
+              {getPermissionTypeLabel(p.permissionType)}
             </button>
           ))}
         </div>
