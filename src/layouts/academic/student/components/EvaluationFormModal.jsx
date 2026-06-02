@@ -86,7 +86,7 @@ function NormalizedScorePreview({ normalized }) {
   );
 }
 
-function RejectedWarning() {
+function RejectedWarning({ reviewComment }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
       <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200">
@@ -107,8 +107,16 @@ function RejectedWarning() {
       <div>
         <p className="text-xs font-semibold text-amber-800">Evaluación rechazada</p>
         <p className="mt-0.5 text-xs leading-relaxed text-amber-700">
-          Revisa los cambios solicitados y vuelve a subir la evidencia para reenviarla.
+          Corrige la nota, reemplaza la evidencia o realiza ambos cambios antes de reenviarla.
         </p>
+        {reviewComment && (
+          <div className="mt-2 rounded-xl border border-amber-200 bg-white/70 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+              Motivo del rechazo
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">{reviewComment}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -151,11 +159,12 @@ export function EvaluationFormModal({
 }) {
   const [form, setForm] = useState(INITIAL);
   const [evidence, setEvidence] = useState(null);
+  const [evidenceChanged, setEvidenceChanged] = useState(false);
   const [evidenceError, setEvidenceError] = useState(null);
   const [formError, setFormError] = useState(null);
 
   const isEdit = mode === "edit";
-  const requiresFreshEvidence = isEdit && evaluation?.status === "rejected";
+  const isRejected = isEdit && evaluation?.status === "rejected";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -167,16 +176,12 @@ export function EvaluationFormModal({
         scaleMin: String(evaluation.scaleMin ?? "0"),
         scaleMax: String(evaluation.scaleMax ?? "100"),
       });
-      setEvidence(
-        evaluation.status === "rejected"
-          ? null
-          : {
-              url: evaluation.evidenceUrl,
-              publicId: evaluation.evidencePublicId,
-              resourceType: evaluation.evidenceResourceType || "image",
-              originalName: evaluation.evidenceOriginalName || "evidencia",
-            }
-      );
+      setEvidence({
+        url: evaluation.evidenceUrl,
+        publicId: evaluation.evidencePublicId,
+        resourceType: evaluation.evidenceResourceType || "image",
+        originalName: evaluation.evidenceOriginalName || "evidencia",
+      });
     } else {
       setForm({
         ...INITIAL,
@@ -185,6 +190,7 @@ export function EvaluationFormModal({
       });
       setEvidence(null);
     }
+    setEvidenceChanged(false);
     setFormError(null);
     setEvidenceError(null);
   }, [isOpen, mode, evaluation, initialSelection]);
@@ -201,6 +207,7 @@ export function EvaluationFormModal({
       resourceType: result.resourceType,
       originalName: result.originalName,
     });
+    setEvidenceChanged(true);
     setEvidenceError(null);
   }
 
@@ -230,8 +237,8 @@ export function EvaluationFormModal({
     }
     if (!evidence) {
       setFormError(
-        requiresFreshEvidence
-          ? "Debes volver a subir la evidencia para reenviar una evaluación rechazada"
+        isRejected
+          ? "Debes conservar o reemplazar la evidencia antes de reenviar"
           : "Debes subir evidencia de la nota"
       );
       return;
@@ -251,15 +258,20 @@ export function EvaluationFormModal({
 
     try {
       if (isEdit && evaluation) {
-        await onUpdate(evaluation.id, {
+        const updateInput = {
           scoreRaw: input.scoreRaw,
           scaleMin: input.scaleMin,
           scaleMax: input.scaleMax,
-          evidenceUrl: input.evidenceUrl,
-          evidencePublicId: input.evidencePublicId,
-          evidenceResourceType: input.evidenceResourceType,
-          evidenceOriginalName: input.evidenceOriginalName,
-        });
+        };
+        if (evidenceChanged) {
+          Object.assign(updateInput, {
+            evidenceUrl: input.evidenceUrl,
+            evidencePublicId: input.evidencePublicId,
+            evidenceResourceType: input.evidenceResourceType,
+            evidenceOriginalName: input.evidenceOriginalName,
+          });
+        }
+        await onUpdate(evaluation.id, updateInput);
       } else {
         await onSubmit(input);
       }
@@ -302,7 +314,7 @@ export function EvaluationFormModal({
 
           <div className="flex flex-col gap-4">
             {/* Alerta evaluación rechazada */}
-            {requiresFreshEvidence && <RejectedWarning />}
+            {isRejected && <RejectedWarning reviewComment={evaluation.reviewComment} />}
 
             {/* Materia */}
             <div>
@@ -385,9 +397,11 @@ export function EvaluationFormModal({
               {evidenceError && (
                 <p className="mt-1.5 text-xs font-medium text-rose-600">{evidenceError}</p>
               )}
-              {isEdit && evidence && !evidenceError && !requiresFreshEvidence && (
+              {isEdit && evidence && !evidenceError && (
                 <p className="mt-1.5 text-xs text-neutral-400">
-                  Evidencia cargada. Puedes reemplazarla subiendo un nuevo archivo.
+                  {evidenceChanged
+                    ? "Nueva evidencia cargada."
+                    : "Puedes conservar la evidencia actual o reemplazarla subiendo un nuevo archivo."}
                 </p>
               )}
             </div>
@@ -418,7 +432,9 @@ export function EvaluationFormModal({
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              Comprobante listo. Registra tu evaluación.
+              {isRejected
+                ? "Corrección lista para reenviar."
+                : "Comprobante listo. Registra tu evaluación."}
             </p>
           )}
           <button
@@ -436,7 +452,11 @@ export function EvaluationFormModal({
             {loading && (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white bg-black" />
             )}
-            {isEdit ? "Guardar cambios" : "Registrar evaluación"}
+            {isRejected
+              ? "Reenviar corrección"
+              : isEdit
+              ? "Guardar cambios"
+              : "Registrar evaluación"}
           </button>
         </div>
       </form>
