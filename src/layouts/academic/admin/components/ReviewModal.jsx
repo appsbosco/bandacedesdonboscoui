@@ -291,7 +291,7 @@ function CommentCard({ comment, onChange, disabled, rejectMode, textareaRef, sec
           Explica qué debe corregir el estudiante antes de volver a enviar.
         </p>
       )}
-      {/* <textarea
+      <textarea
         ref={textareaRef}
         value={comment}
         onChange={(event) => onChange(event.target.value)}
@@ -305,7 +305,7 @@ function CommentCard({ comment, onChange, disabled, rejectMode, textareaRef, sec
         aria-label={rejectMode ? "Motivo de rechazo" : "Comentario para el estudiante"}
         required={rejectMode}
         className="w-full resize-none rounded-xl border border-neutral-200 bg-white p-3 text-sm leading-relaxed text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
-      /> */}
+      />
     </section>
   );
 }
@@ -609,7 +609,7 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
             error={scaleError}
             onChange={handleScoreChange}
           />
-          {/* <CommentCard
+          <CommentCard
             comment={reviewComment}
             onChange={(value) => {
               setReviewComment(value);
@@ -620,7 +620,7 @@ export function ReviewModal({ isOpen, onClose, evaluation, onReview, loading }) 
             textareaRef={commentRef}
             sectionRef={commentSectionRef}
           />
-          <SummaryCard
+          {/* <SummaryCard
             hasScoreChanges={hasScoreChanges}
             scoreRaw={scoreRaw}
             scaleMax={scaleMax}
