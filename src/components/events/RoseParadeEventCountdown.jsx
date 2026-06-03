@@ -7,6 +7,8 @@ import { getRoseParadeEventMeta } from "utils/roseParade";
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 const DAY_MS = 24 * 60 * MINUTE_MS;
+const STORY_WIDTH = 1080;
+const STORY_HEIGHT = 1920;
 
 function getEventTarget(event) {
   const timestamp = Number(event.date);
@@ -234,30 +236,23 @@ async function createStoryBlob(event, countdown) {
 
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1920;
+    canvas.width = STORY_WIDTH;
+    canvas.height = STORY_HEIGHT;
     const ctx = canvas.getContext("2d");
 
-    ctx.fillStyle = "#080b1a";
-    ctx.fillRect(0, 0, 1080, 1920);
-
-    const glow = ctx.createRadialGradient(540, 930, 260, 540, 930, 850);
-    glow.addColorStop(0, "rgba(79,70,229,0.72)");
-    glow.addColorStop(0.55, "rgba(49,46,129,0.44)");
-    glow.addColorStop(1, "rgba(8,11,26,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, 1080, 1920);
+    ctx.fillStyle = "#fafafb";
+    ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
 
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.45)";
-    ctx.shadowBlur = 70;
-    ctx.shadowOffsetY = 24;
+    ctx.shadowColor = "rgba(15,23,42,0.1)";
+    ctx.shadowBlur = 32;
+    ctx.shadowOffsetY = 12;
     roundRect(ctx, 74, 90, 932, 1740, 96);
-    ctx.fillStyle = "#fafafb";
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
     resetShadow(ctx);
-    ctx.strokeStyle = "rgba(255,255,255,0.24)";
-    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(226,232,240,0.9)";
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
 

@@ -22,6 +22,12 @@ const NOTIF_META = {
   LIVE: { label: "Envío real" },
 };
 
+const PRIORITY_META = {
+  low: { label: "Baja", tone: "text-slate-500 bg-slate-100 ring-slate-200" },
+  normal: { label: "Normal", tone: "text-blue-700 bg-blue-50 ring-blue-100" },
+  high: { label: "Alta", tone: "text-rose-700 bg-rose-50 ring-rose-100" },
+};
+
 export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onDelete }) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -64,8 +70,34 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   const imgSrc = getEventImage(event.type);
   const roseParadeMeta = getRoseParadeEventMeta(event);
   const formattedDate = formatDateEs(event.date);
+  const shortDate = formatDateEs(event.date, "short");
   const formattedTime = event.time ? normalizeTimeTo12h(event.time) : "";
-  const audience = Array.isArray(event.audience) ? event.audience : [];
+  const busCapacities = Array.isArray(event.busCapacities) ? event.busCapacities : [];
+  const totalBusCapacity = busCapacities.reduce(
+    (sum, bus) => sum + (Number(bus?.capacity) || 0),
+    0
+  );
+  const priority = PRIORITY_META[event.priority] ?? PRIORITY_META.normal;
+  const transportFee = Number(event.transportFeeAmount) || 0;
+  const hasTransportPayment = Boolean(event.transportPaymentEnabled);
+  const scheduleItems = [
+    event.departure && {
+      label: "Salida CEDES",
+      value: normalizeTimeTo12h(event.departure),
+      icon: <BusIcon />,
+    },
+    event.arrival && {
+      label: "Regreso aprox.",
+      value: normalizeTimeTo12h(event.arrival),
+      icon: <HomeIcon />,
+    },
+  ].filter(Boolean);
+  const paymentSummary = hasTransportPayment
+    ? transportFee > 0
+      ? `Pago habilitado · ₡${transportFee.toLocaleString("es-CR")}`
+      : "Pago habilitado"
+    : "";
+  const roseParadeContext = roseParadeMeta ? getRoseParadeContext(event, cat.label) : null;
 
   const panelClasses = isMobile
     ? `fixed inset-x-0 bottom-0 z-[1300] flex max-h-[94dvh] flex-col overflow-hidden rounded-t-[32px] bg-[#FAFAFB] shadow-[0_-24px_72px_rgba(15,23,42,0.2)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -149,64 +181,97 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
             </div>
           )}
 
-          <EventAvatarStack roseParadeMeta={roseParadeMeta} audience={audience} />
+          <EventAvatarStack roseParadeMeta={roseParadeMeta} />
 
-          <MetaRow
-            left={roseParadeMeta ? "Rumbo a Pasadena" : event.type || cat.label}
-            right={`Fecha: ${formattedDate}`}
+          <SummaryStrip
+            category={cat.label}
+            date={shortDate}
+            place={event.place}
+            roseParadeMeta={roseParadeMeta}
+            type={event.type}
           />
 
+          {roseParadeContext && !roseParadeMeta.isParadeDay && (
+            <RoseParadeContextPanel context={roseParadeContext} />
+          )}
+
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <InfoCard icon={<CalIcon />} label="Fecha" value={formattedDate} accent={cat.accent} />
-            {formattedTime && (
-              <InfoCard
-                icon={<ClockIcon />}
-                label="Hora"
-                value={formattedTime}
-                accent={cat.accent}
-              />
-            )}
             {event.place && (
               <InfoCard
                 icon={<PinIcon />}
-                label="Lugar"
+                label="Punto clave"
                 value={event.place}
                 accent={cat.accent}
                 wide
               />
             )}
-            {event.departure && (
+            {scheduleItems.length > 0 && (
               <InfoCard
-                icon={<BusIcon />}
-                label="Salida"
-                value={normalizeTimeTo12h(event.departure)}
-                accent={cat.accent}
-              />
-            )}
-            {event.arrival && (
-              <InfoCard
-                icon={<HomeIcon />}
-                label="Llegada aprox."
-                value={normalizeTimeTo12h(event.arrival)}
-                accent={cat.accent}
-              />
-            )}
-            <InfoCard
-              icon={<BellIcon />}
-              label="Notificación"
-              value={notif.label}
-              accent={cat.accent}
-            />
-            {audience.length > 0 && (
-              <InfoCard
-                icon={<UsersIcon />}
-                label="Audiencia"
-                value={audience.join(", ")}
+                icon={<ClockIcon />}
+                label="Traslado"
+                value={scheduleItems.map((item) => `${item.label}: ${item.value}`).join(" · ")}
                 accent={cat.accent}
                 wide
               />
             )}
+            {busCapacities.length > 0 && (
+              <InfoCard
+                icon={<BusIcon />}
+                label="Transporte"
+                value={`${busCapacities.length} bus${
+                  busCapacities.length === 1 ? "" : "es"
+                } · ${totalBusCapacity} cupos`}
+                accent={cat.accent}
+              />
+            )}
+            {hasTransportPayment && (
+              <InfoCard
+                icon={<PaymentIcon />}
+                label="Pago de transporte"
+                value={paymentSummary}
+                accent={cat.accent}
+              />
+            )}
+            {event.notificationMode === "LIVE" && (
+              <InfoCard
+                icon={<BellIcon />}
+                label="Aviso enviado"
+                value={notif.label}
+                accent={cat.accent}
+              />
+            )}
           </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {event.priority === "high" && (
+              <StatusPill label={`Prioridad ${priority.label}`} tone={priority.tone} />
+            )}
+            {event.type && <StatusPill label={event.type} />}
+            {roseParadeMeta && <StatusPill label={roseParadeMeta.label} />}
+          </div>
+
+          {busCapacities.length > 0 && (
+            <section className="pt-7">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                Cupos por bus
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {busCapacities.map((bus) => (
+                  <div
+                    key={bus.busNumber}
+                    className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200/70"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                      Bus {bus.busNumber}
+                    </p>
+                    <p className="mt-1 text-lg font-black text-slate-950">
+                      {bus.capacity} cupos
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {event.description && (
             <section className="pb-2 pt-8">
@@ -218,6 +283,20 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
               </h3>
               <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
                 {event.description}
+              </p>
+            </section>
+          )}
+
+          {roseParadeContext && !event.description && (
+            <section className="pb-2 pt-8">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-500">
+                Pasadena 2027
+              </p>
+              <h3 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+                {roseParadeContext.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                {roseParadeContext.description}
               </p>
             </section>
           )}
@@ -257,23 +336,52 @@ export default function EventDrawer({ open, event, isAdmin, onClose, onEdit, onD
   );
 }
 
-function EventAvatarStack({ roseParadeMeta, audience }) {
-  if (!roseParadeMeta && audience.length === 0) return null;
+function getRoseParadeContext(event, categoryLabel) {
+  const timestamp = Number(event.date);
+  const dateKey = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+  const isBeforeParade = dateKey && dateKey < "2027-01-01";
+  const isAfterParade = dateKey && dateKey > "2027-01-01";
 
-  if (!roseParadeMeta) {
-    return (
-      <div className="flex flex-wrap justify-center gap-2 pb-5">
-        {audience.map((item) => (
-          <span
-            key={item}
-            className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-200/70"
-          >
-            {item}
-          </span>
-        ))}
-      </div>
-    );
+  if (isBeforeParade) {
+    return {
+      title: "Preparación para Pasadena",
+      description:
+        "Este evento forma parte de la etapa final de preparación de la Banda CEDES Don Bosco rumbo al Rose Parade 2027.",
+      highlights: [
+        { label: "Propósito", value: "Preparar la presentación internacional" },
+        { label: "Representación", value: "Costa Rica en Pasadena" },
+        { label: "Enfoque", value: event.type || categoryLabel },
+      ],
+    };
   }
+
+  if (isAfterParade) {
+    return {
+      title: "Cierre de la gira Rose Parade",
+      description:
+        "Este evento acompaña el cierre de la experiencia en Pasadena después de la participación de la banda en el Rose Parade 2027.",
+      highlights: [
+        { label: "Etapa", value: "Cierre de gira" },
+        { label: "Experiencia", value: "Pasadena 2027" },
+        { label: "Enfoque", value: event.type || categoryLabel },
+      ],
+    };
+  }
+
+  return {
+    title: "Agenda Rose Parade 2027",
+    description:
+      "Este evento es parte de la agenda especial de la Banda CEDES Don Bosco en su camino al Rose Parade 2027.",
+    highlights: [
+      { label: "Agenda", value: "Rose Parade 2027" },
+      { label: "Delegación", value: "Banda CEDES Don Bosco" },
+      { label: "Enfoque", value: event.type || categoryLabel },
+    ],
+  };
+}
+
+function EventAvatarStack({ roseParadeMeta }) {
+  if (!roseParadeMeta) return null;
 
   return (
     <div className="flex justify-center pb-5" aria-label="Banda CEDES Don Bosco rumbo a Pasadena">
@@ -291,11 +399,14 @@ function EventAvatarStack({ roseParadeMeta, audience }) {
   );
 }
 
-function MetaRow({ left, right }) {
+function SummaryStrip({ category, date, place, roseParadeMeta, type }) {
+  const mainLabel = roseParadeMeta ? "Rumbo a Pasadena" : type || category;
+  const details = [date, place].filter(Boolean).join(" · ");
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-y border-slate-200/70 py-4 text-sm font-bold text-slate-900">
-      <span>{left}</span>
-      <span>{right}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-200/70 py-4 text-sm font-bold text-slate-900">
+      <span>{mainLabel}</span>
+      {details && <span className="text-right text-slate-500">{details}</span>}
     </div>
   );
 }
@@ -317,6 +428,41 @@ function InfoCard({ icon, label, value, accent, wide = false }) {
       </div>
       <p className="break-words text-sm font-bold leading-5 text-slate-950">{value}</p>
     </div>
+  );
+}
+
+function RoseParadeContextPanel({ context }) {
+  return (
+    <section className="mt-6 rounded-[24px] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] ring-1 ring-rose-100">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-500">
+        Agenda Rose Parade
+      </p>
+      <h3 className="mt-2 text-lg font-black tracking-tight text-slate-950">{context.title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{context.description}</p>
+      <div className="mt-4 grid gap-2">
+        {context.highlights.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-start justify-between gap-3 rounded-2xl bg-rose-50/70 px-3 py-2.5"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-500">
+              {item.label}
+            </span>
+            <span className="text-right text-sm font-bold leading-5 text-slate-900">
+              {item.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StatusPill({ label, tone = "bg-white text-slate-600 ring-slate-200/70" }) {
+  return (
+    <span className={`rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${tone}`}>
+      {label}
+    </span>
   );
 }
 
@@ -360,20 +506,40 @@ function AdminFooter({ event, isMobile, onClose, onDelete, onEdit }) {
 
 EventAvatarStack.propTypes = {
   roseParadeMeta: PropTypes.object,
-  audience: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
-MetaRow.propTypes = {
-  left: PropTypes.string.isRequired,
-  right: PropTypes.string.isRequired,
+SummaryStrip.propTypes = {
+  category: PropTypes.string.isRequired,
+  date: PropTypes.string,
+  place: PropTypes.string,
+  roseParadeMeta: PropTypes.object,
+  type: PropTypes.string,
 };
 
 InfoCard.propTypes = {
   icon: PropTypes.node.isRequired,
   label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   accent: PropTypes.string,
   wide: PropTypes.bool,
+};
+
+RoseParadeContextPanel.propTypes = {
+  context: PropTypes.shape({
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string.isRequired,
+    highlights: PropTypes.arrayOf(
+      PropTypes.shape({
+        label: PropTypes.string.isRequired,
+        value: PropTypes.string.isRequired,
+      })
+    ).isRequired,
+  }).isRequired,
+};
+
+StatusPill.propTypes = {
+  label: PropTypes.string.isRequired,
+  tone: PropTypes.string,
 };
 
 AdminFooter.propTypes = {
@@ -387,22 +553,6 @@ AdminFooter.propTypes = {
 const BackIcon = () => (
   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2.2" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-  </svg>
-);
-
-const CalIcon = () => (
-  <svg
-    className="h-3.5 w-3.5"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="2.2"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M3 9.75h18"
-    />
   </svg>
 );
 
@@ -487,7 +637,7 @@ const BellIcon = () => (
   </svg>
 );
 
-const UsersIcon = () => (
+const PaymentIcon = () => (
   <svg
     className="h-3.5 w-3.5"
     fill="none"
@@ -498,7 +648,7 @@ const UsersIcon = () => (
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.33 0-4.512-.645-6.374-1.766v-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+      d="M2.25 8.25h19.5M3.75 6h16.5A1.5 1.5 0 0 1 21.75 7.5v9A1.5 1.5 0 0 1 20.25 18h-16.5A1.5 1.5 0 0 1 2.25 16.5v-9A1.5 1.5 0 0 1 3.75 6Zm3 10.5h3.75"
     />
   </svg>
 );

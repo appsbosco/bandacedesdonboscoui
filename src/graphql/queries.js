@@ -165,6 +165,18 @@ export const GET_EVENTS = gql`
       category
       description
       type
+      notificationMode
+      audience
+      busCapacities {
+        busNumber
+        capacity
+      }
+      transportPaymentEnabled
+      transportFeeAmount
+      priority
+      visibility
+      createdAt
+      updatedAt
     }
   }
 `;
