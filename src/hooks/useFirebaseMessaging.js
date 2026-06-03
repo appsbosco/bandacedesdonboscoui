@@ -18,7 +18,10 @@ export function useFirebaseMessaging(userId) {
       try {
         const token = await generateToken();
         if (!token || cancelled) return;
+        const storageKey = `fcmTokenSynced:${userId}`;
+        if (localStorage.getItem(storageKey) === token) return;
         await updateNotificationToken({ variables: { userId, token } });
+        localStorage.setItem(storageKey, token);
       } catch (err) {
         console.error("[FCM] Token registration:", err);
       }

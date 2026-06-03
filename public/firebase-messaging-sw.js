@@ -23,12 +23,20 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw.js] Received background message ", payload);
-  // Customize notification here
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: "./Icons-01.jpg",
-  };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // Estrategia única: el backend envía payload FCM con `notification` /
+  // `webpush.notification`, entonces Firebase muestra la notificación en
+  // background. No llamamos showNotification() para ese mismo mensaje porque
+  // produciría duplicados en navegadores.
+  if (payload.notification) return;
+
+  // Fallback solo para futuros mensajes data-only.
+  const title = payload.data?.title;
+  const body = payload.data?.body;
+  if (!title && !body) return;
+
+  self.registration.showNotification(title || "Banda CEDES Don Bosco", {
+    body: body || "",
+    icon: "./Icons-01.jpg",
+  });
 });
