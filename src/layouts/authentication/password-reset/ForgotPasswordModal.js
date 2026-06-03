@@ -228,7 +228,7 @@ const ForgotPasswordModal = ({ open, onClose }) => {
                   ¿Olvidaste tu contraseña?
                 </h2>
                 <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">
-                  Sin problema. Escribí tu correo y te enviamos un enlace para restablecerla.
+                  Escribí tu correo y te enviamos un enlace para restablecerla.
                 </p>
               </div>
 

@@ -901,7 +901,7 @@ function OtherDocumentQuickPreview({ document }) {
         <iframe
           src={buildPdfPreviewUrl(pdfUrl, previewImage.publicId)}
           title={`Vista previa ${document.id}`}
-          className="h-44 w-full border-0"
+          className="h-44 w-full border-0 pointer-events-none"
         />
       </div>
     );
@@ -1268,7 +1268,7 @@ function UserDetailPanel({
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Identity documents section */}
         <div className="px-5 py-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">
@@ -2827,7 +2827,7 @@ function AdminDocumentsView() {
             {selectedRow && (
               <div
                 className="w-96 flex-shrink-0 sticky top-4"
-                style={{ maxHeight: "calc(100vh - 140px)" }}
+                style={{ height: "calc(100vh - 140px)" }}
               >
                 <UserDetailPanel
                   key={selectedRow.id}
