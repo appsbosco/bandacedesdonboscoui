@@ -9,7 +9,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { GET_EVENTS } from "graphql/queries";
+import { GET_EVENTS, GET_BIRTHDAYS_FOR_CALENDAR } from "graphql/queries";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -64,8 +64,8 @@ const CATEGORY_META = {
   },
 };
 
-const VIEWS = ["month", "week", "day", "agenda"];
-const VIEW_LABELS = { month: "Mes", week: "Semana", day: "Día", agenda: "Agenda" };
+const VIEWS = ["month", "week", "day", "agenda", "birthdays"];
+const VIEW_LABELS = { month: "Mes", week: "Semana", day: "Día", agenda: "Agenda", birthdays: "🎂 Cumpleaños" };
 
 const BANDS = [
   "Todas las agrupaciones",
@@ -127,6 +127,11 @@ function eventDate(event) {
   return new Date(Number(event.date));
 }
 
+function birthdayDate(event) {
+  // start is an ISO string from the backend (noon UTC)
+  return new Date(event.start);
+}
+
 function getCategoryMeta(category) {
   return CATEGORY_META[category] ?? CATEGORY_META.other;
 }
@@ -169,6 +174,9 @@ export default function EventsCalendar({ currentUser }) {
   // View state
   const today = new Date();
   const [anchor, setAnchor] = useState(today);
+  const { data: birthdayData } = useQuery(GET_BIRTHDAYS_FOR_CALENDAR, {
+    variables: { year: anchor.getFullYear() },
+  });
   const [view, setView] = useState("month");
   const [catFilter, setCatFilter] = useState("all");
   const [bandFilter, setBandFilter] = useState("all");
@@ -189,6 +197,11 @@ export default function EventsCalendar({ currentUser }) {
     [eventData?.getEvents]
   );
 
+  const allBirthdayEvents = useMemo(
+    () => (Array.isArray(birthdayData?.birthdaysForCalendar) ? birthdayData.birthdaysForCalendar : []),
+    [birthdayData?.birthdaysForCalendar]
+  );
+
   const filteredEvents = useMemo(() => {
     let evs = allEvents;
     if (catFilter !== "all") evs = evs.filter((e) => e.category === catFilter);
@@ -200,11 +213,15 @@ export default function EventsCalendar({ currentUser }) {
     return filteredEvents.filter((e) => sameDay(eventDate(e), date));
   }
 
+  function birthdaysForDay(date) {
+    return allBirthdayEvents.filter((e) => sameDay(birthdayDate(e), date));
+  }
+
   // ── Navigation ─────────────────────────────────────────────────────────────
   const navigate = (dir) => {
     // dir: -1 | 1
     const d = new Date(anchor);
-    if (view === "month" || view === "agenda") {
+    if (view === "month" || view === "agenda" || view === "birthdays") {
       d.setDate(1);
       d.setMonth(d.getMonth() + dir);
     } else if (view === "week") d.setDate(d.getDate() + dir * 7);
@@ -236,6 +253,8 @@ export default function EventsCalendar({ currentUser }) {
         month: "long",
         year: "numeric",
       });
+    if (view === "birthdays")
+      return `Cumpleaños — ${MONTH_NAMES_ES[anchor.getMonth()]} ${anchor.getFullYear()}`;
     return `Agenda — ${MONTH_NAMES_ES[anchor.getMonth()]} ${anchor.getFullYear()}`;
   }, [view, anchor]);
 
@@ -332,6 +351,7 @@ export default function EventsCalendar({ currentUser }) {
                   anchor={anchor}
                   today={today}
                   eventsForDay={eventsForDay}
+                  birthdaysForDay={birthdaysForDay}
                   onDayClick={(date) => {
                     setAnchor(date);
                     setView("day");
@@ -365,6 +385,13 @@ export default function EventsCalendar({ currentUser }) {
                   filteredEvents={filteredEvents}
                   today={today}
                   onEventClick={openDrawer}
+                />
+              )}
+              {view === "birthdays" && (
+                <BirthdayView
+                  anchor={anchor}
+                  birthdayEvents={allBirthdayEvents}
+                  today={today}
                 />
               )}
             </>
@@ -578,7 +605,7 @@ function CalendarToolbar({
 }
 
 // ─── Month View ───────────────────────────────────────────────────────────────
-function MonthView({ anchor, today, eventsForDay, onDayClick, onEventClick, onDayAddClick }) {
+function MonthView({ anchor, today, eventsForDay, birthdaysForDay, onDayClick, onEventClick, onDayAddClick }) {
   const days = useMemo(() => getMonthDays(anchor.getFullYear(), anchor.getMonth()), [anchor]);
 
   return (
@@ -600,6 +627,7 @@ function MonthView({ anchor, today, eventsForDay, onDayClick, onEventClick, onDa
         {days.map(({ date, current }, idx) => {
           const isToday = sameDay(date, today);
           const events = eventsForDay(date);
+          const dayBirthdays = birthdaysForDay ? birthdaysForDay(date) : [];
 
           return (
             <div
@@ -670,6 +698,16 @@ function MonthView({ anchor, today, eventsForDay, onDayClick, onEventClick, onDa
                     +{events.length - 3} más
                   </button>
                 )}
+                {dayBirthdays.map((b) => (
+                  <div
+                    key={b.id}
+                    className="w-full text-left text-xs font-medium px-1.5 py-0.5 rounded truncate flex items-center gap-1 bg-pink-50 text-pink-700 border border-pink-100"
+                    title={b.title}
+                  >
+                    <span className="flex-shrink-0">🎂</span>
+                    <span className="truncate">{b.birthdayUserName}</span>
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -993,6 +1031,117 @@ function AgendaView({ anchor, filteredEvents, today, onEventClick }) {
   );
 }
 
+// ─── Birthday View ────────────────────────────────────────────────────────────
+function BirthdayView({ anchor, birthdayEvents, today }) {
+  const rangeStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const rangeEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+
+  const grouped = useMemo(() => {
+    const evs = birthdayEvents
+      .filter((e) => {
+        const d = birthdayDate(e);
+        return d >= rangeStart && d <= rangeEnd;
+      })
+      .sort((a, b) => birthdayDate(a) - birthdayDate(b));
+
+    const map = new Map();
+    for (const ev of evs) {
+      const key = birthdayDate(ev).toISOString().slice(0, 10);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(ev);
+    }
+    return [...map.entries()];
+  }, [birthdayEvents, anchor]);
+
+  if (grouped.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center shadow-sm">
+        <p className="text-4xl mb-3">🎂</p>
+        <p className="text-sm text-slate-400 font-medium">No hay cumpleaños este mes en tu sección</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {grouped.map(([dateKey, events]) => {
+        const date = new Date(dateKey + "T12:00:00");
+        const isToday = sameDay(date, today);
+        return (
+          <div
+            key={dateKey}
+            className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm"
+          >
+            <div
+              className={`px-5 py-3 flex items-center gap-3 border-b border-slate-100 ${
+                isToday ? "bg-pink-50" : "bg-slate-50"
+              }`}
+            >
+              <span className={`text-2xl font-bold ${isToday ? "text-pink-600" : "text-slate-800"}`}>
+                {date.getDate()}
+              </span>
+              <div>
+                <p className={`text-sm font-semibold capitalize ${isToday ? "text-pink-700" : "text-slate-700"}`}>
+                  {date.toLocaleDateString("es-CR", { weekday: "long" })}
+                  {isToday && (
+                    <span className="ml-2 text-xs bg-pink-600 text-white px-2 py-0.5 rounded-full font-bold">
+                      Hoy
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {MONTH_NAMES_ES[date.getMonth()]} {date.getFullYear()}
+                </p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-50">
+              {events.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center gap-4 px-5 py-3.5"
+                >
+                  {event.avatar ? (
+                    <img
+                      src={event.avatar}
+                      alt={event.birthdayUserName}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-pink-100"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0 text-lg">
+                      🎂
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {event.birthdayUserName}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {event.instrument && (
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {event.instrument}
+                        </span>
+                      )}
+                      {event.ageTurning && (
+                        <span className="text-xs text-pink-600 font-semibold">
+                          🎉 {event.ageTurning} años
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="flex-shrink-0 text-xs font-medium text-pink-600 bg-pink-50 border border-pink-100 px-2.5 py-1 rounded-full">
+                    🎂 Cumpleaños
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Category Legend ──────────────────────────────────────────────────────────
 function CategoryLegend() {
   return (
@@ -1105,6 +1254,7 @@ MonthView.propTypes = {
   anchor: PropTypes.instanceOf(Date).isRequired,
   today: PropTypes.instanceOf(Date).isRequired,
   eventsForDay: PropTypes.func.isRequired,
+  birthdaysForDay: PropTypes.func,
   onDayClick: PropTypes.func.isRequired,
   onEventClick: PropTypes.func.isRequired,
   onDayAddClick: PropTypes.func,
@@ -1132,6 +1282,12 @@ AgendaView.propTypes = {
   filteredEvents: PropTypes.array.isRequired,
   today: PropTypes.instanceOf(Date).isRequired,
   onEventClick: PropTypes.func.isRequired,
+};
+
+BirthdayView.propTypes = {
+  anchor: PropTypes.instanceOf(Date).isRequired,
+  birthdayEvents: PropTypes.array.isRequired,
+  today: PropTypes.instanceOf(Date).isRequired,
 };
 
 NavBtn.propTypes = {

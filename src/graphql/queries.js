@@ -691,3 +691,43 @@ export const GET_USER_ATTENDANCE_STATS = gql`
     }
   }
 `;
+
+// ─── Birthdays ─────────────────────────────────────────────────────────────────
+export const GET_BIRTHDAYS_FOR_CALENDAR = gql`
+  query BirthdaysForCalendar($year: Int) {
+    birthdaysForCalendar(year: $year) {
+      id
+      title
+      start
+      end
+      allDay
+      type
+      icon
+      birthdayUserId
+      birthdayUserName
+      instrument
+      avatar
+      ageTurning
+    }
+  }
+`;
+
+export const GET_UPCOMING_BIRTHDAYS = gql`
+  query UpcomingBirthdays($days: Int) {
+    upcomingBirthdays(days: $days) {
+      id
+      name
+      firstSurName
+      secondSurName
+      fullName
+      birthday
+      instrument
+      avatar
+      role
+      ageTurning
+      birthdayMonth
+      birthdayDay
+      isToday
+    }
+  }
+`;
