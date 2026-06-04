@@ -5,13 +5,19 @@ import { generateToken, getFirebaseMessagingInstance } from "config/firebase";
 import { onMessage } from "firebase/messaging";
 
 /**
- * Sincroniza el token FCM del usuario autenticado en cualquier ruta protegida.
+ * Passively syncs the FCM token for an already-authenticated user.
+ * Only runs when Notification.permission === "granted" — never requests
+ * permission automatically. Use usePushNotifications for the explicit flow.
  */
 export function useFirebaseMessaging(userId) {
   const [updateNotificationToken] = useMutation(UPDATE_NOTIFICATION_TOKEN);
 
   useEffect(() => {
     if (!userId) return;
+    // Only sync when permission is already granted — never auto-request
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
     let cancelled = false;
 
     const syncToken = async () => {
@@ -23,7 +29,9 @@ export function useFirebaseMessaging(userId) {
         await updateNotificationToken({ variables: { userId, token } });
         localStorage.setItem(storageKey, token);
       } catch (err) {
-        console.error("[FCM] Token registration:", err);
+        if (process.env.NODE_ENV === "development") {
+          console.error("[FCM] Token sync:", err);
+        }
       }
     };
 

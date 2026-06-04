@@ -39,13 +39,45 @@ async function ensureMessagingServiceWorker() {
   return registration;
 }
 
+/**
+ * Gets the FCM token only when permission is already granted.
+ * Does NOT request permission — call requestPermissionAndGetToken() for that.
+ */
 export const generateToken = async () => {
   if (!canUseMessaging()) return null;
+  if (Notification.permission !== "granted") return null;
 
-  const permission =
-    Notification.permission === "granted"
-      ? "granted"
-      : await Notification.requestPermission();
+  const messaging = getFirebaseMessagingInstance();
+  if (!messaging) return null;
+
+  const serviceWorkerRegistration = await ensureMessagingServiceWorker();
+
+  return getToken(messaging, {
+    vapidKey:
+      "BJmb2xP_HgqJHavQ-ur2jLzepOyjt2V8Dubb59y8KMn6OZqEfZs_vclMuLd_8CDVofoCB0-u5jdXHx-VQw57_hA",
+    serviceWorkerRegistration,
+  });
+};
+
+/**
+ * Asks for notification permission (native browser prompt) and then
+ * returns the FCM token if granted. Must be called from a user gesture.
+ * Returns null if permission was denied or the environment is unsupported.
+ */
+export const requestPermissionAndGetToken = async () => {
+  if (!canUseMessaging()) return null;
+
+  if (Notification.permission === "denied") {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[FCM] Permission denied — cannot re-prompt. User must enable manually.");
+    }
+    return null;
+  }
+
+  let permission = Notification.permission;
+  if (permission !== "granted") {
+    permission = await Notification.requestPermission();
+  }
 
   if (permission !== "granted") return null;
 

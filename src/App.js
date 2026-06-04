@@ -46,6 +46,7 @@ import {
 } from "utils/routeHelpers";
 import { isSupportedPublicLang, normalizePublicLang } from "utils/publicRoutes";
 import { useFirebaseMessaging } from "hooks/useFirebaseMessaging";
+import PwaNotificationGate from "components/pwa/PwaNotificationGate";
 
 import LanguageRedirect from "./LanguageRedirect";
 import PageLayout from "examples/LayoutContainers/PageLayout";
@@ -268,6 +269,10 @@ export default function App() {
           />
           <Configurator />
         </>
+      )}
+
+      {isAuthenticated && authenticatedEntityId && (
+        <PwaNotificationGate userId={authenticatedEntityId} />
       )}
 
       <Suspense fallback={<PageLoader />}>
