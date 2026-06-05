@@ -47,6 +47,21 @@ function MetricCard({ label, value, color }) {
   );
 }
 
+function compareByClosestUpcoming(a, b) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dateA = parsePermissionDate(a.date);
+  const dateB = parsePermissionDate(b.date);
+  const timeA = dateA?.getTime?.() ?? Number.POSITIVE_INFINITY;
+  const timeB = dateB?.getTime?.() ?? Number.POSITIVE_INFINITY;
+  const aIsUpcoming = timeA >= today.getTime();
+  const bIsUpcoming = timeB >= today.getTime();
+
+  if (aIsUpcoming !== bIsUpcoming) return aIsUpcoming ? -1 : 1;
+  return aIsUpcoming ? timeA - timeB : timeB - timeA;
+}
+
 export function AdminPermissionsView() {
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -71,12 +86,16 @@ export function AdminPermissionsView() {
   const { data: eventsData } = useQuery(GET_EVENTS_FOR_PERMISSION_FORM, {
     fetchPolicy: "cache-and-network",
   });
-  const eventOptions = useMemo(() => {
-    const category = typeFilter === "REHEARSAL" ? "rehearsal" : "presentation";
-    return (eventsData?.getEvents ?? [])
-      .filter((event) => event.category === category)
-      .sort((a, b) => parsePermissionDate(b.date) - parsePermissionDate(a.date));
-  }, [eventsData, typeFilter]);
+  const eventOptionsByCategory = useMemo(() => {
+    const events = (eventsData?.getEvents ?? [])
+      .filter((event) => event.category === "rehearsal" || event.category === "presentation")
+      .sort(compareByClosestUpcoming);
+
+    return {
+      rehearsal: events.filter((event) => event.category === "rehearsal"),
+      presentation: events.filter((event) => event.category === "presentation"),
+    };
+  }, [eventsData]);
 
   const { data, loading, refetch } = useQuery(GET_ABSENCE_PERMISSIONS_ADMIN, {
     variables: { filter, limit: 100 },
@@ -97,14 +116,36 @@ export function AdminPermissionsView() {
     };
   }, [permissions]);
 
-  const refetchQueries = [{ query: GET_ABSENCE_PERMISSIONS_ADMIN, variables: { filter, limit: 100 } }];
+  const refetchQueries = [
+    { query: GET_ABSENCE_PERMISSIONS_ADMIN, variables: { filter, limit: 100 } },
+  ];
 
-  const activeFiltersCount = [statusFilter, typeFilter, permissionTypeFilter, eventFilter, startDate, endDate].filter(Boolean).length;
+  const activeFiltersCount = [
+    statusFilter,
+    typeFilter,
+    permissionTypeFilter,
+    eventFilter,
+    startDate,
+    endDate,
+  ].filter(Boolean).length;
 
   function handleTypeFilterChange(value) {
     setTypeFilter(value);
     setEventFilter("");
   }
+
+  function handleRehearsalEventFilterChange(value) {
+    setTypeFilter("REHEARSAL");
+    setEventFilter(value);
+  }
+
+  function handlePresentationEventFilterChange(value) {
+    setTypeFilter("PERFORMANCE");
+    setEventFilter(value);
+  }
+
+  const selectedRehearsalEvent = typeFilter === "REHEARSAL" ? eventFilter : "";
+  const selectedPresentationEvent = typeFilter === "PERFORMANCE" ? eventFilter : "";
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -122,7 +163,12 @@ export function AdminPermissionsView() {
           className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors flex-shrink-0"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           Actualizar
         </button>
@@ -183,28 +229,51 @@ export function AdminPermissionsView() {
           </div>
         </div>
 
-        {typeFilter && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="permissions-event-filter" className="mb-1 block text-xs font-medium text-gray-500">
-              {typeFilter === "REHEARSAL" ? "Ensayo específico" : "Presentación específica"}
+            <label
+              htmlFor="permissions-rehearsal-event-filter"
+              className="mb-1 block text-xs font-medium text-gray-500"
+            >
+              Ensayo
             </label>
             <select
-              id="permissions-event-filter"
-              value={eventFilter}
-              onChange={(event) => setEventFilter(event.target.value)}
+              id="permissions-rehearsal-event-filter"
+              value={selectedRehearsalEvent}
+              onChange={(event) => handleRehearsalEventFilterChange(event.target.value)}
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">
-                {typeFilter === "REHEARSAL" ? "Todos los ensayos" : "Todas las presentaciones"}
-              </option>
-              {eventOptions.map((event) => (
+              <option value="">Todos los ensayos</option>
+              {eventOptionsByCategory.rehearsal.map((event) => (
                 <option key={event.id} value={event.id}>
                   {event.title} · {formatPermissionDate(event.date)}
                 </option>
               ))}
             </select>
           </div>
-        )}
+
+          <div>
+            <label
+              htmlFor="permissions-presentation-event-filter"
+              className="mb-1 block text-xs font-medium text-gray-500"
+            >
+              Presentación
+            </label>
+            <select
+              id="permissions-presentation-event-filter"
+              value={selectedPresentationEvent}
+              onChange={(event) => handlePresentationEventFilterChange(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todas las presentaciones</option>
+              {eventOptionsByCategory.presentation.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.title} · {formatPermissionDate(event.date)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex gap-1.5 flex-wrap flex-1">
@@ -233,7 +302,12 @@ export function AdminPermissionsView() {
             }`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
             </svg>
             Filtros{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </button>
@@ -242,7 +316,12 @@ export function AdminPermissionsView() {
         {showFilters && (
           <div className="bg-gray-50 rounded-2xl p-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="permissions-start-date" className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+              <label
+                htmlFor="permissions-start-date"
+                className="block text-xs font-medium text-gray-500 mb-1"
+              >
+                Desde
+              </label>
               <input
                 id="permissions-start-date"
                 type="date"
@@ -252,7 +331,12 @@ export function AdminPermissionsView() {
               />
             </div>
             <div>
-              <label htmlFor="permissions-end-date" className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+              <label
+                htmlFor="permissions-end-date"
+                className="block text-xs font-medium text-gray-500 mb-1"
+              >
+                Hasta
+              </label>
               <input
                 id="permissions-end-date"
                 type="date"
@@ -263,7 +347,13 @@ export function AdminPermissionsView() {
             </div>
             <button
               type="button"
-              onClick={() => { setPermissionTypeFilter(""); setTypeFilter(""); setEventFilter(""); setStartDate(""); setEndDate(""); }}
+              onClick={() => {
+                setPermissionTypeFilter("");
+                setTypeFilter("");
+                setEventFilter("");
+                setStartDate("");
+                setEndDate("");
+              }}
               className="text-xs text-gray-400 hover:text-gray-600 underline sm:col-span-2"
             >
               Limpiar filtros
@@ -282,12 +372,24 @@ export function AdminPermissionsView() {
       ) : permissions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
           </div>
           <p className="font-semibold text-gray-700">Sin solicitudes</p>
-          <p className="text-sm text-gray-400 mt-1">No hay permisos que coincidan con los filtros aplicados.</p>
+          <p className="text-sm text-gray-400 mt-1">
+            No hay permisos que coincidan con los filtros aplicados.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
