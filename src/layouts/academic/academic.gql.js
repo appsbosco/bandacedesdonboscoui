@@ -358,6 +358,17 @@ export const GET_ADMIN_PENDING_EVALUATIONS = gql`
   }
 `;
 
+// Evaluaciones pendientes de la sección del usuario autenticado (Principal de sección).
+// Reemplaza el patrón N+1: una query en lugar de una por miembro.
+export const GET_SECTION_PENDING_EVALUATIONS = gql`
+  ${EVALUATION_FRAGMENT}
+  query GetSectionPendingEvaluations($filter: AcademicDashboardFilter) {
+    sectionPendingEvaluations(filter: $filter) {
+      ...EvaluationFields
+    }
+  }
+`;
+
 // Versión paginada — preferir esta en producción para no traer todos los pendientes
 export const GET_ADMIN_PENDING_EVALUATIONS_PAGINATED = gql`
   ${EVALUATION_FRAGMENT}

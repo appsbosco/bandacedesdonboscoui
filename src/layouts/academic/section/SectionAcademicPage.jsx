@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import Card from "@mui/material/Card";
 import SoftBox from "components/SoftBox";
@@ -108,33 +108,31 @@ function CoverageByPeriod({ periods = EMPTY_PERIODS, showSubjects = false }) {
 }
 
 function EvidenceLink({ evaluation }) {
-  if (!evaluation?.evidenceUrl) return <span className="text-gray-300 text-xs">—</span>;
-
+  // evidenceUrl no está en EVALUATION_FRAGMENT (se carga solo en modal de detalle).
+  // Usamos evidenceThumbnailUrl para el preview en lista.
   const isPdf =
     evaluation.evidenceResourceType === "raw" || evaluation.evidenceOriginalName?.endsWith(".pdf");
 
-  if (isPdf) {
+  if (isPdf && evaluation.evidencePublicId) {
     return (
-      <a
-        href={evaluation.evidenceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs text-blue-700 hover:bg-blue-100"
-      >
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs text-blue-700">
         PDF
-      </a>
+      </span>
     );
   }
 
-  return (
-    <a href={evaluation.evidenceUrl} target="_blank" rel="noopener noreferrer">
+  if (evaluation.evidenceThumbnailUrl) {
+    return (
       <img
-        src={evaluation.evidenceUrl}
+        src={evaluation.evidenceThumbnailUrl}
         alt="Evidencia"
-        className="w-9 h-9 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+        loading="lazy"
+        className="w-9 h-9 object-cover rounded-lg border border-gray-200"
       />
-    </a>
-  );
+    );
+  }
+
+  return <span className="text-gray-300 text-xs">—</span>;
 }
 
 function PendingEvidence({ evaluation }) {
@@ -558,7 +556,7 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
   );
 }
 
-function MemberRow({ member, isSelected, onOpen }) {
+const MemberRow = React.memo(function MemberRow({ member, isSelected, onOpen }) {
   const risk = RISK_CONFIG[member.performance?.riskLevel] || RISK_CONFIG.GREEN;
   const average = member.performance?.averageGeneral;
   const averageColor =
@@ -573,7 +571,7 @@ function MemberRow({ member, isSelected, onOpen }) {
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-3 min-w-[220px]">
-          <Avatar src={member.memberAvatar} name={member.memberName} size="xs" />
+          <Avatar src={member.memberAvatar} name={member.memberName} size="xs" lazy />
           <div>
             <p className="font-medium text-gray-900">{member.memberName}</p>
             <p className="text-xs text-gray-400">
@@ -608,9 +606,9 @@ function MemberRow({ member, isSelected, onOpen }) {
       </td>
     </tr>
   );
-}
+});
 
-function MemberCard({ member, onOpen }) {
+const MemberCard = React.memo(function MemberCard({ member, onOpen }) {
   const risk = RISK_CONFIG[member.performance?.riskLevel] || RISK_CONFIG.GREEN;
   const average = member.performance?.averageGeneral;
   const averageColor =
@@ -623,7 +621,7 @@ function MemberCard({ member, onOpen }) {
       className="w-full text-left bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
     >
       <div className="flex items-start gap-3">
-        <Avatar src={member.memberAvatar} name={member.memberName} size="md" />
+        <Avatar src={member.memberAvatar} name={member.memberName} size="md" lazy />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -679,7 +677,7 @@ function MemberCard({ member, onOpen }) {
       </div>
     </button>
   );
-}
+});
 
 export default function SectionAcademicPage() {
   const [detailOpen, setDetailOpen] = useState(false);
@@ -716,14 +714,14 @@ export default function SectionAcademicPage() {
     };
   }, [membersOverview]);
 
-  function handleOpenMember(memberId) {
+  const handleOpenMember = useCallback((memberId) => {
     setSelectedMemberId(memberId);
     setDetailOpen(true);
-  }
+  }, [setSelectedMemberId]);
 
-  function handleOpenReview(evaluation) {
+  const handleOpenReview = useCallback((evaluation) => {
     setReviewingEvaluation(evaluation);
-  }
+  }, []);
 
   return (
     <DashboardLayout>

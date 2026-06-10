@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useApolloClient, useMutation, useQuery } from "@apollo/client";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   GET_ACADEMIC_PERIODS,
   GET_SECTION_INSTRUMENT_ACADEMIC_OVERVIEW,
+  GET_SECTION_PENDING_EVALUATIONS,
   GET_STUDENT_ACADEMIC_EVALUATIONS,
   REVIEW_ACADEMIC_EVALUATION,
 } from "../academic.gql";
@@ -10,17 +11,14 @@ import {
 const EMPTY_LIST = [];
 
 export function useSectionAcademicOverview() {
-  const client = useApolloClient();
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
-  const [pendingEvaluations, setPendingEvaluations] = useState([]);
-  const [loadingPendingEvaluations, setLoadingPendingEvaluations] = useState(false);
   const [toast, setToast] = useState(null);
-  const pendingRequestId = useRef(0);
 
+  // Períodos son datos estables — cache-first evita request innecesaria en cada montaje.
   const periodsQuery = useQuery(GET_ACADEMIC_PERIODS, {
     variables: { isActive: true },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
   });
 
   const overviewQuery = useQuery(GET_SECTION_INSTRUMENT_ACADEMIC_OVERVIEW, {
@@ -31,20 +29,26 @@ export function useSectionAcademicOverview() {
     fetchPolicy: "cache-and-network",
   });
 
-  const membersOverview = overviewQuery.data?.sectionInstrumentAcademicOverview || EMPTY_LIST;
+  const membersOverview = overviewQuery.data?.sectionInstrumentAcademicOverview ?? EMPTY_LIST;
+
+  // Set estable de memberIds — evita re-cálculos innecesarios en efectos descendientes.
+  const memberIdSet = useMemo(
+    () => new Set(membersOverview.map((m) => m.memberId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [membersOverview]
+  );
 
   useEffect(() => {
     if (membersOverview.length === 0) {
       if (selectedMemberId) setSelectedMemberId(null);
       return;
     }
-
-    const exists = membersOverview.some((member) => member.memberId === selectedMemberId);
-    if (!selectedMemberId || !exists) {
+    if (!selectedMemberId || !memberIdSet.has(selectedMemberId)) {
       setSelectedMemberId(membersOverview[0].memberId);
     }
-  }, [membersOverview, selectedMemberId]);
+  }, [membersOverview, memberIdSet, selectedMemberId]);
 
+  // Evaluaciones del miembro seleccionado (tab Historial en el sheet de detalle).
   const memberEvaluationsQuery = useQuery(GET_STUDENT_ACADEMIC_EVALUATIONS, {
     variables: {
       studentId: selectedMemberId || "",
@@ -54,67 +58,37 @@ export function useSectionAcademicOverview() {
     fetchPolicy: "cache-and-network",
   });
 
-  const loadPendingEvaluations = useCallback(async () => {
-    const requestId = pendingRequestId.current + 1;
-    pendingRequestId.current = requestId;
+  // Una sola query reemplaza el patrón N+1 anterior (Promise.allSettled × N miembros).
+  // Antes: N requests network-only → hasta 40 requests en carga cálida con 20 miembros.
+  // Ahora: 1 request scoped al servidor → el backend ya filtra por sección del líder.
+  const pendingQuery = useQuery(GET_SECTION_PENDING_EVALUATIONS, {
+    variables: {
+      filter: selectedPeriodId ? { periodId: selectedPeriodId } : undefined,
+    },
+    fetchPolicy: "cache-and-network",
+  });
 
-    if (membersOverview.length === 0) {
-      setPendingEvaluations([]);
-      setLoadingPendingEvaluations(false);
-      return;
-    }
-
-    setLoadingPendingEvaluations(true);
-    try {
-      const results = await Promise.allSettled(
-        membersOverview.map((member) =>
-          client.query({
-            query: GET_STUDENT_ACADEMIC_EVALUATIONS,
-            variables: {
-              studentId: member.memberId,
-              filter: selectedPeriodId ? { periodId: selectedPeriodId } : undefined,
-            },
-            fetchPolicy: "network-only",
-          })
-        )
-      );
-
-      const pending = results
-        .filter((result) => result.status === "fulfilled")
-        .flatMap((result) => result.value.data?.studentAcademicEvaluations || [])
-        .filter((evaluation) => evaluation.status === "pending")
-        .sort(
-          (left, right) =>
-            new Date(right.submittedByStudentAt || right.createdAt) -
-            new Date(left.submittedByStudentAt || left.createdAt)
-        );
-
-      if (pendingRequestId.current === requestId) {
-        setPendingEvaluations(pending);
-      }
-    } finally {
-      if (pendingRequestId.current === requestId) {
-        setLoadingPendingEvaluations(false);
-      }
-    }
-  }, [client, membersOverview, selectedPeriodId]);
-
-  useEffect(() => {
-    loadPendingEvaluations();
-  }, [loadPendingEvaluations]);
+  const pendingEvaluations = useMemo(() => {
+    const all = pendingQuery.data?.sectionPendingEvaluations ?? [];
+    return all.slice().sort(
+      (a, b) =>
+        new Date(b.submittedByStudentAt || b.createdAt) -
+        new Date(a.submittedByStudentAt || a.createdAt)
+    );
+  }, [pendingQuery.data]);
 
   const [reviewMutation, { loading: reviewing }] = useMutation(REVIEW_ACADEMIC_EVALUATION, {
     onCompleted: () => {
       showToast("Evaluación revisada correctamente", "success");
       overviewQuery.refetch();
+      pendingQuery.refetch();
       if (selectedMemberId) memberEvaluationsQuery.refetch();
-      loadPendingEvaluations();
     },
     onError: (error) => showToast(error.message, "error"),
   });
 
   const selectedMember =
-    membersOverview.find((member) => member.memberId === selectedMemberId) || null;
+    membersOverview.find((member) => member.memberId === selectedMemberId) ?? null;
 
   function showToast(message, type = "info") {
     setToast({ message, type });
@@ -126,15 +100,15 @@ export function useSectionAcademicOverview() {
   }
 
   return {
-    periods: periodsQuery.data?.academicPeriods || [],
+    periods: periodsQuery.data?.academicPeriods ?? [],
     membersOverview,
     selectedMember,
     selectedMemberId,
-    memberEvaluations: memberEvaluationsQuery.data?.studentAcademicEvaluations || [],
+    memberEvaluations: memberEvaluationsQuery.data?.studentAcademicEvaluations ?? [],
     pendingEvaluations,
     loadingOverview: overviewQuery.loading,
     loadingMemberEvaluations: memberEvaluationsQuery.loading,
-    loadingPendingEvaluations,
+    loadingPendingEvaluations: pendingQuery.loading,
     reviewing,
     errorOverview: overviewQuery.error,
     selectedPeriodId,
@@ -144,8 +118,8 @@ export function useSectionAcademicOverview() {
     toast,
     refetch: () => {
       overviewQuery.refetch();
+      pendingQuery.refetch();
       if (selectedMemberId) memberEvaluationsQuery.refetch();
-      loadPendingEvaluations();
     },
   };
 }

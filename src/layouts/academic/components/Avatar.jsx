@@ -70,7 +70,7 @@ function ZoomOverlay({ src, name, onClose }) {
 }
 
 // ── Avatar ─────────────────────────────────────────────────────────────────────
-export function Avatar({ src, name, size = "md", className = "", zoomable = false }) {
+export function Avatar({ src, name, size = "md", className = "", zoomable = false, lazy = false }) {
   const [imgError, setImgError] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const sz = SIZE_CLASSES[size] || SIZE_CLASSES.md;
@@ -83,6 +83,7 @@ export function Avatar({ src, name, size = "md", className = "", zoomable = fals
         <img
           src={src}
           alt={name || "Avatar"}
+          loading={lazy ? "lazy" : "eager"}
           className={`${sz} rounded-full object-cover ring-2 ring-white shrink-0 ${canZoom ? "cursor-zoom-in hover:opacity-90 transition-opacity" : ""} ${className}`}
           onError={() => setImgError(true)}
           onClick={canZoom ? () => setZoomed(true) : undefined}
