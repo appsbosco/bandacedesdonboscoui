@@ -688,6 +688,9 @@ export const GET_ATTENDANCES_REHEARSAL_CONNECTION = gql`
         status
         notes
         attendanceDate
+        userAttendancePercentage
+        userUnjustifiedCount
+        userEquivalentAbsences
         createdAt
         updatedAt
         legacyDate

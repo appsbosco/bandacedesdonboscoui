@@ -313,7 +313,7 @@ const useUserAttendanceRecords = (userId, pickerDate, refreshKey = 0) => {
       },
     },
     skip: !userId,
-    fetchPolicy: "network-only",
+    fetchPolicy: "no-cache",
   });
 
   useEffect(() => {
@@ -1216,7 +1216,7 @@ const AttendanceHistoryTable = () => {
     GET_ATTENDANCES_REHEARSAL_CONNECTION,
     {
       variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, filter: attendanceFilter },
-      fetchPolicy: "network-only",
+      fetchPolicy: "no-cache",
       notifyOnNetworkStatusChange: true,
     }
   );
@@ -1251,9 +1251,12 @@ const AttendanceHistoryTable = () => {
       return {
         ...attendance,
         userName,
-        percentage: 0,
+        percentage: Number(attendance.userAttendancePercentage || 0),
         displayDate,
-        _localCounts: {},
+        _localCounts: {
+          ABSENT_UNJUSTIFIED: Number(attendance.userUnjustifiedCount || 0),
+          UNJUSTIFIED_WITHDRAWAL: 0,
+        },
       };
     });
   }, [validAttendances]);
