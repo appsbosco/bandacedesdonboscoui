@@ -7,7 +7,7 @@
  * - Sin ninguna lógica de email
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { GET_EVENTS, GET_BIRTHDAYS_FOR_CALENDAR } from "graphql/queries";
 import { ADD_EVENT, UPDATE_EVENT, DELETE_EVENT } from "graphql/mutations";
@@ -124,6 +124,13 @@ function sameDay(a, b) {
   );
 }
 
+function dateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function eventDate(event) {
   return new Date(Number(event.date));
 }
@@ -152,6 +159,25 @@ const MONTH_NAMES_ES = [
   "Diciembre",
 ];
 const DAY_NAMES_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia(query).matches
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(query);
+    const updateMatches = () => setMatches(mediaQuery.matches);
+
+    updateMatches();
+    mediaQuery.addEventListener("change", updateMatches);
+    return () => mediaQuery.removeEventListener("change", updateMatches);
+  }, [query]);
+
+  return matches;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EventsCalendar({ currentUser }) {
@@ -313,6 +339,11 @@ export default function EventsCalendar({ currentUser }) {
     if (drawer.event?.id === deleteModal.event.id) closeDrawer();
   }, [deleteModal.event?.id, deleteEvent, drawer.event?.id, closeDrawer]);
 
+  const handleViewChange = useCallback((nextView) => {
+    setView(nextView);
+    if (nextView === "birthdays") setAnchor(new Date());
+  }, []);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
@@ -325,7 +356,7 @@ export default function EventsCalendar({ currentUser }) {
             view={view}
             viewTitle={viewTitle}
             isAdmin={isAdmin}
-            onViewChange={setView}
+            onViewChange={handleViewChange}
             onNavigate={navigate}
             onToday={goToToday}
             onAddEvent={() => openAddForm(view === "day" ? anchor : null)}
@@ -460,6 +491,7 @@ function CalendarToolbar({
   onBandFilterChange,
 }) {
   const [showFilters, setShowFilters] = useState(false);
+  const showDesktopLabels = useMediaQuery("(min-width: 640px)");
 
   return (
     <div className="mb-4 space-y-2">
@@ -501,7 +533,7 @@ function CalendarToolbar({
             }`}
           >
             <FilterIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Filtros</span>
+            {showDesktopLabels && <span>Filtros</span>}
             {(catFilter !== "all" || bandFilter !== "all") && (
               <span className="bg-white/30 text-white text-xs px-1 rounded-full">!</span>
             )}
@@ -515,7 +547,7 @@ function CalendarToolbar({
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              <span className="hidden sm:inline">Nuevo evento</span>
+              {showDesktopLabels && <span>Nuevo evento</span>}
             </button>
           )}
         </div>
@@ -531,8 +563,7 @@ function CalendarToolbar({
               view === v ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
             }`}
           >
-            <span className="sm:hidden">{VIEW_LABELS_SHORT[v]}</span>
-            <span className="hidden sm:inline">{VIEW_LABELS[v]}</span>
+            {showDesktopLabels ? VIEW_LABELS[v] : VIEW_LABELS_SHORT[v]}
           </button>
         ))}
       </div>
@@ -1015,6 +1046,7 @@ function AgendaView({ anchor, filteredEvents, today, onEventClick }) {
 function BirthdayView({ anchor, birthdayEvents, today }) {
   const rangeStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const rangeEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  const focusRef = useRef(null);
 
   const grouped = useMemo(() => {
     const evs = birthdayEvents
@@ -1026,12 +1058,34 @@ function BirthdayView({ anchor, birthdayEvents, today }) {
 
     const map = new Map();
     for (const ev of evs) {
-      const key = birthdayDate(ev).toISOString().slice(0, 10);
+      const key = dateKey(birthdayDate(ev));
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(ev);
     }
     return [...map.entries()];
   }, [birthdayEvents, anchor]);
+
+  const focusDateKey = useMemo(() => {
+    if (grouped.length === 0) return null;
+
+    const todayKey = dateKey(today);
+    const hasToday = grouped.some(([dateKey]) => dateKey === todayKey);
+    if (hasToday) return todayKey;
+
+    if (anchor.getFullYear() === today.getFullYear() && anchor.getMonth() === today.getMonth()) {
+      const nextBirthday = grouped.find(([dateKey]) => new Date(dateKey + "T12:00:00") >= today);
+      return nextBirthday?.[0] ?? grouped[grouped.length - 1][0];
+    }
+
+    return grouped[0][0];
+  }, [anchor, grouped, today]);
+
+  useEffect(() => {
+    if (!focusRef.current) return;
+
+    focusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    focusRef.current.focus({ preventScroll: true });
+  }, [focusDateKey]);
 
   if (grouped.length === 0) {
     return (
@@ -1047,10 +1101,20 @@ function BirthdayView({ anchor, birthdayEvents, today }) {
       {grouped.map(([dateKey, events]) => {
         const date = new Date(dateKey + "T12:00:00");
         const isToday = sameDay(date, today);
+        const isFocusTarget = dateKey === focusDateKey;
         return (
           <div
             key={dateKey}
-            className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm"
+            ref={isFocusTarget ? focusRef : null}
+            tabIndex={isFocusTarget ? -1 : undefined}
+            aria-current={isToday ? "date" : undefined}
+            className={`bg-white rounded-2xl border overflow-hidden shadow-sm outline-none transition-shadow ${
+              isToday
+                ? "border-pink-200 ring-2 ring-pink-200"
+                : isFocusTarget
+                ? "border-slate-200 ring-2 ring-slate-200"
+                : "border-slate-100"
+            }`}
           >
             <div
               className={`px-5 py-3 flex items-center gap-3 border-b border-slate-100 ${
