@@ -1,8 +1,7 @@
 // AttendanceHistoryTable.jsx
 import { useQuery, useLazyQuery, useMutation } from "@apollo/client";
 import {
-  GET_ALL_ATTENDANCES_REHEARSAL,
-  GET_USERS,
+  GET_ATTENDANCES_REHEARSAL_CONNECTION,
   GET_USERS_BY_ID,
   GET_USER_ATTENDANCE_STATS,
 } from "graphql/queries";
@@ -41,8 +40,7 @@ const ATTENDANCE_STATUS_CONFIG = {
   },
 };
 
-const RECORDS_PER_PAGE = 50;
-const ATTENDANCE_FETCH_PAGE_SIZE = 1000;
+const ATTENDANCE_FETCH_PAGE_SIZE = 50;
 
 const STATUS_KEYS = [
   "PRESENT",
@@ -117,10 +115,11 @@ const getYmdInCR = (dateValue) => {
 };
 
 const getRecordRawDate = (attendance) =>
+  attendance?.attendanceDate ||
   attendance?.legacyDate ||
-  attendance?.createdAt ||
   attendance?.session?.dateNormalized ||
   attendance?.session?.date ||
+  attendance?.createdAt ||
   null;
 
 const getPickerYmd = (pickerDate) => {
@@ -172,6 +171,8 @@ const getUserFullName = (user) =>
     .map((part) => String(part || "").trim())
     .filter(Boolean)
     .join(" ");
+
+const getDisplayUserName = (user) => getUserFullName(user) || "Usuario no encontrado";
 
 // ── Helpers de riesgo ────────────────────────────────────────────────────────
 
@@ -289,21 +290,53 @@ const useUserAttendanceStats = (userId, pickerDate, refreshKey = 0) => {
   };
 };
 
+const useDebouncedValue = (value, delay = 350) => {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+
+  return debounced;
+};
+
+const useUserAttendanceRecords = (userId, pickerDate, refreshKey = 0) => {
+  const { startDate, endDate } = getDateRangeFromPicker(pickerDate);
+
+  const { data, loading, error, refetch } = useQuery(GET_ATTENDANCES_REHEARSAL_CONNECTION, {
+    variables: {
+      limit: 100,
+      filter: {
+        userId,
+        ...(startDate ? { startDate, endDate } : {}),
+      },
+    },
+    skip: !userId,
+    fetchPolicy: "network-only",
+  });
+
+  useEffect(() => {
+    if (userId) refetch?.();
+  }, [refreshKey, userId, refetch]);
+
+  return {
+    records: data?.getAttendancesRehearsalConnection?.nodes || [],
+    loading,
+    error,
+  };
+};
+
 // ============================================================================
 // SUBCOMPONENT: WorstAttendancePanel
 // ============================================================================
 
-const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
+const WorstAttendancePanel = ({ users = [], topN = 8 }) => {
   const [expanded, setExpanded] = useState(false);
 
   const sorted = useMemo(() => {
-    return Object.values(statsByUserId)
-      .sort((a, b) => {
-        if (a.percentage !== b.percentage) return a.percentage - b.percentage;
-        return b.unjustifiedCountLocal - a.unjustifiedCountLocal;
-      })
-      .slice(0, topN);
-  }, [statsByUserId, topN]);
+    return [...users].slice(0, topN);
+  }, [users, topN]);
 
   if (sorted.length === 0) return null;
 
@@ -316,7 +349,7 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
       >
         <div className="flex items-center gap-2">
           <span className="text-red-600 font-bold text-sm">⚠ Peor asistencia</span>
-          <span className="text-xs text-red-500">Top {topN} (cálculo local*)</span>
+          <span className="text-xs text-red-500">Top {topN}</span>
         </div>
         <span className="text-xs text-gray-500">{expanded ? "▲ Ocultar" : "▼ Ver"}</span>
       </button>
@@ -327,12 +360,13 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
             ({
               userId,
               user,
-              percentage,
-              unjustifiedCountLocal,
-              equivalentAbsencesLocal,
-              hasThreeUnjustifiedLocal,
+              attendancePercentage,
+              unjustifiedCount,
+              equivalentAbsences,
+              hasThreeUnjustified,
             }) => {
-              const fullName = getUserFullName(user);
+              const fullName = getDisplayUserName(user);
+              const percentage = Number(attendancePercentage || 0);
               const mood = getMoodConfig(percentage);
 
               return (
@@ -359,17 +393,17 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
                     <div className="text-xs text-gray-500 text-right leading-tight">
                       <p>
                         Inj:{" "}
-                        <span className="font-semibold text-red-600">{unjustifiedCountLocal}</span>
+                        <span className="font-semibold text-red-600">{unjustifiedCount || 0}</span>
                       </p>
                       <p>
                         Equiv:{" "}
                         <span className="font-semibold text-orange-600">
-                          {equivalentAbsencesLocal.toFixed(1)}
+                          {Number(equivalentAbsences || 0).toFixed(1)}
                         </span>
                       </p>
                     </div>
 
-                    {hasThreeUnjustifiedLocal && (
+                    {hasThreeUnjustified && (
                       <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300 whitespace-nowrap">
                         ⚠ 3+ inj.
                       </span>
@@ -381,8 +415,7 @@ const WorstAttendancePanel = ({ statsByUserId, topN = 8 }) => {
           )}
 
           <p className="px-4 py-2 text-[11px] text-gray-400 bg-gray-50">
-            * No incluye sesiones sin registro. Para datos exactos, consultar panel de
-            administración.
+            Calculado por el backend con los filtros activos.
           </p>
         </div>
       )}
@@ -410,6 +443,11 @@ const AttendanceDetailModal = ({
   const [saveError, setSaveError] = useState("");
 
   const { stats: backendStats, loading: statsLoading } = useUserAttendanceStats(
+    isOpen ? userStats?.userId : null,
+    selectedDate,
+    statsRefreshKey
+  );
+  const { records: backendRecords } = useUserAttendanceRecords(
     isOpen ? userStats?.userId : null,
     selectedDate,
     statsRefreshKey
@@ -451,11 +489,11 @@ const AttendanceDetailModal = ({
     attendanceCreditsLocal,
     hasThreeUnjustifiedLocal,
     exceedsLimitLocal,
-    records,
   } = userStats;
+  const records = backendRecords.length > 0 ? backendRecords : userStats.records || [];
 
   const displayUser = backendStats?.user || user;
-  const fullName = getUserFullName(displayUser);
+  const fullName = getDisplayUserName(displayUser);
 
   const displayPercentage = backendStats?.attendancePercentage ?? percentage;
   const displayMood = getMoodConfig(displayPercentage);
@@ -840,7 +878,7 @@ const MetricCard = ({ label, value, sub, highlight }) => {
 // ============================================================================
 
 const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
-  const userName = record.userName || getUserFullName(record.user);
+  const userName = record.userName || getDisplayUserName(record.user);
 
   const attendanceConfig = getAttendanceConfig(record.status);
   const percentageValue = typeof record.percentage === "number" ? record.percentage : 0;
@@ -878,8 +916,8 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
       <div className="block min-[1024px]:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            {record.user?.name?.[0]}
-            {record.user?.firstSurName?.[0]}
+            {record.user?.name?.[0] || "?"}
+            {record.user?.firstSurName?.[0] || ""}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -895,7 +933,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500">{record.user?.instrument}</p>
+            <p className="text-xs text-gray-500">{record.user?.instrument || "Sin instrumento"}</p>
           </div>
           <div className="flex-shrink-0">
             <span className="text-xs text-gray-500">{displayDate}</span>
@@ -928,8 +966,8 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
       <div className="hidden min-[1024px]:grid min-[1024px]:grid-cols-12 gap-4 px-4 py-3 items-center">
         <div className="col-span-3 flex items-center gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            {record.user?.name?.[0]}
-            {record.user?.firstSurName?.[0]}
+            {record.user?.name?.[0] || "?"}
+            {record.user?.firstSurName?.[0] || ""}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -945,7 +983,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500">{record.user?.instrument}</p>
+            <p className="text-xs text-gray-500">{record.user?.instrument || "Sin instrumento"}</p>
           </div>
         </div>
 
@@ -1144,7 +1182,6 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
 
 const AttendanceHistoryTable = () => {
   const [selectedDate, setSelectedDate] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     status: "all",
@@ -1156,227 +1193,118 @@ const AttendanceHistoryTable = () => {
 
   const [detailUserId, setDetailUserId] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [allPagesLoaded, setAllPagesLoaded] = useState(false);
-  const [isFetchingAllPages, setIsFetchingAllPages] = useState(false);
   const [paginationError, setPaginationError] = useState("");
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
   const { data: userData } = useQuery(GET_USERS_BY_ID);
-  const {
-    data: usersData,
-    loading: usersLoading,
-    error: usersError,
-  } = useQuery(GET_USERS, {
-    fetchPolicy: "network-only",
-  });
   const currentUser = userData?.getUser || null;
   const isAdmin = String(currentUser?.role || "").toUpperCase() === "ADMIN";
-  const userInstrument = currentUser?.instrument;
 
-  const { loading, error, data, fetchMore } = useQuery(GET_ALL_ATTENDANCES_REHEARSAL, {
-    variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, offset: 0 },
-    fetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true,
+  const attendanceFilter = useMemo(() => {
+    const { startDate, endDate } = getDateRangeFromPicker(selectedDate);
+    return {
+      ...(filters.status !== "all" ? { status: filters.status } : {}),
+      ...(filters.instrument !== "all" ? { instrument: filters.instrument } : {}),
+      ...(filters.section !== "all" ? { section: filters.section } : {}),
+      ...(startDate ? { startDate, endDate } : {}),
+      ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
+    };
+  }, [debouncedSearch, filters.instrument, filters.section, filters.status, selectedDate]);
+
+  const { loading, error, data, fetchMore, refetch } = useQuery(
+    GET_ATTENDANCES_REHEARSAL_CONNECTION,
+    {
+      variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, filter: attendanceFilter },
+      fetchPolicy: "network-only",
+      notifyOnNetworkStatusChange: true,
+    }
+  );
+
+  const connection = data?.getAttendancesRehearsalConnection;
+  const pageInfo = connection?.pageInfo || {};
+  const validAttendances = connection?.nodes || [];
+  const availableFilters = connection?.availableFilters || { instruments: [], sections: [] };
+  const summary = connection?.summary || { total: 0, present: 0, absent: 0 };
+  const worstUsers = connection?.worstUsers || [];
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      instruments: availableFilters.instruments || [],
+      sections: availableFilters.sections || [],
+    }));
+  }, [availableFilters.instruments, availableFilters.sections]);
+
+  const [updateSingleAttendance] = useMutation(UPDATE_SINGLE_ATTENDANCE, {
+    onCompleted: () => {
+      refetch?.();
+      setStatsRefreshKey((value) => value + 1);
+    },
   });
 
-  const [updateSingleAttendance] = useMutation(UPDATE_SINGLE_ATTENDANCE);
-
-  useEffect(() => {
-    const loadedCount = data?.getAllAttendancesRehearsal?.length || 0;
-    if (loading || allPagesLoaded || isFetchingAllPages) return;
-    if (loadedCount === 0 || loadedCount % ATTENDANCE_FETCH_PAGE_SIZE !== 0) {
-      setAllPagesLoaded(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchRemainingPages = async () => {
-      setIsFetchingAllPages(true);
-      let offset = loadedCount;
-
-      try {
-        while (!cancelled) {
-          const result = await fetchMore({
-            variables: { limit: ATTENDANCE_FETCH_PAGE_SIZE, offset },
-            updateQuery: (previousResult, { fetchMoreResult }) => {
-              const previous = previousResult?.getAllAttendancesRehearsal || [];
-              const next = fetchMoreResult?.getAllAttendancesRehearsal || [];
-
-              return {
-                getAllAttendancesRehearsal: [...previous, ...next],
-              };
-            },
-          });
-
-          const page = result?.data?.getAllAttendancesRehearsal || [];
-          if (page.length < ATTENDANCE_FETCH_PAGE_SIZE) {
-            setAllPagesLoaded(true);
-            break;
-          }
-
-          offset += page.length;
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPaginationError(err?.message || "No se pudo cargar todo el historial.");
-        }
-      } finally {
-        if (!cancelled) setIsFetchingAllPages(false);
-      }
-    };
-
-    fetchRemainingPages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [allPagesLoaded, data, fetchMore, isFetchingAllPages, loading]);
-
-  const usersById = useMemo(() => {
-    const map = new Map();
-    (usersData?.getUsers || []).forEach((user) => {
-      if (user?.id) map.set(String(user.id), user);
-    });
-    return map;
-  }, [usersData]);
-
-  const validAttendances = useMemo(() => {
-    const arr = data?.getAllAttendancesRehearsal || [];
-    const hasUserCatalog = Array.isArray(usersData?.getUsers);
-
-    if (!hasUserCatalog && !usersError) return [];
-
-    return arr
-      .filter((a) => a?.user?.id)
-      .map((attendance) => {
-        const completeUser = usersById.get(String(attendance.user.id));
-        if (!completeUser) return attendance;
-        return {
-          ...attendance,
-          user: {
-            ...attendance.user,
-            ...completeUser,
-          },
-        };
-      });
-  }, [data, usersById, usersData, usersError]);
-
-  useEffect(() => {
-    if (validAttendances.length > 0) {
-      const uniqueInstruments = [
-        ...new Set(validAttendances.map((a) => a.user?.instrument).filter(Boolean)),
-      ];
-      const uniqueSections = [
-        ...new Set(validAttendances.map((a) => a.session?.section).filter(Boolean)),
-      ];
-
-      setFilters((prev) => ({
-        ...prev,
-        instruments: uniqueInstruments.sort(),
-        sections: uniqueSections.sort(),
-      }));
-    }
-  }, [validAttendances]);
-
-  const accessibleRecords = useMemo(() => {
-    return validAttendances
-      .filter((r) => {
-        if (!currentUser) return true;
-        if (isAdmin) return true;
-        return r.user?.instrument === userInstrument;
-      })
-      .sort((a, b) => getSortDateValue(b) - getSortDateValue(a));
-  }, [validAttendances, currentUser, isAdmin, userInstrument]);
-
-  const statsBaseRecords = useMemo(() => {
-    return accessibleRecords.filter((r) => {
-      const instrumentMatch =
-        filters.instrument === "all" || r.user?.instrument === filters.instrument;
-      const sectionMatch = filters.section === "all" || r.session?.section === filters.section;
-      return instrumentMatch && sectionMatch;
-    });
-  }, [accessibleRecords, filters.instrument, filters.section]);
-
-  const statsByUserId = useMemo(() => buildUserStatsMap(statsBaseRecords), [statsBaseRecords]);
-
   const processedRecords = useMemo(() => {
-    return accessibleRecords.map((attendance) => {
-      const userName = getUserFullName(attendance.user);
-
-      const userId = attendance.user?.id ? String(attendance.user.id) : "";
-      const userStat = userId ? statsByUserId[userId] : null;
-      const percentage = userStat?.percentage ?? 0;
+    return validAttendances.map((attendance) => {
+      const userName = getDisplayUserName(attendance.user);
       const displayDate = getDisplayDateFromRecord(attendance);
 
       return {
         ...attendance,
         userName,
-        percentage,
+        percentage: 0,
         displayDate,
-        _localCounts: userStat?.counts ?? {},
+        _localCounts: {},
       };
     });
-  }, [accessibleRecords, statsByUserId]);
-
-  const filteredRecords = useMemo(() => {
-    const term = searchTerm ? searchTerm.toLowerCase() : "";
-    const selectedYmd = selectedDate ? getPickerYmd(selectedDate) : null;
-
-    return processedRecords.filter((record) => {
-      const searchMatch =
-        !searchTerm ||
-        record.userName.toLowerCase().includes(term) ||
-        String(record.user?.instrument || "")
-          .toLowerCase()
-          .includes(term);
-
-      const statusMatch = filters.status === "all" || record.status === filters.status;
-      const instrumentMatch =
-        filters.instrument === "all" || record.user?.instrument === filters.instrument;
-      const sectionMatch = filters.section === "all" || record.session?.section === filters.section;
-      const recordYmdCR = getYmdInCR(getRecordRawDate(record));
-      const dateMatch = !selectedYmd || recordYmdCR === selectedYmd;
-
-      return searchMatch && statusMatch && instrumentMatch && sectionMatch && dateMatch;
-    });
-  }, [
-    processedRecords,
-    searchTerm,
-    filters.status,
-    filters.instrument,
-    filters.section,
-    selectedDate,
-  ]);
+  }, [validAttendances]);
 
   const stats = useMemo(
     () => ({
-      total: filteredRecords.length,
-      present: filteredRecords.filter((r) => r.status === "PRESENT" || r.status === "LATE").length,
-      absent: filteredRecords.filter((r) => r.status !== "PRESENT" && r.status !== "LATE").length,
+      total: summary.total || 0,
+      present: (summary.present || 0) + (summary.late || 0),
+      absent: summary.absent || 0,
     }),
-    [filteredRecords]
+    [summary]
   );
 
-  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / RECORDS_PER_PAGE));
-  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const endIndex = startIndex + RECORDS_PER_PAGE;
-  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
-  const isInitialLoading = (loading || usersLoading) && validAttendances.length === 0;
+  const paginatedRecords = processedRecords;
+  const isInitialLoading = loading && validAttendances.length === 0;
+  const hasNextPage = Boolean(pageInfo.hasNextPage);
+  const isLoadingMore = loading && validAttendances.length > 0;
 
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-    if (filteredRecords.length === 0) setCurrentPage(1);
-  }, [currentPage, totalPages, filteredRecords.length]);
+  const handleLoadMore = async () => {
+    if (!hasNextPage || !pageInfo.endCursor) return;
+    setPaginationError("");
+    try {
+      await fetchMore({
+        variables: {
+          limit: ATTENDANCE_FETCH_PAGE_SIZE,
+          filter: { ...attendanceFilter, cursor: pageInfo.endCursor },
+        },
+        updateQuery: (previousResult, { fetchMoreResult }) => {
+          const previous = previousResult?.getAttendancesRehearsalConnection;
+          const next = fetchMoreResult?.getAttendancesRehearsalConnection;
+          if (!previous || !next) return previousResult;
+
+          return {
+            getAttendancesRehearsalConnection: {
+              ...next,
+              nodes: [...previous.nodes, ...next.nodes],
+            },
+          };
+        },
+      });
+    } catch (err) {
+      setPaginationError(err?.message || "No se pudo cargar la siguiente página.");
+    }
+  };
 
   const handleFilterChange = (filterName, value) => {
     setFilters((prev) => ({ ...prev, [filterName]: value }));
-    setCurrentPage(1);
   };
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    setCurrentPage(1);
   };
 
   const openDetails = (userId) => {
@@ -1400,23 +1328,30 @@ const AttendanceHistoryTable = () => {
         notes: notes ?? "",
       },
     });
-
-    setStatsRefreshKey((value) => value + 1);
   };
 
   const selectedUserStats = useMemo(() => {
     if (!detailUserId) return null;
 
-    const selectedYmd = selectedDate ? getPickerYmd(selectedDate) : null;
-    const detailRecords = statsBaseRecords.filter((record) => {
-      const userMatch = String(record?.user?.id || "") === detailUserId;
-      if (!userMatch) return false;
-      if (!selectedYmd) return true;
-      return getYmdInCR(getRecordRawDate(record)) === selectedYmd;
-    });
+    const loadedRecords = validAttendances.filter(
+      (record) => String(record?.user?.id || "") === detailUserId
+    );
+    const fromPage = buildUserStatsMap(loadedRecords)[detailUserId];
+    if (fromPage) return fromPage;
 
-    return buildUserStatsMap(detailRecords)[detailUserId] || null;
-  }, [detailUserId, selectedDate, statsBaseRecords]);
+    const record = validAttendances.find((item) => String(item?.user?.id || "") === detailUserId);
+    return {
+      userId: detailUserId,
+      user: record?.user || null,
+      total: 0,
+      counts: STATUS_KEYS.reduce((acc, key) => ({ ...acc, [key]: 0 }), {}),
+      percentage: 0,
+      attendanceCreditsLocal: 0,
+      hasThreeUnjustifiedLocal: false,
+      exceedsLimitLocal: false,
+      records: [],
+    };
+  }, [detailUserId, validAttendances]);
 
   if (error) {
     return (
@@ -1450,13 +1385,12 @@ const AttendanceHistoryTable = () => {
         searchTerm={searchTerm}
         onSearchChange={(val) => {
           setSearchTerm(val);
-          setCurrentPage(1);
         }}
-        totalResults={filteredRecords.length}
+        totalResults={connection?.totalCount || 0}
       />
 
       <div className="px-0 sm:px-4 pt-4">
-        <WorstAttendancePanel statsByUserId={statsByUserId} topN={5} />
+        <WorstAttendancePanel users={worstUsers} topN={5} />
       </div>
 
       <div className="px-0 sm:px-4 py-4 sm:py-2">
@@ -1491,11 +1425,11 @@ const AttendanceHistoryTable = () => {
                   />
                 </svg>
                 <p className="text-gray-600 font-medium text-sm sm:text-base">
-                  {usersLoading ? "Cargando estudiantes..." : "Cargando historial..."}
+                  Cargando historial...
                 </p>
               </div>
             </div>
-          ) : filteredRecords.length === 0 ? (
+          ) : processedRecords.length === 0 ? (
             <div className="py-12 text-center text-gray-600 text-sm px-6">
               <p className="font-medium text-gray-700">No se encontraron registros</p>
               {selectedDate ? (
@@ -1526,29 +1460,18 @@ const AttendanceHistoryTable = () => {
                 ))}
               </div>
 
-              {totalPages > 1 && (
+              {(hasNextPage || processedRecords.length > 0) && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t bg-gray-50">
                   <p className="text-sm text-gray-700">
-                    Mostrando {startIndex + 1} - {Math.min(endIndex, filteredRecords.length)} de{" "}
-                    {filteredRecords.length} registros
+                    Mostrando {processedRecords.length} de {connection?.totalCount || 0} registros
                   </p>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
+                      onClick={handleLoadMore}
+                      disabled={!hasNextPage || isLoadingMore}
                       className="px-3 py-1 bg-white border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
-                      Anterior
-                    </button>
-                    <span className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
-                      {currentPage} / {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 bg-white border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Siguiente
+                      {isLoadingMore ? "Cargando..." : "Cargar más"}
                     </button>
                   </div>
                 </div>
@@ -1576,7 +1499,7 @@ const AttendanceHistoryTable = () => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  {isFetchingAllPages ? "Cargando historial completo..." : "Actualizando..."}
+                  Actualizando...
                 </div>
               )}
             </>
@@ -1617,7 +1540,7 @@ MetricCard.propTypes = {
 };
 
 WorstAttendancePanel.propTypes = {
-  statsByUserId: PropTypes.object.isRequired,
+  users: PropTypes.array,
   topN: PropTypes.number,
 };
 

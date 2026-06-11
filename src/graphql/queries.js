@@ -661,6 +661,77 @@ export const GET_ALL_ATTENDANCES_REHEARSAL = gql`
   }
 `;
 
+export const GET_ATTENDANCES_REHEARSAL_CONNECTION = gql`
+  query GetAttendancesRehearsalConnection($limit: Int, $filter: AttendanceFilterInput) {
+    getAttendancesRehearsalConnection(limit: $limit, filter: $filter) {
+      nodes {
+        id
+        user {
+          id
+          name
+          firstSurName
+          secondSurName
+          instrument
+        }
+        session {
+          id
+          date
+          section
+          dateNormalized
+        }
+        recordedBy {
+          id
+          name
+          firstSurName
+          secondSurName
+        }
+        status
+        notes
+        attendanceDate
+        createdAt
+        updatedAt
+        legacyDate
+        legacyAttended
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+      summary {
+        total
+        present
+        absent
+        late
+        absentJustified
+        absentUnjustified
+        justifiedWithdrawals
+        unjustifiedWithdrawals
+      }
+      availableFilters {
+        instruments
+        sections
+      }
+      worstUsers {
+        userId
+        user {
+          id
+          name
+          firstSurName
+          secondSurName
+          instrument
+        }
+        totalSessions
+        attendancePercentage
+        unjustifiedCount
+        equivalentAbsences
+        hasThreeUnjustified
+        exceedsLimit
+      }
+    }
+  }
+`;
+
 export const GET_USER_ATTENDANCE_STATS = gql`
   query GetUserAttendanceStats($userId: ID!, $startDate: String, $endDate: String) {
     getUserAttendanceStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
