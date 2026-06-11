@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import { AlertTriangle, BookOpen, CalendarDays, CheckCircle2, Search } from "lucide-react";
 import { Modal } from "components/ui/Modal";
 import EvidenceUploader from "./EvidenceUploader";
 
@@ -10,6 +11,7 @@ import EvidenceUploader from "./EvidenceUploader";
 const INITIAL = {
   subjectId: "",
   periodId: "",
+  assessmentSlotId: "",
   scoreRaw: "",
   scaleMin: "0",
   scaleMax: "100",
@@ -24,6 +26,67 @@ function scoreTone(score) {
   return "text-rose-600";
 }
 
+function requirementKey(requirement) {
+  if (!requirement) return "";
+  return `${requirement.subjectId}:${requirement.assessmentSlotId}`;
+}
+
+function semesterLabel(semester) {
+  return Number(semester) === 2 ? "II Semestre" : "I Semestre";
+}
+
+function requirementSort(a, b) {
+  const yearDelta = Number(a.academicYear || 0) - Number(b.academicYear || 0);
+  if (yearDelta !== 0) return yearDelta;
+  const semesterDelta = Number(a.semester || 0) - Number(b.semester || 0);
+  if (semesterDelta !== 0) return semesterDelta;
+  const subjectDelta = Number(a.subject?.order || 0) - Number(b.subject?.order || 0);
+  if (subjectDelta !== 0) return subjectDelta;
+  const slotDelta = Number(a.assessmentSlot?.order || 0) - Number(b.assessmentSlot?.order || 0);
+  if (slotDelta !== 0) return slotDelta;
+  return String(a.subjectName || "").localeCompare(String(b.subjectName || ""));
+}
+
+function requirementMatchesQuery(requirement, query) {
+  if (!query) return true;
+  const needle = String(query).trim().toLowerCase();
+  if (!needle) return true;
+  return [requirement.subjectName, requirement.slotLabel, requirement.evaluationType]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(needle));
+}
+
+function requirementMatchesSemester(requirement, semesterFilter) {
+  if (semesterFilter === "all") return true;
+  return String(requirement?.semester || "") === String(semesterFilter);
+}
+
+function requirementTypeLabel(type) {
+  return type === "FINAL_GRADE" ? "Nota final" : "Examen";
+}
+
+function requirementSubjectTypeLabel(type) {
+  return type === "SEMESTER_FINAL_ONLY" ? "Solo nota final" : "Con exámenes";
+}
+
+function inferPeriodSemester(period) {
+  if (period?.semester) return Number(period.semester);
+  const name = String(period?.name || "").toLowerCase();
+  if (name.includes("ii semestre") || name.includes("segundo semestre")) return 2;
+  return 1;
+}
+
+function findPeriodForRequirement(periods, requirement) {
+  if (!requirement) return null;
+  return (
+    periods.find(
+      (period) =>
+        Number(period.academicYear || period.year) === Number(requirement.academicYear) &&
+        inferPeriodSemester(period) === Number(requirement.semester)
+    ) || null
+  );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FieldLabel({ htmlFor, children, required }) {
@@ -35,22 +98,6 @@ function FieldLabel({ htmlFor, children, required }) {
       {children}
       {required && <span className="ml-1 text-rose-400">*</span>}
     </label>
-  );
-}
-
-function SelectField({ id, name, value, onChange, disabled, placeholder, children }) {
-  return (
-    <select
-      id={id}
-      name={name}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      className="w-full appearance-none rounded-2xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-sm font-medium text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <option value="">{placeholder}</option>
-      {children}
-    </select>
   );
 }
 
@@ -151,8 +198,8 @@ export function EvaluationFormModal({
   mode,
   evaluation,
   initialSelection,
-  subjects,
   periods,
+  requirements = [],
   onSubmit,
   onUpdate,
   loading,
@@ -162,9 +209,40 @@ export function EvaluationFormModal({
   const [evidenceChanged, setEvidenceChanged] = useState(false);
   const [evidenceError, setEvidenceError] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [semesterFilter, setSemesterFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRequirementKey, setSelectedRequirementKey] = useState("");
 
   const isEdit = mode === "edit";
   const isRejected = isEdit && evaluation?.status === "rejected";
+  const hasLockedRequirement = !isEdit && Boolean(initialSelection?.requirement);
+  const sortedRequirements = useMemo(
+    () => [...(requirements || [])].sort(requirementSort),
+    [requirements]
+  );
+  const visibleRequirements = useMemo(
+    () =>
+      sortedRequirements.filter(
+        (requirement) =>
+          requirementMatchesSemester(requirement, semesterFilter) &&
+          requirementMatchesQuery(requirement, searchQuery)
+      ),
+    [sortedRequirements, semesterFilter, searchQuery]
+  );
+  const selectedRequirement = useMemo(
+    () =>
+      hasLockedRequirement
+        ? initialSelection?.requirement || null
+        : isEdit
+        ? initialSelection?.requirement || null
+        : sortedRequirements.find((req) => requirementKey(req) === selectedRequirementKey) || null,
+    [hasLockedRequirement, initialSelection, isEdit, selectedRequirementKey, sortedRequirements]
+  );
+  const selectedRequirementPeriod = selectedRequirement
+    ? findPeriodForRequirement(periods, selectedRequirement)
+    : null;
+  const selectedRequirementSemester =
+    selectedRequirement?.semester || selectedRequirementPeriod?.semester || 1;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -172,6 +250,7 @@ export function EvaluationFormModal({
       setForm({
         subjectId: evaluation.subject?.id || "",
         periodId: evaluation.period?.id || "",
+        assessmentSlotId: evaluation.assessmentSlot?.id || "",
         scoreRaw: String(evaluation.scoreRaw ?? ""),
         scaleMin: String(evaluation.scaleMin ?? "0"),
         scaleMax: String(evaluation.scaleMax ?? "100"),
@@ -182,21 +261,89 @@ export function EvaluationFormModal({
         resourceType: evaluation.evidenceResourceType || "image",
         originalName: evaluation.evidenceOriginalName || "evidencia",
       });
+      setSemesterFilter("all");
+      setSearchQuery("");
+      setSelectedRequirementKey("");
     } else {
+      const requirement = initialSelection?.requirement || sortedRequirements[0] || null;
+      const period = requirement ? findPeriodForRequirement(periods, requirement) : null;
       setForm({
         ...INITIAL,
-        subjectId: initialSelection?.subjectId || "",
-        periodId: initialSelection?.periodId || "",
+        subjectId: requirement?.subjectId || "",
+        periodId: period?.id || "",
+        assessmentSlotId: requirement?.assessmentSlotId || "",
       });
       setEvidence(null);
+      setSelectedRequirementKey(requirement ? requirementKey(requirement) : "");
+      if (hasLockedRequirement && requirement) {
+        setSemesterFilter(String(requirement.semester || "all"));
+      } else {
+        setSemesterFilter("all");
+      }
     }
     setEvidenceChanged(false);
     setFormError(null);
     setEvidenceError(null);
-  }, [isOpen, mode, evaluation, initialSelection]);
+  }, [
+    isOpen,
+    mode,
+    evaluation,
+    initialSelection,
+    isEdit,
+    periods,
+    sortedRequirements,
+    hasLockedRequirement,
+  ]);
+
+  useEffect(() => {
+    if (hasLockedRequirement) return;
+    if (!isOpen || isEdit) return;
+    const requirement =
+      sortedRequirements.find((req) => requirementKey(req) === selectedRequirementKey) || null;
+    const period = requirement ? findPeriodForRequirement(periods, requirement) : null;
+    setForm((prev) => ({
+      ...prev,
+      subjectId: requirement?.subjectId || "",
+      periodId: period?.id || "",
+      assessmentSlotId: requirement?.assessmentSlotId || "",
+    }));
+  }, [hasLockedRequirement, isOpen, isEdit, periods, selectedRequirementKey, sortedRequirements]);
+
+  useEffect(() => {
+    if (hasLockedRequirement) return;
+    if (!isOpen || isEdit) return;
+    if (selectedRequirementKey) {
+      const exists = sortedRequirements.some(
+        (req) => requirementKey(req) === selectedRequirementKey
+      );
+      if (exists) return;
+    }
+    const fallback = visibleRequirements[0] || sortedRequirements[0] || null;
+    setSelectedRequirementKey(fallback ? requirementKey(fallback) : "");
+  }, [
+    hasLockedRequirement,
+    isOpen,
+    isEdit,
+    selectedRequirementKey,
+    sortedRequirements,
+    visibleRequirements,
+  ]);
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormError(null);
+  }
+
+  function selectRequirement(requirement) {
+    const nextKey = requirementKey(requirement);
+    setSelectedRequirementKey(nextKey);
+    const period = findPeriodForRequirement(periods, requirement);
+    setForm((prev) => ({
+      ...prev,
+      subjectId: requirement?.subjectId || "",
+      periodId: period?.id || "",
+      assessmentSlotId: requirement?.assessmentSlotId || "",
+    }));
     setFormError(null);
   }
 
@@ -223,12 +370,16 @@ export function EvaluationFormModal({
     e.preventDefault();
     setFormError(null);
 
-    if (!form.subjectId) {
-      setFormError("Selecciona una materia");
+    const targetRequirement = isEdit
+      ? selectedRequirement
+      : sortedRequirements.find((req) => requirementKey(req) === selectedRequirementKey) || null;
+
+    if (!isEdit && !targetRequirement) {
+      setFormError("Selecciona el pendiente exacto antes de continuar");
       return;
     }
-    if (!form.periodId) {
-      setFormError("Selecciona un período");
+    if (!form.subjectId || !form.periodId || !form.assessmentSlotId) {
+      setFormError("No se pudo resolver la obligación académica seleccionada");
       return;
     }
     if (!form.scoreRaw) {
@@ -247,6 +398,7 @@ export function EvaluationFormModal({
     const input = {
       subjectId: form.subjectId,
       periodId: form.periodId,
+      assessmentSlotId: form.assessmentSlotId,
       scoreRaw: parseFloat(form.scoreRaw),
       scaleMin: parseFloat(form.scaleMin) || 0,
       scaleMax: parseFloat(form.scaleMax) || 100,
@@ -299,7 +451,7 @@ export function EvaluationFormModal({
       size="lg"
       containerClassName="items-end p-0 sm:items-center sm:p-4"
       overlayClassName="bg-neutral-950/60 backdrop-blur-md"
-      panelClassName="flex h-[95dvh] max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-[32px] rounded-b-none border border-white/60 bg-white shadow-[0_32px_80px_rgba(0,0,0,0.18)] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-lg sm:rounded-[28px]"
+      panelClassName="flex h-[95dvh] max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-[32px] rounded-b-none border border-white/60 bg-white shadow-[0_32px_80px_rgba(0,0,0,0.18)] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-3xl sm:rounded-[28px]"
       headerClassName="!px-5 !py-4 border-b border-neutral-100 bg-white"
       contentClassName="!p-0 flex min-h-0 flex-1 overflow-hidden bg-neutral-50"
       closeButtonClassName="rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
@@ -316,47 +468,233 @@ export function EvaluationFormModal({
             {/* Alerta evaluación rechazada */}
             {isRejected && <RejectedWarning reviewComment={evaluation.reviewComment} />}
 
-            {/* Materia */}
-            <div>
-              <FieldLabel htmlFor="eval-subject" required>
-                Materia
-              </FieldLabel>
-              <SelectField
-                id="eval-subject"
-                name="subjectId"
-                value={form.subjectId}
-                onChange={handleChange}
-                disabled={isEdit}
-                placeholder="Selecciona una materia"
-              >
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
+            {!isEdit && hasLockedRequirement && selectedRequirement && (
+              <section className="sm:hidden rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-600">
+                      Pendiente seleccionado
+                    </p>
+                    <h4 className="mt-1 truncate text-sm font-bold text-neutral-900">
+                      {selectedRequirement.subjectName}
+                    </h4>
+                    <p className="mt-0.5 truncate text-xs text-neutral-600">
+                      {selectedRequirement.slotLabel}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                        {semesterLabel(selectedRequirementSemester)}{" "}
+                        {selectedRequirement.academicYear}
+                      </span>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                        {requirementTypeLabel(selectedRequirement.evaluationType)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
 
-            {/* Período */}
-            <div>
-              <FieldLabel htmlFor="eval-period" required>
-                Período
-              </FieldLabel>
-              <SelectField
-                id="eval-period"
-                name="periodId"
-                value={form.periodId}
-                onChange={handleChange}
-                disabled={isEdit}
-                placeholder="Selecciona un período"
-              >
-                {periods.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {p.year}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
+            {!isEdit && !hasLockedRequirement && (
+              <section className="rounded-[28px]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                      Paso 1
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-neutral-900">
+                      Elige el pendiente exacto
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                      Selecciona una y sigue con la nota.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                    {visibleRequirements.length} opciones
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {[
+                    { value: "all", label: "Todos" },
+                    { value: "1", label: "I Semestre" },
+                    { value: "2", label: "II Semestre" },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSemesterFilter(item.value)}
+                      className={`rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+                        semesterFilter === item.value
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative mt-3">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar materia o evaluación"
+                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pl-10 pr-3 text-sm text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+                  />
+                </div>
+
+                <div className="mt-4 max-h-[32vh] overflow-y-auto pr-1">
+                  {visibleRequirements.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-center">
+                      <AlertTriangle className="mx-auto h-5 w-5 text-neutral-400" />
+                      <p className="mt-2 text-sm font-semibold text-neutral-900">
+                        No hay pendientes con ese filtro
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                        Cambia el semestre o limpia la búsqueda para ver más opciones.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {visibleRequirements.map((req) => {
+                        const key = requirementKey(req);
+                        const isSelected = key === selectedRequirementKey;
+                        return (
+                          <button
+                            type="button"
+                            key={key}
+                            onClick={() => selectRequirement(req)}
+                            className={`group flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                              isSelected
+                                ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100"
+                                : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <div
+                              className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                                isSelected
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-neutral-100 text-neutral-500"
+                              }`}
+                            >
+                              <BookOpen className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate text-sm font-semibold text-neutral-900">
+                                  {req.subjectName}
+                                </p>
+                                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                                  {requirementTypeLabel(req.evaluationType)}
+                                </span>
+                              </div>
+                              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-500">
+                                {req.slotLabel}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
+                                  <CalendarDays className="h-3.5 w-3.5" />
+                                  {semesterLabel(req.semester)} {req.academicYear}
+                                </span>
+                                <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
+                                  {requirementSubjectTypeLabel(req.subjectType)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-300 transition group-hover:text-neutral-500">
+                              {isSelected ? (
+                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <div className="h-2 w-2 rounded-full bg-current" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {!isEdit && selectedRequirement && !hasLockedRequirement && (
+              <section className="rounded-[28px] border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm sm:p-5 mt-7">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-600">
+                      Pendiente seleccionado
+                    </p>
+                    <h4 className="mt-1 truncate text-base font-bold text-neutral-900">
+                      {selectedRequirement.subjectName}
+                    </h4>
+                    <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+                      {selectedRequirement.slotLabel}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                        {semesterLabel(selectedRequirementSemester)}{" "}
+                        {selectedRequirement.academicYear}
+                      </span>
+                      <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                        {requirementTypeLabel(selectedRequirement.evaluationType)}
+                      </span>
+                      <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                        {requirementSubjectTypeLabel(selectedRequirement.subjectType)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {isEdit && evaluation && (
+              <section className="rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-500">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                      Evaluación actual
+                    </p>
+                    <h4 className="mt-1 truncate text-base font-bold text-neutral-900">
+                      {evaluation.subject?.name || "Materia"}
+                    </h4>
+                    <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+                      {evaluation.assessmentSlot?.label ||
+                        evaluation.slotLabel ||
+                        evaluation.period?.name ||
+                        "Pendiente"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {evaluation.period?.name && (
+                        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
+                          {evaluation.period.name}
+                        </span>
+                      )}
+                      {evaluation.assessmentSlot?.semester && (
+                        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
+                          {semesterLabel(evaluation.assessmentSlot.semester)}
+                        </span>
+                      )}
+                      {evaluation.assessmentSlot?.evaluationType && (
+                        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
+                          {requirementTypeLabel(evaluation.assessmentSlot.evaluationType)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Nota */}
             <div>
@@ -412,12 +750,12 @@ export function EvaluationFormModal({
         </div>
 
         {/* Action bar sticky */}
-        <div className="flex flex-col gap-2.5 border-t border-neutral-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.07)] sm:flex-row sm:px-6 sm:pb-4">
+        <div className="flex flex-row gap-2.5 border-t border-neutral-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.07)] sm:px-6 sm:pb-4">
           {evidence && (
             <p
               role="status"
               aria-live="polite"
-              className="flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 sm:hidden"
+              className="hidden items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 sm:hidden"
             >
               <svg
                 className="h-4 w-4 shrink-0"
@@ -440,7 +778,7 @@ export function EvaluationFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 flex-1 rounded-2xl text-sm font-semibold text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700 active:scale-[0.98] sm:h-12 sm:border sm:border-neutral-200 sm:bg-neutral-100 sm:text-neutral-700 sm:hover:bg-neutral-200"
+            className="h-12 flex-1 rounded-2xl border border-neutral-200 bg-neutral-100 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-200 hover:text-neutral-800 active:scale-[0.98]"
           >
             Cancelar
           </button>
@@ -472,9 +810,11 @@ EvaluationFormModal.propTypes = {
   initialSelection: PropTypes.shape({
     subjectId: PropTypes.string,
     periodId: PropTypes.string,
+    assessmentSlotId: PropTypes.string,
+    requirement: PropTypes.object,
   }),
-  subjects: PropTypes.array.isRequired,
   periods: PropTypes.array.isRequired,
+  requirements: PropTypes.array,
   onSubmit: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
   loading: PropTypes.bool,

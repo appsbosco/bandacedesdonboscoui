@@ -76,33 +76,66 @@ function ToastBar({ toast }) {
   );
 }
 
-function CoverageByPeriod({ periods = EMPTY_PERIODS, showSubjects = false }) {
-  if (periods.length === 0) return <span className="text-xs text-gray-300">Sin períodos activos</span>;
+function CoverageByPeriod({ requirements = EMPTY_PERIODS, showSubjects = false }) {
+  if (requirements.length === 0) {
+    return <span className="text-xs text-gray-300">Sin obligaciones pendientes</span>;
+  }
+
+  const unique = [];
+  const seen = new Set();
+  for (const requirement of requirements) {
+    const key = `${requirement.subjectId}:${requirement.assessmentSlotId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(requirement);
+  }
+
+  const grouped = unique.reduce((acc, requirement) => {
+    const key = `${requirement.academicYear}:${requirement.semester}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(requirement);
+    return acc;
+  }, {});
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {periods.map((period) => (
-        <span
-          key={period.periodId}
-          title={
-            period.missingSubjects.length > 0
-              ? `Faltan: ${period.missingSubjects.map((subject) => subject.subjectName).join(", ")}`
-              : "Todas las materias fueron subidas"
-          }
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
-            period.missingEvaluationsCount > 0
-              ? "bg-amber-100 text-amber-700"
-              : "bg-emerald-100 text-emerald-700"
-          }`}
-        >
-          {period.periodName} {period.year}: {period.missingEvaluationsCount}
-          {showSubjects && period.missingSubjects.length > 0 && (
-            <span className="font-normal">
-              ({period.missingSubjects.map((subject) => subject.subjectName).join(", ")})
-            </span>
-          )}
-        </span>
-      ))}
+    <div className="space-y-2">
+      {Object.entries(grouped)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, items]) => {
+          const [year, semester] = key.split(":");
+          const semesterLabel = Number(semester) === 2 ? "II Semestre" : "I Semestre";
+          const preview = items.slice(0, 4);
+          return (
+            <div key={key} className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-neutral-700">
+                  {semesterLabel} {year}
+                </p>
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                  {items.length} pendientes
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {preview.map((item) => (
+                  <span
+                    key={`${item.subjectId}:${item.assessmentSlotId}`}
+                    title={showSubjects ? `${item.subjectName} — ${item.slotLabel}` : item.slotLabel}
+                    className="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-neutral-700"
+                  >
+                    <span className="truncate">
+                      {showSubjects ? `${item.subjectName} — ${item.slotLabel}` : item.slotLabel}
+                    </span>
+                  </span>
+                ))}
+                {items.length > preview.length && (
+                  <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-neutral-500">
+                    +{items.length - preview.length}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }
@@ -351,9 +384,9 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Materias faltantes por período
+          Obligaciones pendientes por semestre
         </p>
-        <CoverageByPeriod periods={member.coverageByPeriod} showSubjects />
+          <CoverageByPeriod requirements={member.missingRequirements} showSubjects />
       </div>
 
       <div className="flex border-b border-gray-200">
@@ -585,7 +618,7 @@ const MemberRow = React.memo(function MemberRow({ member, isSelected, onOpen }) 
         {member.memberInstrument || "—"}
       </td>
       <td className="px-4 py-3 min-w-[240px]">
-        <CoverageByPeriod periods={member.coverageByPeriod} />
+        <CoverageByPeriod requirements={member.missingRequirements} />
       </td>
       <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap">
         {member.submittedEvaluationsCount}/{member.expectedEvaluationsCount}
@@ -671,7 +704,7 @@ const MemberCard = React.memo(function MemberCard({ member, onOpen }) {
           </div>
           <div className="mt-3">
             <p className="mb-1.5 text-[11px] text-gray-400">Faltantes por período</p>
-            <CoverageByPeriod periods={member.coverageByPeriod} />
+            <CoverageByPeriod requirements={member.missingRequirements} />
           </div>
         </div>
       </div>
@@ -849,7 +882,7 @@ export default function SectionAcademicPage() {
                           Instrumento
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          Materias faltantes por período
+                          Obligaciones pendientes por semestre
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           Subidas

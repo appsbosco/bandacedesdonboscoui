@@ -141,19 +141,40 @@ GradesSelect.propTypes = {
 // ─── Subject Modal ─────────────────────────────────────────────────────────────
 
 function SubjectModal({ isOpen, onClose, mode, subject, onSave, loading }) {
-  const [form, setForm] = useState({ name: "", code: "", grades: [], bands: "", isActive: true });
+  const [form, setForm] = useState({
+    name: "",
+    code: "",
+    subjectType: "EXAM_BASED",
+    scienceGroup: "",
+    order: 0,
+    grades: [],
+    bands: "",
+    isActive: true,
+  });
 
   useEffect(() => {
     if (isOpen && mode === "edit" && subject) {
       setForm({
         name: subject.name || "",
         code: subject.code || "",
+        subjectType: subject.subjectType || "EXAM_BASED",
+        scienceGroup: subject.scienceGroup || "",
+        order: subject.order || 0,
         grades: subject.grades || [],
         bands: (subject.bands || []).join(", "),
         isActive: subject.isActive !== false,
       });
     } else if (isOpen) {
-      setForm({ name: "", code: "", grades: [], bands: "", isActive: true });
+      setForm({
+        name: "",
+        code: "",
+        subjectType: "EXAM_BASED",
+        scienceGroup: "",
+        order: 0,
+        grades: [],
+        bands: "",
+        isActive: true,
+      });
     }
   }, [isOpen, mode, subject]);
 
@@ -162,6 +183,9 @@ function SubjectModal({ isOpen, onClose, mode, subject, onSave, loading }) {
     const input = {
       name: form.name.trim(),
       code: form.code.trim() || undefined,
+      subjectType: form.subjectType,
+      scienceGroup: form.scienceGroup || null,
+      order: parseInt(form.order, 10) || 0,
       isActive: form.isActive,
       grades: form.grades,
       bands: form.bands ? form.bands.split(",").map((b) => b.trim()).filter(Boolean) : [],
@@ -195,6 +219,42 @@ function SubjectModal({ isOpen, onClose, mode, subject, onSave, loading }) {
             className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="MAT-101"
           />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tipo *</label>
+            <select
+              value={form.subjectType}
+              onChange={(e) => setForm((f) => ({ ...f, subjectType: e.target.value }))}
+              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="EXAM_BASED">Con exámenes</option>
+              <option value="SEMESTER_FINAL_ONLY">Solo nota final</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Orden</label>
+            <input
+              type="number"
+              value={form.order}
+              onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
+              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Grupo de ciencia</label>
+          <select
+            value={form.scienceGroup}
+            onChange={(e) => setForm((f) => ({ ...f, scienceGroup: e.target.value }))}
+            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">No aplica</option>
+            <option value="GENERAL_SCIENCE">Ciencias</option>
+            <option value="BIOLOGY">Biología</option>
+            <option value="CHEMISTRY">Química</option>
+            <option value="PHYSICS">Física</option>
+          </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Niveles</label>
@@ -263,6 +323,7 @@ function PeriodModal({ isOpen, onClose, mode, period, onSave, loading }) {
   const [form, setForm] = useState({
     name: "",
     year: new Date().getFullYear(),
+    semester: 1,
     order: 1,
     isActive: true,
   });
@@ -272,11 +333,12 @@ function PeriodModal({ isOpen, onClose, mode, period, onSave, loading }) {
       setForm({
         name: period.name || "",
         year: period.year || new Date().getFullYear(),
+        semester: period.semester || 1,
         order: period.order || 1,
         isActive: period.isActive !== false,
       });
     } else if (isOpen) {
-      setForm({ name: "", year: new Date().getFullYear(), order: 1, isActive: true });
+      setForm({ name: "", year: new Date().getFullYear(), semester: 1, order: 1, isActive: true });
     }
   }, [isOpen, mode, period]);
 
@@ -285,6 +347,8 @@ function PeriodModal({ isOpen, onClose, mode, period, onSave, loading }) {
     const input = {
       name: form.name.trim(),
       year: parseInt(form.year),
+      academicYear: parseInt(form.year),
+      semester: parseInt(form.semester),
       order: parseInt(form.order),
       isActive: form.isActive,
     };
@@ -309,7 +373,7 @@ function PeriodModal({ isOpen, onClose, mode, period, onSave, loading }) {
             required
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Año *</label>
             <input
@@ -319,6 +383,17 @@ function PeriodModal({ isOpen, onClose, mode, period, onSave, loading }) {
               className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Semestre *</label>
+            <select
+              value={form.semester}
+              onChange={(e) => setForm((f) => ({ ...f, semester: e.target.value }))}
+              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={1}>I</option>
+              <option value={2}>II</option>
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Orden *</label>
@@ -434,6 +509,10 @@ export function SubjectPeriodManager({
               >
                 <div>
                   <p className="text-sm text-gray-900 font-medium">{s.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {s.subjectType === "SEMESTER_FINAL_ONLY" ? "Solo nota final" : "Con exámenes"}
+                    {s.scienceGroup ? ` · ${s.scienceGroup}` : ""}
+                  </p>
                   {s.grades?.length > 0 && (
                     <p className="text-xs text-gray-500">{s.grades.join(", ")}</p>
                   )}
@@ -502,7 +581,7 @@ export function SubjectPeriodManager({
                 <div>
                   <p className="text-sm text-gray-900 font-medium">{p.name}</p>
                   <p className="text-xs text-gray-500">
-                    {p.year} · Orden {p.order}
+                    {p.year} · Semestre {p.semester || "—"} · Orden {p.order}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

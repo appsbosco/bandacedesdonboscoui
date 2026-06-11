@@ -41,7 +41,11 @@ function Toast({ toast }) {
     info: "bg-blue-50 border-blue-300 text-blue-800",
   };
   return (
-    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${colors[toast.type] || colors.info}`}>
+    <div
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${
+        colors[toast.type] || colors.info
+      }`}
+    >
       {toast.message}
     </div>
   );
@@ -60,9 +64,11 @@ export default function StudentAcademicPage() {
     evaluations,
     performance,
     coverage,
+    requirementsCoverage,
     loadingEvaluations,
     loadingPerformance,
     loadingCoverage,
+    loadingRequirements,
     submitting,
     updating,
     deleting,
@@ -80,7 +86,7 @@ export default function StudentAcademicPage() {
     toast,
   } = useAcademicEvaluations({ grade: currentGrade });
 
-  const riskBadge = performance ? (RISK_BADGE[performance.riskLevel] || RISK_BADGE.GREEN) : null;
+  const riskBadge = performance ? RISK_BADGE[performance.riskLevel] || RISK_BADGE.GREEN : null;
   const averageColor =
     performance?.averageGeneral >= 80
       ? "text-emerald-600"
@@ -88,8 +94,21 @@ export default function StudentAcademicPage() {
       ? "text-amber-600"
       : "text-red-600";
 
-  const coverageByPeriod = coverage?.coverageByPeriod || [];
-  const missingCount = coverage?.missingEvaluationsCount || 0;
+  const requirementSummary = requirementsCoverage?.summary || null;
+  const requirements = requirementsCoverage?.requirements || [];
+  const missingRequirements = requirementsCoverage?.missingRequirements || [];
+  const completedRequirements = requirementsCoverage?.completedRequirements || [];
+  const missingCount = requirementSummary?.missingCount ?? 0;
+
+  const requirementsBySemester = requirements.reduce((acc, requirement) => {
+    const key = requirement.semester || 0;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(requirement);
+    return acc;
+  }, {});
+  const requirementSemesters = Object.entries(requirementsBySemester).sort(
+    ([a], [b]) => Number(a) - Number(b)
+  );
 
   return (
     <DashboardLayout>
@@ -114,15 +133,21 @@ export default function StudentAcademicPage() {
                     )}
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {currentGrade && (
-                        <span className="text-sm text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">{currentGrade}</span>
+                        <span className="text-sm text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                          {currentGrade}
+                        </span>
                       )}
                       {user?.instrument && (
-                        <span className="text-sm text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">{user.instrument}</span>
+                        <span className="text-sm text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                          {user.instrument}
+                        </span>
                       )}
                     </div>
                   </div>
                   {riskBadge && (
-                    <span className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border ${riskBadge.cls}`}>
+                    <span
+                      className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border ${riskBadge.cls}`}
+                    >
                       {riskBadge.label}
                     </span>
                   )}
@@ -132,12 +157,16 @@ export default function StudentAcademicPage() {
                 {performance && (
                   <div className="flex flex-wrap gap-4 mt-3">
                     <div className="text-center">
-                      <p className={`text-lg font-bold ${averageColor}`}>{performance.averageGeneral?.toFixed(1)}</p>
+                      <p className={`text-lg font-bold ${averageColor}`}>
+                        {performance.averageGeneral?.toFixed(1)}
+                      </p>
                       <p className="text-xs text-gray-400">Promedio</p>
                     </div>
                     <div className="w-px bg-gray-200" />
                     <div className="text-center">
-                      <p className="text-lg font-bold text-emerald-600">{performance.approvedCount}</p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        {performance.approvedCount}
+                      </p>
                       <p className="text-xs text-gray-400">Aprobadas</p>
                     </div>
                     <div className="w-px bg-gray-200" />
@@ -149,7 +178,9 @@ export default function StudentAcademicPage() {
                       <>
                         <div className="w-px bg-gray-200" />
                         <div className="text-center">
-                          <p className="text-lg font-bold text-red-600">{performance.rejectedCount}</p>
+                          <p className="text-lg font-bold text-red-600">
+                            {performance.rejectedCount}
+                          </p>
                           <p className="text-xs text-gray-400">Rechazadas</p>
                         </div>
                       </>
@@ -158,7 +189,11 @@ export default function StudentAcademicPage() {
                       <>
                         <div className="w-px bg-gray-200" />
                         <div className="text-center">
-                          <p className={`text-lg font-bold ${missingCount > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                          <p
+                            className={`text-lg font-bold ${
+                              missingCount > 0 ? "text-amber-600" : "text-emerald-600"
+                            }`}
+                          >
                             {missingCount}
                           </p>
                           <p className="text-xs text-gray-400">Faltantes</p>
@@ -173,11 +208,22 @@ export default function StudentAcademicPage() {
             {/* ── Alert: rejected evaluations ── */}
             {performance?.rejectedCount > 0 && (
               <div className="mb-4 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
-                <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-4 h-4 text-red-500 shrink-0 mt-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <p className="text-sm text-red-700">
-                  Tienes <span className="font-semibold">{performance.rejectedCount}</span> evaluación(es) rechazada(s). Puedes editarlas y volver a enviarlas.
+                  Tienes <span className="font-semibold">{performance.rejectedCount}</span>{" "}
+                  evaluación(es) rechazada(s). Puedes editarlas y volver a enviarlas.
                 </p>
               </div>
             )}
@@ -212,7 +258,12 @@ export default function StudentAcademicPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors mb-1"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
                 </svg>
                 <span className="hidden sm:inline">Nueva evaluación</span>
               </button>
@@ -221,77 +272,184 @@ export default function StudentAcademicPage() {
             {/* ── Tab: Resumen ── */}
             {activeTab === "resumen" && (
               <div className="space-y-6">
-                <PerformanceSummary performance={performance} loading={loadingPerformance} />
-
-                {/* Missing evaluations panel */}
-                {!loadingCoverage && coverageByPeriod.length > 0 && (
-                  <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Materias por subir según período ({missingCount})
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => openFormModal("create")}
-                        className="text-xs text-blue-600 hover:text-blue-500 font-medium"
-                      >
-                        Registrar evaluación
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      {coverageByPeriod.map((period) => (
-                        <div key={period.periodId} className="rounded-xl bg-gray-50 p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-800">
-                                {period.periodName} {period.year}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {period.submittedEvaluationsCount} de {period.expectedEvaluationsCount} subidas
-                              </p>
-                            </div>
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              period.missingEvaluationsCount > 0
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}>
-                              {period.missingEvaluationsCount} faltantes
-                            </span>
+                {/* Requirement coverage panel */}
+                {!loadingRequirements && requirements.length > 0 && (
+                  <div className="rounded-[28px]  shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 pb-4">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                          Obligaciones académicas
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-neutral-900">
+                          {requirementsCoverage?.academicYear} - {missingCount} pendientes
+                        </h3>
+                        <p className="mt-1 text-sm text-neutral-500">
+                          Lo que falta subir aparece arriba por semestre, con el acceso directo para
+                          registrar.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {requirementSummary && (
+                          <div className="rounded-2xl bg-neutral-50 px-3 py-2 text-right">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                              Entregadas
+                            </p>
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {requirementSummary.submittedCount}/{requirementSummary.expectedCount}
+                            </p>
                           </div>
-                          {period.missingSubjects.length > 0 && (
-                            <div className="mt-3 space-y-1.5">
-                              {period.missingSubjects.map((subject) => (
-                                <div key={subject.subjectId} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                                  <span className="text-sm font-medium text-gray-700">{subject.subjectName}</span>
+                        )}
+                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-500">
+                            Pendientes
+                          </p>
+                          <p className="text-sm font-semibold text-amber-700">{missingCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                      {requirementSemesters.map(([semester, items]) => {
+                        const pending = items.filter((item) => !item.submitted);
+                        const completed = items.filter((item) => item.submitted);
+                        const pendingPreview = pending.slice(0, 4);
+                        const completedPreview = completed.slice(0, 3);
+                        return (
+                          <section
+                            key={semester}
+                            className="rounded-[22px] border border-neutral-100 bg-neutral-50/70 p-3.5"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-neutral-900">
+                                  {semester === "1" ? "I Semestre" : "II Semestre"}{" "}
+                                  {requirementsCoverage?.academicYear}
+                                </p>
+                                <p className="text-xs text-neutral-500">
+                                  {completed.length} de {items.length} entregadas
+                                </p>
+                              </div>
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                  pending.length > 0
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-emerald-100 text-emerald-700"
+                                }`}
+                              >
+                                {pending.length} pendientes
+                              </span>
+                            </div>
+
+                            {pendingPreview.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                                    Pendientes
+                                  </p>
+                                  <p className="text-[10px] font-semibold text-neutral-400">
+                                    Toca una tarjeta para subirla
+                                  </p>
+                                </div>
+                                {pendingPreview.map((requirement) => (
                                   <button
                                     type="button"
+                                    key={`${requirement.subjectId}:${requirement.assessmentSlotId}`}
                                     onClick={() =>
                                       openFormModal("create", null, {
-                                        subjectId: subject.subjectId,
-                                        periodId: period.periodId,
+                                        requirement,
                                       })
                                     }
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
+                                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 text-left transition hover:border-blue-200 hover:bg-blue-50"
                                   >
-                                    Registrar
+                                    <div className="min-w-0">
+                                      <span className="block truncate text-sm font-semibold text-neutral-900">
+                                        {requirement.subjectName}
+                                      </span>
+                                      <span className="block truncate text-xs text-neutral-500">
+                                        {requirement.slotLabel}
+                                      </span>
+                                    </div>
+                                    <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+                                      Subir
+                                    </span>
                                   </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                                ))}
+                                {pending.length > pendingPreview.length && (
+                                  <p className="px-1 text-xs text-neutral-500">
+                                    +{pending.length - pendingPreview.length} pendientes más en este
+                                    semestre.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {completedPreview.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                                  Completadas
+                                </p>
+                                {completedPreview.map((requirement) => (
+                                  <div
+                                    key={`${requirement.subjectId}:${requirement.assessmentSlotId}:done`}
+                                    className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2.5"
+                                  >
+                                    <div className="min-w-0">
+                                      <span className="block truncate text-sm font-medium text-neutral-800">
+                                        {requirement.subjectName}
+                                      </span>
+                                      <span className="block truncate text-xs text-neutral-500">
+                                        {requirement.slotLabel}
+                                      </span>
+                                    </div>
+                                    <span
+                                      className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                        requirement.status === "approved"
+                                          ? "bg-emerald-100 text-emerald-700"
+                                          : requirement.status === "rejected"
+                                          ? "bg-red-100 text-red-700"
+                                          : "bg-amber-100 text-amber-700"
+                                      }`}
+                                    >
+                                      {requirement.status === "approved"
+                                        ? "Aprobada"
+                                        : requirement.status === "rejected"
+                                        ? "Rechazada"
+                                        : "En revisión"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
+                <PerformanceSummary performance={performance} loading={loadingPerformance} />
+
                 {!loadingPerformance && !performance && (
-                  <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-xl border border-gray-200">
-                    <svg className="w-14 h-14 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <div className="flex flex-col items-center justify-center rounded-[28px] border border-neutral-200 bg-neutral-50 py-16">
+                    <svg
+                      className="mb-4 h-14 w-14 text-neutral-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
                     </svg>
-                    <p className="text-sm font-medium text-gray-600">Sin datos de rendimiento aún</p>
-                    <p className="text-xs text-gray-400 mt-1">Registra evaluaciones y espera a que sean aprobadas</p>
+                    <p className="text-sm font-medium text-neutral-700">
+                      Sin datos de rendimiento aún
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-400">
+                      Registra evaluaciones y espera a que sean aprobadas
+                    </p>
                   </div>
                 )}
               </div>
@@ -309,17 +467,23 @@ export default function StudentAcademicPage() {
                   >
                     <option value="">Todos los períodos</option>
                     {periods.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} — {p.year}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {p.year}
+                      </option>
                     ))}
                   </select>
                   <select
                     value={filter.subjectId || ""}
-                    onChange={(e) => setFilter((f) => ({ ...f, subjectId: e.target.value || null }))}
+                    onChange={(e) =>
+                      setFilter((f) => ({ ...f, subjectId: e.target.value || null }))
+                    }
                     className="flex-1 min-w-[140px] bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Todas las materias</option>
                     {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
                     ))}
                   </select>
                   <select
@@ -328,7 +492,9 @@ export default function StudentAcademicPage() {
                     className="flex-1 min-w-[120px] bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {STATUS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -354,18 +520,26 @@ export default function StudentAcademicPage() {
         initialSelection={formModal.initialSelection}
         subjects={subjects}
         periods={periods}
+        requirements={missingRequirements}
         onSubmit={handleSubmit}
         onUpdate={handleUpdate}
         loading={submitting || updating}
       />
 
       {/* Delete Modal */}
-      <Modal isOpen={deleteModal.open} onClose={closeDeleteModal} title="Eliminar evaluación" size="sm">
+      <Modal
+        isOpen={deleteModal.open}
+        onClose={closeDeleteModal}
+        title="Eliminar evaluación"
+        size="sm"
+      >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             ¿Seguro que deseas eliminar la evaluación de{" "}
-            <span className="font-semibold text-gray-900">{deleteModal.evaluation?.subject?.name}</span>?
-            Esta acción no se puede deshacer.
+            <span className="font-semibold text-gray-900">
+              {deleteModal.evaluation?.subject?.name}
+            </span>
+            ? Esta acción no se puede deshacer.
           </p>
           <div className="flex gap-3">
             <button

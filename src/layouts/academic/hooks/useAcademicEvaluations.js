@@ -6,12 +6,14 @@ import {
   GET_MY_ACADEMIC_EVALUATIONS,
   GET_MY_ACADEMIC_PERFORMANCE,
   GET_MY_ACADEMIC_EVALUATION_COVERAGE,
+  GET_MY_ACADEMIC_REQUIREMENTS,
   SUBMIT_ACADEMIC_EVALUATION,
   UPDATE_OWN_PENDING_EVALUATION,
   DELETE_OWN_PENDING_EVALUATION,
 } from "../academic.gql";
 
 export function useAcademicEvaluations({ periodId, year, grade } = {}) {
+  const academicYear = year || new Date().getFullYear();
   const [filter, setFilter] = useState({ periodId, subjectId: null, status: null });
   const [formModal, setFormModal] = useState({
     open: false,
@@ -49,6 +51,11 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     fetchPolicy: "cache-and-network",
   });
 
+  const requirementsQuery = useQuery(GET_MY_ACADEMIC_REQUIREMENTS, {
+    variables: { academicYear, semester: null },
+    fetchPolicy: "cache-and-network",
+  });
+
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
   const [submitMutation, { loading: submitting }] = useMutation(SUBMIT_ACADEMIC_EVALUATION, {
@@ -58,6 +65,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       evaluationsQuery.refetch();
       performanceQuery.refetch();
       coverageQuery.refetch();
+      requirementsQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -69,6 +77,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       evaluationsQuery.refetch();
       performanceQuery.refetch();
       coverageQuery.refetch();
+      requirementsQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -80,6 +89,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       evaluationsQuery.refetch();
       performanceQuery.refetch();
       coverageQuery.refetch();
+      requirementsQuery.refetch();
     },
     onError: (e) => showToast(e.message, "error"),
   });
@@ -136,6 +146,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     evaluations: evaluationsQuery.data?.myAcademicEvaluations || [],
     performance: performanceQuery.data?.myAcademicPerformance || null,
     coverage: coverageQuery.data?.myAcademicEvaluationCoverage || null,
+    requirementsCoverage: requirementsQuery.data?.getMyAcademicRequirements || null,
 
     // Loading
     loadingSubjects: subjectsQuery.loading,
@@ -143,6 +154,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
     loadingEvaluations: evaluationsQuery.loading,
     loadingPerformance: performanceQuery.loading,
     loadingCoverage: coverageQuery.loading,
+    loadingRequirements: requirementsQuery.loading,
     submitting,
     updating,
     deleting,
@@ -176,6 +188,7 @@ export function useAcademicEvaluations({ periodId, year, grade } = {}) {
       evaluationsQuery.refetch();
       performanceQuery.refetch();
       coverageQuery.refetch();
+      requirementsQuery.refetch();
     },
   };
 }

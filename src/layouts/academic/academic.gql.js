@@ -20,8 +20,11 @@ const ACADEMIC_SUBJECT_FRAGMENT = gql`
     name
     code
     isActive
+    subjectType
     bands
     grades
+    scienceGroup
+    order
   }
 `;
 
@@ -30,8 +33,29 @@ const ACADEMIC_PERIOD_FRAGMENT = gql`
     id
     name
     year
+    academicYear
+    semester
     order
     isActive
+  }
+`;
+
+const ASSESSMENT_SLOT_FRAGMENT = gql`
+  fragment AssessmentSlotFields on AcademicAssessmentSlot {
+    id
+    academicYear
+    semester
+    slotKey
+    label
+    evaluationType
+    subjectType
+    appliesToGrades
+    excludedGrades
+    order
+    isActive
+    requiresEvidence
+    createdAt
+    updatedAt
   }
 `;
 
@@ -42,6 +66,7 @@ const EVALUATION_FRAGMENT = gql`
   ${EVAL_BASIC_USER_FRAGMENT}
   ${ACADEMIC_SUBJECT_FRAGMENT}
   ${ACADEMIC_PERIOD_FRAGMENT}
+  ${ASSESSMENT_SLOT_FRAGMENT}
   fragment EvaluationFields on AcademicEvaluation {
     id
     student {
@@ -53,6 +78,13 @@ const EVALUATION_FRAGMENT = gql`
     period {
       ...AcademicPeriodFields
     }
+    assessmentSlot {
+      ...AssessmentSlotFields
+    }
+    academicYear
+    semester
+    evaluationType
+    migrationStatus
     scoreRaw
     scaleMin
     scaleMax
@@ -82,6 +114,7 @@ const EVALUATION_DETAIL_FRAGMENT = gql`
   ${EVAL_BASIC_USER_FRAGMENT}
   ${ACADEMIC_SUBJECT_FRAGMENT}
   ${ACADEMIC_PERIOD_FRAGMENT}
+  ${ASSESSMENT_SLOT_FRAGMENT}
   fragment EvaluationDetailFields on AcademicEvaluationDetail {
     id
     student {
@@ -93,6 +126,13 @@ const EVALUATION_DETAIL_FRAGMENT = gql`
     period {
       ...AcademicPeriodFields
     }
+    assessmentSlot {
+      ...AssessmentSlotFields
+    }
+    academicYear
+    semester
+    evaluationType
+    migrationStatus
     scoreRaw
     scaleMin
     scaleMax
@@ -124,12 +164,27 @@ const PERFORMANCE_FRAGMENT = gql`
     studentId
     studentName
     averageGeneral
+    averageFromSubmittedApproved
+    coveragePercentage
+    expectedCount
+    submittedCount
+    missingCount
     approvedCount
     pendingCount
     rejectedCount
     averagesBySubject {
       subjectId
       subjectName
+      average
+      evaluationCount
+    }
+    averagesBySemester {
+      semester
+      average
+      evaluationCount
+    }
+    averagesByEvaluationType {
+      evaluationType
       average
       evaluationCount
     }
@@ -189,6 +244,104 @@ const ACADEMIC_COVERAGE_FRAGMENT = gql`
       missingSubjects {
         subjectId
         subjectName
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+      }
+    }
+  }
+`;
+
+const REQUIREMENT_COVERAGE_FRAGMENT = gql`
+  ${EVALUATION_FRAGMENT}
+  fragment RequirementCoverageFields on StudentAcademicRequirementCoverage {
+    studentId
+    student {
+      ...EvalBasicUserFields
+    }
+    academicYear
+    semester
+    summary {
+      expectedCount
+      submittedCount
+      missingCount
+      approvedCount
+      pendingCount
+      rejectedCount
+      allSubmitted
+      coveragePercentage
+    }
+    requirements {
+      subject {
+        ...AcademicSubjectFields
+      }
+      assessmentSlot {
+        ...AssessmentSlotFields
+      }
+      academicYear
+      semester
+      required
+      submitted
+      status
+      scoreNormalized100
+      subjectId
+      subjectName
+      subjectType
+      assessmentSlotId
+      slotKey
+      slotLabel
+      evaluationType
+      evaluationId
+      evaluation {
+        ...EvaluationFields
+      }
+    }
+    missingRequirements {
+      subject {
+        ...AcademicSubjectFields
+      }
+      assessmentSlot {
+        ...AssessmentSlotFields
+      }
+      academicYear
+      semester
+      required
+      submitted
+      status
+      scoreNormalized100
+      subjectId
+      subjectName
+      subjectType
+      assessmentSlotId
+      slotKey
+      slotLabel
+      evaluationType
+      evaluationId
+    }
+    completedRequirements {
+      subject {
+        ...AcademicSubjectFields
+      }
+      assessmentSlot {
+        ...AssessmentSlotFields
+      }
+      academicYear
+      semester
+      required
+      submitted
+      status
+      scoreNormalized100
+      subjectId
+      subjectName
+      subjectType
+      assessmentSlotId
+      slotKey
+      slotLabel
+      evaluationType
+      evaluationId
+      evaluation {
+        ...EvaluationFields
       }
     }
   }
@@ -214,6 +367,15 @@ export const GET_ACADEMIC_PERIODS = gql`
       ...AcademicPeriodFields
       createdAt
       updatedAt
+    }
+  }
+`;
+
+export const GET_ACADEMIC_ASSESSMENT_SLOTS = gql`
+  ${ASSESSMENT_SLOT_FRAGMENT}
+  query GetAcademicAssessmentSlots($academicYear: Int, $semester: Int, $isActive: Boolean) {
+    getAcademicAssessmentSlots(academicYear: $academicYear, semester: $semester, isActive: $isActive) {
+      ...AssessmentSlotFields
     }
   }
 `;
@@ -245,6 +407,15 @@ export const GET_MY_ACADEMIC_EVALUATION_COVERAGE = gql`
   }
 `;
 
+export const GET_MY_ACADEMIC_REQUIREMENTS = gql`
+  ${REQUIREMENT_COVERAGE_FRAGMENT}
+  query GetMyAcademicRequirements($academicYear: Int!, $semester: Int) {
+    getMyAcademicRequirements(academicYear: $academicYear, semester: $semester) {
+      ...RequirementCoverageFields
+    }
+  }
+`;
+
 export const GET_STUDENT_ACADEMIC_EVALUATIONS = gql`
   ${EVALUATION_FRAGMENT}
   query GetStudentAcademicEvaluations($studentId: ID!, $filter: AcademicDashboardFilter) {
@@ -259,6 +430,24 @@ export const GET_STUDENT_ACADEMIC_PERFORMANCE = gql`
   query GetStudentAcademicPerformance($studentId: ID!, $periodId: ID, $year: Int) {
     studentAcademicPerformance(studentId: $studentId, periodId: $periodId, year: $year) {
       ...PerformanceFields
+    }
+  }
+`;
+
+export const GET_STUDENT_ACADEMIC_REQUIREMENTS = gql`
+  ${REQUIREMENT_COVERAGE_FRAGMENT}
+  query GetStudentAcademicRequirements($studentId: ID!, $academicYear: Int!, $semester: Int) {
+    getStudentAcademicRequirements(studentId: $studentId, academicYear: $academicYear, semester: $semester) {
+      ...RequirementCoverageFields
+    }
+  }
+`;
+
+export const GET_ADMIN_ACADEMIC_COVERAGE = gql`
+  ${REQUIREMENT_COVERAGE_FRAGMENT}
+  query GetAdminAcademicCoverage($filter: AcademicCoverageFilterInput) {
+    getAdminAcademicCoverage(filter: $filter) {
+      ...RequirementCoverageFields
     }
   }
 `;
@@ -401,17 +590,60 @@ export const GET_ADMIN_ACADEMIC_STUDENTS = gql`
       expectedEvaluationsCount
       submittedEvaluationsCount
       missingEvaluationsCount
-      coverageByPeriod {
-        periodId
-        periodName
-        year
-        expectedEvaluationsCount
-        submittedEvaluationsCount
-        missingEvaluationsCount
-        missingSubjects {
-          subjectId
-          subjectName
-        }
+      summary {
+        expectedCount
+        submittedCount
+        missingCount
+        approvedCount
+        pendingCount
+        rejectedCount
+        allSubmitted
+        coveragePercentage
+      }
+      requirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
+      }
+      missingRequirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
+      }
+      completedRequirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
       }
     }
   }
@@ -511,17 +743,60 @@ export const GET_SECTION_INSTRUMENT_ACADEMIC_OVERVIEW = gql`
       expectedEvaluationsCount
       submittedEvaluationsCount
       missingEvaluationsCount
-      coverageByPeriod {
-        periodId
-        periodName
-        year
-        expectedEvaluationsCount
-        submittedEvaluationsCount
-        missingEvaluationsCount
-        missingSubjects {
-          subjectId
-          subjectName
-        }
+      summary {
+        expectedCount
+        submittedCount
+        missingCount
+        approvedCount
+        pendingCount
+        rejectedCount
+        allSubmitted
+        coveragePercentage
+      }
+      requirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
+      }
+      missingRequirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
+      }
+      completedRequirements {
+        subjectId
+        subjectName
+        subjectType
+        assessmentSlotId
+        slotKey
+        slotLabel
+        evaluationType
+        academicYear
+        semester
+        required
+        submitted
+        status
+        scoreNormalized100
       }
       performance {
         ...PerformanceFields
@@ -570,6 +845,42 @@ export const UPDATE_ACADEMIC_PERIOD = gql`
   mutation UpdateAcademicPeriod($id: ID!, $input: AcademicPeriodInput!) {
     updateAcademicPeriod(id: $id, input: $input) {
       ...AcademicPeriodFields
+    }
+  }
+`;
+
+export const CREATE_ACADEMIC_ASSESSMENT_SLOT = gql`
+  ${ASSESSMENT_SLOT_FRAGMENT}
+  mutation CreateAcademicAssessmentSlot($input: AcademicAssessmentSlotInput!) {
+    createAcademicAssessmentSlot(input: $input) {
+      ...AssessmentSlotFields
+    }
+  }
+`;
+
+export const UPDATE_ACADEMIC_ASSESSMENT_SLOT = gql`
+  ${ASSESSMENT_SLOT_FRAGMENT}
+  mutation UpdateAcademicAssessmentSlot($id: ID!, $input: AcademicAssessmentSlotInput!) {
+    updateAcademicAssessmentSlot(id: $id, input: $input) {
+      ...AssessmentSlotFields
+    }
+  }
+`;
+
+export const DELETE_OR_DEACTIVATE_ACADEMIC_ASSESSMENT_SLOT = gql`
+  mutation DeleteOrDeactivateAcademicAssessmentSlot($id: ID!) {
+    deleteOrDeactivateAcademicAssessmentSlot(id: $id)
+  }
+`;
+
+export const SEED_ACADEMIC_RULES_FOR_YEAR = gql`
+  mutation SeedAcademicRulesForYear($year: Int!) {
+    seedAcademicRulesForYear(year: $year) {
+      academicYear
+      subjectsUpserted
+      periodsUpserted
+      slotsUpserted
+      message
     }
   }
 `;

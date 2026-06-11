@@ -90,9 +90,9 @@ export function PerformanceSummary({ performance, loading }) {
   const risk = RISK_CONFIG[performance.riskLevel] || RISK_CONFIG.GREEN;
   const trend = TREND_CONFIG[performance.trendDirection] || TREND_CONFIG.STABLE;
   const averageColor =
-    performance.averageGeneral >= 80
+    performance.averageFromSubmittedApproved >= 80
       ? "text-emerald-600"
-      : performance.averageGeneral >= 70
+      : performance.averageFromSubmittedApproved >= 70
       ? "text-amber-600"
       : "text-red-600";
 
@@ -117,9 +117,9 @@ export function PerformanceSummary({ performance, loading }) {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <p className="text-xs text-gray-500 mb-1.5">Promedio general</p>
+          <p className="text-xs text-gray-500 mb-1.5">Promedio aprobado</p>
           <p className={`text-2xl font-bold ${averageColor}`}>
-            {performance.averageGeneral?.toFixed(1)}
+            {performance.averageFromSubmittedApproved?.toFixed(1)}
             <span className="text-sm text-gray-400 font-normal ml-0.5">/100</span>
           </p>
         </div>
@@ -136,14 +136,16 @@ export function PerformanceSummary({ performance, loading }) {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <p className="text-xs text-gray-500 mb-1.5">Aprobadas</p>
-          <p className="text-2xl font-bold text-emerald-600">{performance.approvedCount}</p>
-          <p className="text-xs text-gray-400 mt-0.5">evaluaciones</p>
+          <p className="text-xs text-gray-500 mb-1.5">Cumplimiento</p>
+          <p className="text-2xl font-bold text-blue-600">{performance.coveragePercentage?.toFixed(1)}%</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {performance.submittedCount}/{performance.expectedCount} entregadas
+          </p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <p className="text-xs text-gray-500 mb-1.5">Pendientes</p>
-          <p className="text-2xl font-bold text-amber-600">{performance.pendingCount}</p>
+          <p className="text-xs text-gray-500 mb-1.5">Faltantes</p>
+          <p className="text-2xl font-bold text-amber-600">{performance.missingCount}</p>
           {performance.rejectedCount > 0 && (
             <p className="text-xs text-red-500 mt-0.5">{performance.rejectedCount} rechazadas</p>
           )}

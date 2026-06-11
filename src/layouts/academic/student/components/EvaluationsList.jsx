@@ -184,7 +184,9 @@ export function EvaluationsList({
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <p className="text-gray-700">{ev.period?.name}</p>
-                  <p className="text-xs text-gray-400">{ev.period?.year}</p>
+                  <p className="text-xs text-gray-400">
+                    {ev.assessmentSlot?.label || ev.period?.year}
+                  </p>
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <span className="font-medium text-gray-900">{ev.scoreRaw}</span>
