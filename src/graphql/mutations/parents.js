@@ -30,3 +30,18 @@ export const REMOVE_CHILD_FROM_PARENT = gql`
     }
   }
 `;
+
+export const UPDATE_MY_PARENT_PROFILE = gql`
+  mutation UpdateMyParentProfile($input: UpdateMyParentProfileInput) {
+    updateMyParentProfile(input: $input) {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      phone
+      role
+      avatar
+    }
+  }
+`;

@@ -60,6 +60,26 @@ export const UPDATE_USER = gql`
   }
 `;
 
+export const UPDATE_MY_USER_PROFILE = gql`
+  mutation UpdateMyUserProfile($input: UpdateMyUserProfileInput) {
+    updateMyUserProfile(input: $input) {
+      id
+      name
+      firstSurName
+      secondSurName
+      email
+      birthday
+      carnet
+      state
+      grade
+      phone
+      role
+      instrument
+      avatar
+    }
+  }
+`;
+
 // Users
 export const DELETE_USER = gql`
   mutation DeleteUser($deleteUserId: ID!) {

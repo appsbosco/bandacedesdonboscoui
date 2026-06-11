@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import Header from "layouts/profile/components/Header";
+import ProfileEditModal from "layouts/profile/components/ProfileEditModal";
 import MedicalRecordModal from "./components/Modals/MedicalRecordModal";
 import InventoryModal from "./components/Modals/InventoryModal";
 import {
@@ -17,6 +18,7 @@ import {
   UPDATE_MEDICAL_RECORD,
   CREATE_INVENTORY,
   UPDATE_INVENTORY,
+  UPDATE_MY_USER_PROFILE,
 } from "graphql/mutations";
 
 // ─── Reusable field row ────────────────────────────────────────────────────────
@@ -147,6 +149,9 @@ const Overview = () => {
   const [selected, setSelected] = useState(null);
   const [modalType, setModalType] = useState(null);
   const [openModal, setOpenModal] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
 
   const [addMedicalRecord] = useMutation(CREATE_MEDICAL_RECORD, {
     refetchQueries: [{ query: GET_MEDICAL_RECORD_BY_USER }],
@@ -160,6 +165,25 @@ const Overview = () => {
   const [updateInventory] = useMutation(UPDATE_INVENTORY, {
     refetchQueries: [{ query: GET_INVENTORY_BY_USER }],
   });
+  const [updateMyUserProfile, { loading: updatingProfile }] = useMutation(
+    UPDATE_MY_USER_PROFILE,
+    {
+      refetchQueries: [{ query: GET_USERS_BY_ID }],
+      awaitRefetchQueries: true,
+      onCompleted: () => {
+        setProfileError("");
+        setProfileMessage("Información actualizada correctamente.");
+        setTimeout(() => {
+          setProfileMessage("");
+          setProfileModalOpen(false);
+        }, 900);
+      },
+      onError: (error) => {
+        setProfileMessage("");
+        setProfileError(error.message.replace("GraphQL error: ", ""));
+      },
+    }
+  );
 
   const handleOpenModal = (type, event = null) => {
     setModalType(type);
@@ -187,6 +211,9 @@ const Overview = () => {
   const handleUpdateInventory = async (data) => {
     await updateInventory({ variables: { id: selected.id, input: data } });
     handleCloseModal();
+  };
+  const handleUpdateProfile = async (input) => {
+    await updateMyUserProfile({ variables: { input } });
   };
 
   const medicalRecords = medicalRecordData?.getMedicalRecordByUser || [];
@@ -225,6 +252,16 @@ const Overview = () => {
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
               </svg>
+            }
+            action={
+              <EditButton
+                label="Editar"
+                onClick={() => {
+                  setProfileError("");
+                  setProfileMessage("");
+                  setProfileModalOpen(true);
+                }}
+              />
             }
           >
             <InfoRow
@@ -533,6 +570,17 @@ const Overview = () => {
           </ProfileCard>
         </div>
       </div>
+
+      <ProfileEditModal
+        open={profileModalOpen}
+        accountType="user"
+        profile={userData?.getUser}
+        loading={updatingProfile}
+        error={profileError}
+        successMessage={profileMessage}
+        onClose={() => setProfileModalOpen(false)}
+        onSubmit={handleUpdateProfile}
+      />
 
       <Footer />
     </DashboardLayout>

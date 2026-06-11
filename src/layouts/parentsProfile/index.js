@@ -4,6 +4,7 @@
 =========================================================
 */
 
+import { useState } from "react";
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 import SoftBox from "components/SoftBox";
@@ -11,17 +12,50 @@ import SoftTypography from "components/SoftTypography";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import Header from "layouts/profile/components/Header";
+import ProfileEditModal from "layouts/profile/components/ProfileEditModal";
 import { Divider } from "@mui/material";
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { GET_PARENT_DASHBOARD } from "graphql/queries/parents";
+import { UPDATE_MY_PARENT_PROFILE } from "graphql/mutations/parents";
 
 const Overview = () => {
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
   const { data, loading, error } = useQuery(GET_PARENT_DASHBOARD, {
     variables: {
       dateRange: { preset: "ALL_TIME" },
     },
     fetchPolicy: "cache-and-network",
   });
+  const [updateMyParentProfile, { loading: updatingProfile }] = useMutation(
+    UPDATE_MY_PARENT_PROFILE,
+    {
+      refetchQueries: [
+        {
+          query: GET_PARENT_DASHBOARD,
+          variables: { dateRange: { preset: "ALL_TIME" } },
+        },
+      ],
+      awaitRefetchQueries: true,
+      onCompleted: () => {
+        setProfileError("");
+        setProfileMessage("Información actualizada correctamente.");
+        setTimeout(() => {
+          setProfileMessage("");
+          setProfileModalOpen(false);
+        }, 900);
+      },
+      onError: (mutationError) => {
+        setProfileMessage("");
+        setProfileError(mutationError.message.replace("GraphQL error: ", ""));
+      },
+    }
+  );
+
+  const handleUpdateProfile = async (input) => {
+    await updateMyParentProfile({ variables: { input } });
+  };
 
   if (loading && !data) {
     return (
@@ -109,6 +143,25 @@ const Overview = () => {
                 <SoftTypography variant="h5" fontWeight="medium">
                   Información general
                 </SoftTypography>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileError("");
+                    setProfileMessage("");
+                    setProfileModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors duration-150 hover:bg-slate-200"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  Editar
+                </button>
               </SoftBox>
               <SoftBox p={2}>
                 <SoftBox mb={2} lineHeight={1}>
@@ -412,6 +465,17 @@ const Overview = () => {
           )}
         </Grid>
       </SoftBox>
+
+      <ProfileEditModal
+        open={profileModalOpen}
+        accountType="parent"
+        profile={parent}
+        loading={updatingProfile}
+        error={profileError}
+        successMessage={profileMessage}
+        onClose={() => setProfileModalOpen(false)}
+        onSubmit={handleUpdateProfile}
+      />
 
       <Footer />
     </DashboardLayout>

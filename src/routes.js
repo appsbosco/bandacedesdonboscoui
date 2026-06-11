@@ -686,20 +686,20 @@ export const adminRoutes = [
   items.ticketAssign(),
   items.ticketScan({ name: "Escaneo de entradas", key: "qr-scanner" }),
 
-  title("Otros", "otros"),
-  items.colorGuardCampDashboard({ icon: muiIcon12(FlagIcon) }),
-  items.alumniDashboard(),
-  items.guatemalaDashboard(),
-  collapse({
-    name: "Apoyo",
-    key: "grupo-apoyo-dashboard",
-    route: "/grupo-apoyo-dashboard",
-    icon: muiIcon12(AccessibilityIcon),
-    component: <ApoyoDashboard />,
-  }),
+  // title("Otros", "otros"),
+  // items.colorGuardCampDashboard({ icon: muiIcon12(FlagIcon) }),
+  // items.alumniDashboard(),
+  // items.guatemalaDashboard(),
+  // collapse({
+  //   name: "Apoyo",
+  //   key: "grupo-apoyo-dashboard",
+  //   route: "/grupo-apoyo-dashboard",
+  //   icon: muiIcon12(AccessibilityIcon),
+  //   component: <ApoyoDashboard />,
+  // }),
 
-  title("Comunicación", "comunication"),
-  items.email(),
+  // title("Comunicación", "comunication"),
+  // items.email(),
 
   title("Cuenta", "account-pages"),
   items.profile(),
