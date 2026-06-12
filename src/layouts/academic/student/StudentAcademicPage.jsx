@@ -33,6 +33,11 @@ const TABS = [
   { id: "calificaciones", label: "Historial de calificaciones" },
 ];
 
+function inferPeriodSemester(period) {
+  const semester = Number(period?.semester);
+  return [1, 2].includes(semester) ? semester : null;
+}
+
 function Toast({ toast }) {
   if (!toast) return null;
   const colors = {
@@ -99,16 +104,35 @@ export default function StudentAcademicPage() {
   const missingRequirements = requirementsCoverage?.missingRequirements || [];
   const completedRequirements = requirementsCoverage?.completedRequirements || [];
   const missingCount = requirementSummary?.missingCount ?? 0;
+  const activeSemesters = new Set(
+    periods
+      .filter(
+        (period) =>
+          period?.isActive !== false &&
+          Number(period.academicYear || period.year) === Number(requirementsCoverage?.academicYear)
+      )
+      .map(inferPeriodSemester)
+      .filter((semester) => [1, 2].includes(Number(semester)))
+  );
 
-  const requirementsBySemester = requirements.reduce((acc, requirement) => {
-    const key = requirement.semester || 0;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(requirement);
+  const requirementsBySemester = missingRequirements.reduce((acc, requirement) => {
+    const semesterKey = Number(requirement.semester || 0);
+    if (!acc[semesterKey]) acc[semesterKey] = {};
+    const slotKey = requirement.assessmentSlotId || requirement.slotKey || "default";
+    if (!acc[semesterKey][slotKey]) {
+      acc[semesterKey][slotKey] = {
+        slotKey,
+        slotLabel: requirement.slotLabel || "Obligación académica",
+        evaluationType: requirement.evaluationType || null,
+        items: [],
+      };
+    }
+    acc[semesterKey][slotKey].items.push(requirement);
     return acc;
   }, {});
-  const requirementSemesters = Object.entries(requirementsBySemester).sort(
-    ([a], [b]) => Number(a) - Number(b)
-  );
+  const requirementSemesters = Object.entries(requirementsBySemester)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .filter(([semester]) => activeSemesters.has(Number(semester)));
 
   return (
     <DashboardLayout>
@@ -310,10 +334,16 @@ export default function StudentAcademicPage() {
 
                     <div className="mt-4 grid gap-3 xl:grid-cols-2">
                       {requirementSemesters.map(([semester, items]) => {
-                        const pending = items.filter((item) => !item.submitted);
-                        const completed = items.filter((item) => item.submitted);
-                        const pendingPreview = pending.slice(0, 4);
-                        const completedPreview = completed.slice(0, 3);
+                        const slotGroups = Object.values(items).sort((a, b) => {
+                          const orderA = Number(a.items?.[0]?.assessmentSlot?.order || 0);
+                          const orderB = Number(b.items?.[0]?.assessmentSlot?.order || 0);
+                          if (orderA !== orderB) return orderA - orderB;
+                          return String(a.slotLabel || "").localeCompare(String(b.slotLabel || ""));
+                        });
+                        const totalPending = slotGroups.reduce(
+                          (sum, group) => sum + group.items.length,
+                          0
+                        );
                         return (
                           <section
                             key={semester}
@@ -326,100 +356,68 @@ export default function StudentAcademicPage() {
                                   {requirementsCoverage?.academicYear}
                                 </p>
                                 <p className="text-xs text-neutral-500">
-                                  {completed.length} de {items.length} entregadas
+                                  {items && Object.values(items).reduce((sum, group) => sum + group.items.length, 0)} pendientes reales
                                 </p>
                               </div>
                               <span
                                 className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
-                                  pending.length > 0
+                                  totalPending > 0
                                     ? "bg-amber-100 text-amber-700"
                                     : "bg-emerald-100 text-emerald-700"
                                 }`}
                               >
-                                {pending.length} pendientes
+                                {totalPending} pendientes
                               </span>
                             </div>
 
-                            {pendingPreview.length > 0 && (
-                              <div className="mt-3 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                                    Pendientes
-                                  </p>
-                                  <p className="text-[10px] font-semibold text-neutral-400">
-                                    Toca una tarjeta para subirla
-                                  </p>
-                                </div>
-                                {pendingPreview.map((requirement) => (
-                                  <button
-                                    type="button"
-                                    key={`${requirement.subjectId}:${requirement.assessmentSlotId}`}
-                                    onClick={() =>
-                                      openFormModal("create", null, {
-                                        requirement,
-                                      })
-                                    }
-                                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 text-left transition hover:border-blue-200 hover:bg-blue-50"
-                                  >
+                            <div className="mt-3 space-y-3">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                                Pendientes por obligación
+                              </p>
+                              {slotGroups.map((group) => (
+                                <div
+                                  key={group.slotKey}
+                                  className="rounded-2xl border border-neutral-200 bg-white px-3 py-3"
+                                >
+                                  <div className="flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                      <span className="block truncate text-sm font-semibold text-neutral-900">
-                                        {requirement.subjectName}
-                                      </span>
-                                      <span className="block truncate text-xs text-neutral-500">
-                                        {requirement.slotLabel}
-                                      </span>
+                                      <p className="text-sm font-semibold text-neutral-900">
+                                        {group.slotLabel}
+                                      </p>
+                                      <p className="text-xs text-neutral-500">
+                                        {group.items.length} materia
+                                        {group.items.length === 1 ? "" : "s"} pendientes
+                                      </p>
                                     </div>
-                                    <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
-                                      Subir
-                                    </span>
-                                  </button>
-                                ))}
-                                {pending.length > pendingPreview.length && (
-                                  <p className="px-1 text-xs text-neutral-500">
-                                    +{pending.length - pendingPreview.length} pendientes más en este
-                                    semestre.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-
-                            {completedPreview.length > 0 && (
-                              <div className="mt-3 space-y-2">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                                  Completadas
-                                </p>
-                                {completedPreview.map((requirement) => (
-                                  <div
-                                    key={`${requirement.subjectId}:${requirement.assessmentSlotId}:done`}
-                                    className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2.5"
-                                  >
-                                    <div className="min-w-0">
-                                      <span className="block truncate text-sm font-medium text-neutral-800">
-                                        {requirement.subjectName}
-                                      </span>
-                                      <span className="block truncate text-xs text-neutral-500">
-                                        {requirement.slotLabel}
-                                      </span>
-                                    </div>
-                                    <span
-                                      className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
-                                        requirement.status === "approved"
-                                          ? "bg-emerald-100 text-emerald-700"
-                                          : requirement.status === "rejected"
-                                          ? "bg-red-100 text-red-700"
-                                          : "bg-amber-100 text-amber-700"
-                                      }`}
-                                    >
-                                      {requirement.status === "approved"
-                                        ? "Aprobada"
-                                        : requirement.status === "rejected"
-                                        ? "Rechazada"
-                                        : "En revisión"}
+                                    <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                                      {group.items.length}
                                     </span>
                                   </div>
-                                ))}
-                              </div>
-                            )}
+
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {group.items.map((requirement) => (
+                                      <button
+                                        type="button"
+                                        key={`${requirement.subjectId}:${requirement.assessmentSlotId}`}
+                                        onClick={() =>
+                                          openFormModal("create", null, {
+                                            requirement,
+                                          })
+                                        }
+                                        className="inline-flex max-w-full items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-left transition hover:border-blue-200 hover:bg-blue-50"
+                                      >
+                                        <span className="min-w-0 truncate text-xs font-semibold text-neutral-800">
+                                          {requirement.subjectName}
+                                        </span>
+                                        <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white">
+                                          Subir
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </section>
                         );
                       })}

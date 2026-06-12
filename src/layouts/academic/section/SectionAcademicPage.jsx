@@ -98,16 +98,15 @@ function CoverageByPeriod({ requirements = EMPTY_PERIODS, showSubjects = false }
   }, {});
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {Object.entries(grouped)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([key, items]) => {
           const [year, semester] = key.split(":");
           const semesterLabel = Number(semester) === 2 ? "II Semestre" : "I Semestre";
-          const preview = items.slice(0, 4);
           return (
-            <div key={key} className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2">
+            <div key={key} className="rounded-2xl border border-neutral-200 bg-white px-3 py-3">
+              <div className="flex items-center justify-between gap-2 border-b border-neutral-100 pb-2.5">
                 <p className="text-xs font-semibold text-neutral-700">
                   {semesterLabel} {year}
                 </p>
@@ -115,28 +114,79 @@ function CoverageByPeriod({ requirements = EMPTY_PERIODS, showSubjects = false }
                   {items.length} pendientes
                 </span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {preview.map((item) => (
-                  <span
+              <div className="mt-2 space-y-2">
+                {items.map((item) => (
+                  <div
                     key={`${item.subjectId}:${item.assessmentSlotId}`}
-                    title={showSubjects ? `${item.subjectName} — ${item.slotLabel}` : item.slotLabel}
-                    className="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-neutral-700"
+                    className="flex items-start justify-between gap-3 rounded-xl bg-neutral-50 px-3 py-2"
+                    title={
+                      showSubjects ? `${item.subjectName} — ${item.slotLabel}` : item.slotLabel
+                    }
                   >
-                    <span className="truncate">
-                      {showSubjects ? `${item.subjectName} — ${item.slotLabel}` : item.slotLabel}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-neutral-900">
+                        {showSubjects ? item.subjectName : item.slotLabel}
+                      </p>
+                      {showSubjects && (
+                        <p className="truncate text-xs text-neutral-500">{item.slotLabel}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-600">
+                      {item.evaluationType === "FINAL_GRADE" ? "Final" : "Examen"}
                     </span>
-                  </span>
+                  </div>
                 ))}
-                {items.length > preview.length && (
-                  <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-neutral-500">
-                    +{items.length - preview.length}
-                  </span>
-                )}
               </div>
             </div>
           );
         })}
     </div>
+  );
+}
+
+function groupRequirements(requirements = EMPTY_PERIODS) {
+  const unique = [];
+  const seen = new Set();
+  for (const requirement of requirements) {
+    const key = `${requirement.subjectId}:${requirement.assessmentSlotId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(requirement);
+  }
+
+  return unique.reduce((acc, requirement) => {
+    const key = `${requirement.academicYear}:${requirement.semester}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(requirement);
+    return acc;
+  }, {});
+}
+
+function RequirementsButton({ count, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-left transition hover:border-blue-200 hover:bg-blue-50"
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-600">
+        {count}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-xs font-semibold text-neutral-800">
+          Ver pendientes
+        </span>
+        <span className="block text-[10px] text-neutral-500">Abrir detalle completo</span>
+      </span>
+      <svg
+        className="h-4 w-4 shrink-0 text-neutral-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m9 5 7 7-7 7" />
+      </svg>
+    </button>
   );
 }
 
@@ -276,7 +326,13 @@ function PendingApprovalQueue({ evaluations, loading, onOpenReview }) {
   );
 }
 
-function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview }) {
+function MemberDetail({
+  member,
+  evaluations,
+  loadingEvaluations,
+  onOpenReview,
+  onOpenRequirements,
+}) {
   const [activeTab, setActiveTab] = useState("resumen");
   const performance = member?.performance || null;
   const risk = RISK_CONFIG[performance?.riskLevel] || RISK_CONFIG.GREEN;
@@ -350,7 +406,7 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
         </div>
       </div>
 
-      <div
+      {/* <div
         className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border ${
           member.allEvaluationsSubmitted
             ? "bg-emerald-50 border-emerald-200"
@@ -380,13 +436,24 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
         >
           {member.allEvaluationsSubmitted ? "Completo" : "Incompleto"}
         </span>
-      </div>
+      </div> */}
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Obligaciones pendientes por semestre
-        </p>
-          <CoverageByPeriod requirements={member.missingRequirements} showSubjects />
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Obligaciones pendientes
+          </p>
+          <p className="mt-1 text-sm text-gray-600">
+            {member.missingEvaluationsCount} pendientes distribuidos por semestre.
+          </p>
+        </div>
+        <RequirementsButton
+          count={member.missingEvaluationsCount}
+          onClick={(event) => {
+            event.stopPropagation?.();
+            onOpenRequirements(member);
+          }}
+        />
       </div>
 
       <div className="flex border-b border-gray-200">
@@ -432,13 +499,15 @@ function MemberDetail({ member, evaluations, loadingEvaluations, onOpenReview })
                         <span className="text-sm text-gray-700 truncate">
                           {subject.subjectName}
                         </span>
-                        <span className={`text-sm font-bold ml-2 ${
-                          subject.average >= 80
-                            ? "text-emerald-600"
-                            : subject.average >= 70
-                            ? "text-amber-600"
-                            : "text-red-600"
-                        }`}>
+                        <span
+                          className={`text-sm font-bold ml-2 ${
+                            subject.average >= 80
+                              ? "text-emerald-600"
+                              : subject.average >= 70
+                              ? "text-amber-600"
+                              : "text-red-600"
+                          }`}
+                        >
                           {subject.average.toFixed(1)}
                         </span>
                       </div>
@@ -618,7 +687,13 @@ const MemberRow = React.memo(function MemberRow({ member, isSelected, onOpen }) 
         {member.memberInstrument || "—"}
       </td>
       <td className="px-4 py-3 min-w-[240px]">
-        <CoverageByPeriod requirements={member.missingRequirements} />
+        <RequirementsButton
+          count={member.missingEvaluationsCount}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        />
       </td>
       <td className="px-4 py-3 text-center text-gray-600 whitespace-nowrap">
         {member.submittedEvaluationsCount}/{member.expectedEvaluationsCount}
@@ -633,7 +708,9 @@ const MemberRow = React.memo(function MemberRow({ member, isSelected, onOpen }) 
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <div className="flex items-center justify-end gap-3">
-          <span className={`text-sm font-bold ${averageColor}`}>{average?.toFixed?.(1) ?? "0.0"}</span>
+          <span className={`text-sm font-bold ${averageColor}`}>
+            {average?.toFixed?.(1) ?? "0.0"}
+          </span>
           <span className="text-xs text-gray-400">/100</span>
         </div>
       </td>
@@ -641,16 +718,23 @@ const MemberRow = React.memo(function MemberRow({ member, isSelected, onOpen }) 
   );
 });
 
-const MemberCard = React.memo(function MemberCard({ member, onOpen }) {
+const MemberCard = React.memo(function MemberCard({ member, onOpen, onOpenRequirements }) {
   const risk = RISK_CONFIG[member.performance?.riskLevel] || RISK_CONFIG.GREEN;
   const average = member.performance?.averageGeneral;
   const averageColor =
     average >= 80 ? "text-emerald-600" : average >= 70 ? "text-amber-600" : "text-red-600";
 
   return (
-    <button
-      type="button"
+    <div
       onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen?.();
+        }
+      }}
       className="w-full text-left bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
     >
       <div className="flex items-start gap-3">
@@ -683,7 +767,9 @@ const MemberCard = React.memo(function MemberCard({ member, onOpen }) {
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="rounded-xl bg-gray-50 px-3 py-2">
               <p className="text-[11px] text-gray-400">Promedio</p>
-              <p className={`text-sm font-bold ${averageColor}`}>{average?.toFixed?.(1) ?? "0.0"}</p>
+              <p className={`text-sm font-bold ${averageColor}`}>
+                {average?.toFixed?.(1) ?? "0.0"}
+              </p>
             </div>
             <div className="rounded-xl bg-gray-50 px-3 py-2">
               <p className="text-[11px] text-gray-400">Subidas</p>
@@ -703,17 +789,24 @@ const MemberCard = React.memo(function MemberCard({ member, onOpen }) {
             </div>
           </div>
           <div className="mt-3">
-            <p className="mb-1.5 text-[11px] text-gray-400">Faltantes por período</p>
-            <CoverageByPeriod requirements={member.missingRequirements} />
+            <RequirementsButton
+              count={member.missingEvaluationsCount}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenRequirements(member);
+              }}
+            />
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 });
 
 export default function SectionAcademicPage() {
   const [detailOpen, setDetailOpen] = useState(false);
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [requirementsMember, setRequirementsMember] = useState(null);
   const [reviewingEvaluation, setReviewingEvaluation] = useState(null);
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const currentUser = userData?.getUser || null;
@@ -747,13 +840,22 @@ export default function SectionAcademicPage() {
     };
   }, [membersOverview]);
 
-  const handleOpenMember = useCallback((memberId) => {
-    setSelectedMemberId(memberId);
-    setDetailOpen(true);
-  }, [setSelectedMemberId]);
+  const handleOpenMember = useCallback(
+    (memberId) => {
+      setSelectedMemberId(memberId);
+      setDetailOpen(true);
+    },
+    [setSelectedMemberId]
+  );
 
   const handleOpenReview = useCallback((evaluation) => {
     setReviewingEvaluation(evaluation);
+  }, []);
+
+  const handleOpenRequirements = useCallback((member) => {
+    setDetailOpen(false);
+    setRequirementsMember(member);
+    setRequirementsOpen(true);
   }, []);
 
   return (
@@ -864,6 +966,7 @@ export default function SectionAcademicPage() {
                       key={member.memberId}
                       member={member}
                       onOpen={() => handleOpenMember(member.memberId)}
+                      onOpenRequirements={handleOpenRequirements}
                     />
                   ))}
                 </div>
@@ -902,6 +1005,7 @@ export default function SectionAcademicPage() {
                           member={member}
                           isSelected={member.memberId === selectedMemberId}
                           onOpen={() => handleOpenMember(member.memberId)}
+                          onOpenRequirements={handleOpenRequirements}
                         />
                       ))}
                     </tbody>
@@ -944,6 +1048,67 @@ export default function SectionAcademicPage() {
             evaluations={memberEvaluations}
             loadingEvaluations={loadingMemberEvaluations}
             onOpenReview={handleOpenReview}
+            onOpenRequirements={handleOpenRequirements}
+          />
+        </div>
+      </BottomSheetDialog>
+
+      <BottomSheetDialog
+        isOpen={requirementsOpen && Boolean(requirementsMember)}
+        onClose={() => {
+          setRequirementsOpen(false);
+          setRequirementsMember(null);
+        }}
+        title={requirementsMember?.memberName || "Pendientes académicos"}
+        subtitle={
+          requirementsMember
+            ? `${requirementsMember.memberInstrument || "Sin instrumento"} · ${
+                requirementsMember.memberGrade || "Sin nivel"
+              }`
+            : null
+        }
+        icon="📋"
+        maxWidth="720px"
+        footer={
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setRequirementsOpen(false);
+                setRequirementsMember(null);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        <div className="p-4 sm:p-6">
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-neutral-400">Pendientes</p>
+              <p className="text-sm font-bold text-neutral-900">
+                {requirementsMember?.missingEvaluationsCount || 0}
+              </p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-neutral-400">Subidas</p>
+              <p className="text-sm font-bold text-neutral-900">
+                {requirementsMember?.submittedEvaluationsCount || 0}
+              </p>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2">
+              <p className="text-[11px] text-neutral-400">Esperadas</p>
+              <p className="text-sm font-bold text-neutral-900">
+                {requirementsMember?.expectedEvaluationsCount || 0}
+              </p>
+            </div>
+          </div>
+
+          <CoverageByPeriod
+            requirements={requirementsMember?.missingRequirements || []}
+            showSubjects
           />
         </div>
       </BottomSheetDialog>

@@ -70,10 +70,8 @@ function requirementSubjectTypeLabel(type) {
 }
 
 function inferPeriodSemester(period) {
-  if (period?.semester) return Number(period.semester);
-  const name = String(period?.name || "").toLowerCase();
-  if (name.includes("ii semestre") || name.includes("segundo semestre")) return 2;
-  return 1;
+  const semester = Number(period?.semester);
+  return [1, 2].includes(semester) ? semester : null;
 }
 
 function findPeriodForRequirement(periods, requirement) {
