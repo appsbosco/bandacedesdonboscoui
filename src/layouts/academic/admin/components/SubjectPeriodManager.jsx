@@ -253,7 +253,7 @@ function SubjectModal({ isOpen, onClose, mode, subject, onSave, loading }) {
             <option value="GENERAL_SCIENCE">Ciencias</option>
             <option value="BIOLOGY">Biología</option>
             <option value="CHEMISTRY">Química</option>
-            <option value="PHYSICS">Física</option>
+            <option value="PHYSICS">Fisica Matemática</option>
           </select>
         </div>
         <div>
