@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_ABSENCE_PERMISSION_REQUEST,
+  UPDATE_ABSENCE_PERMISSION_REQUEST,
   GET_EVENTS_FOR_PERMISSION_FORM,
 } from "../absencePermissions.gql";
 import { parsePermissionDate } from "../dateUtils";
@@ -104,12 +105,20 @@ export function PermissionRequestForm({
   formId,
   hideActions = false,
   onSubmitStateChange,
+  initialPermission = null,
 }) {
-  const [permissionType, setPermissionType] = useState("ABSENCE");
-  const [targetType, setTargetType] = useState("REHEARSAL");
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [reason, setReason] = useState("");
-  const [attachment, setAttachment] = useState(null);
+  const isEditing = Boolean(initialPermission?.id);
+  const [permissionType, setPermissionType] = useState(initialPermission?.permissionType ?? "ABSENCE");
+  const [targetType, setTargetType] = useState(initialPermission?.targetType ?? "REHEARSAL");
+  const [selectedEventId, setSelectedEventId] = useState(initialPermission?.event?.id ?? "");
+  const [reason, setReason] = useState(initialPermission?.reason ?? "");
+  const [arrivalTime, setArrivalTime] = useState(initialPermission?.arrivalTime ?? "");
+  const [withdrawalTime, setWithdrawalTime] = useState(initialPermission?.withdrawalTime ?? "");
+  const [attachment, setAttachment] = useState(
+    initialPermission?.attachments?.[0]
+      ? { url: initialPermission.attachments[0], name: "Evidencia adjunta" }
+      : null
+  );
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -143,8 +152,8 @@ export function PermissionRequestForm({
   const visibleEvents = targetType === "REHEARSAL" ? rehearsalEvents : presentationEvents;
 
   const selectedEvent = useMemo(
-    () => allEvents.find((e) => e.id === selectedEventId) ?? null,
-    [allEvents, selectedEventId]
+    () => allEvents.find((e) => e.id === selectedEventId) ?? initialPermission?.event ?? null,
+    [allEvents, initialPermission?.event, selectedEventId]
   );
 
   const [createPermission, { loading: submitting }] = useMutation(
@@ -155,11 +164,24 @@ export function PermissionRequestForm({
       onError: (err) => setError(err.message),
     }
   );
-  const submitDisabled = submitting || uploadingEvidence;
-  const submitLabel = submitting
-    ? "Enviando…"
+  const [updatePermission, { loading: updating }] = useMutation(
+    UPDATE_ABSENCE_PERMISSION_REQUEST,
+    {
+      refetchQueries,
+      onCompleted: () => onSuccess?.(),
+      onError: (err) => setError(err.message),
+    }
+  );
+  const saving = submitting || updating;
+  const submitDisabled = saving || uploadingEvidence;
+  const submitLabel = saving
+    ? isEditing
+      ? "Guardando…"
+      : "Enviando…"
     : uploadingEvidence
     ? "Subiendo evidencia…"
+    : isEditing
+    ? "Guardar cambios"
     : "Enviar solicitud";
 
   useEffect(() => {
@@ -167,6 +189,7 @@ export function PermissionRequestForm({
   }, [onSubmitStateChange, submitDisabled, submitLabel]);
 
   function handleTypeChange(type) {
+    if (isEditing) return;
     setTargetType(type);
     setSelectedEventId("");
     setFieldErrors((current) => ({ ...current, event: null }));
@@ -181,7 +204,7 @@ export function PermissionRequestForm({
       setError("Debes seleccionar un integrante.");
       return;
     }
-    if (!selectedEventId) {
+    if (!isEditing && !selectedEventId) {
       const eventError =
         targetType === "REHEARSAL"
           ? "Seleccioná el ensayo para el que necesitás el permiso."
@@ -189,6 +212,18 @@ export function PermissionRequestForm({
       setFieldErrors({ event: eventError });
       setError(eventError);
       eventListRef.current?.focus();
+      return;
+    }
+    if (permissionType === "LATE_ARRIVAL" && !arrivalTime) {
+      const timeError = "Indicá la hora de llegada al ensayo.";
+      setFieldErrors({ arrivalTime: timeError });
+      setError(timeError);
+      return;
+    }
+    if (permissionType === "EARLY_WITHDRAWAL" && !withdrawalTime) {
+      const timeError = "Indicá la hora del retiro.";
+      setFieldErrors({ withdrawalTime: timeError });
+      setError(timeError);
       return;
     }
     if (!reason.trim() || reason.trim().length < 5) {
@@ -203,6 +238,26 @@ export function PermissionRequestForm({
       return;
     }
 
+    const timeFields = {
+      arrivalTime: permissionType === "LATE_ARRIVAL" ? arrivalTime : null,
+      withdrawalTime: permissionType === "EARLY_WITHDRAWAL" ? withdrawalTime : null,
+    };
+
+    if (isEditing) {
+      await updatePermission({
+        variables: {
+          id: initialPermission.id,
+          input: {
+            permissionType,
+            reason: reason.trim(),
+            ...timeFields,
+            attachments: attachment ? [attachment.url] : [],
+          },
+        },
+      });
+      return;
+    }
+
     await createPermission({
       variables: {
         input: {
@@ -211,6 +266,7 @@ export function PermissionRequestForm({
           targetType,
           eventId: selectedEventId,
           reason: reason.trim(),
+          ...timeFields,
           attachments: attachment ? [attachment.url] : [],
         },
       },
@@ -258,6 +314,7 @@ export function PermissionRequestForm({
               key={opt.value}
               type="button"
               onClick={() => handleTypeChange(opt.value)}
+              disabled={isEditing}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                 targetType === opt.value
                   ? "border-blue-500 bg-blue-50 text-blue-700"
@@ -272,56 +329,58 @@ export function PermissionRequestForm({
       </div>
 
       {/* Event list */}
-      <div
-        ref={eventListRef}
-        tabIndex={-1}
-        className={`rounded-xl outline-none transition-shadow ${
-          fieldErrors.event ? "ring-2 ring-red-400 ring-offset-2" : ""
-        }`}
-      >
-        <p className="block text-sm font-medium text-gray-700 mb-2">
-          {targetType === "REHEARSAL" ? "Seleccioná el ensayo" : "Seleccioná la presentación"}
-          <span className="ml-1 text-red-500">*</span>
-        </p>
+      {!isEditing && (
+        <div
+          ref={eventListRef}
+          tabIndex={-1}
+          className={`rounded-xl outline-none transition-shadow ${
+            fieldErrors.event ? "ring-2 ring-red-400 ring-offset-2" : ""
+          }`}
+        >
+          <p className="block text-sm font-medium text-gray-700 mb-2">
+            {targetType === "REHEARSAL" ? "Seleccioná el ensayo" : "Seleccioná la presentación"}
+            <span className="ml-1 text-red-500">*</span>
+          </p>
 
-        {eventsLoading ? (
-          <div className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-xl" />
-            ))}
-          </div>
-        ) : visibleEvents.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-5 text-center">
-            <p className="text-sm text-gray-500">
-              No hay {targetType === "REHEARSAL" ? "ensayos" : "presentaciones"} registrados en el calendario.
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Contactá a un administrador para agregar el evento.
-            </p>
-          </div>
-        ) : (
-          <div
-            className="space-y-2 overflow-y-auto pr-1"
-            style={{ maxHeight: "18rem", overscrollBehavior: "contain" }}
-          >
-            {visibleEvents.map((ev) => (
-              <EventOptionCard
-                key={ev.id}
-                event={ev}
-                isSelected={selectedEventId === ev.id}
-                onSelect={(eventId) => {
-                  setSelectedEventId(eventId);
-                  setFieldErrors((current) => ({ ...current, event: null }));
-                  setError(null);
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {fieldErrors.event && (
-          <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors.event}</p>
-        )}
-      </div>
+          {eventsLoading ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : visibleEvents.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-5 text-center">
+              <p className="text-sm text-gray-500">
+                No hay {targetType === "REHEARSAL" ? "ensayos" : "presentaciones"} registrados en el calendario.
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Contactá a un administrador para agregar el evento.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="space-y-2 overflow-y-auto pr-1"
+              style={{ maxHeight: "18rem", overscrollBehavior: "contain" }}
+            >
+              {visibleEvents.map((ev) => (
+                <EventOptionCard
+                  key={ev.id}
+                  event={ev}
+                  isSelected={selectedEventId === ev.id}
+                  onSelect={(eventId) => {
+                    setSelectedEventId(eventId);
+                    setFieldErrors((current) => ({ ...current, event: null }));
+                    setError(null);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {fieldErrors.event && (
+            <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors.event}</p>
+          )}
+        </div>
+      )}
 
       {/* Selected event summary */}
       {selectedEvent && (
@@ -335,6 +394,62 @@ export function PermissionRequestForm({
             <p className="text-sm font-semibold text-blue-800 truncate">{selectedEvent.title}</p>
             <p className="text-xs text-blue-600">{fmtDateLong(selectedEvent.date)}</p>
           </div>
+        </div>
+      )}
+
+      {permissionType === "LATE_ARRIVAL" && (
+        <div>
+          <label htmlFor={`${formId ?? "permission-request"}-arrival-time`} className="block text-sm font-medium text-gray-700 mb-1.5">
+            Hora de llegada al ensayo
+            <span className="ml-1 text-red-500">*</span>
+          </label>
+          <input
+            id={`${formId ?? "permission-request"}-arrival-time`}
+            type="time"
+            aria-label="Hora de llegada al ensayo"
+            value={arrivalTime}
+            onChange={(e) => {
+              setArrivalTime(e.target.value);
+              setFieldErrors((current) => ({ ...current, arrivalTime: null }));
+              setError(null);
+            }}
+            className={`w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.arrivalTime
+                ? "border-red-400 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+          />
+          {fieldErrors.arrivalTime && (
+            <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.arrivalTime}</p>
+          )}
+        </div>
+      )}
+
+      {permissionType === "EARLY_WITHDRAWAL" && (
+        <div>
+          <label htmlFor={`${formId ?? "permission-request"}-withdrawal-time`} className="block text-sm font-medium text-gray-700 mb-1.5">
+            Hora del retiro
+            <span className="ml-1 text-red-500">*</span>
+          </label>
+          <input
+            id={`${formId ?? "permission-request"}-withdrawal-time`}
+            type="time"
+            aria-label="Hora del retiro"
+            value={withdrawalTime}
+            onChange={(e) => {
+              setWithdrawalTime(e.target.value);
+              setFieldErrors((current) => ({ ...current, withdrawalTime: null }));
+              setError(null);
+            }}
+            className={`w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+              fieldErrors.withdrawalTime
+                ? "border-red-400 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+          />
+          {fieldErrors.withdrawalTime && (
+            <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.withdrawalTime}</p>
+          )}
         </div>
       )}
 

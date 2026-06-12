@@ -41,7 +41,7 @@ function RequesterLabel({ permission }) {
   return <span className="text-xs text-gray-400">Solicitado por {name}</span>;
 }
 
-export function PermissionRequestCard({ permission, onViewDetail, onCancel, showStudent = false }) {
+export function PermissionRequestCard({ permission, onViewDetail, onCancel, onEdit, showStudent = false }) {
   const student = permission.student;
   const studentName = student
     ? `${student.name} ${student.firstSurName} ${student.secondSurName ?? ""}`.trim()
@@ -49,6 +49,16 @@ export function PermissionRequestCard({ permission, onViewDetail, onCancel, show
 
   const canCancel =
     permission.requestStatus === "PENDING" && onCancel;
+  const canEdit =
+    permission.requestStatus !== "APPROVED" &&
+    permission.requestStatus !== "CANCELLED" &&
+    onEdit;
+  const timeLabel =
+    permission.permissionType === "LATE_ARRIVAL" && permission.arrivalTime
+      ? `Llegada: ${permission.arrivalTime}`
+      : permission.permissionType === "EARLY_WITHDRAWAL" && permission.withdrawalTime
+      ? `Retiro: ${permission.withdrawalTime}`
+      : null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
@@ -87,6 +97,11 @@ export function PermissionRequestCard({ permission, onViewDetail, onCancel, show
       {/* Justification badge (only when there's a concrete status) */}
       <div className="flex flex-wrap gap-1.5">
         <PermissionTypeBadge type={permission.permissionType} size="xs" />
+        {timeLabel && (
+          <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+            {timeLabel}
+          </span>
+        )}
         {permission.justificationStatus !== "PENDING_REVIEW" && (
           <JustificationBadge status={permission.justificationStatus} size="xs" />
         )}
@@ -121,6 +136,15 @@ export function PermissionRequestCard({ permission, onViewDetail, onCancel, show
         </div>
 
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(permission)}
+              className="text-xs font-medium text-blue-700 transition-colors px-2 py-1 rounded-md hover:bg-blue-50"
+            >
+              Editar
+            </button>
+          )}
           {canCancel && (
             <button
               type="button"

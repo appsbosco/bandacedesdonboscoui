@@ -125,6 +125,7 @@ export function ParentPermissionsView() {
   const [selectedChild, setSelectedChild] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
 
   // Load parent dashboard to get children list
@@ -266,6 +267,7 @@ export function ParentPermissionsView() {
                 <PermissionRequestCard
                   key={p.id}
                   permission={p}
+                  onEdit={(perm) => setEditTarget(perm)}
                   onCancel={(perm) => setCancelTarget(perm)}
                 />
               ))}
@@ -286,6 +288,24 @@ export function ParentPermissionsView() {
         studentId={selectedChild?.id}
         onSuccess={() => {
           setShowForm(false);
+          refetch();
+        }}
+        refetchQueries={[
+          {
+            query: GET_ABSENCE_PERMISSIONS_FOR_CHILD,
+            variables: { childId: selectedChild?.id, limit: 50 },
+          },
+        ]}
+      />
+
+      <PermissionRequestDialog
+        isOpen={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        title="Editar solicitud"
+        studentId={editTarget?.student?.id ?? selectedChild?.id}
+        initialPermission={editTarget}
+        onSuccess={() => {
+          setEditTarget(null);
           refetch();
         }}
         refetchQueries={[

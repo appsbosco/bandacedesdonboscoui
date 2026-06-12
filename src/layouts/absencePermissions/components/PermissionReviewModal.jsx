@@ -110,6 +110,18 @@ export function PermissionReviewModal({ permission, isOpen, onClose, refetchQuer
       : permission.requestedByUser
       ? `${permission.requestedByUser.name} ${permission.requestedByUser.firstSurName}`
       : "Integrante";
+  const timeDetail =
+    permission.permissionType === "LATE_ARRIVAL"
+      ? permission.arrivalTime
+      : permission.permissionType === "EARLY_WITHDRAWAL"
+      ? permission.withdrawalTime
+      : null;
+  const timeDetailLabel =
+    permission.permissionType === "LATE_ARRIVAL"
+      ? "Hora de llegada"
+      : permission.permissionType === "EARLY_WITHDRAWAL"
+      ? "Hora de retiro"
+      : null;
 
   async function handleReview() {
     if (!selectedAction) {
@@ -168,6 +180,7 @@ export function PermissionReviewModal({ permission, isOpen, onClose, refetchQuer
         <div className="grid grid-cols-2 gap-4">
           <DetailRow label="Actividad" value={targetLabel} />
           <DetailRow label="Tipo de permiso" value={getPermissionTypeLabel(permission.permissionType)} />
+          {timeDetailLabel && <DetailRow label={timeDetailLabel} value={timeDetail} />}
           <DetailRow label="Fecha de actividad" value={fmtDate(permission.absenceDate)} />
           <DetailRow label="Solicitado por" value={`${requesterName} (${permission.requesterType === "PARENT" ? "Padre/Madre" : "Integrante"})`} />
           <DetailRow label="Fecha de solicitud" value={fmtDate(permission.createdAt)} />

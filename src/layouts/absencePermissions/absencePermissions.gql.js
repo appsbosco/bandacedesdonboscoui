@@ -50,6 +50,8 @@ const ABSENCE_PERMISSION_CORE = gql`
     }
     absenceDate
     reason
+    arrivalTime
+    withdrawalTime
     attachments
     requestStatus
     justificationStatus
@@ -241,6 +243,15 @@ export const CREATE_ABSENCE_PERMISSION_REQUEST = gql`
   ${ABSENCE_PERMISSION_CORE}
   mutation CreateAbsencePermissionRequest($input: CreateAbsencePermissionInput!) {
     createAbsencePermissionRequest(input: $input) {
+      ...AbsencePermissionCore
+    }
+  }
+`;
+
+export const UPDATE_ABSENCE_PERMISSION_REQUEST = gql`
+  ${ABSENCE_PERMISSION_CORE}
+  mutation UpdateAbsencePermissionRequest($id: ID!, $input: UpdateAbsencePermissionInput!) {
+    updateAbsencePermissionRequest(id: $id, input: $input) {
       ...AbsencePermissionCore
     }
   }

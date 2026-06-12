@@ -5,6 +5,9 @@ import { PermissionRequestForm } from "./PermissionRequestForm";
 
 export function PermissionRequestDialog({ isOpen, onClose, title, ...formProps }) {
   const formId = useId();
+  const formKey = `${formProps.initialPermission?.id ?? "new"}-${formProps.studentId ?? "none"}-${
+    isOpen ? "open" : "closed"
+  }`;
   const [submitState, setSubmitState] = useState({
     disabled: true,
     label: "Enviar solicitud",
@@ -40,6 +43,7 @@ export function PermissionRequestDialog({ isOpen, onClose, title, ...formProps }
     >
       <div className="p-4 sm:p-6">
         <PermissionRequestForm
+          key={formKey}
           {...formProps}
           formId={formId}
           hideActions

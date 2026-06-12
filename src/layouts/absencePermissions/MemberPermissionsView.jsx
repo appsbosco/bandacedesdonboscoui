@@ -37,6 +37,7 @@ function EmptyPermissions() {
 export function MemberPermissionsView() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
 
   const { data: userData } = useQuery(GET_USERS_BY_ID);
@@ -129,6 +130,7 @@ export function MemberPermissionsView() {
             <PermissionRequestCard
               key={p.id}
               permission={p}
+              onEdit={isExalumno ? (perm) => setEditTarget(perm) : undefined}
               onCancel={(perm) => setCancelTarget(perm)}
             />
           ))}
@@ -143,6 +145,19 @@ export function MemberPermissionsView() {
         studentId={currentUser?.id}
         onSuccess={() => {
           setShowForm(false);
+          refetch();
+        }}
+        refetchQueries={[{ query: GET_MY_USER_ABSENCE_PERMISSIONS, variables: { limit: 50 } }]}
+      />
+
+      <PermissionRequestDialog
+        isOpen={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        title="Editar solicitud"
+        studentId={currentUser?.id}
+        initialPermission={editTarget}
+        onSuccess={() => {
+          setEditTarget(null);
           refetch();
         }}
         refetchQueries={[{ query: GET_MY_USER_ABSENCE_PERMISSIONS, variables: { limit: 50 } }]}
