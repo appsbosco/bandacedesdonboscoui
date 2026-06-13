@@ -76,13 +76,20 @@ function inferPeriodSemester(period) {
 
 function findPeriodForRequirement(periods, requirement) {
   if (!requirement) return null;
-  return (
-    periods.find(
-      (period) =>
-        Number(period.academicYear || period.year) === Number(requirement.academicYear) &&
-        inferPeriodSemester(period) === Number(requirement.semester)
-    ) || null
-  );
+
+  const sameAcademicWindow = (period) =>
+    Number(period.academicYear || period.year) === Number(requirement.academicYear) &&
+    inferPeriodSemester(period) === Number(requirement.semester);
+
+  const slotOrder = Number(requirement.assessmentSlot?.order);
+  if (Number.isFinite(slotOrder) && slotOrder > 0) {
+    const periodBySlotOrder = periods.find(
+      (period) => sameAcademicWindow(period) && Number(period.order) === slotOrder
+    );
+    if (periodBySlotOrder) return periodBySlotOrder;
+  }
+
+  return periods.find(sameAcademicWindow) || null;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
