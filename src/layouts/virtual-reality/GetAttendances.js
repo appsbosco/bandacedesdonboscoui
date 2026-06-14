@@ -174,6 +174,15 @@ const getUserFullName = (user) =>
 
 const getDisplayUserName = (user) => getUserFullName(user) || "Usuario no encontrado";
 
+const getEntityId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (value.id) return getEntityId(value.id);
+  if (value._id) return getEntityId(value._id);
+  const asString = String(value);
+  return asString === "[object Object]" ? "" : asString;
+};
+
 // ── Helpers de riesgo ────────────────────────────────────────────────────────
 
 const getRiskBadges = ({ hasThreeUnjustified, exceedsLimit } = {}) => {
@@ -198,7 +207,7 @@ const buildUserStatsMap = (records) => {
   const map = new Map();
 
   for (const r of records) {
-    const userId = r?.user?.id ? String(r.user.id) : null;
+    const userId = getEntityId(r?.user);
     if (!userId) continue;
 
     const user = r.user;
@@ -321,7 +330,9 @@ const useUserAttendanceRecords = (userId, pickerDate, refreshKey = 0) => {
   }, [refreshKey, userId, refetch]);
 
   return {
-    records: data?.getAttendancesRehearsalConnection?.nodes || [],
+    records: (data?.getAttendancesRehearsalConnection?.nodes || []).filter(
+      (record) => getEntityId(record?.user) === getEntityId(userId)
+    ),
     loading,
     error,
   };
@@ -442,7 +453,7 @@ const AttendanceDetailModal = ({
   const [savingId, setSavingId] = useState(null);
   const [saveError, setSaveError] = useState("");
 
-  const { stats: backendStats, loading: statsLoading } = useUserAttendanceStats(
+  const { stats: rawBackendStats, loading: statsLoading } = useUserAttendanceStats(
     isOpen ? userStats?.userId : null,
     selectedDate,
     statsRefreshKey
@@ -481,6 +492,12 @@ const AttendanceDetailModal = ({
 
   if (!isOpen || !userStats) return null;
 
+  const selectedUserId = getEntityId(userStats.userId);
+  const backendStats =
+    rawBackendStats && getEntityId(rawBackendStats.userId) === selectedUserId
+      ? rawBackendStats
+      : null;
+
   const {
     user,
     total,
@@ -490,7 +507,10 @@ const AttendanceDetailModal = ({
     hasThreeUnjustifiedLocal,
     exceedsLimitLocal,
   } = userStats;
-  const records = backendRecords.length > 0 ? backendRecords : userStats.records || [];
+  const localRecords = (userStats.records || []).filter(
+    (record) => getEntityId(record?.user) === selectedUserId
+  );
+  const records = backendRecords.length > 0 ? backendRecords : localRecords;
 
   const displayUser = backendStats?.user || user;
   const fullName = getDisplayUserName(displayUser);
@@ -897,7 +917,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
   };
 
   const displayDate = record.displayDate || getDisplayDateFromRecord(record);
-  const open = () => onOpenDetails?.(record.user?.id);
+  const open = () => onOpenDetails?.(getEntityId(record.user));
 
   return (
     <div
@@ -1311,8 +1331,9 @@ const AttendanceHistoryTable = () => {
   };
 
   const openDetails = (userId) => {
-    if (!userId) return;
-    setDetailUserId(String(userId));
+    const normalizedUserId = getEntityId(userId);
+    if (!normalizedUserId) return;
+    setDetailUserId(normalizedUserId);
     setIsDetailOpen(true);
   };
 
@@ -1337,12 +1358,12 @@ const AttendanceHistoryTable = () => {
     if (!detailUserId) return null;
 
     const loadedRecords = validAttendances.filter(
-      (record) => String(record?.user?.id || "") === detailUserId
+      (record) => getEntityId(record?.user) === detailUserId
     );
     const fromPage = buildUserStatsMap(loadedRecords)[detailUserId];
     if (fromPage) return fromPage;
 
-    const record = validAttendances.find((item) => String(item?.user?.id || "") === detailUserId);
+    const record = validAttendances.find((item) => getEntityId(item?.user) === detailUserId);
     return {
       userId: detailUserId,
       user: record?.user || null,
