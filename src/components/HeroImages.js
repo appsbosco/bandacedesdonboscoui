@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import landing from "../assets/images/landing-5.webp";
 import landing3 from "../assets/images/landing-3.webp";
 import landing5 from "../assets/images/landing-6.webp";
+import landing4 from "../assets/images/landing-4.webp";
 import pasion from "../assets/images/pasion.webp";
 import friends from "../assets/images/friends.webp";
 import family from "../assets/images/family.webp";
@@ -12,6 +13,7 @@ const HERO_IMAGES = [
   { src: landing, alt: "Banda CEDES Don Bosco - Banda de marcha" },
   { src: landing3, alt: "Banda CEDES Don Bosco - Presentación" },
   { src: landing5, alt: "Banda CEDES Don Bosco - Ensayo" },
+  { src: landing4, alt: "Banda CEDES Don Bosco - Ensayo" },
 ];
 
 const TRANSITION_INTERVAL = 5000;
