@@ -294,7 +294,14 @@ function PendingApprovalQueue({ evaluations, loading, onOpenReview }) {
                     {evaluation.student?.name} {evaluation.student?.firstSurName}
                   </p>
                   <p className="truncate text-sm text-gray-600">
-                    {evaluation.subject?.name || "Materia"} · {evaluation.period?.name || "Período"}
+                    {evaluation.subject?.name || "Materia"}
+                    {evaluation.assessmentSlot?.label && (
+                      <span className="ml-1 inline-flex items-center px-1.5 py-0 rounded-full text-[11px] font-medium bg-blue-50 border border-blue-200 text-blue-700">
+                        {evaluation.assessmentSlot.label}
+                      </span>
+                    )}
+                    {" · "}
+                    {evaluation.period?.name || "Período"}
                   </p>
                   <p className="mt-1 text-xs text-gray-400">
                     Enviada {fmtDate(evaluation.submittedByStudentAt)}
@@ -570,6 +577,9 @@ function MemberDetail({
                       Materia
                     </th>
                     <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Evaluación
+                    </th>
+                    <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Período
                     </th>
                     <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -608,6 +618,15 @@ function MemberDetail({
                           <p className="font-medium text-gray-900 text-xs whitespace-nowrap">
                             {evaluation.subject?.name}
                           </p>
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {evaluation.assessmentSlot?.label ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-700">
+                              {evaluation.assessmentSlot.label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <p className="text-xs text-gray-600">{evaluation.period?.name}</p>

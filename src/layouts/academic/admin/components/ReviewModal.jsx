@@ -103,6 +103,11 @@ function StudentCard({ evaluation }) {
             {evaluation.period?.name || "Período"}
             {evaluation.period?.year ? ` ${evaluation.period.year}` : ""}
           </p>
+          {evaluation.assessmentSlot?.label && (
+            <span className="mt-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-700">
+              {evaluation.assessmentSlot.label}
+            </span>
+          )}
         </div>
         {evaluation.student?.grade && (
           <div className="shrink-0 rounded-xl bg-neutral-100 px-3 py-2 text-center">

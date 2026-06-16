@@ -225,14 +225,17 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, onDelete, revie
                 Materia
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Evaluación
+              </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Período
               </th>
               <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Nota
               </th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {/* <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Evidencia
-              </th>
+              </th> */}
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Enviada
               </th>
@@ -263,6 +266,15 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, onDelete, revie
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-700">{ev.subject?.name}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
+                  {ev.assessmentSlot?.label ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-700">
+                      {ev.assessmentSlot.label}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
                   <p className="text-gray-700">{ev.period?.name}</p>
                   <p className="text-xs text-gray-400">{ev.period?.year}</p>
                 </td>
@@ -280,9 +292,9 @@ function PendingEvaluationsTab({ evaluations, loading, onReview, onDelete, revie
                   </span>
                   <span className="text-xs text-gray-400">/100</span>
                 </td>
-                <td className="px-4 py-3 text-center">
+                {/* <td className="px-4 py-3 text-center">
                   <EvidenceLink ev={ev} />
-                </td>
+                </td> */}
                 <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                   {fmtDate(ev.submittedByStudentAt)}
                 </td>
@@ -1238,6 +1250,9 @@ function StudentDetailDrawer({
                           Materia
                         </th>
                         <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Evaluación
+                        </th>
+                        <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           Período
                         </th>
                         <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -1264,6 +1279,15 @@ function StudentDetailDrawer({
                               <p className="font-medium text-gray-900 text-xs whitespace-nowrap">
                                 {ev.subject?.name}
                               </p>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              {ev.assessmentSlot?.label ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-700">
+                                  {ev.assessmentSlot.label}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-300">—</span>
+                              )}
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap">
                               <p className="text-xs text-gray-600">{ev.period?.name}</p>
