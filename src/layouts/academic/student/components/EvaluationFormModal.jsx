@@ -713,7 +713,7 @@ export function EvaluationFormModal({
                 value={form.scoreRaw}
                 onChange={handleChange}
                 step="0.01"
-                placeholder="85"
+                placeholder="0"
                 className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-3.5 py-3 text-sm font-semibold text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
               />
             </div>
