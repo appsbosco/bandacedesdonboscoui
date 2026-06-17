@@ -50,7 +50,7 @@ export function useAcademicDashboard() {
   });
 
   const riskRankingQuery = useQuery(GET_ADMIN_RISK_RANKING, {
-    variables: { filter: buildApiFilter(filter), limit: 50 },
+    variables: { filter: buildApiFilter(filter), limit: 500 },
     fetchPolicy: "cache-and-network",
   });
 
