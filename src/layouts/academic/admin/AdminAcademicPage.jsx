@@ -558,7 +558,7 @@ function StudentsTab({ allUsers, riskRanking, pendingEvaluations, onOpenDrawer, 
                       {u.instrument || "—"}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {perf ? (
+                      {perf && perf.approvedCount > 0 ? (
                         <span
                           className={`font-bold ${
                             perf.averageGeneral >= 80
@@ -571,17 +571,42 @@ function StudentsTab({ allUsers, riskRanking, pendingEvaluations, onOpenDrawer, 
                           {perf.averageGeneral?.toFixed(1)}
                         </span>
                       ) : (
-                        <span className="text-gray-300 text-xs">Sin datos</span>
+                        <span className="text-gray-300 text-xs">
+                          {perf && perf.pendingCount > 0 ? "Pendiente" : "Sin datos"}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {risk ? (
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${risk.badge}`}
+                        <div
+                          className="group/risk relative inline-block"
+                          title={perf?.riskReasons?.join(" | ")}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`} />
-                          {risk.label}
-                        </span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium cursor-default ${risk.badge}`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`} />
+                            {risk.label}
+                          </span>
+                          {perf?.riskReasons?.length > 0 && (
+                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/risk:block z-50 w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-xl text-left">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">
+                                Por qué tiene este nivel
+                              </p>
+                              <ul className="space-y-1">
+                                {perf.riskReasons.map((r, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="text-xs text-gray-700 leading-snug flex gap-1.5"
+                                  >
+                                    <span className="mt-1 shrink-0 w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                    {r}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>
                       )}
@@ -912,11 +937,14 @@ function RankingTab({ riskRanking, loading, onOpenDrawer }) {
             <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Riesgo
             </th>
-            <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            {/* <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Tendencia
-            </th>
+            </th> */}
             <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Materias riesgo
+            </th>
+            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Motivo
             </th>
             <th className="px-4 py-3" />
           </tr>
@@ -954,14 +982,31 @@ function RankingTab({ riskRanking, loading, onOpenDrawer }) {
                     {risk.label}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-center text-xs text-gray-500">
+                {/* <td className="px-4 py-3 text-center text-xs text-gray-500">
                   {TREND_LABEL[p.trendDirection]}
-                </td>
+                </td> */}
                 <td className="px-4 py-3 text-right text-xs">
                   {p.riskSubjects?.length > 0 ? (
                     <span className="font-medium text-red-600">{p.riskSubjects.length}</span>
                   ) : (
                     <span className="text-gray-300">0</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 max-w-xs">
+                  {p.riskReasons?.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {p.riskReasons.map((reason, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-1.5 text-xs text-gray-600 leading-snug"
+                        >
+                          <span className={`mt-1 shrink-0 w-1.5 h-1.5 rounded-full ${risk.dot}`} />
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -1143,6 +1188,54 @@ function StudentDetailDrawer({
               )}
               {!loadingPerf && performance && (
                 <>
+                  {performance.riskReasons?.length > 0 && (
+                    <div
+                      className={`rounded-xl border p-4 ${
+                        performance.riskLevel === "RED"
+                          ? "bg-red-50 border-red-200"
+                          : performance.riskLevel === "YELLOW"
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-emerald-50 border-emerald-200"
+                      }`}
+                    >
+                      <p
+                        className={`mb-2 text-xs font-semibold uppercase tracking-wide ${
+                          performance.riskLevel === "RED"
+                            ? "text-red-700"
+                            : performance.riskLevel === "YELLOW"
+                            ? "text-amber-700"
+                            : "text-emerald-700"
+                        }`}
+                      >
+                        {performance.riskLevel === "RED"
+                          ? "En riesgo"
+                          : performance.riskLevel === "YELLOW"
+                          ? "Rendimiento regular"
+                          : "Buen rendimiento"}{" "}
+                        — análisis
+                      </p>
+                      <ul className="space-y-1.5">
+                        {performance.riskReasons.map((reason, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-2 text-xs text-gray-700 leading-snug"
+                          >
+                            <span
+                              className={`mt-1 shrink-0 w-1.5 h-1.5 rounded-full ${
+                                performance.riskLevel === "RED"
+                                  ? "bg-red-500"
+                                  : performance.riskLevel === "YELLOW"
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                              }`}
+                            />
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="rounded-xl border border-gray-200 bg-white p-4">
                     <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Obligaciones pendientes por semestre

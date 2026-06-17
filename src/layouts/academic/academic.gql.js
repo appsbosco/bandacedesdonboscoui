@@ -210,6 +210,7 @@ const PERFORMANCE_FRAGMENT = gql`
     }
     riskScore
     riskLevel
+    riskReasons
     recentEvaluations {
       id
       scoreNormalized100
@@ -665,6 +666,7 @@ export const GET_ADMIN_RISK_RANKING = gql`
         average
         reason
       }
+      riskReasons
       approvedCount
       pendingCount
       rejectedCount
