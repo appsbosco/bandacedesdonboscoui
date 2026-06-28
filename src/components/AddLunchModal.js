@@ -41,6 +41,8 @@ const CATEGORIES = [
 const DAYS_OPTIONS = [
   { value: "Sábado", label: "Sábado" },
   { value: "Domingo", label: "Domingo" },
+  { value: "Lunes", label: "Lunes" },
+  { value: "Martes", label: "Martes" },
 ];
 
 // ---------------------------

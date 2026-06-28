@@ -34,8 +34,27 @@ export function getFirebaseMessagingInstance() {
 }
 
 async function ensureMessagingServiceWorker() {
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-  await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", {
+    scope: "/firebase-cloud-messaging-push-scope/",
+  });
+
+  if (!registration.active) {
+    const worker = registration.installing || registration.waiting;
+    if (worker) {
+      await new Promise((resolve, reject) => {
+        const handleStateChange = () => {
+          if (worker.state === "activated") resolve();
+          if (worker.state === "redundant") {
+            reject(new Error("[FCM] El service worker de mensajería no pudo activarse."));
+          }
+        };
+
+        worker.addEventListener("statechange", handleStateChange);
+        handleStateChange();
+      });
+    }
+  }
+
   return registration;
 }
 

@@ -10,6 +10,7 @@ import { SoftUIControllerProvider } from "context";
 import { ToastProvider } from "components/ui/Toast";
 import MetaTagProvider from "MetaTagProvider";
 import { UserProvider } from "./UserContext";
+import { registerAppServiceWorker } from "./serviceWorkerRegistration";
 import App from "App";
 import "./i18n";
 
@@ -33,3 +34,5 @@ createRoot(document.getElementById("root")).render(
     </ApolloProvider>
   </BrowserRouter>
 );
+
+registerAppServiceWorker();
