@@ -6,10 +6,58 @@ import {
   useLiveMutation,
   useStatus,
 } from "./liveblocks.config.js";
+import { LiveMap } from "@liveblocks/client";
 
 const BACKEND_URL = process.env.REACT_APP_GRAPHQL_URL
   ? process.env.REACT_APP_GRAPHQL_URL.replace("/api/graphql", "")
   : "http://localhost:4000";
+
+function getSlotKey(slot) {
+  return `${slot.zone}:${slot.row}:${slot.col}`;
+}
+
+function getSlotEntries(slotsStorage) {
+  if (!slotsStorage) return [];
+  if (typeof slotsStorage.entries === "function") {
+    return Array.from(slotsStorage.entries());
+  }
+  if (Array.isArray(slotsStorage)) {
+    return slotsStorage.filter((slot) => slot?.zone).map((slot) => [getSlotKey(slot), slot]);
+  }
+  if (typeof slotsStorage === "object") {
+    return Object.entries(slotsStorage);
+  }
+  return [];
+}
+
+function getSlotValues(slotsStorage) {
+  return getSlotEntries(slotsStorage)
+    .map(([, slot]) => slot)
+    .filter(Boolean);
+}
+
+function getSlotStorageSize(slotsStorage) {
+  if (!slotsStorage) return 0;
+  if (typeof slotsStorage.size === "number") return slotsStorage.size;
+  return getSlotEntries(slotsStorage).length;
+}
+
+function ensureLiveSlots(storage) {
+  const liveSlots = storage.get("slots");
+  if (
+    liveSlots &&
+    typeof liveSlots.get === "function" &&
+    typeof liveSlots.set === "function" &&
+    typeof liveSlots.delete === "function" &&
+    typeof liveSlots.keys === "function"
+  ) {
+    return liveSlots;
+  }
+
+  const upgradedSlots = new LiveMap(getSlotEntries(liveSlots));
+  storage.set("slots", upgradedSlots);
+  return upgradedSlots;
+}
 
 export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const [myPresence, updateMyPresence] = useMyPresence();
@@ -18,7 +66,7 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const debounceRef = useRef(null);
 
   const slotsMap = useStorage((root) => root.slots);
-  const slots = slotsMap ? Array.from(slotsMap.values()) : [];
+  const slots = getSlotValues(slotsMap);
 
   // ── Hidratar presencia ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -42,7 +90,7 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   // ── Mutaciones de storage ───────────────────────────────────────────────────
   const moveSlot = useLiveMutation(
     ({ storage }, keyA, keyB) => {
-      const liveSlots = storage.get("slots");
+      const liveSlots = ensureLiveSlots(storage);
       const slotA = liveSlots.get(keyA);
       const slotB = liveSlots.get(keyB);
       if (!slotA || !slotB) return;
@@ -67,19 +115,19 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   );
 
   const toggleSlotLock = useLiveMutation(({ storage }, key) => {
-    const liveSlots = storage.get("slots");
+    const liveSlots = ensureLiveSlots(storage);
     const slot = liveSlots.get(key);
     if (!slot) return;
     liveSlots.set(key, { ...slot, locked: !slot.locked });
   }, []);
 
   const setSlots = useLiveMutation(({ storage }, newSlots) => {
-    const liveSlots = storage.get("slots");
+    const liveSlots = ensureLiveSlots(storage);
     for (const key of Array.from(liveSlots.keys())) {
       liveSlots.delete(key);
     }
     for (const slot of newSlots) {
-      liveSlots.set(`${slot.zone}:${slot.row}:${slot.col}`, slot);
+      liveSlots.set(getSlotKey(slot), slot);
     }
   }, []);
 
@@ -125,8 +173,8 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
   const persistToMongo = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      if (!slotsMap || slotsMap.size === 0) return;
-      const slotsArray = Array.from(slotsMap.values()).filter((s) => s?.zone);
+      if (!slotsMap || getSlotStorageSize(slotsMap) === 0) return;
+      const slotsArray = getSlotValues(slotsMap).filter((s) => s?.zone);
       const token = localStorage.getItem("token");
       try {
         await fetch(`${BACKEND_URL}/api/formations/${formationId}/persist`, {
@@ -145,8 +193,8 @@ export function useFormationRoom({ formationId, currentUser, initialSlots }) {
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (!slotsMap || slotsMap.size === 0) return;
-      const slotsArray = Array.from(slotsMap.values()).filter((s) => s?.zone);
+      if (!slotsMap || getSlotStorageSize(slotsMap) === 0) return;
+      const slotsArray = getSlotValues(slotsMap).filter((s) => s?.zone);
       navigator.sendBeacon(
         `${BACKEND_URL}/api/formations/${formationId}/persist`,
         new Blob([JSON.stringify({ slots: slotsArray })], { type: "application/json" })
