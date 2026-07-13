@@ -63,6 +63,7 @@ export default function ItineraryPassengersModal({
   applying,
   result,
   onClearResult,
+  initialSelectedIds = [],
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [search, setSearch] = useState("");
@@ -77,11 +78,15 @@ export default function ItineraryPassengersModal({
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedIds(new Set());
+      const maxPassengers = itinerary?.maxPassengers ?? 60;
+      const passengerCount = itinerary?.passengerCount || 0;
+      const seatsRemaining = Math.max(0, maxPassengers - passengerCount);
+      setSelectedIds(new Set(initialSelectedIds.slice(0, seatsRemaining)));
       setSearch("");
       setInstrumentFilter("all");
       setTab("add");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, itinerary?.id]);
 
   if (!isOpen || !itinerary) return null;

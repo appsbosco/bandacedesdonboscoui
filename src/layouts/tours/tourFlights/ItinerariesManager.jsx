@@ -7,12 +7,10 @@
 import ItineraryCard from "./ItineraryCard";
 import ItineraryFormModal from "./ItineraryFormModal";
 import AssignFlightsToItineraryModal from "./AssignFlightsToItineraryModal";
-import ItineraryPassengersModal from "./ItineraryPassengersModal";
 import ItineraryLeadersModal from "./ItineraryLeadersModal";
 import { Toast } from "../TourHelpers";
 
 export default function ItinerariesManager({
-  tourId,
   itineraries,
   unassignedFlights,
   itinerariesLoading,
@@ -33,15 +31,7 @@ export default function ItinerariesManager({
   handleAssignFlights,
   assigningFlights,
   // Assign passengers
-  assignPassengersModal,
   openAssignPassengersModal,
-  closeAssignPassengersModal,
-  handleAssignPassengers,
-  handleRemovePassengers,
-  assigningPassengers,
-  removingPassengers,
-  assignResult,
-  setAssignResult,
   // Leaders
   leadersModal,
   openLeadersModal,
@@ -138,21 +128,6 @@ export default function ItinerariesManager({
         onAssign={handleAssignFlights}
         loading={assigningFlights}
       />
-
-      {assignPassengersModal.open && assignPassengersModal.itinerary && (
-        <ItineraryPassengersModal
-          isOpen={assignPassengersModal.open}
-          itinerary={assignPassengersModal.itinerary}
-          allItineraries={itineraries}
-          tourId={tourId}
-          onClose={closeAssignPassengersModal}
-          onAssign={handleAssignPassengers}
-          onRemove={handleRemovePassengers}
-          applying={assigningPassengers || removingPassengers}
-          result={assignResult}
-          onClearResult={() => setAssignResult(null)}
-        />
-      )}
 
       {leadersModal.open && leadersModal.itinerary && (
         <ItineraryLeadersModal

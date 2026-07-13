@@ -15,12 +15,17 @@ import FlightFormModal from "./FlightFormModal";
 import FlightDeleteModal from "./FlightDeleteModal";
 import FlightPassengersModal from "./FlightPassengersModal";
 import ItinerariesManager from "./ItinerariesManager";
+import ItineraryPassengersModal from "./ItineraryPassengersModal";
+import ParticipantsTableView from "./ParticipantsTableView";
+import UnassignedParticipantsView from "./UnassignedParticipantsView";
 import { Toast } from "../TourHelpers";
 
 const TABS = [
-  { id: "itineraries", label: "Itinerarios", emoji: "🗓️" },
-  { id: "flights",     label: "Vuelos",       emoji: "✈️" },
-  { id: "unassigned",  label: "Sin asignar",  emoji: "⚠️" },
+  { id: "itineraries",            label: "Itinerarios",                  emoji: "🗓️" },
+  { id: "flights",                label: "Vuelos",                       emoji: "✈️" },
+  { id: "unassigned",             label: "Sin asignar",                  emoji: "⚠️" },
+  { id: "participantsTable",      label: "Participantes",                emoji: "📋" },
+  { id: "unassignedParticipants", label: "Participantes sin itinerario", emoji: "🙋" },
 ];
 
 export default function TourFlightsPage({ tourId, tourName }) {
@@ -61,7 +66,8 @@ export default function TourFlightsPage({ tourId, tourName }) {
   } = useTourFlights(tourId);
 
   // ── Itineraries hook (itinerary CRUD + assign flights + assign passengers) ─
-  const itinerariesHook = useTourItineraries(tourId);
+  const needsParticipants = tab === "participantsTable" || tab === "unassignedParticipants";
+  const itinerariesHook = useTourItineraries(tourId, { skipParticipants: !needsParticipants });
   const { unassignedFlights } = itinerariesHook;
 
   // Active toast: prefer itineraries toast over flights toast
@@ -113,7 +119,7 @@ export default function TourFlightsPage({ tourId, tourName }) {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -131,6 +137,11 @@ export default function TourFlightsPage({ tourId, tourName }) {
                 {unassignedFlights.length}
               </span>
             )}
+            {t.id === "unassignedParticipants" && itinerariesHook.unassignedParticipants.length > 0 && (
+              <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                {itinerariesHook.unassignedParticipants.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -145,7 +156,6 @@ export default function TourFlightsPage({ tourId, tourName }) {
           {/* ── ITINERARIES TAB ── */}
           {tab === "itineraries" && (
             <ItinerariesManager
-              tourId={tourId}
               itineraries={itinerariesHook.itineraries}
               unassignedFlights={unassignedFlights}
               itinerariesLoading={itinerariesHook.itinerariesLoading}
@@ -162,15 +172,7 @@ export default function TourFlightsPage({ tourId, tourName }) {
               closeAssignFlightsModal={itinerariesHook.closeAssignFlightsModal}
               handleAssignFlights={itinerariesHook.handleAssignFlights}
               assigningFlights={itinerariesHook.assigningFlights}
-              assignPassengersModal={itinerariesHook.assignPassengersModal}
               openAssignPassengersModal={itinerariesHook.openAssignPassengersModal}
-              closeAssignPassengersModal={itinerariesHook.closeAssignPassengersModal}
-              handleAssignPassengers={itinerariesHook.handleAssignPassengers}
-              handleRemovePassengers={itinerariesHook.handleRemovePassengers}
-              assigningPassengers={itinerariesHook.assigningPassengers}
-              removingPassengers={itinerariesHook.removingPassengers}
-              assignResult={itinerariesHook.assignResult}
-              setAssignResult={itinerariesHook.setAssignResult}
               leadersModal={itinerariesHook.leadersModal}
               openLeadersModal={itinerariesHook.openLeadersModal}
               closeLeadersModal={itinerariesHook.closeLeadersModal}
@@ -202,6 +204,28 @@ export default function TourFlightsPage({ tourId, tourName }) {
               onEdit={openEditModal}
               onDelete={openDeleteModal}
               onGoToItineraries={() => setTab("itineraries")}
+            />
+          )}
+
+          {/* ── PARTICIPANTS TABLE TAB ── */}
+          {tab === "participantsTable" && (
+            <ParticipantsTableView
+              tourName={tourName}
+              itineraries={itinerariesHook.itineraries}
+              unassignedParticipants={itinerariesHook.unassignedParticipants}
+              loading={itinerariesHook.participantsLoading}
+            />
+          )}
+
+          {/* ── UNASSIGNED PARTICIPANTS TAB ── */}
+          {tab === "unassignedParticipants" && (
+            <UnassignedParticipantsView
+              participants={itinerariesHook.unassignedParticipants}
+              itineraries={itinerariesHook.itineraries}
+              onAssign={(itinerary, participantId) =>
+                itinerariesHook.openAssignPassengersModal(itinerary, [participantId])
+              }
+              loading={itinerariesHook.participantsLoading}
             />
           )}
         </>
@@ -237,6 +261,22 @@ export default function TourFlightsPage({ tourId, tourName }) {
         assigningBulk={assigningBulk}
         removing={removing}
       />
+
+      {itinerariesHook.assignPassengersModal.open && itinerariesHook.assignPassengersModal.itinerary && (
+        <ItineraryPassengersModal
+          isOpen={itinerariesHook.assignPassengersModal.open}
+          itinerary={itinerariesHook.assignPassengersModal.itinerary}
+          allItineraries={itinerariesHook.itineraries}
+          tourId={tourId}
+          onClose={itinerariesHook.closeAssignPassengersModal}
+          onAssign={itinerariesHook.handleAssignPassengers}
+          onRemove={itinerariesHook.handleRemovePassengers}
+          applying={itinerariesHook.assigningPassengers || itinerariesHook.removingPassengers}
+          result={itinerariesHook.assignResult}
+          onClearResult={() => itinerariesHook.setAssignResult(null)}
+          initialSelectedIds={itinerariesHook.assignPassengersModal.initialSelectedIds}
+        />
+      )}
 
       {/* Toast */}
       {activeToast && (

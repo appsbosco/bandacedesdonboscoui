@@ -29,6 +29,7 @@ const ITINERARY_CORE = gql`
       secondSurname
       identification
       instrument
+      role
       visaStatus
       visaDeniedCount
     }
@@ -66,6 +67,22 @@ export const GET_UNASSIGNED_TOUR_FLIGHTS = gql`
       arrivalAt
       direction
       passengerCount
+    }
+  }
+`;
+
+export const GET_TOUR_PARTICIPANTS_FOR_TABLE = gql`
+  query GetTourParticipantsForTable($tourId: ID!) {
+    getTourParticipants(tourId: $tourId) {
+      id
+      firstName
+      firstSurname
+      secondSurname
+      identification
+      instrument
+      role
+      visaStatus
+      visaDeniedCount
     }
   }
 `;

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_TOUR_ITINERARIES,
   GET_UNASSIGNED_TOUR_FLIGHTS,
+  GET_TOUR_PARTICIPANTS_FOR_TABLE,
   CREATE_TOUR_ITINERARY,
   UPDATE_TOUR_ITINERARY,
   DELETE_TOUR_ITINERARY,
@@ -13,12 +14,13 @@ import {
   SET_ITINERARY_LEADERS,
 } from "./tourItineraries.gql.js";
 
-export function useTourItineraries(tourId) {
+export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
   const [formModal, setFormModal] = useState({ open: false, mode: "create", itinerary: null });
   const [assignFlightsModal, setAssignFlightsModal] = useState({ open: false, itinerary: null });
   const [assignPassengersModalState, setAssignPassengersModal] = useState({
     open: false,
     itineraryId: null,
+    initialSelectedIds: [],
   });
   const [leadersModal, setLeadersModal] = useState({ open: false, itinerary: null });
   const [assignResult, setAssignResult] = useState(null);
@@ -48,9 +50,23 @@ export function useTourItineraries(tourId) {
     fetchPolicy: "cache-and-network",
   });
 
+  const {
+    data: participantsData,
+    loading: participantsLoading,
+    refetch: refetchParticipants,
+  } = useQuery(GET_TOUR_PARTICIPANTS_FOR_TABLE, {
+    variables: { tourId },
+    skip: !tourId || skipParticipants,
+    fetchPolicy: "cache-and-network",
+  });
+
   const refetchAll = useCallback(async () => {
-    await Promise.all([refetchItineraries(), refetchUnassigned()]);
-  }, [refetchItineraries, refetchUnassigned]);
+    await Promise.all([
+      refetchItineraries(),
+      refetchUnassigned(),
+      ...(skipParticipants ? [] : [refetchParticipants()]),
+    ]);
+  }, [refetchItineraries, refetchUnassigned, refetchParticipants, skipParticipants]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const [createItinerary, { loading: creating }] = useMutation(CREATE_TOUR_ITINERARY, {
@@ -150,13 +166,17 @@ export function useTourItineraries(tourId) {
   const closeAssignFlightsModal = useCallback(() =>
     setAssignFlightsModal({ open: false, itinerary: null }), []);
 
-  const openAssignPassengersModal = useCallback((itinerary) => {
+  const openAssignPassengersModal = useCallback((itinerary, preselectIds = []) => {
     setAssignResult(null);
-    setAssignPassengersModal({ open: true, itineraryId: itinerary.id });
+    setAssignPassengersModal({
+      open: true,
+      itineraryId: itinerary.id,
+      initialSelectedIds: preselectIds,
+    });
   }, []);
 
   const closeAssignPassengersModal = useCallback(
-    () => setAssignPassengersModal({ open: false, itineraryId: null }),
+    () => setAssignPassengersModal({ open: false, itineraryId: null, initialSelectedIds: [] }),
     []
   );
 
@@ -213,13 +233,25 @@ export function useTourItineraries(tourId) {
   const assignPassengersModal = {
     open: assignPassengersModalState.open,
     itinerary: activePassengersItinerary,
+    initialSelectedIds: assignPassengersModalState.initialSelectedIds,
   };
+
+  const allParticipants = participantsData?.getTourParticipants || [];
+  const assignedParticipantIds = new Set(
+    itineraries.flatMap((it) => (it.participants || []).map((p) => p.id))
+  );
+  const unassignedParticipants = allParticipants.filter(
+    (p) => !assignedParticipantIds.has(p.id)
+  );
 
 
   return {
     itineraries,
     assignPassengersModal,
     unassignedFlights,
+    allParticipants,
+    unassignedParticipants,
+    participantsLoading,
     itinerariesLoading,
     itinerariesError,
     unassignedLoading,
