@@ -11,9 +11,34 @@ const DIRECTIONS = [
   { value: "CONNECTING", label: "Conexión", emoji: "🔄" },
 ];
 
+const COSTA_RICA_TIME_ZONE = "America/Costa_Rica";
+const COSTA_RICA_UTC_OFFSET = "-06:00";
+const COSTA_RICA_DATETIME_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: COSTA_RICA_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 function toInputDatetime(isoString) {
   if (!isoString) return "";
-  return isoString.slice(0, 16);
+
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = COSTA_RICA_DATETIME_FORMATTER
+    .formatToParts(date)
+    .reduce((acc, part) => ({ ...acc, [part.type]: part.value }), {});
+
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+function costaRicaDatetimeToIso(localDatetime) {
+  // Costa Rica uses UTC-06:00 year-round, without daylight-saving changes.
+  return new Date(`${localDatetime}:00${COSTA_RICA_UTC_OFFSET}`).toISOString();
 }
 
 const EMPTY = {
@@ -86,8 +111,8 @@ export default function FlightFormModal({
       flightNumber: form.flightNumber.trim(),
       origin:       form.origin.trim().toUpperCase(),
       destination:  form.destination.trim().toUpperCase(),
-      departureAt:  new Date(form.departureAt).toISOString(),
-      arrivalAt:    new Date(form.arrivalAt).toISOString(),
+      departureAt:  costaRicaDatetimeToIso(form.departureAt),
+      arrivalAt:    costaRicaDatetimeToIso(form.arrivalAt),
       direction:    form.direction,
       notes:        form.notes.trim() || undefined,
     });
@@ -173,7 +198,6 @@ export default function FlightFormModal({
               onChange={(v) => set("flightNumber", v)}
             />
           </div>
-
           {/* Origin + Destination */}
           <div className="grid grid-cols-2 gap-3">
             <Field
@@ -209,6 +233,9 @@ export default function FlightFormModal({
               onChange={(v) => set("arrivalAt", v)}
             />
           </div>
+          <p className="-mt-2 text-[11px] text-gray-500">
+            Horas mostradas en zona horaria de Costa Rica (UTC-6).
+          </p>
 
           {/* Notes */}
           <div>
