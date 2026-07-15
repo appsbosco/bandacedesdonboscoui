@@ -167,6 +167,29 @@ export const REMOVE_PASSENGERS_FROM_ITINERARY = gql`
   }
 `;
 
+export const REASSIGN_PASSENGER_TO_ITINERARY = gql`
+  mutation ReassignPassengerToItinerary(
+    $sourceItineraryId: ID!
+    $targetItineraryId: ID!
+    $participantId: ID!
+  ) {
+    reassignPassengerToItinerary(
+      sourceItineraryId: $sourceItineraryId
+      targetItineraryId: $targetItineraryId
+      participantId: $participantId
+    ) {
+      itinerary { id passengerCount seatsRemaining maxPassengers }
+      assigned
+      removed
+      skipped
+      conflicts { participantId participantName reason conflictingItinerary }
+      passengerCount
+      maxPassengers
+      seatsRemaining
+    }
+  }
+`;
+
 export const SET_ITINERARY_LEADERS = gql`
   mutation SetItineraryLeaders($itineraryId: ID!, $leaderIds: [ID!]!) {
     setItineraryLeaders(itineraryId: $itineraryId, leaderIds: $leaderIds) {

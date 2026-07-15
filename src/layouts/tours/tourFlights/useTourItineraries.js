@@ -11,6 +11,7 @@ import {
   UNASSIGN_FLIGHTS_FROM_ITINERARY,
   ASSIGN_PASSENGERS_TO_ITINERARY,
   REMOVE_PASSENGERS_FROM_ITINERARY,
+  REASSIGN_PASSENGER_TO_ITINERARY,
   SET_ITINERARY_LEADERS,
 } from "./tourItineraries.gql.js";
 
@@ -144,6 +145,17 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     }
   );
 
+  const [reassignPassengerMutation, { loading: reassigningPassenger }] = useMutation(
+    REASSIGN_PASSENGER_TO_ITINERARY,
+    {
+      onCompleted: () => {
+        showToast("Participante reasignado correctamente", "success");
+        refetchAll();
+      },
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
   const [setLeadersMutation, { loading: settingLeaders }] = useMutation(SET_ITINERARY_LEADERS, {
     onCompleted: () => {
       showToast("Líderes actualizados", "success");
@@ -215,8 +227,21 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     return result?.data?.assignPassengersToItinerary || null;
   };
 
+  const handleAssignParticipantToItinerary = async (itineraryId, participantId) => {
+    const result = await assignPassengersMutation({
+      variables: { itineraryId, participantIds: [participantId] },
+    });
+    return result?.data?.assignPassengersToItinerary || null;
+  };
+
   const handleRemovePassengers = async (itineraryId, participantIds) => {
     await removePassengersMutation({ variables: { itineraryId, participantIds } });
+  };
+
+  const handleReassignPassenger = async (sourceItineraryId, targetItineraryId, participantId) => {
+    await reassignPassengerMutation({
+      variables: { sourceItineraryId, targetItineraryId, participantId },
+    });
   };
 
   const handleSetLeaders = async (itineraryId, leaderIds) => {
@@ -273,7 +298,9 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     handleAssignFlights,
     handleUnassignFlight,
     handleAssignPassengers,
+    handleAssignParticipantToItinerary,
     handleRemovePassengers,
+    handleReassignPassenger,
     handleSetLeaders,
     creating,
     updating,
@@ -281,6 +308,7 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     assigningFlights,
     assigningPassengers,
     removingPassengers,
+    reassigningPassenger,
     settingLeaders,
     toast,
     setToast,

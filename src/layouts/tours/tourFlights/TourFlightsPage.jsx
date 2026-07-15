@@ -21,10 +21,10 @@ import UnassignedParticipantsView from "./UnassignedParticipantsView";
 import { Toast } from "../TourHelpers";
 
 const TABS = [
-  { id: "itineraries",            label: "Itinerarios",                  emoji: "🗓️" },
-  { id: "flights",                label: "Vuelos",                       emoji: "✈️" },
-  { id: "unassigned",             label: "Sin asignar",                  emoji: "⚠️" },
-  { id: "participantsTable",      label: "Participantes",                emoji: "📋" },
+  { id: "itineraries", label: "Itinerarios", emoji: "🗓️" },
+  { id: "flights", label: "Vuelos", emoji: "✈️" },
+  { id: "unassigned", label: "Sin asignar", emoji: "⚠️" },
+  { id: "participantsTable", label: "Participantes", emoji: "📋" },
   { id: "unassignedParticipants", label: "Participantes sin itinerario", emoji: "🙋" },
 ];
 
@@ -105,7 +105,11 @@ export default function TourFlightsPage({ tourId, tourName }) {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard value={flights.length} label="Total vuelos" />
-        <StatCard value={itinerariesHook.itineraries.length} label="Itinerarios" color="text-blue-600" />
+        <StatCard
+          value={itinerariesHook.itineraries.length}
+          label="Itinerarios"
+          color="text-blue-600"
+        />
         <StatCard
           value={unassignedFlights.length}
           label="Sin asignar"
@@ -137,11 +141,12 @@ export default function TourFlightsPage({ tourId, tourName }) {
                 {unassignedFlights.length}
               </span>
             )}
-            {t.id === "unassignedParticipants" && itinerariesHook.unassignedParticipants.length > 0 && (
-              <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                {itinerariesHook.unassignedParticipants.length}
-              </span>
-            )}
+            {t.id === "unassignedParticipants" &&
+              itinerariesHook.unassignedParticipants.length > 0 && (
+                <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                  {itinerariesHook.unassignedParticipants.length}
+                </span>
+              )}
           </button>
         ))}
       </div>
@@ -214,6 +219,10 @@ export default function TourFlightsPage({ tourId, tourName }) {
               itineraries={itinerariesHook.itineraries}
               unassignedParticipants={itinerariesHook.unassignedParticipants}
               loading={itinerariesHook.participantsLoading}
+              onRemove={itinerariesHook.handleRemovePassengers}
+              onReassign={itinerariesHook.handleReassignPassenger}
+              removing={itinerariesHook.removingPassengers}
+              reassigning={itinerariesHook.reassigningPassenger}
             />
           )}
 
@@ -222,9 +231,8 @@ export default function TourFlightsPage({ tourId, tourName }) {
             <UnassignedParticipantsView
               participants={itinerariesHook.unassignedParticipants}
               itineraries={itinerariesHook.itineraries}
-              onAssign={(itinerary, participantId) =>
-                itinerariesHook.openAssignPassengersModal(itinerary, [participantId])
-              }
+              onAssign={itinerariesHook.handleAssignParticipantToItinerary}
+              assigning={itinerariesHook.assigningPassengers}
               loading={itinerariesHook.participantsLoading}
             />
           )}
@@ -262,21 +270,22 @@ export default function TourFlightsPage({ tourId, tourName }) {
         removing={removing}
       />
 
-      {itinerariesHook.assignPassengersModal.open && itinerariesHook.assignPassengersModal.itinerary && (
-        <ItineraryPassengersModal
-          isOpen={itinerariesHook.assignPassengersModal.open}
-          itinerary={itinerariesHook.assignPassengersModal.itinerary}
-          allItineraries={itinerariesHook.itineraries}
-          tourId={tourId}
-          onClose={itinerariesHook.closeAssignPassengersModal}
-          onAssign={itinerariesHook.handleAssignPassengers}
-          onRemove={itinerariesHook.handleRemovePassengers}
-          applying={itinerariesHook.assigningPassengers || itinerariesHook.removingPassengers}
-          result={itinerariesHook.assignResult}
-          onClearResult={() => itinerariesHook.setAssignResult(null)}
-          initialSelectedIds={itinerariesHook.assignPassengersModal.initialSelectedIds}
-        />
-      )}
+      {itinerariesHook.assignPassengersModal.open &&
+        itinerariesHook.assignPassengersModal.itinerary && (
+          <ItineraryPassengersModal
+            isOpen={itinerariesHook.assignPassengersModal.open}
+            itinerary={itinerariesHook.assignPassengersModal.itinerary}
+            allItineraries={itinerariesHook.itineraries}
+            tourId={tourId}
+            onClose={itinerariesHook.closeAssignPassengersModal}
+            onAssign={itinerariesHook.handleAssignPassengers}
+            onRemove={itinerariesHook.handleRemovePassengers}
+            applying={itinerariesHook.assigningPassengers || itinerariesHook.removingPassengers}
+            result={itinerariesHook.assignResult}
+            onClearResult={() => itinerariesHook.setAssignResult(null)}
+            initialSelectedIds={itinerariesHook.assignPassengersModal.initialSelectedIds}
+          />
+        )}
 
       {/* Toast */}
       {activeToast && (
@@ -289,12 +298,20 @@ export default function TourFlightsPage({ tourId, tourName }) {
 /* ── Flights view ────────────────────────────────────────────────────────────── */
 
 const FLIGHT_SECTIONS = [
-  { key: "outbound",   label: "Vuelos de ida",   emoji: "🛫" },
-  { key: "inbound",    label: "Vuelos de vuelta", emoji: "🛬" },
-  { key: "connecting", label: "Conexiones",       emoji: "🔄" },
+  { key: "outbound", label: "Vuelos de ida", emoji: "🛫" },
+  { key: "inbound", label: "Vuelos de vuelta", emoji: "🛬" },
+  { key: "connecting", label: "Conexiones", emoji: "🔄" },
 ];
 
-function FlightsView({ flights, outbound, inbound, connecting, onEdit, onDelete, onManagePassengers }) {
+function FlightsView({
+  flights,
+  outbound,
+  inbound,
+  connecting,
+  onEdit,
+  onDelete,
+  onManagePassengers,
+}) {
   const bySection = { outbound, inbound, connecting };
 
   if (flights.length === 0) {
@@ -343,7 +360,9 @@ function UnassignedView({ flights, onEdit, onDelete, onGoToItineraries }) {
     return (
       <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-10 text-center">
         <p className="text-3xl mb-2">✅</p>
-        <h3 className="text-sm font-bold text-emerald-800 mb-1">Todos los vuelos tienen itinerario</h3>
+        <h3 className="text-sm font-bold text-emerald-800 mb-1">
+          Todos los vuelos tienen itinerario
+        </h3>
         <p className="text-xs text-emerald-600">
           Todos los vuelos están asignados a un itinerario de gira.
         </p>
@@ -358,7 +377,8 @@ function UnassignedView({ flights, onEdit, onDelete, onGoToItineraries }) {
           <strong>
             {flights.length} vuelo{flights.length !== 1 ? "s" : ""}
           </strong>{" "}
-          sin itinerario. Usá la pestaña <strong>Itinerarios</strong> para crear uno y asignar vuelos.
+          sin itinerario. Usá la pestaña <strong>Itinerarios</strong> para crear uno y asignar
+          vuelos.
         </p>
         <button
           onClick={onGoToItineraries}
