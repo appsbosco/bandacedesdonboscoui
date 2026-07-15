@@ -23,6 +23,36 @@ function participantFullName(p = {}) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
 }
 
+function givenNames(p = {}) {
+  const names = String(p.firstName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return {
+    first: names[0] || "—",
+    second: names.slice(1).join(" ") || "—",
+  };
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-CR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function sexLabel(value) {
+  if (value === "M") return "Masculino";
+  if (value === "F") return "Femenino";
+  if (value === "OTHER") return "Otro";
+  return "—";
+}
+
 function visaLabel(p = {}) {
   if (p.visaStatus === "DENIED") return "Negada";
   if (p.visaStatus === "APPROVED") return "Aprobada";
@@ -61,6 +91,7 @@ function buildGroups(itineraries = [], unassignedParticipants = []) {
       (it.participants || []).map((p) => ({
         ...p,
         __itinerary: it.name,
+        __reservationNumber: it.reservationNumber || "—",
         __role: roleLabel(p, leaderIds.has(p.id)),
         __priority: isLeaderOrStaff(p, leaderIds) ? 0 : 1,
       }))
@@ -76,6 +107,7 @@ function buildGroups(itineraries = [], unassignedParticipants = []) {
         unassignedParticipants.map((p) => ({
           ...p,
           __itinerary: "Sin itinerario",
+          __reservationNumber: "—",
           __role: roleLabel(p, false, "—"),
           __priority: isLeaderOrStaff(p, noLeaders) ? 0 : 1,
         }))
@@ -104,10 +136,30 @@ export async function exportTourParticipantsXLSX({
 
   const wb = XLSX.utils.book_new();
 
-  const headerCols = ["Nombre completo", "Cédula", "Instrumento", "Itinerario", "Rol", "Visa"];
+  const headerCols = [
+    "Número de reserva",
+    "Primer apellido",
+    "Segundo apellido",
+    "Primer nombre",
+    "Segundo nombre",
+    "Nacimiento",
+    "Pasaporte",
+    "Vence",
+    "Identificación",
+    "Sexo",
+    "Instrumento",
+    "Itinerario",
+    "Rol",
+    "Visa",
+  ];
+  const lastColIdx = headerCols.length - 1;
   const aoa = [];
   aoa.push([tourName]);
-  aoa.push([`Participantes por itinerario · ${totalParticipants} participante${totalParticipants !== 1 ? "s" : ""}`]);
+  aoa.push([
+    `Participantes por itinerario · ${totalParticipants} participante${
+      totalParticipants !== 1 ? "s" : ""
+    }`,
+  ]);
   aoa.push([`Generado: ${dateStr}`]);
   aoa.push([]);
   aoa.push(headerCols);
@@ -117,13 +169,29 @@ export async function exportTourParticipantsXLSX({
 
   for (const group of groups) {
     groupHeaderRowIdxs.add(currentRow);
-    aoa.push([`${group.name}   ·   ${group.members.length} participante${group.members.length !== 1 ? "s" : ""}`]);
+    const reservationNumber = group.members[0]?.__reservationNumber;
+    const reservationLabel =
+      reservationNumber && reservationNumber !== "—" ? `   ·   Reserva ${reservationNumber}` : "";
+    aoa.push([
+      `${group.name}${reservationLabel}   ·   ${group.members.length} participante${
+        group.members.length !== 1 ? "s" : ""
+      }`,
+    ]);
     currentRow++;
 
     for (const p of group.members) {
+      const names = givenNames(p);
       aoa.push([
-        participantFullName(p) || "—",
+        p.__reservationNumber,
+        p.firstSurname || "—",
+        p.secondSurname || "—",
+        names.first,
+        names.second,
+        formatDate(p.birthDate),
+        p.passportNumber || "—",
+        formatDate(p.passportExpiry),
         p.identification || "—",
+        sexLabel(p.sex),
         p.instrument || "—",
         p.__itinerary,
         p.__role,
@@ -136,19 +204,33 @@ export async function exportTourParticipantsXLSX({
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
   ws["!cols"] = [
-    { wch: 32 },
+    { wch: 19 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 22 },
+    { wch: 13 },
     { wch: 16 },
+    { wch: 13 },
+    { wch: 17 },
+    { wch: 12 },
     { wch: 18 },
     { wch: 24 },
     { wch: 12 },
     { wch: 12 },
   ];
 
+  ws["!autofilter"] = { ref: `A5:${XLSX.utils.encode_col(lastColIdx)}5` };
+  ws["!freeze"] = { xSplit: 0, ySplit: 5, topLeftCell: "A6", activePane: "bottomLeft" };
+
   ws["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } },
-    ...[...groupHeaderRowIdxs].map((ri) => ({ s: { r: ri, c: 0 }, e: { r: ri, c: 5 } })),
+    { s: { r: 0, c: 0 }, e: { r: 0, c: lastColIdx } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: lastColIdx } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: lastColIdx } },
+    ...[...groupHeaderRowIdxs].map((ri) => ({
+      s: { r: ri, c: 0 },
+      e: { r: ri, c: lastColIdx },
+    })),
   ];
 
   function S(ref, style) {

@@ -5,6 +5,7 @@ const ITINERARY_CORE = gql`
     id
     tourId
     name
+    reservationNumber
     notes
     maxPassengers
     seatsRemaining
@@ -28,8 +29,14 @@ const ITINERARY_CORE = gql`
       firstSurname
       secondSurname
       identification
+      birthDate
+      sex
+      passportNumber
+      passportExpiry
       instrument
       role
+      hasVisa
+      visaExpiry
       visaStatus
       visaDeniedCount
     }
@@ -79,6 +86,10 @@ export const GET_TOUR_PARTICIPANTS_FOR_TABLE = gql`
       firstSurname
       secondSurname
       identification
+      birthDate
+      sex
+      passportNumber
+      passportExpiry
       instrument
       role
       visaStatus
@@ -101,6 +112,7 @@ export const UPDATE_TOUR_ITINERARY = gql`
     updateTourItinerary(id: $id, input: $input) {
       id
       name
+      reservationNumber
       notes
       maxPassengers
       seatsRemaining

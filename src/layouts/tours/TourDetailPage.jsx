@@ -106,13 +106,21 @@ function AdminQuickActions({ tourId, onCreated }) {
   });
 
   const [deleteParticipant, { loading: deleting }] = useMutation(DELETE_TOUR_PARTICIPANT, {
+    refetchQueries: [
+      "GetTourParticipantsQuickActions",
+      "GetTourParticipantsPlanner",
+      "GetTourParticipantsForRooms",
+      "GetTourParticipantsForTable",
+      "GetTourRooms",
+      "GetFinancialTable",
+      "GetFinancialSummary",
+      "GetTourParticipantsDocs",
+    ],
+    awaitRefetchQueries: true,
     onCompleted: (data) => {
       const result = data?.deleteTourParticipant;
       setToast({
-        message:
-          result?.deletionMode === "SOFT"
-            ? "Participante retirado de la gira. Se conservó el historial financiero."
-            : "Participante eliminado completamente de la gira.",
+        message: `Participante eliminado completamente. Se limpiaron ${result?.cascadeResults?.documents || 0} documento(s).`,
         type: "success",
       });
       setDeleteCandidate(null);
@@ -156,6 +164,7 @@ function AdminQuickActions({ tourId, onCreated }) {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl transition-all"
         >
@@ -188,7 +197,7 @@ function AdminQuickActions({ tourId, onCreated }) {
             <div className="px-6 pt-6 pb-4 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">Eliminar participante</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Se eliminará también de vuelos, itinerarios, rutas y habitaciones.
+                Esta acción elimina todas sus relaciones dentro de la gira.
               </p>
             </div>
             <div className="p-6 space-y-4">
@@ -202,19 +211,22 @@ function AdminQuickActions({ tourId, onCreated }) {
                 </p>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 space-y-1">
-                <p className="font-bold">Si tiene pagos:</p>
-                <p>• Se retirará de la gira</p>
-                <p>• Se conservará el historial financiero</p>
-                <p>• Quedará marcado para auditoría</p>
+                <p className="font-bold">Eliminación permanente</p>
+                <p>• Pagos, cuotas y cuenta financiera</p>
+                <p>• Habitaciones, vuelos, rutas e itinerarios</p>
+                <p>• Documentos, si no se usan en otra gira activa</p>
+                <p>• Se conservará únicamente el registro de auditoría</p>
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setDeleteCandidate(null)}
                   className="flex-1 py-2.5 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={confirmDelete}
                   disabled={deleting}
                   className="flex-1 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm disabled:opacity-50 transition-all"
@@ -327,7 +339,9 @@ function AdminTabContent({ activeTab, tour, onTourRefetch }) {
         </div>
       );
     case "flights":
-      return <TourFlightsPage tourId={tour.id} tourName={tour.name} />;
+      return (
+        <TourFlightsPage tourId={tour.id} tourName={tour.name} tourEndDate={tour.endDate} />
+      );
     case "rooms":
       return <TourRoomsPage tourId={tour.id} tourName={tour.name} />;
     case "payments":

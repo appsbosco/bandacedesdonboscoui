@@ -5,9 +5,16 @@
  */
 import { useState, useEffect } from "react";
 
-const EMPTY = { name: "", notes: "", maxPassengers: "60" };
+const EMPTY = { name: "", reservationNumber: "", notes: "", maxPassengers: "60" };
 
-export default function ItineraryFormModal({ isOpen, mode, itinerary, onClose, onSubmit, loading }) {
+export default function ItineraryFormModal({
+  isOpen,
+  mode,
+  itinerary,
+  onClose,
+  onSubmit,
+  loading,
+}) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
 
@@ -17,6 +24,7 @@ export default function ItineraryFormModal({ isOpen, mode, itinerary, onClose, o
       mode === "edit" && itinerary
         ? {
             name: itinerary.name || "",
+            reservationNumber: itinerary.reservationNumber || "",
             notes: itinerary.notes || "",
             maxPassengers: String(itinerary.maxPassengers ?? 60),
           }
@@ -41,10 +49,14 @@ export default function ItineraryFormModal({ isOpen, mode, itinerary, onClose, o
       newErrors.maxPassengers = "Debe ser un número entero >= 1";
     }
 
-    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     onSubmit({
       name: form.name.trim(),
+      reservationNumber: form.reservationNumber.trim() || null,
       notes: form.notes.trim() || undefined,
       maxPassengers: maxP,
     });
@@ -94,6 +106,22 @@ export default function ItineraryFormModal({ isOpen, mode, itinerary, onClose, o
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+              Número de reserva <span className="normal-case font-normal">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              value={form.reservationNumber}
+              onChange={(e) => set("reservationNumber", e.target.value.toUpperCase())}
+              placeholder="Ej: ABC123"
+              className="w-full px-3 py-2 text-sm font-mono uppercase border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Código PNR o localizador entregado por la aerolínea.
+            </p>
+          </div>
+
           {/* Max passengers */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -113,8 +141,8 @@ export default function ItineraryFormModal({ isOpen, mode, itinerary, onClose, o
               <p className="text-xs text-red-500 mt-1">{errors.maxPassengers}</p>
             )}
             <p className="text-xs text-gray-400 mt-1">
-              Número máximo de pasajeros para este itinerario. No podrá asignarse más pasajeros
-              que este límite.
+              Número máximo de pasajeros para este itinerario. No podrá asignarse más pasajeros que
+              este límite.
             </p>
           </div>
 

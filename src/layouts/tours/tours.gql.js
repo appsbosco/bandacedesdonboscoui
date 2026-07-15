@@ -152,6 +152,7 @@ export const DELETE_TOUR_PARTICIPANT = gql`
         payments
         installments
         financialAccounts
+        documents
       }
     }
   }

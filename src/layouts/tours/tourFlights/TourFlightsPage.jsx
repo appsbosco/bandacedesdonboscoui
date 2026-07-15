@@ -28,7 +28,7 @@ const TABS = [
   { id: "unassignedParticipants", label: "Participantes sin itinerario", emoji: "🙋" },
 ];
 
-export default function TourFlightsPage({ tourId, tourName }) {
+export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
   const [tab, setTab] = useState("itineraries");
 
   // ── Flights hook (individual CRUD + per-flight passenger management) ──────
@@ -234,6 +234,7 @@ export default function TourFlightsPage({ tourId, tourName }) {
               onAssign={itinerariesHook.handleAssignParticipantToItinerary}
               assigning={itinerariesHook.assigningPassengers}
               loading={itinerariesHook.participantsLoading}
+              tourEndDate={tourEndDate}
             />
           )}
         </>

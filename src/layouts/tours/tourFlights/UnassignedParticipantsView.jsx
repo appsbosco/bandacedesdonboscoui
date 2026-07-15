@@ -6,6 +6,9 @@
 import { useState } from "react";
 import ReassignParticipantModal from "./ReassignParticipantModal";
 
+const EMPTY_PARTICIPANTS = [];
+const EMPTY_ITINERARIES = [];
+
 function participantFullName(p) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
 }
@@ -26,12 +29,32 @@ function sortParticipants(participants) {
   });
 }
 
+function getMissingItineraryReason(participant, tourEndDate) {
+  if (participant.visaStatus === "DENIED") {
+    return { label: "Visa denegada", blocking: true, tone: "red" };
+  }
+  if (!participant.hasVisa) {
+    return { label: "Sin visa vigente", blocking: true, tone: "red" };
+  }
+  if (!participant.visaExpiry) {
+    return { label: "Visa sin fecha de vencimiento", blocking: true, tone: "amber" };
+  }
+  if (tourEndDate && new Date(participant.visaExpiry) < new Date(tourEndDate)) {
+    return { label: "La visa vence antes de terminar la gira", blocking: true, tone: "red" };
+  }
+  if (participant.visaStatus !== "APPROVED") {
+    return { label: `Visa ${participant.visaStatus?.toLowerCase() || "sin revisar"}`, blocking: true, tone: "amber" };
+  }
+  return { label: "Visa válida · pendiente de asignación", blocking: false, tone: "emerald" };
+}
+
 export default function UnassignedParticipantsView({
-  participants = [],
-  itineraries = [],
+  participants = EMPTY_PARTICIPANTS,
+  itineraries = EMPTY_ITINERARIES,
   onAssign,
   assigning = false,
   loading = false,
+  tourEndDate,
 }) {
   const [selectedParticipant, setSelectedParticipant] = useState(null);
 
@@ -68,7 +91,15 @@ export default function UnassignedParticipantsView({
         </p>
       </div>
       <div className="space-y-2">
-        {sortParticipants(participants).map((p) => (
+        {sortParticipants(participants).map((p) => {
+          const reason = getMissingItineraryReason(p, tourEndDate);
+          const reasonClass =
+            reason.tone === "red"
+              ? "bg-red-50 text-red-700 border-red-200"
+              : reason.tone === "amber"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-emerald-50 text-emerald-700 border-emerald-200";
+          return (
           <div
             key={p.id}
             className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-2xl"
@@ -95,17 +126,21 @@ export default function UnassignedParticipantsView({
                 {p.identification || "—"}
                 {p.instrument && <span className="ml-2 text-gray-400">{p.instrument}</span>}
               </p>
+              <span className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${reasonClass}`}>
+                {reason.label}
+              </span>
             </div>
             <button
               type="button"
               onClick={() => setSelectedParticipant(p)}
-              disabled={itineraries.length === 0 || assigning}
+              disabled={itineraries.length === 0 || assigning || reason.blocking}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Asignar a itinerario
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <ReassignParticipantModal
