@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { MARK_ATTENDANCE_AND_PAYMENT } from "graphql/mutations";
 import { GET_INSTRUCTOR_STUDENTS_ATTENDANCE } from "graphql/queries";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -81,17 +81,18 @@ const getInitials = (u) =>
 // ─────────────────────────────────────────────
 // StatusChip — no dynamic class construction
 // ─────────────────────────────────────────────
-const StatusChip = ({ option, isActive, onClick }) => (
+const StatusChip = ({ option, isActive, onClick, disabled }) => (
   <button
     type="button"
     onClick={onClick}
     aria-pressed={isActive}
+    disabled={disabled}
     title={option.label}
     className={[
-      "px-3 py-1.5 text-xs font-semibold rounded-full border transition-all duration-150 whitespace-nowrap",
-      "focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400",
+      "min-h-11 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors duration-150 whitespace-nowrap",
+      "focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 disabled:cursor-wait disabled:opacity-60",
       isActive
-        ? `${option.activeCls} shadow-sm scale-105`
+        ? `${option.activeCls} shadow-sm`
         : "bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700",
     ].join(" ")}
   >
@@ -99,10 +100,17 @@ const StatusChip = ({ option, isActive, onClick }) => (
   </button>
 );
 
+const EMPTY_ATTENDANCE = Object.freeze({
+  attendanceStatus: "",
+  paymentStatus: "",
+  justification: "",
+  isSaved: null,
+});
+
 // ─────────────────────────────────────────────
 // AvatarCircle — outside StudentRow to avoid remount on every render
 // ─────────────────────────────────────────────
-const AvatarCircle = ({ student, size = 36 }) => {
+const AvatarCircle = memo(({ student, size = 36 }) => {
   const avatarStyle = getAvatarStyle(getFullName(student));
   return (
     <div
@@ -112,18 +120,18 @@ const AvatarCircle = ({ student, size = 36 }) => {
       {getInitials(student)}
     </div>
   );
-};
+});
 
 // ─────────────────────────────────────────────
 // SavedBadge — outside StudentRow to avoid remount on every render
 // ─────────────────────────────────────────────
-const SavedBadge = ({ isSaved }) => (
+const SavedBadge = memo(({ isSaved }) => (
   <span
     className={`inline-flex items-center gap-1 text-xs font-medium ${
-      isSaved ? "text-emerald-600" : "text-amber-600"
+      isSaved === true ? "text-emerald-700" : isSaved === false ? "text-amber-700" : "text-gray-500"
     }`}
   >
-    {isSaved ? (
+    {isSaved === true ? (
       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
         <path
           fillRule="evenodd"
@@ -131,67 +139,84 @@ const SavedBadge = ({ isSaved }) => (
           clipRule="evenodd"
         />
       </svg>
-    ) : (
+    ) : isSaved === false ? (
       <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse inline-block" />
+    ) : (
+      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full inline-block" />
     )}
-    {isSaved ? "Guardado" : "Sin guardar"}
+    {isSaved === true ? "Guardado" : isSaved === false ? "Sin guardar" : "Sin registro"}
   </span>
-);
+));
 
 // ─────────────────────────────────────────────
 // JustInput — outside StudentRow to avoid remount on every render
 // ─────────────────────────────────────────────
-const JustInput = ({ studentId, value, onChange, hasError, placeholder = "Justificación..." }) => (
-  <input
-    type="text"
-    value={value}
-    onChange={(e) => onChange(studentId, "justification", e.target.value)}
-    placeholder={placeholder}
-    className={[
-      "w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all",
-      "focus:ring-2 focus:ring-gray-800/10",
-      hasError
-        ? "border-red-300 bg-red-50 focus:border-red-400"
-        : "border-gray-200 focus:border-gray-400",
-    ].join(" ")}
-  />
+const JustInput = memo(
+  ({ studentId, value, onChange, hasError, disabled, placeholder = "Justificación..." }) => (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(studentId, "justification", e.target.value)}
+      placeholder={placeholder}
+      aria-label="Justificación de la ausencia"
+      aria-invalid={hasError}
+      aria-describedby={hasError ? `justification-error-${studentId}` : undefined}
+      disabled={disabled}
+      className={[
+        "w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all",
+        "focus:ring-2 focus:ring-gray-800/10",
+        hasError
+          ? "border-red-300 bg-red-50 focus:border-red-400"
+          : "border-gray-200 focus:border-gray-400",
+      ].join(" ")}
+    />
+  )
 );
 
 // ─────────────────────────────────────────────
 // StudentRow
 // ─────────────────────────────────────────────
-const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => {
+const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, disabled }) => {
   if (!student) return null;
 
   const name = getFullName(student);
-  const curAttendance = attendance?.attendanceStatus || "Presente";
-  const curPayment = attendance?.paymentStatus || "Pendiente";
+  const curAttendance = attendance?.attendanceStatus || "";
+  const curPayment = attendance?.paymentStatus || "";
   const curJust = attendance?.justification || "";
-  const isSaved = attendance?.isSaved !== false;
+  const isSaved = attendance?.isSaved;
   const needsJust = curAttendance === "Ausencia Justificada";
 
   const highlight = (str) => {
     if (!searchTerm) return str;
-    const rx = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    return str.split(rx).map((p, i) =>
-      rx.test(p) ? (
-        <mark key={i} className="bg-yellow-200 font-bold rounded-sm px-0.5">
-          {p}
+    const rx = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    const matches = [];
+    let match = rx.exec(str);
+    while (match) {
+      matches.push(match);
+      match = rx.exec(str);
+    }
+    if (!matches.length) return str;
+    const parts = [];
+    let cursor = 0;
+    matches.forEach((match) => {
+      if (match.index > cursor) parts.push(str.slice(cursor, match.index));
+      parts.push(
+        <mark key={match.index} className="bg-yellow-200 font-bold rounded-sm px-0.5">
+          {match[0]}
         </mark>
-      ) : (
-        p
-      )
-    );
+      );
+      cursor = match.index + match[0].length;
+    });
+    if (cursor < str.length) parts.push(str.slice(cursor));
+    return parts;
   };
 
   return (
     <div
       className={`relative border-b border-gray-100 last:border-b-0 transition-colors ${
-        !isSaved ? "bg-amber-50" : "hover:bg-gray-50"
+        isSaved === false ? "bg-amber-50" : "hover:bg-gray-50"
       }`}
     >
-      {!isSaved && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400 rounded-r" />}
-
       {/* ─── MOBILE (< 768px) ─── */}
       <div className="md:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
@@ -214,6 +239,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
                 option={opt}
                 isActive={curAttendance === opt.value}
                 onClick={() => onAttendanceChange(student.id, "attendanceStatus", opt.value)}
+                disabled={disabled}
               />
             ))}
           </div>
@@ -230,7 +256,13 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
               onChange={onAttendanceChange}
               hasError={needsJust && !curJust}
               placeholder="Describe el motivo..."
+              disabled={disabled}
             />
+            {needsJust && !curJust.trim() && (
+              <p id={`justification-error-${student.id}`} className="mt-1 text-xs text-red-600">
+                Escribe una justificación antes de guardar.
+              </p>
+            )}
           </div>
         )}
 
@@ -245,6 +277,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
                 option={opt}
                 isActive={curPayment === opt.value}
                 onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
+                disabled={disabled}
               />
             ))}
           </div>
@@ -275,6 +308,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
               option={opt}
               isActive={curAttendance === opt.value}
               onClick={() => onAttendanceChange(student.id, "attendanceStatus", opt.value)}
+              disabled={disabled}
             />
           ))}
         </div>
@@ -287,6 +321,7 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
               value={curJust}
               onChange={onAttendanceChange}
               hasError={needsJust && !curJust}
+              disabled={disabled}
             />
           )}
         </div>
@@ -299,13 +334,14 @@ const StudentRow = ({ student, attendance, onAttendanceChange, searchTerm }) => 
               option={opt}
               isActive={curPayment === opt.value}
               onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
+              disabled={disabled}
             />
           ))}
         </div>
       </div>
     </div>
   );
-};
+});
 
 // ─────────────────────────────────────────────
 // Toast
@@ -320,6 +356,9 @@ const Toast = ({ message, type, onClose }) => {
     <>
       <style>{`@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
       <div
+        role={type === "error" ? "alert" : "status"}
+        aria-live={type === "error" ? "assertive" : "polite"}
+        aria-atomic="true"
         style={{ animation: "toastIn 0.25s ease-out" }}
         className={`fixed top-5 right-5 z-[1350] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs ${
           type === "success" ? "bg-gray-900" : "bg-red-600"
@@ -350,7 +389,12 @@ const Toast = ({ message, type, onClose }) => {
           </svg>
         )}
         <span className="flex-1">{message}</span>
-        <button onClick={onClose} className="opacity-60 hover:opacity-100 text-lg leading-none">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar notificación"
+          className="min-h-11 min-w-11 opacity-80 hover:opacity-100 text-lg leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
           ×
         </button>
       </div>
@@ -361,114 +405,206 @@ const Toast = ({ message, type, onClose }) => {
 // ─────────────────────────────────────────────
 // Main Table Component
 // ─────────────────────────────────────────────
-const InstructorAttendanceTable = ({ students }) => {
+const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [attendanceData, setAttendanceData] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const searchRef = useRef(null);
+  const validDate =
+    selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime()) ? selectedDate : null;
+  const selectedDateIso = validDate?.toISOString();
 
   const { loading, error, data, refetch } = useQuery(GET_INSTRUCTOR_STUDENTS_ATTENDANCE, {
-    variables: { date: selectedDate.toISOString() },
+    variables: { date: selectedDateIso },
+    skip: !selectedDateIso,
     fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true,
   });
 
   const [markAttendanceAndPayment] = useMutation(MARK_ATTENDANCE_AND_PAYMENT);
 
   useEffect(() => {
-    if (!students?.length) return;
-    const init = {};
-    students.forEach((s) => {
-      init[s.id] = {
-        attendanceStatus: "Presente",
-        paymentStatus: "Pendiente",
-        justification: "",
-        isSaved: true,
-      };
-    });
-    if (data?.getInstructorStudentsAttendance) {
-      data.getInstructorStudentsAttendance.forEach((rec) => {
-        init[rec.student.id] = {
-          attendanceStatus: rec.attendanceStatus,
-          paymentStatus: rec.paymentStatus,
-          justification: rec.justification || "",
-          isSaved: true,
-        };
+    if (!students?.length || loading || !data) return;
+    const records = Array.isArray(data?.getInstructorStudentsAttendance)
+      ? data.getInstructorStudentsAttendance.filter((record) => record?.student?.id)
+      : [];
+    const recordsByStudent = new Map(records.map((record) => [String(record.student.id), record]));
+
+    setAttendanceData((previous) => {
+      const next = {};
+      students.forEach((student) => {
+        if (!student?.id) return;
+        const id = String(student.id);
+        const draft = previous[id];
+        const record = recordsByStudent.get(id);
+
+        if (draft?.isSaved === false) {
+          next[id] = draft;
+        } else if (record) {
+          next[id] = {
+            attendanceStatus: record.attendanceStatus || "Presente",
+            paymentStatus: record.paymentStatus || "Pendiente",
+            justification: record.justification || "",
+            isSaved: true,
+            recordExists: true,
+          };
+        } else {
+          next[id] = {
+            attendanceStatus: "",
+            paymentStatus: "",
+            justification: "",
+            isSaved: null,
+            recordExists: false,
+          };
+        }
       });
-    }
-    setAttendanceData(init);
-  }, [data, students]);
+      return next;
+    });
+  }, [data, loading, students]);
 
   useEffect(() => {
-    if (selectedDate) refetch({ date: selectedDate.toISOString() });
-  }, [selectedDate, refetch]);
+    const preventAccidentalExit = (event) => {
+      if (!Object.values(attendanceData).some((record) => record?.isSaved === false)) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventAccidentalExit);
+    return () => window.removeEventListener("beforeunload", preventAccidentalExit);
+  }, [attendanceData]);
 
-  const filteredStudents = students.filter(
-    (s) => !searchTerm || getFullName(s).toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = useMemo(
+    () =>
+      students.filter(
+        (student) =>
+          student?.id &&
+          (!searchTerm ||
+            getFullName(student)
+              .toLocaleLowerCase("es")
+              .includes(searchTerm.trim().toLocaleLowerCase("es")))
+      ),
+    [searchTerm, students]
   );
 
-  const stats = {
-    total: students.length,
-    present: Object.values(attendanceData).filter((r) => r?.attendanceStatus === "Presente").length,
-    absent: Object.values(attendanceData).filter((r) => r?.attendanceStatus?.includes("Ausencia"))
-      .length,
-    paid: Object.values(attendanceData).filter((r) => r?.paymentStatus === "Pagado").length,
-  };
-  const unsavedCount = Object.values(attendanceData).filter((r) => !r?.isSaved).length;
+  const stats = useMemo(() => {
+    const records = Object.values(attendanceData);
+    return {
+      total: students.length,
+      present: records.filter((record) => record?.attendanceStatus === "Presente").length,
+      absent: records.filter((record) => record?.attendanceStatus?.includes("Ausencia")).length,
+      paid: records.filter((record) => record?.paymentStatus === "Pagado").length,
+    };
+  }, [attendanceData, students.length]);
+  const unsavedCount = useMemo(
+    () => Object.values(attendanceData).filter((record) => record?.isSaved === false).length,
+    [attendanceData]
+  );
 
-  const handleChange = useCallback((studentId, field, value) => {
-    setAttendanceData((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...(prev[studentId] || {
-          attendanceStatus: "Presente",
-          paymentStatus: "Pendiente",
-          justification: "",
-        }),
-        [field]: value,
-        isSaved: false,
-      },
-    }));
-  }, []);
+  const closeToast = useCallback(() => setToast(null), []);
+
+  const handleDateChange = useCallback(
+    (nextDate) => {
+      if (isSaving) return;
+      if (!(nextDate instanceof Date) || Number.isNaN(nextDate.getTime())) {
+        setToast({ message: "Selecciona una fecha válida.", type: "error" });
+        return;
+      }
+      if (
+        unsavedCount > 0 &&
+        !window.confirm("Hay cambios sin guardar. ¿Quieres descartarlos y cambiar de fecha?")
+      ) {
+        return;
+      }
+      setAttendanceData({});
+      onDirtyChange(false);
+      setSelectedDate(nextDate);
+    },
+    [isSaving, onDirtyChange, unsavedCount]
+  );
+
+  const handleChange = useCallback(
+    (studentId, field, value) => {
+      onDirtyChange(true);
+      setAttendanceData((prev) => {
+        const current = prev[studentId] || {};
+        return {
+          ...prev,
+          [studentId]: {
+            ...current,
+            attendanceStatus: current.attendanceStatus || "Presente",
+            paymentStatus: current.paymentStatus || "Pendiente",
+            justification: current.justification || "",
+            [field]: value,
+            isSaved: false,
+          },
+        };
+      });
+    },
+    [onDirtyChange]
+  );
 
   const handleSaveAll = async () => {
-    setIsSaving(true);
-    let ok = 0,
-      fail = 0;
-    const unsaved = Object.entries(attendanceData).filter(([, d]) => !d?.isSaved);
-    for (const [studentId, d] of unsaved) {
-      try {
-        await markAttendanceAndPayment({
-          variables: {
-            input: {
-              studentId,
-              attendanceStatus: d.attendanceStatus || "Presente",
-              paymentStatus: d.paymentStatus || "Pendiente",
-              justification: d.justification || "",
-              date: selectedDate.toISOString(),
-            },
-          },
-        });
-        setAttendanceData((prev) => ({
-          ...prev,
-          [studentId]: { ...prev[studentId], isSaved: true },
-        }));
-        ok++;
-      } catch (e) {
-        console.error(e);
-        fail++;
-      }
-    }
-    setIsSaving(false);
-    if (fail === 0) {
+    if (!selectedDateIso || isSaving) return;
+    const unsaved = Object.entries(attendanceData).filter(
+      ([, record]) => record?.isSaved === false
+    );
+    const invalid = unsaved.filter(
+      ([, record]) =>
+        record.attendanceStatus === "Ausencia Justificada" && !record.justification?.trim()
+    );
+    if (invalid.length) {
       setToast({
-        message: `${ok} registro${ok !== 1 ? "s" : ""} guardado${ok !== 1 ? "s" : ""} ✓`,
-        type: "success",
+        message: `Falta justificar ${invalid.length} ausencia${invalid.length === 1 ? "" : "s"}.`,
+        type: "error",
       });
-      await refetch();
-    } else {
-      setToast({ message: `${ok} guardados, ${fail} con error`, type: "error" });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const results = await Promise.allSettled(
+        unsaved.map(([studentId, record]) =>
+          markAttendanceAndPayment({
+            variables: {
+              input: {
+                studentId,
+                attendanceStatus: record.attendanceStatus || "Presente",
+                paymentStatus: record.paymentStatus || "Pendiente",
+                justification: record.justification?.trim() || "",
+                date: selectedDateIso,
+              },
+            },
+          })
+        )
+      );
+      const savedIds = unsaved.reduce((ids, [studentId], index) => {
+        if (results[index].status === "fulfilled") ids.push(studentId);
+        return ids;
+      }, []);
+      const failed = results.length - savedIds.length;
+
+      setAttendanceData((previous) => {
+        const next = { ...previous };
+        savedIds.forEach((studentId) => {
+          if (next[studentId])
+            next[studentId] = { ...next[studentId], isSaved: true, recordExists: true };
+        });
+        return next;
+      });
+
+      setToast({
+        message: failed
+          ? `${savedIds.length} guardados; ${failed} requieren reintento.`
+          : `${savedIds.length} registro${savedIds.length === 1 ? "" : "s"} guardado${
+              savedIds.length === 1 ? "" : "s"
+            } correctamente.`,
+        type: failed ? "error" : "success",
+      });
+      onDirtyChange(failed > 0);
+      if (!failed) await refetch();
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -523,25 +659,28 @@ const InstructorAttendanceTable = ({ students }) => {
           </svg>
           <DatePicker
             selected={selectedDate}
-            onChange={setSelectedDate}
+            onChange={handleDateChange}
             dateFormat="dd/MM/yyyy"
-            className="px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none cursor-pointer font-medium text-gray-700 bg-white"
+            aria-label="Fecha de asistencia"
+            calendarStartDay={1}
+            disabled={isSaving}
+            className="min-h-11 w-32 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm outline-none cursor-pointer font-medium text-gray-700 bg-white focus:ring-2 focus:ring-gray-700 focus:ring-offset-1"
           />
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div className="flex flex-wrap items-center gap-2 px-5 sm:px-6 py-3 bg-gray-50 border-b border-gray-100">
+      <div
+        className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 sm:px-6 py-3 bg-gray-50 border-b border-gray-100"
+        aria-label="Resumen de asistencia"
+      >
         {[
           { label: "Total", value: stats.total, color: "text-gray-700" },
           { label: "Presentes", value: stats.present, color: "text-emerald-600" },
           { label: "Ausentes", value: stats.absent, color: "text-amber-600" },
           { label: "Pagados", value: stats.paid, color: "text-blue-600" },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-gray-200"
-          >
+          <div key={s.label} className="flex items-baseline gap-1.5">
             <span className={`text-base font-bold ${s.color}`}>{s.value}</span>
             <span className="text-xs text-gray-400 font-medium">{s.label}</span>
           </div>
@@ -574,13 +713,16 @@ const InstructorAttendanceTable = ({ students }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar estudiante..."
-          className="flex-1 text-sm outline-none placeholder-gray-400 text-gray-700 bg-transparent"
+          aria-label="Buscar en estudiantes asignados"
+          className="min-h-11 flex-1 text-base sm:text-sm outline-none placeholder-gray-500 text-gray-700 bg-transparent"
         />
         {searchTerm && (
           <>
             <button
+              type="button"
               onClick={() => setSearchTerm("")}
-              className="text-gray-400 hover:text-gray-600 text-base w-5 h-5 flex items-center justify-center"
+              aria-label="Limpiar búsqueda"
+              className="text-gray-500 hover:text-gray-700 text-xl min-w-11 min-h-11 flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-600"
             >
               ×
             </button>
@@ -626,8 +768,9 @@ const InstructorAttendanceTable = ({ students }) => {
           <div className="flex flex-col items-center gap-3 py-14 px-4 text-center">
             <p className="text-sm text-red-500">{error.message}</p>
             <button
+              type="button"
               onClick={() => refetch()}
-              className="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="min-h-11 px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-600"
             >
               Reintentar
             </button>
@@ -641,16 +784,10 @@ const InstructorAttendanceTable = ({ students }) => {
             <StudentRow
               key={student.id}
               student={student}
-              attendance={
-                attendanceData[student.id] || {
-                  attendanceStatus: "Presente",
-                  paymentStatus: "Pendiente",
-                  justification: "",
-                  isSaved: true,
-                }
-              }
+              attendance={attendanceData[student.id] || EMPTY_ATTENDANCE}
               onAttendanceChange={handleChange}
               searchTerm={searchTerm}
+              disabled={isSaving}
             />
           ))
         )}
@@ -658,15 +795,16 @@ const InstructorAttendanceTable = ({ students }) => {
 
       {/* ── Save bar ── */}
       {unsavedCount > 0 && (
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 bg-white border-t border-gray-200 shadow-lg">
+        <div className="sticky bottom-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-white border-t border-gray-200 shadow-lg">
           <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
             <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
             {unsavedCount} estudiante{unsavedCount !== 1 ? "s" : ""} sin guardar
           </div>
           <button
+            type="button"
             onClick={handleSaveAll}
             disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-11 w-full sm:w-auto justify-center flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700 focus-visible:ring-offset-2"
           >
             {isSaving ? (
               <>
@@ -694,7 +832,7 @@ const InstructorAttendanceTable = ({ students }) => {
         </div>
       )}
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
     </div>
   );
 };
@@ -705,36 +843,41 @@ export default InstructorAttendanceTable;
 InstructorAttendanceTable.propTypes = {
   students: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.string.isRequired,
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
       name: PropTypes.string.isRequired,
       firstSurName: PropTypes.string.isRequired,
     })
   ).isRequired,
+  onDirtyChange: PropTypes.func,
 };
+InstructorAttendanceTable.defaultProps = { onDirtyChange: () => {} };
 StudentRow.propTypes = {
   student: PropTypes.object.isRequired,
   attendance: PropTypes.object,
   onAttendanceChange: PropTypes.func.isRequired,
   searchTerm: PropTypes.string,
+  disabled: PropTypes.bool,
 };
 AvatarCircle.propTypes = {
   student: PropTypes.object.isRequired,
   size: PropTypes.number,
 };
 SavedBadge.propTypes = {
-  isSaved: PropTypes.bool.isRequired,
+  isSaved: PropTypes.bool,
 };
 JustInput.propTypes = {
-  studentId: PropTypes.string.isRequired,
+  studentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   value: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   hasError: PropTypes.bool,
+  disabled: PropTypes.bool,
   placeholder: PropTypes.string,
 };
 StatusChip.propTypes = {
   option: PropTypes.object.isRequired,
   isActive: PropTypes.bool.isRequired,
   onClick: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
 };
 Toast.propTypes = {
   message: PropTypes.string.isRequired,

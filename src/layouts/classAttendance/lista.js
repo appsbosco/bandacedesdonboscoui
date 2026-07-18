@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Footer from "examples/Footer";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -46,6 +46,50 @@ const userShape = PropTypes.shape({
   role: PropTypes.string,
 });
 
+class PageErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    // Keep the page recoverable while preserving enough context for production monitoring.
+    console.error("Error al renderizar el registro de asistencia", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <DashboardLayout>
+          <DashboardNavbar />
+          <main className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
+            <h1 className="text-xl font-bold text-gray-900">No pudimos mostrar esta pantalla</h1>
+            <p className="text-sm text-gray-600">
+              Tus cambios guardados siguen seguros. Recarga la pantalla para volver a intentarlo.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="min-h-11 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700 focus-visible:ring-offset-2"
+            >
+              Recargar pantalla
+            </button>
+          </main>
+          <Footer />
+        </DashboardLayout>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+PageErrorBoundary.propTypes = { children: PropTypes.node.isRequired };
+
 // ─────────────────────────────────────────────
 // Avatar
 // ─────────────────────────────────────────────
@@ -75,19 +119,62 @@ const StudentSearchDropdown = ({ students, value, onChange }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+  const listboxId = useId();
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const selected = students.find((s) => s.id === value);
-  const filtered = students.filter((s) =>
-    getFullName(s).toLowerCase().includes(query.toLowerCase())
+  const selected = useMemo(
+    () => students.find((s) => String(s.id) === String(value)),
+    [students, value]
+  );
+  const filtered = useMemo(
+    () =>
+      students.filter((s) =>
+        getFullName(s).toLocaleLowerCase("es").includes(query.trim().toLocaleLowerCase("es"))
+      ),
+    [query, students]
+  );
+
+  const selectStudent = useCallback(
+    (student) => {
+      if (!student) return;
+      onChange(student.id);
+      setQuery("");
+      setOpen(false);
+      setActiveIndex(-1);
+    },
+    [onChange]
   );
 
   useEffect(() => {
     const handler = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
   }, []);
+
+  useEffect(() => {
+    setActiveIndex(filtered.length ? 0 : -1);
+  }, [query, filtered.length]);
+
+  const handleKeyDown = (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((current) => Math.min(current + 1, filtered.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((current) => Math.max(current - 1, 0));
+    } else if (event.key === "Enter" && open && activeIndex >= 0) {
+      event.preventDefault();
+      selectStudent(filtered[activeIndex]);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+      setActiveIndex(-1);
+    }
+  };
 
   return (
     <div ref={wrapRef} className="relative flex-1 min-w-0">
@@ -115,47 +202,67 @@ const StudentSearchDropdown = ({ students, value, onChange }) => {
               onClick={() => {
                 onChange("");
                 setQuery("");
+                requestAnimationFrame(() => inputRef.current?.focus());
               }}
-              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors text-base leading-none"
+              aria-label={`Quitar selección de ${getFullName(selected)}`}
+              className="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
               ×
             </button>
           </div>
         ) : (
           <input
+            ref={inputRef}
             autoComplete="off"
             type="text"
-            className="flex-1 px-4 py-2.5 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800 min-w-0"
+            className="flex-1 px-4 py-3 text-base sm:text-sm bg-transparent outline-none placeholder-gray-500 text-gray-800 min-w-0"
             placeholder="Buscar estudiante por nombre..."
+            aria-label="Buscar estudiante por nombre"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-activedescendant={
+              open && activeIndex >= 0
+                ? `${listboxId}-option-${filtered[activeIndex]?.id}`
+                : undefined
+            }
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
           />
         )}
       </div>
 
       {open && !selected && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-2xl shadow-2xl shadow-gray-200/80 z-50 max-h-60 overflow-y-auto">
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Estudiantes disponibles"
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto overscroll-contain"
+        >
           {filtered.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-400">
               No se encontraron estudiantes
             </p>
           ) : (
             <div className="py-1.5 px-1.5 space-y-0.5">
-              {filtered.map((s) => (
+              {filtered.map((s, index) => (
                 <button
                   key={s.id}
+                  id={`${listboxId}-option-${s.id}`}
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onChange(s.id);
-                    setQuery("");
-                    setOpen(false);
-                  }}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                  role="option"
+                  aria-selected={activeIndex === index}
+                  onClick={() => selectStudent(s)}
+                  onPointerMove={() => setActiveIndex(index)}
+                  className={`flex items-center gap-3 w-full min-h-11 px-3 py-2.5 rounded-lg transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-700 ${
+                    activeIndex === index ? "bg-gray-100" : "hover:bg-gray-50"
+                  }`}
                 >
                   <Avatar user={s} size="sm" />
                   <div className="flex flex-col min-w-0">
@@ -212,7 +319,8 @@ const StudentCard = ({ student, onRemove, removing }) => {
         <button
           type="button"
           onClick={() => setConfirm(true)}
-          className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all"
+          className="min-h-11 flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          aria-label={`Desasignar a ${getFullName(student)}`}
         >
           <svg
             width="12"
@@ -229,22 +337,26 @@ const StudentCard = ({ student, onRemove, removing }) => {
           <span className="hidden sm:inline">Quitar</span>
         </button>
       ) : (
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-gray-500 hidden sm:block">¿Desasignar?</span>
+        <div
+          className="flex items-center gap-2 flex-shrink-0"
+          role="group"
+          aria-label={`Confirmar desasignación de ${getFullName(student)}`}
+        >
+          <span className="text-xs text-gray-600 hidden sm:block">¿Desasignar?</span>
           <button
             type="button"
             onClick={() => {
               setConfirm(false);
               onRemove(student.id);
             }}
-            className="px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+            className="min-h-11 min-w-11 px-3 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
           >
             Sí
           </button>
           <button
             type="button"
             onClick={() => setConfirm(false)}
-            className="px-3 py-1 text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            className="min-h-11 min-w-11 px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-600"
           >
             No
           </button>
@@ -277,6 +389,9 @@ const Toast = ({ message, type, onClose }) => {
     <>
       <style>{`@keyframes toastIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
       <div
+        role={type === "error" ? "alert" : "status"}
+        aria-live={type === "error" ? "assertive" : "polite"}
+        aria-atomic="true"
         style={{ animation: "toastIn 0.25s ease-out" }}
         className={`fixed top-5 right-5 z-[1350] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs
           ${type === "success" ? "bg-gray-900" : "bg-red-600"}`}
@@ -310,7 +425,8 @@ const Toast = ({ message, type, onClose }) => {
         <button
           type="button"
           onClick={onClose}
-          className="opacity-60 hover:opacity-100 text-lg leading-none"
+          aria-label="Cerrar notificación"
+          className="min-h-11 min-w-11 opacity-80 hover:opacity-100 text-lg leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           ×
         </button>
@@ -334,8 +450,10 @@ const ClassAttendance = () => {
   const [assignedStudents, setAssignedStudents] = useState([]);
   const [toast, setToast] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [attendanceDirty, setAttendanceDirty] = useState(false);
 
-  const showToast = (message, type = "success") => setToast({ message, type });
+  const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
+  const closeToast = useCallback(() => setToast(null), []);
 
   const { loading: userLoading, error: userError, data: userData } = useQuery(GET_USERS_BY_ID);
   const { loading: usersLoading, error: usersError, data: usersData } = useQuery(GET_USERS);
@@ -352,8 +470,9 @@ const ClassAttendance = () => {
   useEffect(() => {
     if (!usersData || !userData) return;
 
-    const instructor = userData.getUser;
-    const allUsers = usersData.getUsers;
+    const instructor = userData?.getUser;
+    const allUsers = Array.isArray(usersData?.getUsers) ? usersData.getUsers.filter(Boolean) : [];
+    if (!instructor) return;
 
     const EXCLUDED = [
       "Instructor de instrumento",
@@ -363,24 +482,32 @@ const ClassAttendance = () => {
       "Admin",
     ];
 
-    const assignedIds = new Set((instructor.students || []).map((s) => s.id));
+    const instructorStudents = Array.isArray(instructor.students)
+      ? instructor.students.filter((student) => student?.id)
+      : [];
+    const assignedIds = new Set(instructorStudents.map((s) => String(s.id)));
 
     setAvailableStudents(
       allUsers.filter(
-        (u) => !EXCLUDED.includes(u.role) && u.name && u.firstSurName && !assignedIds.has(u.id)
+        (u) =>
+          u?.id &&
+          !EXCLUDED.includes(u.role) &&
+          u.name &&
+          u.firstSurName &&
+          !assignedIds.has(String(u.id))
       )
     );
 
-    setAssignedStudents((instructor.students || []).filter((s) => s?.name && s?.firstSurName));
+    setAssignedStudents(instructorStudents.filter((s) => s?.name && s?.firstSurName));
   }, [usersData, userData]);
 
   const handleAssign = async () => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || assignLoading) return;
 
     try {
       await assignStudentToInstructor({ variables: { studentId: selectedStudent } });
 
-      const student = availableStudents.find((s) => s.id === selectedStudent);
+      const student = availableStudents.find((s) => String(s.id) === String(selectedStudent));
       if (student) {
         setAssignedStudents((p) => [...p, student]);
         setAvailableStudents((p) => p.filter((s) => s.id !== selectedStudent));
@@ -394,14 +521,23 @@ const ClassAttendance = () => {
   };
 
   const handleRemove = async (studentId) => {
+    if (removingId) return;
+    if (
+      attendanceDirty &&
+      !window.confirm(
+        "Hay cambios de asistencia sin guardar. ¿Quieres desasignar al estudiante y descartar esos cambios?"
+      )
+    ) {
+      return;
+    }
     setRemovingId(studentId);
 
     try {
       await removeStudentFromInstructor({ variables: { studentId } });
 
-      const student = assignedStudents.find((s) => s.id === studentId);
+      const student = assignedStudents.find((s) => String(s.id) === String(studentId));
       if (student) {
-        setAssignedStudents((p) => p.filter((s) => s.id !== studentId));
+        setAssignedStudents((p) => p.filter((s) => String(s.id) !== String(studentId)));
         setAvailableStudents((p) => [...p, student]);
       }
 
@@ -442,7 +578,7 @@ const ClassAttendance = () => {
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="max-w-5xl mx-auto  py-6 pb-16 space-y-5">
+      <main className="max-w-5xl mx-auto px-3 sm:px-5 py-6 pb-16 space-y-5">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mis estudiantes</h1>
@@ -577,15 +713,21 @@ const ClassAttendance = () => {
         {/* Attendance table */}
         {assignedStudents.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <AttendanceTable students={assignedStudents} />
+            <AttendanceTable students={assignedStudents} onDirtyChange={setAttendanceDirty} />
           </div>
         )}
-      </div>
+      </main>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
       <Footer />
     </DashboardLayout>
   );
 };
 
-export default ClassAttendance;
+const ClassAttendancePage = () => (
+  <PageErrorBoundary>
+    <ClassAttendance />
+  </PageErrorBoundary>
+);
+
+export default ClassAttendancePage;
