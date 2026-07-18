@@ -9,10 +9,14 @@ import { useState } from "react";
 import { useTourParentAccess } from "./useTourParentAccess";
 import TourSelfServiceDocuments from "./TourSelfServiceDocuments";
 import TourSelfServicePayments from "./TourSelfServicePayments";
+import TourSelfServiceItinerary from "./TourSelfServiceItinerary";
+import TourSelfServiceFlights from "./TourSelfServiceFlights";
 
 const TABS = [
   { id: "documents", label: "Documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments",  label: "Pagos",      emoji: "💰", moduleKey: "payments"  },
+  { id: "itinerary", label: "Itinerario", emoji: "🗺️", moduleKey: "itinerary" },
+  { id: "flights", label: "Vuelos", emoji: "✈️", moduleKey: "flights" },
 ];
 
 export default function TourParentView({ tour }) {
@@ -25,6 +29,18 @@ export default function TourParentView({ tour }) {
     selectedChildUserId,
     setSelectedChildUserId,
     paymentAccount,
+    documentSummary,
+    documentSummaryLoading,
+    isVerified,
+    itinerary,
+    itineraryLoading,
+    flights,
+    flightsLoading,
+    updateChildInfo,
+    updateInfoLoading,
+    confirmChildVerification,
+    confirmLoading,
+    confirmError,
     loading,
     paymentLoading,
     childrenError,
@@ -79,6 +95,8 @@ export default function TourParentView({ tour }) {
   const visibleTabs = TABS.filter(
     (t) => selfServiceAccess?.[t.moduleKey] !== false
   );
+  const isLockedTab = (tabId) =>
+    (tabId === "itinerary" || tabId === "flights") && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -92,6 +110,7 @@ export default function TourParentView({ tour }) {
               const isSelected = cId === selectedChildUserId;
               return (
                 <button
+                  type="button"
                   key={child.id}
                   onClick={() => setSelectedChildUserId(cId)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
@@ -133,6 +152,7 @@ export default function TourParentView({ tour }) {
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
           {visibleTabs.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
@@ -143,6 +163,7 @@ export default function TourParentView({ tour }) {
             >
               <span>{tab.emoji}</span>
               <span className="hidden sm:inline">{tab.label}</span>
+              {isLockedTab(tab.id) && <span className="text-[10px]">🔒</span>}
             </button>
           ))}
         </div>
@@ -152,7 +173,13 @@ export default function TourParentView({ tour }) {
       {selectedChild ? (
         <>
           {activeTab === "documents" && visibleTabs.some((t) => t.id === "documents") && (
-            <TourSelfServiceDocuments participant={selectedChild} />
+            <TourSelfServiceDocuments participant={selectedChild} documentSummary={documentSummary} documentSummaryLoading={documentSummaryLoading} onSaveInfo={updateChildInfo} saveLoading={updateInfoLoading} onConfirm={confirmChildVerification} confirmLoading={confirmLoading} confirmError={confirmError} isParentView />
+          )}
+          {activeTab === "itinerary" && visibleTabs.some((t) => t.id === "itinerary") && (
+            isLockedTab("itinerary") ? <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+          )}
+          {activeTab === "flights" && visibleTabs.some((t) => t.id === "flights") && (
+            isLockedTab("flights") ? <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
           )}
           {activeTab === "payments" && visibleTabs.some((t) => t.id === "payments") && (
             paymentLoading ? (
@@ -171,4 +198,8 @@ export default function TourParentView({ tour }) {
       )}
     </div>
   );
+}
+
+function LockedChildTabMessage({ onGoToDocuments }) {
+  return <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center"><p className="text-2xl mb-2">🔒</p><p className="text-sm font-bold text-amber-800">Falta verificar la información de tu hijo</p><p className="text-xs text-amber-700 mt-1 mb-4">Revisa y confirma sus datos personales, pasaporte y visa en Documentos.</p><button type="button" onClick={onGoToDocuments} className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl">Ir a Documentos →</button></div>;
 }

@@ -24,6 +24,8 @@ import TourDocumentsPage from "./tourDocuments/TourDocumentsPage";
 import { useTourSelfService } from "./selfService/useTourSelfService";
 import TourSelfServiceDocuments from "./selfService/TourSelfServiceDocuments";
 import TourSelfServicePayments from "./selfService/TourSelfServicePayments";
+import TourSelfServiceItinerary from "./selfService/TourSelfServiceItinerary";
+import TourSelfServiceFlights from "./selfService/TourSelfServiceFlights";
 import TourSelfServiceConfig from "./TourSelfServiceConfig";
 import TourParentView from "./selfService/TourParentView";
 import { CREATE_TOUR_PARTICIPANT, DELETE_TOUR_PARTICIPANT } from "./tours.gql";
@@ -266,10 +268,11 @@ const FINANCIAL_TABS = [
   { id: "payments", label: "Control financiero", emoji: "💰" },
 ];
 
-// Tabs disponibles en self-service (solo documentos y pagos por ahora)
 const SELF_SERVICE_TABS = [
   { id: "documents", label: "Mis documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments", label: "Mis pagos", emoji: "💰", moduleKey: "payments" },
+  { id: "itinerary", label: "Mi itinerario", emoji: "🗺️", moduleKey: "itinerary" },
+  { id: "flights", label: "Mis vuelos", emoji: "✈️", moduleKey: "flights" },
 ];
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
@@ -358,8 +361,13 @@ function AdminTabContent({ activeTab, tour, onTourRefetch }) {
 function SelfServiceView({ tour }) {
   const { selfServiceAccess } = tour;
 
-  const { participant, paymentAccount, loading, isLinked, isNotLinkedError, participantError } =
-    useTourSelfService({ tourId: tour.id, selfServiceAccess });
+  const {
+    participant, paymentAccount, documentSummary, documentSummaryLoading,
+    isVerified, itinerary, itineraryLoading, flights, flightsLoading,
+    updateParticipantInfo, updateInfoLoading, confirmVerification,
+    confirmLoading, confirmError, loading, isLinked, isNotLinkedError,
+    participantError,
+  } = useTourSelfService({ tourId: tour.id, selfServiceAccess });
 
   // Calcular tabs visibles para este usuario
   const visibleTabs = SELF_SERVICE_TABS.filter(
@@ -417,6 +425,9 @@ function SelfServiceView({ tour }) {
     );
   }
 
+  const isLockedTab = (tabId) =>
+    (tabId === "itinerary" || tabId === "flights") && !isVerified;
+
   return (
     <div className="space-y-5">
       {/* Info del participante */}
@@ -440,6 +451,7 @@ function SelfServiceView({ tour }) {
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
           {visibleTabs.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
@@ -450,16 +462,23 @@ function SelfServiceView({ tour }) {
             >
               <span>{tab.emoji}</span>
               <span className="hidden sm:inline">{tab.label}</span>
+              {isLockedTab(tab.id) && <span className="text-[10px]">🔒</span>}
             </button>
           ))}
         </div>
       )}
 
       {/* Contenido del tab activo */}
-      {activeTab === "documents" && <TourSelfServiceDocuments participant={participant} />}
+      {activeTab === "documents" && <TourSelfServiceDocuments participant={participant} documentSummary={documentSummary} documentSummaryLoading={documentSummaryLoading} onSaveInfo={updateParticipantInfo} saveLoading={updateInfoLoading} onConfirm={confirmVerification} confirmLoading={confirmLoading} confirmError={confirmError} />}
       {activeTab === "payments" && <TourSelfServicePayments paymentAccount={paymentAccount} />}
+      {activeTab === "itinerary" && (isLockedTab("itinerary") ? <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />)}
+      {activeTab === "flights" && (isLockedTab("flights") ? <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceFlights flights={flights} loading={flightsLoading} />)}
     </div>
   );
+}
+
+function LockedTabMessage({ onGoToDocuments }) {
+  return <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center"><p className="text-2xl mb-2">🔒</p><p className="text-sm font-bold text-amber-800">Debes verificar tu información primero</p><p className="text-xs text-amber-700 mt-1 mb-4">Confirma tus datos personales, pasaporte y visa en Documentos para desbloquear esta sección.</p><button type="button" onClick={onGoToDocuments} className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl">Ir a Documentos →</button></div>;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
