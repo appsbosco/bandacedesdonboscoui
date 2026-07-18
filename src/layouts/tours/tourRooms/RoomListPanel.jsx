@@ -378,13 +378,59 @@ function RoomPlannerCard({
             : "border-gray-200"
       }`}
     >
-      <div className="px-3 pt-3 pb-2 border-b border-gray-100 flex items-center justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-xs font-bold text-gray-900 truncate">
-              {room.hotelName} · {room.roomNumber}
-            </p>
+      <div className="px-3 pt-3 pb-2.5 border-b border-gray-100">
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 flex-1 text-sm font-bold leading-5 text-gray-900 truncate" title={`${room.hotelName} · ${room.roomNumber}`}>
+            {room.hotelName} · {room.roomNumber}
+          </p>
 
+          <div className="flex flex-shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onToggleLock(room)}
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${room.isLocked ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"}`}
+              title={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación terminada"}
+              aria-label={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación"}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                {room.isLocked ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 10V7a6 6 0 0112 0v3m-11 0h10a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a2 2 0 012-2z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10V7a4 4 0 017.5-2M7 10h10a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a2 2 0 012-2z" />
+                )}
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onEdit(room)}
+              disabled={room.isLocked}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30"
+              title="Editar habitación"
+              aria-label="Editar habitación"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onDelete(room)}
+              disabled={room.isLocked}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+              title="Eliminar habitación"
+              aria-label="Eliminar habitación"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${useBadge.className}`}>
               {useBadge.label}
             </span>
@@ -395,83 +441,31 @@ function RoomPlannerCard({
               </span>
             )}
             {room.isLocked && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-full border border-slate-200">
-                <span aria-hidden="true">🔒</span> Terminada
+              <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-full border border-slate-200">
+                Terminada
               </span>
             )}
           </div>
-
-          {room.responsible && (
-            <p className="text-[10px] text-amber-600 font-medium flex items-center gap-0.5 mt-0.5">
-              <span>👑</span>
-              <span className="truncate">
-                {[room.responsible.firstName, room.responsible.firstSurname]
-                  .filter(Boolean)
-                  .join(" ")}
-              </span>
-            </p>
-          )}
-
-          {/* <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            {warnings.map((w) => (
-              <WarningBadge key={w.type} type={w.type} label={w.label} />
-            ))}
-          </div> */}
+          <div className="flex flex-shrink-0 items-baseline gap-1.5">
+            {room.isLocked ? (
+              <span className="text-[10px] font-semibold text-slate-500">cap. {room.capacity}</span>
+            ) : (
+              <CapacityEditor value={room.capacity} onSave={(n) => onCapacityChange(room, n)} />
+            )}
+            <span className={`text-sm font-bold tabular-nums ${isFull ? "text-emerald-600" : "text-gray-700"}`}>
+              {room.occupantCount}/{room.capacity}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {room.isLocked ? (
-            <span className="text-[10px] font-semibold text-slate-500">cap.{room.capacity}</span>
-          ) : (
-            <CapacityEditor value={room.capacity} onSave={(n) => onCapacityChange(room, n)} />
-          )}
-
-          <span className={`text-xs font-bold ${isFull ? "text-emerald-600" : "text-gray-600"}`}>
-            {room.occupantCount}/{room.capacity}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => onToggleLock(room)}
-            className={`p-1 rounded transition-all ${room.isLocked ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "text-gray-300 hover:bg-gray-100 hover:text-gray-600"}`}
-            title={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación terminada"}
-            aria-label={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación"}
-          >
-            <span aria-hidden="true">{room.isLocked ? "🔒" : "🔓"}</span>
-          </button>
-
-          <button
-            onClick={() => onEdit(room)}
-            disabled={room.isLocked}
-            className="p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Editar habitación"
-          >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => onDelete(room)}
-            disabled={room.isLocked}
-            className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Eliminar habitación"
-          >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
-        </div>
+        {room.responsible && (
+          <p className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-amber-700">
+            <span aria-hidden="true">★</span>
+            <span className="truncate">
+              {[room.responsible.firstName, room.responsible.firstSurname].filter(Boolean).join(" ")}
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="px-3 pt-2 pb-1">

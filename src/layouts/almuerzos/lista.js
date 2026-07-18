@@ -462,108 +462,41 @@ const ProductsDetail = ({ order }) => {
   );
 };
 
-const ProductSummaryColumn = ({ title, products, emptyText }) => (
-  <div className="min-w-0">
-    <div className="flex items-center justify-between gap-3 mb-2">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
-      <span className="text-xs font-semibold text-slate-400">
-        {products.reduce((total, product) => total + product.quantity, 0)} unidades
-      </span>
-    </div>
-    {products.length === 0 ? (
-      <p className="text-xs text-slate-400 py-2">{emptyText}</p>
-    ) : (
-      <div className="divide-y divide-slate-100 border-y border-slate-100">
-        {products.map((product) => (
-          <div key={product.id} className="flex items-center justify-between gap-3 py-2">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{product.name}</p>
-              {title === "Extras" && (
-                <p className="text-[11px] text-slate-400">{product.category}</p>
-              )}
-            </div>
-            <span className="shrink-0 min-w-9 rounded-lg bg-slate-900 px-2 py-1 text-center text-sm font-extrabold text-white">
-              {product.quantity}
-            </span>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
-
 const DayPreparationSummary = ({ group }) => {
   const lunchUnits = group.summary.lunches.reduce((total, product) => total + product.quantity, 0);
   const extraUnits = group.summary.extras.reduce((total, product) => total + product.quantity, 0);
 
   return (
-    <div className="bg-slate-50 border-y border-slate-200">
-      <div className="px-4 sm:px-5 py-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div>
-            <p className="text-lg font-extrabold text-slate-900">{group.key}</p>
-            <p className="text-sm text-slate-500">Preparación para el día del almuerzo</p>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white">
-            {[
-              ["Pedidos", group.orders.length],
-              ["Almuerzos", lunchUnits],
-              ["Extras", extraUnits],
-            ].map(([name, value]) => (
-              <div key={name} className="px-3 sm:px-5 py-2 text-center">
-                <p className="text-lg font-extrabold text-slate-900">{value}</p>
-                <p className="text-[11px] font-semibold text-slate-500">{name}</p>
-              </div>
-            ))}
-          </div>
+    <div className="mx-5 mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="grid grid-cols-3 divide-x divide-slate-200 shrink-0">
+          {[
+            ["Pedidos", group.orders.length],
+            ["Almuerzos", lunchUnits],
+            ["Extras", extraUnits],
+          ].map(([name, value]) => (
+            <div key={name} className="px-3 sm:px-5 text-center first:pl-0">
+              <p className="text-lg font-extrabold text-slate-900">{value}</p>
+              <p className="text-xs font-semibold text-slate-500">{name}</p>
+            </div>
+          ))}
         </div>
-
-        <div className="grid md:grid-cols-2 gap-x-8 gap-y-4 mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-          <ProductSummaryColumn
-            title="Almuerzos"
-            products={group.summary.lunches}
-            emptyText="No hay almuerzos para este día."
-          />
-          {/* <ProductSummaryColumn
-            title="Extras"
-            products={group.summary.extras}
-            emptyText="No hay bebidas ni postres para este día."
-          /> */}
+        <div className="hidden lg:block h-10 w-px bg-slate-200" />
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          {[...group.summary.lunches, ...group.summary.extras].map((product) => (
+            <div
+              key={product.id}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5"
+            >
+              <span className="text-sm font-semibold text-slate-700">{product.name}</span>
+              <span className="text-sm font-extrabold text-slate-900">{product.quantity}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
-
-const ProductPreparationSummary = ({ group }) => (
-  <div className="border-y border-slate-200 bg-slate-50 px-4 sm:px-5 py-4">
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="text-lg font-extrabold text-slate-900">{group.name}</p>
-          <span className="rounded-full bg-white border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">
-            {group.category}
-          </span>
-        </div>
-        <p className="text-sm text-slate-500">
-          {group.day} · {group.orders} pedido{group.orders !== 1 ? "s" : ""}
-        </p>
-      </div>
-      <div className="flex items-center gap-6 rounded-xl border border-slate-200 bg-white px-4 py-2">
-        <div>
-          <p className="text-[11px] font-semibold text-slate-500">Total solicitado</p>
-          <p className="text-xl font-extrabold text-slate-900">{group.quantity}</p>
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold text-slate-500">Pendiente</p>
-          <p className="text-xl font-extrabold text-rose-700">
-            {Math.max(0, group.quantity - group.pickedUp)}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 // ─────────────────────────────────────────────
 // Reports Panel
@@ -856,8 +789,7 @@ const ListaAlmuerzos = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("orders"); // orders | reports
-  const [preparationView, setPreparationView] = useState("day");
-  const [preparationFilter, setPreparationFilter] = useState("all");
+  const [selectedLunchDay, setSelectedLunchDay] = useState("");
   const debouncedSearch = useDebounced(search, 180);
   const [notice, showNotice] = useNotice();
   const [completingId, setCompletingId] = useState(null);
@@ -942,44 +874,18 @@ const ListaAlmuerzos = () => {
       });
   }, [orders]);
 
-  const preparationProducts = useMemo(() => {
-    const products = new Map();
-    orders.forEach((order) => {
-      (order.products || []).forEach((item) => {
-        const product = item.productId;
-        const key = product?.id || product?.name || item.id;
-        if (!key) return;
-        const current = products.get(key) || {
-          key,
-          name: product?.name || "Producto",
-          category: product?.category || "Sin categoría",
-          day: productDay(item),
-          quantity: 0,
-          pickedUp: 0,
-          orderIds: new Set(),
-        };
-        current.quantity += Number(item.quantity || 0);
-        current.pickedUp += Number(item.quantityPickedUp || 0);
-        current.orderIds.add(order.id);
-        products.set(key, current);
-      });
-    });
-    return [...products.values()]
-      .map((product) => ({ ...product, orders: product.orderIds.size }))
-      .sort((a, b) => a.name.localeCompare(b.name, "es"));
-  }, [orders]);
-
-  const preparationOptions =
-    preparationView === "day"
-      ? preparationGroups.map((group) => ({ value: group.key, label: group.key }))
-      : preparationProducts.map((product) => ({ value: product.key, label: product.name }));
-
-  const visiblePreparationGroups = preparationGroups.filter(
-    (group) => preparationFilter === "all" || group.key === preparationFilter
-  );
-  const visiblePreparationProducts = preparationProducts.filter(
-    (product) => preparationFilter === "all" || product.key === preparationFilter
-  );
+  const activeLunchDay =
+    preparationGroups.some((group) => group.key === selectedLunchDay) && selectedLunchDay
+      ? selectedLunchDay
+      : preparationGroups[0]?.key || "";
+  const selectedPreparationGroup = preparationGroups.find((group) => group.key === activeLunchDay);
+  const lunchDayOrders = (selectedPreparationGroup?.orders || []).map((order) => {
+    const dayProducts = (order.products || []).filter(
+      (item) => productDay(item) === activeLunchDay
+    );
+    const dayOrder = { ...order, products: dayProducts };
+    return { ...dayOrder, __items: calcItems(dayOrder), __total: calcTotal(dayOrder) };
+  });
 
   const stats = useMemo(() => {
     const total = ordersRaw.length;
@@ -1179,52 +1085,69 @@ const ListaAlmuerzos = () => {
 
             {!loading && !error && orders.length > 0 && (
               <div className="border-b border-slate-200 bg-white">
-                <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-end gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-900">Resumen para preparar</p>
+                <div
+                  className="px-5 py-4"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
+                    alignItems: "end",
+                    gap: "16px",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p className="text-base font-bold text-slate-900 whitespace-nowrap">
+                      Resumen para preparar
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Elegí el día del almuerzo para filtrar el listado.
+                    </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
-                    <label className="text-xs font-semibold text-slate-500">
-                      Ver por
-                      <select
-                        value={preparationView}
-                        onChange={(event) => {
-                          setPreparationView(event.target.value);
-                          setPreparationFilter("all");
-                        }}
-                        className="mt-1 block w-full sm:w-40 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-rose-200"
-                      >
-                        <option value="day">Día</option>
-                        <option value="product">Producto</option>
-                      </select>
+                  <div style={{ width: "100%", maxWidth: "320px", justifySelf: "end" }}>
+                    <label
+                      htmlFor="lunch-day-filter"
+                      className="block text-xs font-bold text-slate-600 mb-1.5"
+                    >
+                      Día del almuerzo
                     </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      {preparationView === "day" ? "Día" : "Producto"}
+                    <div className="relative">
                       <select
-                        value={preparationFilter}
-                        onChange={(event) => setPreparationFilter(event.target.value)}
-                        className="mt-1 block w-full sm:w-48 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-rose-200"
+                        id="lunch-day-filter"
+                        value={activeLunchDay}
+                        onChange={(event) => setSelectedLunchDay(event.target.value)}
+                        aria-label="Filtrar pedidos por día del almuerzo"
+                        className="block w-full text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                        style={{
+                          appearance: "none",
+                          WebkitAppearance: "none",
+                          width: "100%",
+                          height: "44px",
+                          padding: "0 44px 0 14px",
+                          border: "1px solid rgb(203 213 225)",
+                          borderRadius: "12px",
+                          backgroundColor: "rgb(248 250 252)",
+                          cursor: "pointer",
+                        }}
                       >
-                        <option value="all">Todos</option>
-                        {preparationOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
+                        {preparationGroups.map((group) => (
+                          <option key={group.key} value={group.key}>
+                            {group.key}
                           </option>
                         ))}
                       </select>
-                    </label>
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+                        style={{ fontSize: "14px" }}
+                      >
+                        ▼
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-3 pb-4">
-                  {preparationView === "day"
-                    ? visiblePreparationGroups.map((group) => (
-                        <DayPreparationSummary key={group.key} group={group} />
-                      ))
-                    : visiblePreparationProducts.map((group) => (
-                        <ProductPreparationSummary key={group.key} group={group} />
-                      ))}
-                </div>
+                {selectedPreparationGroup && (
+                  <DayPreparationSummary group={selectedPreparationGroup} />
+                )}
               </div>
             )}
 
@@ -1257,7 +1180,7 @@ const ListaAlmuerzos = () => {
             {/* MOBILE CARDS */}
             {!loading && !error && orders.length > 0 && (
               <div className="md:hidden py-4 space-y-3">
-                {orders.map((order) => {
+                {lunchDayOrders.map((order) => {
                   const isOpen = expandedId === order.id;
                   const isBusy = completingId === order.id;
                   const hasPending = order.products?.some((p) => p.status !== "completed");
@@ -1356,7 +1279,7 @@ const ListaAlmuerzos = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {orders.map((order) => {
+                    {lunchDayOrders.map((order) => {
                       const isOpen = expandedId === order.id;
                       const isBusy = completingId === order.id;
                       const pickedUp =
@@ -1527,11 +1450,6 @@ const OrderShape = PropTypes.shape({
 });
 
 ProductsDetail.propTypes = { order: OrderShape.isRequired };
-ProductSummaryColumn.propTypes = {
-  title: PropTypes.string.isRequired,
-  products: PropTypes.arrayOf(ProductSummaryShape).isRequired,
-  emptyText: PropTypes.string.isRequired,
-};
 DayPreparationSummary.propTypes = {
   group: PropTypes.shape({
     key: PropTypes.string.isRequired,
@@ -1540,16 +1458,6 @@ DayPreparationSummary.propTypes = {
       lunches: PropTypes.arrayOf(ProductSummaryShape).isRequired,
       extras: PropTypes.arrayOf(ProductSummaryShape).isRequired,
     }).isRequired,
-  }).isRequired,
-};
-ProductPreparationSummary.propTypes = {
-  group: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    category: PropTypes.string.isRequired,
-    day: PropTypes.string.isRequired,
-    orders: PropTypes.number.isRequired,
-    quantity: PropTypes.number.isRequired,
-    pickedUp: PropTypes.number.isRequired,
   }).isRequired,
 };
 PickupModal.propTypes = {
