@@ -54,9 +54,7 @@ function participantFullName(p) {
 function formatReadOnlyDate(value) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleDateString("es-CR", { timeZone: "UTC" });
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("es-CR", { timeZone: "UTC" });
 }
 
 function ReadOnlyDocumentData({ data, visa = false }) {
@@ -67,13 +65,13 @@ function ReadOnlyDocumentData({ data, visa = false }) {
     ["Apellidos", data.surname],
     ["Nacionalidad", data.nationality],
     ["País emisor", data.issuingCountry],
-    ["Número de documento", data.documentNumber || data.passportNumber],
-    ...(visa
-      ? [
-          ["Tipo / clase de visa", data.visaType],
-          ["Número de control", data.visaControlNumber],
-        ]
-      : []),
+    // ["Número de documento", data.documentNumber || data.passportNumber],
+    // ...(visa
+    //   ? [
+    //       ["Tipo / clase de visa", data.visaType],
+    //       ["Número de control", data.visaControlNumber],
+    //     ]
+    //   : []),
     ["Fecha de nacimiento", formatReadOnlyDate(data.dateOfBirth)],
     ["Sexo", { M: "Masculino", F: "Femenino", X: "Otro / no especificado" }[data.sex] || data.sex],
     ["Fecha de emisión", formatReadOnlyDate(data.issueDate)],
@@ -449,9 +447,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
   const isSyncedFromDocuments = Boolean(participant.linkedUser);
 
   const ageAtTour =
-    refDate && participant.birthDate
-      ? getAgeAtDate(participant.birthDate, refDate)
-      : null;
+    refDate && participant.birthDate ? getAgeAtDate(participant.birthDate, refDate) : null;
   const isAdult = ageAtTour !== null ? ageAtTour >= 18 : null;
 
   const passportIso = partsToIso(passportDate);
@@ -459,19 +455,17 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
 
   const canSave = isSyncedFromDocuments
     ? true
-    : (
-        // passport date either empty or valid
-        (!passportDate.day || passportIso) &&
-        // visa date either empty or valid (only matters if hasVisa)
-        (!hasVisa || !visaDate.day || visaIso)
-      );
+    : // passport date either empty or valid
+      (!passportDate.day || passportIso) &&
+      // visa date either empty or valid (only matters if hasVisa)
+      (!hasVisa || !visaDate.day || visaIso);
 
   const visaStatusChanged =
     visaStatus !== (participant.visaStatus || "UNKNOWN") ||
     visaStatusReason !== (participant.visaLastDeniedReason || "") ||
     visaStatusNotes !== (participant.visaNotes || "");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSave) return;
     const input = isSyncedFromDocuments
       ? {
@@ -492,7 +486,8 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
         notes: visaStatusNotes.trim() || null,
       };
     }
-    onSave(participant.id, input);
+    const savedSuccessfully = await onSave(participant.id, input);
+    if (savedSuccessfully) onClose();
   };
 
   return (
@@ -611,8 +606,8 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                 lineHeight: 1.5,
               }}
             >
-              Pasaporte, visa y permiso de salida se administran en Documents para
-              participantes vinculados. Esta pantalla solo conserva notas locales.
+              Pasaporte, visa y permiso de salida se administran en Documents para participantes
+              vinculados. Esta pantalla solo conserva notas locales.
             </div>
           )}
 
@@ -657,7 +652,15 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
           {/* Visa */}
           <Section title="Visa">
             {isSyncedFromDocuments ? (
-              <div style={{ display: "grid", gap: "12px", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gap: "12px",
+                  fontSize: "13px",
+                  color: "#374151",
+                  lineHeight: 1.5,
+                }}
+              >
                 <div>
                   Estado: <strong>{participant.hasVisa ? "Registrada" : "No registrada"}</strong>
                 </div>
@@ -673,11 +676,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
               </div>
             ) : (
               <>
-                <Toggle
-                  label="Tiene visa"
-                  checked={hasVisa}
-                  onChange={setHasVisa}
-                />
+                <Toggle label="Tiene visa" checked={hasVisa} onChange={setHasVisa} />
                 {hasVisa && (
                   <DateInput
                     label="Vencimiento de visa (DD/MM/AAAA)"
@@ -707,7 +706,9 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                 Historial: {participant.visaDeniedCount} negativa
                 {participant.visaDeniedCount !== 1 ? "s" : ""}.
                 {participant.visaLastDeniedAt
-                  ? ` Última el ${new Date(participant.visaLastDeniedAt).toLocaleDateString("es-CR")}.`
+                  ? ` Última el ${new Date(participant.visaLastDeniedAt).toLocaleDateString(
+                      "es-CR"
+                    )}.`
                   : ""}
               </div>
             )}
@@ -803,8 +804,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                 letterSpacing: "0.05em",
               }}
             >
-              Notas{" "}
-              <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span>
+              Notas <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span>
             </label>
             <textarea
               value={notes}

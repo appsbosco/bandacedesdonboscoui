@@ -457,8 +457,7 @@ export function DocumentDetail() {
     {
       refetchQueries: [
         { query: DOCUMENT_BY_ID, variables: { id } },
-        { query: MY_DOCUMENTS },
-        { query: ALL_DOCUMENTS },
+        { query: userIsAdmin ? ALL_DOCUMENTS : MY_DOCUMENTS },
       ],
       awaitRefetchQueries: true,
       onError: (err) => addToast(`Error al guardar: ${err.message}`, "error"),
@@ -468,8 +467,7 @@ export function DocumentDetail() {
   const [setDocumentStatus, { loading: updatingStatus }] = useMutation(SET_DOCUMENT_STATUS, {
     refetchQueries: [
       { query: DOCUMENT_BY_ID, variables: { id } },
-      { query: MY_DOCUMENTS },
-      { query: ALL_DOCUMENTS },
+      { query: userIsAdmin ? ALL_DOCUMENTS : MY_DOCUMENTS },
     ],
     awaitRefetchQueries: true,
     onCompleted: () => addToast("Documento marcado como revisado", "success"),

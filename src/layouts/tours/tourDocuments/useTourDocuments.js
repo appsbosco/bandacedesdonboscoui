@@ -90,9 +90,13 @@ export function useTourDocuments(tourId, tour) {
 
         showToast("Documentos y estado de visa actualizados correctamente", "success");
         setEditParticipant(null);
-        await Promise.all([refetch(), refetchExtractedData()]);
+        Promise.all([refetch(), refetchExtractedData()]).catch(() => {
+          showToast("Los cambios se guardaron, pero no se pudo actualizar la vista", "error");
+        });
+        return true;
       } catch (e) {
         showToast(e.message || "Error al guardar", "error");
+        return false;
       }
     },
     [refetch, refetchExtractedData, updateParticipant, updateParticipantVisaStatus]
