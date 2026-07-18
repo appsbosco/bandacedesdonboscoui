@@ -51,6 +51,47 @@ function participantFullName(p) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
 }
 
+function formatReadOnlyDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleDateString("es-CR", { timeZone: "UTC" });
+}
+
+function ReadOnlyDocumentData({ data, visa = false }) {
+  if (!data) return null;
+  const rows = [
+    ["Nombre completo", data.fullName],
+    ["Nombres", data.givenNames],
+    ["Apellidos", data.surname],
+    ["Nacionalidad", data.nationality],
+    ["País emisor", data.issuingCountry],
+    ["Número de documento", data.documentNumber || data.passportNumber],
+    ...(visa
+      ? [
+          ["Tipo / clase de visa", data.visaType],
+          ["Número de control", data.visaControlNumber],
+        ]
+      : []),
+    ["Fecha de nacimiento", formatReadOnlyDate(data.dateOfBirth)],
+    ["Sexo", { M: "Masculino", F: "Femenino", X: "Otro / no especificado" }[data.sex] || data.sex],
+    ["Fecha de emisión", formatReadOnlyDate(data.issueDate)],
+    ["Fecha de vencimiento", formatReadOnlyDate(data.expirationDate)],
+  ];
+
+  return (
+    <div style={{ display: "grid", gap: "8px", fontSize: "12px", color: "#374151" }}>
+      {rows.map(([label, value]) => (
+        <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
+          <span style={{ color: "#9CA3AF" }}>{label}</span>
+          <strong style={{ textAlign: "right", overflowWrap: "anywhere" }}>{value || "—"}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── DateInput: three-field dd / mm / yyyy ──────────────────────────────────
 
 function DateInput({ label, value, onChange }) {
@@ -594,6 +635,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                       })
                     : "—"}
                 </div>
+                <ReadOnlyDocumentData data={participant.__documentData?.passport} />
               </>
             ) : (
               <>
@@ -615,7 +657,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
           {/* Visa */}
           <Section title="Visa">
             {isSyncedFromDocuments ? (
-              <div style={{ fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
+              <div style={{ display: "grid", gap: "12px", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
                 <div>
                   Estado: <strong>{participant.hasVisa ? "Registrada" : "No registrada"}</strong>
                 </div>
@@ -627,6 +669,7 @@ export default function DocumentEditModal({ participant, refDate, onSave, onClos
                       })
                     : "—"}
                 </div>
+                <ReadOnlyDocumentData data={participant.__documentData?.visa} visa />
               </div>
             ) : (
               <>

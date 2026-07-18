@@ -36,6 +36,10 @@ function formatDateTime(iso) {
   });
 }
 
+function formatSex(value) {
+  return { M: "Masculino", F: "Femenino", X: "Otro / no especificado" }[value] || value || "—";
+}
+
 const EXPIRY_STATUS_CONFIG = {
   ok: { label: "Vigente", bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0" },
   warning: { label: "Por vencer", bg: "#FFFBEB", color: "#92400E", border: "#FDE68A" },
@@ -130,6 +134,8 @@ export default function DocumentDetailDrawer({ participant, refDate, onClose, on
   if (!participant) return null;
 
   const visaDenied = participant.visaStatus === "DENIED";
+  const passport = participant.__documentData?.passport;
+  const visa = participant.__documentData?.visa;
   const ageAtTour =
     refDate && participant.birthDate
       ? getAgeAtDate(participant.birthDate, refDate)
@@ -284,6 +290,18 @@ export default function DocumentDetailDrawer({ participant, refDate, onClose, on
                     </div>
                   }
                 />
+                {passport && (
+                  <>
+                    <DetailRow label="Nombre completo" value={passport.fullName} />
+                    <DetailRow label="Nombres" value={passport.givenNames} />
+                    <DetailRow label="Apellidos" value={passport.surname} />
+                    <DetailRow label="Nacionalidad" value={passport.nationality} />
+                    <DetailRow label="País emisor" value={passport.issuingCountry} />
+                    <DetailRow label="Fecha de nacimiento" value={formatDate(passport.dateOfBirth)} />
+                    <DetailRow label="Sexo" value={formatSex(passport.sex)} />
+                    <DetailRow label="Fecha de emisión" value={formatDate(passport.issueDate)} />
+                  </>
+                )}
               </Card>
             </section>
 
@@ -338,6 +356,24 @@ export default function DocumentDetailDrawer({ participant, refDate, onClose, on
                       </div>
                     }
                   />
+                )}
+                {visa && (
+                  <>
+                    <DetailRow label="Nombre completo" value={visa.fullName} />
+                    <DetailRow label="Nombres" value={visa.givenNames} />
+                    <DetailRow label="Apellidos" value={visa.surname} />
+                    <DetailRow label="Nacionalidad" value={visa.nationality} />
+                    <DetailRow label="País emisor" value={visa.issuingCountry} />
+                    <DetailRow
+                      label="N° de documento"
+                      value={visa.documentNumber || visa.passportNumber}
+                    />
+                    <DetailRow label="Tipo / clase" value={visa.visaType} />
+                    <DetailRow label="N° de control" value={visa.visaControlNumber} />
+                    <DetailRow label="Fecha de nacimiento" value={formatDate(visa.dateOfBirth)} />
+                    <DetailRow label="Sexo" value={formatSex(visa.sex)} />
+                    <DetailRow label="Fecha de emisión" value={formatDate(visa.issueDate)} />
+                  </>
                 )}
               </Card>
             </section>

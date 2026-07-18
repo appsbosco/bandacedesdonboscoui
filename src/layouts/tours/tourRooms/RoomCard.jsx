@@ -4,18 +4,34 @@
  */
 
 const ROOM_TYPE_CONFIG = {
-  SINGLE: { label: "Individual", emoji: "🛏️", className: "bg-gray-50 text-gray-600 border-gray-100" },
+  SINGLE: {
+    label: "Individual",
+    emoji: "🛏️",
+    className: "bg-gray-50 text-gray-600 border-gray-100",
+  },
   DOUBLE: { label: "Doble", emoji: "🛏️🛏️", className: "bg-blue-50 text-blue-700 border-blue-100" },
-  TRIPLE: { label: "Triple", emoji: "🛏️🛏️🛏️", className: "bg-violet-50 text-violet-700 border-violet-100" },
-  QUAD: { label: "Cuádruple", emoji: "🏨", className: "bg-amber-50 text-amber-700 border-amber-100" },
-  SUITE: { label: "Suite", emoji: "⭐", className: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+  TRIPLE: {
+    label: "Triple",
+    emoji: "🛏️🛏️🛏️",
+    className: "bg-violet-50 text-violet-700 border-violet-100",
+  },
+  QUAD: {
+    label: "Cuádruple",
+    emoji: "🏨",
+    className: "bg-amber-50 text-amber-700 border-amber-100",
+  },
+  SUITE: {
+    label: "Suite",
+    emoji: "⭐",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  },
 };
 
 function participantName(p) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
 }
 
-export default function RoomCard({ room, onEdit, onDelete, onManageOccupants }) {
+export default function RoomCard({ room, onEdit, onDelete, onManageOccupants, onToggleLock }) {
   const cfg = ROOM_TYPE_CONFIG[room.roomType] || ROOM_TYPE_CONFIG.SINGLE;
   const occupancyPct = room.capacity > 0 ? (room.occupantCount / room.capacity) * 100 : 0;
 
@@ -35,32 +51,63 @@ export default function RoomCard({ room, onEdit, onDelete, onManageOccupants }) 
             <span>{cfg.label}</span>
           </span>
           <span className="text-sm font-bold text-gray-900">Hab. {room.roomNumber}</span>
-          {room.floor && (
-            <span className="text-xs text-gray-400">· Piso {room.floor}</span>
-          )}
+          {room.floor && <span className="text-xs text-gray-400">· Piso {room.floor}</span>}
           {room.isFull && (
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
               Completa
             </span>
           )}
         </div>
+
+        {room.isLocked && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+            <span aria-hidden="true">🔒</span> Bloqueada
+          </span>
+        )}
         <div className="flex items-center gap-1">
           <button
+            type="button"
+            onClick={() => onToggleLock(room)}
+            className={`p-1.5 rounded-lg transition-all ${
+              room.isLocked
+                ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            }`}
+            title={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación terminada"}
+            aria-label={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación"}
+          >
+            <span aria-hidden="true">{room.isLocked ? "🔒" : "🔓"}</span>
+          </button>
+          <button
+            type="button"
             onClick={() => onEdit(room)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+            disabled={room.isLocked}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Editar habitación"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+              />
             </svg>
           </button>
           <button
+            type="button"
             onClick={() => onDelete(room)}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
+            disabled={room.isLocked}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Eliminar habitación"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
           </button>
         </div>
@@ -127,14 +174,26 @@ export default function RoomCard({ room, onEdit, onDelete, onManageOccupants }) 
       {/* Footer: manage occupants */}
       <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-gray-50">
         <button
+          type="button"
           onClick={() => onManageOccupants(room)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 transition-all group"
+          disabled={room.isLocked}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 transition-all group disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </svg>
           <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">
-            Gestionar ocupantes
+            {room.isLocked ? "Habitación terminada" : "Gestionar ocupantes"}
           </span>
         </button>
         {room.updatedBy && (

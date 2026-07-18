@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_TOUR_PARTICIPANTS_DOCS,
+  GET_TOUR_DOCUMENT_EXTRACTED_DATA,
   UPDATE_PARTICIPANT_DOCS,
   UPDATE_PARTICIPANT_VISA_STATUS,
 } from "./tourDocuments.gql";
@@ -28,6 +29,16 @@ export function useTourDocuments(tourId, tour) {
 
   // ── Query ─────────────────────────────────────────────────────────────────────
   const { data, loading, error, refetch } = useQuery(GET_TOUR_PARTICIPANTS_DOCS, {
+    variables: { tourId },
+    skip: !tourId,
+    fetchPolicy: "cache-and-network",
+  });
+  const {
+    data: extractedData,
+    loading: loadingExtractedData,
+    error: extractedDataError,
+    refetch: refetchExtractedData,
+  } = useQuery(GET_TOUR_DOCUMENT_EXTRACTED_DATA, {
     variables: { tourId },
     skip: !tourId,
     fetchPolicy: "cache-and-network",
@@ -61,12 +72,12 @@ export function useTourDocuments(tourId, tour) {
 
         showToast("Documentos y estado de visa actualizados correctamente", "success");
         setEditParticipant(null);
-        await refetch();
+        await Promise.all([refetch(), refetchExtractedData()]);
       } catch (e) {
         showToast(e.message || "Error al guardar", "error");
       }
     },
-    [refetch, updateParticipant, updateParticipantVisaStatus]
+    [refetch, refetchExtractedData, updateParticipant, updateParticipantVisaStatus]
   );
 
   // ── Reference date + computed statuses ───────────────────────────────────────
@@ -74,11 +85,22 @@ export function useTourDocuments(tourId, tour) {
   const hasRefDate = !!refDate;
 
   const participants = data?.getTourParticipants || [];
+  const extractedByParticipant = useMemo(
+    () =>
+      new Map(
+        (extractedData?.getTourAviancaDocumentData || []).map((entry) => [
+          entry.participantId,
+          entry,
+        ])
+      ),
+    [extractedData]
+  );
 
   const enriched = useMemo(
     () =>
       participants.map((p) => ({
         ...p,
+        __documentData: extractedByParticipant.get(p.id) || null,
         _docStatus: computeParticipantDocStatus(p, refDate),
         _passportExpiry: getExpiryStatus(p.passportExpiry),
         // hasVisa=false → "missing" (no puede pintarse como ok)
@@ -87,7 +109,7 @@ export function useTourDocuments(tourId, tour) {
         _visaDenied: p.visaStatus === "DENIED",
         _visaDeniedLabel: getVisaDenialLabel(p.visaDeniedCount),
       })),
-    [participants, refDate]
+    [participants, refDate, extractedByParticipant]
   );
 
   const docCounts = useMemo(
@@ -104,9 +126,9 @@ export function useTourDocuments(tourId, tour) {
 
   return {
     participants: enriched,
-    loading,
-    error,
-    refetch,
+    loading: loading || loadingExtractedData,
+    error: error || extractedDataError,
+    refetch: () => Promise.all([refetch(), refetchExtractedData()]),
     refDate,
     hasRefDate,
     docCounts,

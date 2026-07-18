@@ -180,7 +180,7 @@ function MovePopover({ rooms, fromRoomId, onMove, onClose }) {
 
       <div className="max-h-48 overflow-y-auto">
         {rooms
-          .filter((r) => r.id !== fromRoomId)
+          .filter((r) => r.id !== fromRoomId && !r.isLocked)
           .map((r) => {
             const atMax = r.occupantCount >= MAX_ROOM_CAPACITY;
 
@@ -235,6 +235,7 @@ function OccupantChip({
   movingId,
   isResponsible,
   onSetResponsible,
+  disabled,
 }) {
   const [showMovePopover, setShowMovePopover] = useState(false);
 
@@ -251,10 +252,10 @@ function OccupantChip({
 
   return (
     <div
-      draggable={!isMoving}
+      draggable={!isMoving && !disabled}
       onDragStart={(e) => onDragStart(e, p.id, roomId)}
-      className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-xl border transition-all cursor-grab active:cursor-grabbing select-none group ${
-        isMoving
+      className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-xl border transition-all select-none group ${
+        isMoving || disabled
           ? "opacity-40 cursor-wait"
           : isResponsible
             ? "bg-amber-50 border-amber-200 hover:border-amber-300"
@@ -269,11 +270,18 @@ function OccupantChip({
 
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-800 truncate">{participantFullName(p)}</p>
-        {age !== null && <p className="text-[10px] text-gray-400">{age} años</p>}
+        {(age !== null || p.instrument) && (
+          <p className="text-[10px] text-gray-400 truncate">
+            {age !== null && <span>{age} años</span>}
+            {age !== null && p.instrument && <span> · </span>}
+            {p.instrument && <span>{p.instrument}</span>}
+          </p>
+        )}
       </div>
 
       <button
         onClick={handleCrownClick}
+        disabled={disabled}
         className={`flex-shrink-0 p-0.5 rounded transition-all ${
           isResponsible
             ? "opacity-100 text-amber-500 hover:text-amber-700"
@@ -298,6 +306,7 @@ function OccupantChip({
 
       <button
         onClick={() => setShowMovePopover((v) => !v)}
+        disabled={disabled}
         className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200"
         title="Mover"
       >
@@ -336,12 +345,13 @@ function RoomPlannerCard({
   onDelete,
   onCapacityChange,
   onSetResponsible,
+  onToggleLock,
   movingId,
   dragOverRoomId,
 }) {
   const pct = room.capacity > 0 ? (room.occupantCount / room.capacity) * 100 : 0;
   const warnings = roomWarnings(room.occupants, sexOverrides);
-  const isDragTarget = dragOverRoomId === room.id;
+  const isDragTarget = !room.isLocked && dragOverRoomId === room.id;
   const isFull = room.occupantCount >= room.capacity;
   const responsibleId = room.responsible?.id || null;
   const useBadge = {
@@ -353,12 +363,15 @@ function RoomPlannerCard({
   return (
     <div
       onDragOver={(e) => {
+        if (room.isLocked) return;
         e.preventDefault();
         onDragOver(room.id);
       }}
-      onDrop={(e) => onDrop(e, room.id)}
+      onDrop={(e) => !room.isLocked && onDrop(e, room.id)}
       className={`bg-white rounded-2xl border shadow-sm transition-all ${
-        isDragTarget
+        room.isLocked
+          ? "border-slate-300 bg-slate-50/60"
+          : isDragTarget
           ? "border-blue-400 shadow-blue-100 bg-blue-50"
           : isFull
             ? "border-emerald-200"
@@ -379,6 +392,11 @@ function RoomPlannerCard({
             {isFull && (
               <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
                 Completa
+              </span>
+            )}
+            {room.isLocked && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-full border border-slate-200">
+                <span aria-hidden="true">🔒</span> Terminada
               </span>
             )}
           </div>
@@ -402,15 +420,30 @@ function RoomPlannerCard({
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <CapacityEditor value={room.capacity} onSave={(n) => onCapacityChange(room, n)} />
+          {room.isLocked ? (
+            <span className="text-[10px] font-semibold text-slate-500">cap.{room.capacity}</span>
+          ) : (
+            <CapacityEditor value={room.capacity} onSave={(n) => onCapacityChange(room, n)} />
+          )}
 
           <span className={`text-xs font-bold ${isFull ? "text-emerald-600" : "text-gray-600"}`}>
             {room.occupantCount}/{room.capacity}
           </span>
 
           <button
+            type="button"
+            onClick={() => onToggleLock(room)}
+            className={`p-1 rounded transition-all ${room.isLocked ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "text-gray-300 hover:bg-gray-100 hover:text-gray-600"}`}
+            title={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación terminada"}
+            aria-label={room.isLocked ? "Desbloquear habitación" : "Bloquear habitación"}
+          >
+            <span aria-hidden="true">{room.isLocked ? "🔒" : "🔓"}</span>
+          </button>
+
+          <button
             onClick={() => onEdit(room)}
-            className="p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-all"
+            disabled={room.isLocked}
+            className="p-1 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Editar habitación"
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -425,7 +458,8 @@ function RoomPlannerCard({
 
           <button
             onClick={() => onDelete(room)}
-            className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+            disabled={room.isLocked}
+            className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Eliminar habitación"
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,7 +493,7 @@ function RoomPlannerCard({
             }`}
           >
             <p className="text-[10px] text-gray-400">
-              {isDragTarget ? "Suelta aquí ↓" : "Arrastrá participantes aquí"}
+              {room.isLocked ? "Habitación bloqueada" : isDragTarget ? "Suelta aquí ↓" : "Arrastrá participantes aquí"}
             </p>
           </div>
         )}
@@ -476,6 +510,7 @@ function RoomPlannerCard({
             movingId={movingId}
             isResponsible={occupant.participant.id === responsibleId}
             onSetResponsible={onSetResponsible}
+            disabled={room.isLocked}
           />
         ))}
 
@@ -506,6 +541,7 @@ function RoomSection({
   onDelete,
   onCapacityChange,
   onSetResponsible,
+  onToggleLock,
   movingId,
   dragOverRoomId,
   onDragOver,
@@ -564,6 +600,7 @@ function RoomSection({
               onDelete={onDelete}
               onCapacityChange={onCapacityChange}
               onSetResponsible={onSetResponsible}
+              onToggleLock={onToggleLock}
               movingId={movingId}
               dragOverRoomId={dragOverRoomId}
             />
@@ -586,6 +623,7 @@ export default function RoomListPanel({
   onAddRoom,
   onCapacityChange,
   onSetResponsible,
+  onToggleLock,
   movingId,
 }) {
   const [dragOverRoomId, setDragOverRoomId] = useState(null);
@@ -723,6 +761,7 @@ export default function RoomListPanel({
             onDelete={onDelete}
             onCapacityChange={onCapacityChange}
             onSetResponsible={onSetResponsible}
+            onToggleLock={onToggleLock}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
             collapsed={collapsedSections.men}
@@ -746,6 +785,7 @@ export default function RoomListPanel({
             onDelete={onDelete}
             onCapacityChange={onCapacityChange}
             onSetResponsible={onSetResponsible}
+            onToggleLock={onToggleLock}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
             collapsed={collapsedSections.women}
@@ -769,6 +809,7 @@ export default function RoomListPanel({
             onDelete={onDelete}
             onCapacityChange={onCapacityChange}
             onSetResponsible={onSetResponsible}
+            onToggleLock={onToggleLock}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
             collapsed={collapsedSections.mixed_staff}
@@ -792,6 +833,7 @@ export default function RoomListPanel({
             onDelete={onDelete}
             onCapacityChange={onCapacityChange}
             onSetResponsible={onSetResponsible}
+            onToggleLock={onToggleLock}
             movingId={movingId}
             dragOverRoomId={dragOverRoomId}
             collapsed={collapsedSections.unassigned}

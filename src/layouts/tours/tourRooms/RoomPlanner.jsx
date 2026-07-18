@@ -31,6 +31,7 @@ export default function RoomPlanner({
   sexOverrides,
   handleSetSex,
   handleSetResponsible,
+  handleSetRoomLocked,
   handleSyncRoomTypes,
   plannerCapacity,
   setPlannerCapacity,
@@ -229,6 +230,7 @@ export default function RoomPlanner({
             onAddRoom={openCreateModal}
             onCapacityChange={handleCapacityChange}
             onSetResponsible={handleSetResponsible}
+            onToggleLock={handleSetRoomLocked}
             movingId={movingId}
           />
         </div>

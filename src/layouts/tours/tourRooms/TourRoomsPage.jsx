@@ -66,6 +66,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
     sexOverrides,
     handleSetSex,
     handleSetResponsible,
+    handleSetRoomLocked,
     handleSyncRoomTypes,
     handleCapacityChange,
     plannerCapacity,
@@ -125,6 +126,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
             sexOverrides={sexOverrides}
             handleSetSex={handleSetSex}
             handleSetResponsible={handleSetResponsible}
+            handleSetRoomLocked={handleSetRoomLocked}
             handleSyncRoomTypes={handleSyncRoomTypes}
             plannerCapacity={plannerCapacity}
             setPlannerCapacity={setPlannerCapacity}
@@ -318,6 +320,7 @@ export default function TourRoomsPage({ tourId, tourName }) {
                     onEdit={openEditModal}
                     onDelete={openDeleteModal}
                     onManageOccupants={openOccupantsModal}
+                    onToggleLock={handleSetRoomLocked}
                   />
                 ))}
               </div>

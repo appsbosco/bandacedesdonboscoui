@@ -13,6 +13,12 @@ export const GET_TOUR_ROOMS = gql`
       notes
       occupantCount
       isFull
+      isLocked
+      lockedAt
+      lockedBy {
+        name
+        firstSurName
+      }
       responsible {
         id
         firstName
@@ -28,6 +34,7 @@ export const GET_TOUR_ROOMS = gql`
           identification
           birthDate
           sex
+          instrument
         }
         confirmedAt
       }
@@ -93,6 +100,7 @@ export const CREATE_TOUR_ROOM = gql`
           identification
           birthDate
           sex
+          instrument
         }
         confirmedAt
       }
@@ -122,6 +130,7 @@ export const UPDATE_TOUR_ROOM = gql`
           identification
           birthDate
           sex
+          instrument
         }
         confirmedAt
       }
@@ -150,6 +159,7 @@ export const ASSIGN_OCCUPANT = gql`
           identification
           birthDate
           sex
+          instrument
         }
         confirmedAt
       }
@@ -178,6 +188,7 @@ export const REMOVE_OCCUPANT = gql`
           identification
           birthDate
           sex
+          instrument
         }
         confirmedAt
       }
@@ -194,6 +205,20 @@ export const SET_ROOM_RESPONSIBLE = gql`
         firstName
         firstSurname
         secondSurname
+      }
+    }
+  }
+`;
+
+export const SET_TOUR_ROOM_LOCKED = gql`
+  mutation SetTourRoomLocked($roomId: ID!, $locked: Boolean!) {
+    setTourRoomLocked(roomId: $roomId, locked: $locked) {
+      id
+      isLocked
+      lockedAt
+      lockedBy {
+        name
+        firstSurName
       }
     }
   }

@@ -74,6 +74,7 @@ export const UPDATE_MY_USER_PROFILE = gql`
       grade
       phone
       role
+      canSwitchRole
       instrument
       avatar
     }

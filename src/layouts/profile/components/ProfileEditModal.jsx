@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const USER_FIELDS = [
   { name: "name", label: "Nombre", required: true },
@@ -19,33 +19,49 @@ const PARENT_FIELDS = [
 
 const REQUIRED_FIELDS = ["name", "firstSurName", "secondSurName", "phone"];
 
+const USER_ROLES = [
+  "Admin",
+  "Integrante BCDB",
+  "Principal de sección",
+  "Asistente de sección",
+  "Director",
+  "Dirección Logística",
+  "Staff",
+  "Instructor Drumline",
+  "Instructora Color Guard",
+  "Instructora Danza",
+  "Instructor de instrumento",
+  "CEDES",
+];
+
 function normalizeDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
 }
 
 function buildInitialValues(profile, fields) {
-  return fields.reduce((acc, field) => {
+  const values = fields.reduce((acc, field) => {
     const value = profile?.[field.name] || "";
     acc[field.name] = field.type === "date" ? normalizeDate(value) : value;
     return acc;
   }, {});
+
+  if (profile?.role) values.role = profile.role;
+  return values;
 }
 
 export default function ProfileEditModal({
   open,
   accountType,
   profile,
+  canManageRole,
   loading,
   error,
   successMessage,
   onClose,
   onSubmit,
 }) {
-  const fields = useMemo(
-    () => (accountType === "parent" ? PARENT_FIELDS : USER_FIELDS),
-    [accountType],
-  );
+  const fields = accountType === "parent" ? PARENT_FIELDS : USER_FIELDS;
   const [values, setValues] = useState(() => buildInitialValues(profile, fields));
   const [formError, setFormError] = useState("");
 
@@ -72,6 +88,10 @@ export default function ProfileEditModal({
         : values[field.name];
       return acc;
     }, {});
+
+    if (accountType === "user" && canManageRole) {
+      payload.role = values.role;
+    }
 
     const missing = REQUIRED_FIELDS.some((field) => !payload[field]);
     if (missing) {
@@ -117,9 +137,9 @@ export default function ProfileEditModal({
 
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
               Email
-            </label>
+            </span>
             <p className="mt-1 text-sm font-medium text-slate-700">{profile?.email || "N/A"}</p>
           </div>
 
@@ -141,6 +161,33 @@ export default function ProfileEditModal({
               </label>
             ))}
           </div>
+
+          {accountType === "user" && canManageRole && (
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-800">
+                  Rol de la plataforma
+                </span>
+                <select
+                  name="role"
+                  value={values.role || "Admin"}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="block w-full rounded-xl border border-amber-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  {USER_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                Este cambio modifica los permisos y las secciones disponibles en tu cuenta. La
+                opción Admin te permite regresar al acceso administrativo completo.
+              </p>
+            </div>
+          )}
 
           {(formError || error) && (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -183,6 +230,7 @@ ProfileEditModal.propTypes = {
   open: PropTypes.bool.isRequired,
   accountType: PropTypes.oneOf(["user", "parent"]).isRequired,
   profile: PropTypes.object,
+  canManageRole: PropTypes.bool,
   loading: PropTypes.bool,
   error: PropTypes.string,
   successMessage: PropTypes.string,
@@ -192,6 +240,7 @@ ProfileEditModal.propTypes = {
 
 ProfileEditModal.defaultProps = {
   profile: null,
+  canManageRole: false,
   loading: false,
   error: "",
   successMessage: "",

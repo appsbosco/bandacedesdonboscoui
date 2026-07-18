@@ -14,6 +14,7 @@ export const GET_USERS_BY_ID = gql`
       grade
       phone
       role
+      canSwitchRole
       instrument
       avatar
       notificationTokens

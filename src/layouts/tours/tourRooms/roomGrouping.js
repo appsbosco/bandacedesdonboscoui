@@ -569,6 +569,7 @@ export function computeRebalanceOps({
       {
         id: r.id,
         capacity: r.capacity,
+        isLocked: r.isLocked ?? false,
         roomUse: r.roomUse || "REGULAR",
         occupants: [...(r.occupants || [])],
       },
@@ -602,7 +603,7 @@ export function computeRebalanceOps({
   /** Returns true if pId can be placed in roomId (sex compatibility). */
   const canGoToRoom = (pId, roomId) => {
     const room = roomMap.get(roomId);
-    if (!room) return false;
+    if (!room || room.isLocked) return false;
     const participantIsStaff = isStaff(pId);
     if (room.roomUse === "STAFF") return participantIsStaff;
     if (room.roomUse === "MIXED") return true;

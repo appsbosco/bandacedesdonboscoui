@@ -33,6 +33,7 @@ export const GET_ORDERS_BY_USER_OPTIMIZED = gql`
           id
           name
           price
+          category
         }
       }
     }
@@ -58,6 +59,8 @@ export const GET_ORDERS = gql`
           id
           name
           price
+          category
+          availableForDays
         }
         quantity
         quantityPickedUp

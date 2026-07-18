@@ -10,6 +10,7 @@ import {
   REMOVE_OCCUPANT,
   UPDATE_TOUR_PARTICIPANT_SEX,
   SET_ROOM_RESPONSIBLE,
+  SET_TOUR_ROOM_LOCKED,
 } from "./tourRooms.gql";
 import {
   suggestRoomsFromGroup,
@@ -113,6 +114,7 @@ export function useTourRooms(tourId) {
   const [updateRoomRaw] = useMutation(UPDATE_TOUR_ROOM);
   const [updateParticipantSexMutation] = useMutation(UPDATE_TOUR_PARTICIPANT_SEX);
   const [setRoomResponsibleMutation] = useMutation(SET_ROOM_RESPONSIBLE);
+  const [setTourRoomLockedMutation] = useMutation(SET_TOUR_ROOM_LOCKED);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const showToast = (message, type = "success") => setToast({ message, type });
@@ -217,6 +219,12 @@ export function useTourRooms(tourId) {
   const handleMove = useCallback(
     async (participantId, fromRoomId, toRoomId) => {
       if (fromRoomId === toRoomId) return;
+      const source = roomsRef.current.find((room) => room.id === fromRoomId);
+      const destination = roomsRef.current.find((room) => room.id === toRoomId);
+      if (source?.isLocked || destination?.isLocked) {
+        showToast("Desbloquee la habitación para mover participantes", "warning");
+        return;
+      }
       setMovingId(participantId);
       try {
         // Compute the full operation plan (primary move + cascade + capacity sync)
@@ -315,8 +323,24 @@ export function useTourRooms(tourId) {
     [setRoomResponsibleMutation, refetch]
   );
 
+  const handleSetRoomLocked = useCallback(
+    async (room) => {
+      try {
+        const locked = !room.isLocked;
+        await setTourRoomLockedMutation({ variables: { roomId: room.id, locked } });
+        await refetch();
+        showToast(locked ? "Habitación bloqueada" : "Habitación desbloqueada", "success");
+      } catch (e) {
+        showToast(e.message || "No se pudo cambiar el bloqueo", "error");
+      }
+    },
+    [setTourRoomLockedMutation, refetch]
+  );
+
   const handleSyncRoomTypes = useCallback(async () => {
-    const roomsToSync = roomsRef.current.filter((room) => inferRoomType(room) !== room.roomType);
+    const roomsToSync = roomsRef.current.filter(
+      (room) => !room.isLocked && inferRoomType(room) !== room.roomType
+    );
 
     if (roomsToSync.length === 0) {
       showToast("Las denominaciones ya estan sincronizadas", "success");
@@ -512,6 +536,7 @@ export function useTourRooms(tourId) {
     sexOverrides,
     handleSetSex,
     handleSetResponsible,
+    handleSetRoomLocked,
     handleSyncRoomTypes,
     handleCapacityChange,
     plannerCapacity,
