@@ -1,57 +1,55 @@
-/**
- * useTourParentAccess
- * Hook para el acceso self-service de padres de familia a giras.
- * Carga los hijos vinculados como participantes y la cuenta de pagos del hijo seleccionado.
- */
-import { useState, useEffect } from "react";
-import { useQuery } from "@apollo/client";
-import { GET_MY_CHILDREN_TOUR_ACCESS, GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT } from "./parentTour.gql";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  GET_MY_CHILDREN_TOUR_ACCESS,
+  GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT,
+  GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY,
+  GET_MY_CHILD_TOUR_ITINERARY,
+  GET_MY_CHILD_TOUR_FLIGHTS,
+  UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO,
+  CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION,
+} from "./parentTour.gql";
+
+const EMPTY_CHILDREN = [];
 
 export function useTourParentAccess({ tourId, selfServiceAccess }) {
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments !== false;
-
+  const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary !== false;
+  const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights !== false;
   const [selectedChildUserId, setSelectedChildUserId] = useState(null);
-
-  // ── Cargar hijos participantes de esta gira ──────────────────────────────────
-  const {
-    data: childrenData,
-    loading: childrenLoading,
-    error: childrenError,
-  } = useQuery(GET_MY_CHILDREN_TOUR_ACCESS, {
-    variables: { tourId },
-    skip: !tourId,
-    fetchPolicy: "cache-and-network",
-  });
-
-  const children = childrenData?.myChildrenTourAccess ?? [];
-
-  // Auto-seleccionar el primer hijo cuando carguen
+  const { data: childrenData, loading: childrenLoading, error: childrenError, refetch: refetchChildren } = useQuery(GET_MY_CHILDREN_TOUR_ACCESS, { variables: { tourId }, skip: !tourId, fetchPolicy: "cache-and-network" });
+  const children = childrenData?.myChildrenTourAccess ?? EMPTY_CHILDREN;
   useEffect(() => {
-    if (!selectedChildUserId && children.length > 0) {
-      const firstChildUserId = children[0].linkedUser?.id;
-      if (firstChildUserId) setSelectedChildUserId(firstChildUserId);
-    }
+    if (!selectedChildUserId && children.length > 0) setSelectedChildUserId(children[0].linkedUser?.id || null);
   }, [children, selectedChildUserId]);
-
-  // ── Cargar cuenta de pagos del hijo seleccionado ─────────────────────────────
-  const {
-    data: paymentData,
-    loading: paymentLoading,
-  } = useQuery(GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT, {
-    variables: { tourId, childUserId: selectedChildUserId },
-    skip: !selectedChildUserId || !paymentsEnabled,
-    fetchPolicy: "cache-and-network",
-  });
-
-  const selectedChild = children.find((c) => c.linkedUser?.id === selectedChildUserId) ?? null;
-  const paymentAccount = paymentData?.myChildTourPaymentAccount ?? null;
-
+  const selectedChild = children.find((child) => child.linkedUser?.id === selectedChildUserId) ?? null;
+  const isVerified = Boolean(selectedChild?.selfServiceVerified);
+  const variables = { tourId, childUserId: selectedChildUserId };
+  const { data: paymentData, loading: paymentLoading } = useQuery(GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT, { variables, skip: !selectedChildUserId || !paymentsEnabled, fetchPolicy: "cache-and-network" });
+  const { data: documentSummaryData, loading: documentSummaryLoading, refetch: refetchDocumentSummary } = useQuery(GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY, { variables, skip: !selectedChildUserId, fetchPolicy: "cache-and-network" });
+  const { data: itineraryData, loading: itineraryLoading } = useQuery(GET_MY_CHILD_TOUR_ITINERARY, { variables, skip: !selectedChildUserId || !itineraryEnabled || !isVerified, fetchPolicy: "cache-and-network" });
+  const { data: flightsData, loading: flightsLoading } = useQuery(GET_MY_CHILD_TOUR_FLIGHTS, { variables, skip: !selectedChildUserId || !flightsEnabled || !isVerified, fetchPolicy: "cache-and-network" });
+  const [updateChildInfoMutation, { loading: updateInfoLoading, error: updateInfoError }] = useMutation(UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO, { onCompleted: () => { refetchChildren(); refetchDocumentSummary(); } });
+  const [confirmChildVerificationMutation, { loading: confirmLoading, error: confirmError }] = useMutation(CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION, { onCompleted: () => refetchChildren() });
   return {
     children,
     selectedChild,
     selectedChildUserId,
     setSelectedChildUserId,
-    paymentAccount,
+    paymentAccount: paymentData?.myChildTourPaymentAccount ?? null,
+    documentSummary: documentSummaryData?.myChildTourParticipantDocumentSummary ?? null,
+    documentSummaryLoading,
+    isVerified,
+    itinerary: itineraryData?.myChildTourItinerary ?? null,
+    itineraryLoading,
+    flights: flightsData?.myChildTourFlights ?? [],
+    flightsLoading,
+    updateChildInfo: (input) => updateChildInfoMutation({ variables: { ...variables, input } }),
+    updateInfoLoading,
+    updateInfoError,
+    confirmChildVerification: () => confirmChildVerificationMutation({ variables }),
+    confirmLoading,
+    confirmError,
     loading: childrenLoading,
     paymentLoading,
     childrenError,
