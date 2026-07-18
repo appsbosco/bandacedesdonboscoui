@@ -9,6 +9,7 @@ const statusLabel = { ok: "Vigente", warning: "Por vencer", expired: "Vencido", 
 const statusClass = { ok: "text-emerald-700 bg-emerald-50", warning: "text-amber-700 bg-amber-50", expired: "text-red-700 bg-red-50", missing: "text-gray-500 bg-gray-50" };
 const dateValue = (value) => value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toISOString().split("T")[0] : "";
 const displayDate = (value) => value ? new Date(value).toLocaleDateString("es-CR", { timeZone: "UTC" }) : "—";
+const dateTimeValue = (value) => value ? `${value}T00:00:00.000Z` : null;
 
 function Field({ label, value, onChange, type = "text" }) {
   return <label className="flex flex-col gap-1"><span className="text-xs font-medium text-gray-500 uppercase">{label}</span><input type={type} value={value || ""} onChange={(event) => onChange(event.target.value)} className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400" /></label>;
@@ -27,7 +28,13 @@ export default function TourSelfServiceDocuments({ participant, documentSummary,
   const { criteria, passed } = computeVerificationCriteria(participant);
   const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
-    await onSaveInfo({ ...form, secondSurname: form.secondSurname || null, email: form.email || null, phone: form.phone || null, birthDate: form.birthDate || null });
+    await onSaveInfo({
+      ...form,
+      secondSurname: form.secondSurname || null,
+      email: form.email || null,
+      phone: form.phone || null,
+      birthDate: dateTimeValue(form.birthDate),
+    });
     setSaved(true);
   };
   return <div className="space-y-5">
