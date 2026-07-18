@@ -87,6 +87,8 @@ export const GET_MY_TOUR_PARTICIPANT = gql`
       hasVisa
       visaExpiry
       hasExitPermit
+      selfServiceVerified
+      selfServiceVerifiedAt
       status
       role
       notes
