@@ -6,7 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   DOCUMENT_BY_ID,
   DELETE_DOCUMENT,
-  ENQUEUE_DOCUMENT_OCR,
+  UPSERT_DOCUMENT_EXTRACTED_DATA,
   MY_DOCUMENTS,
   ALL_DOCUMENTS,
   SET_DOCUMENT_STATUS,
@@ -38,6 +38,89 @@ const POLL_TIMEOUT_MS = 180000;
 
 // Tipos que no usan OCR
 const NON_OCR_TYPES = new Set(["OTHER", "PERMISO_SALIDA"]);
+
+const COMMON_EDIT_FIELDS = [
+  ["fullName", "Nombre completo"],
+  ["givenNames", "Nombre(s)"],
+  ["surname", "Apellido(s)"],
+  ["nationality", "Nacionalidad"],
+  ["issuingCountry", "País emisor"],
+  ["passportNumber", "Número de pasaporte"],
+  ["documentNumber", "Número de documento"],
+  ["dateOfBirth", "Fecha de nacimiento", "date"],
+  ["sex", "Sexo"],
+  ["issueDate", "Fecha de emisión", "date"],
+  ["expirationDate", "Fecha de expiración", "date"],
+];
+
+function editableFieldsForType(type) {
+  if (type !== "VISA") return COMMON_EDIT_FIELDS;
+  return [
+    ...COMMON_EDIT_FIELDS,
+    ["visaType", "Tipo de visa"],
+    ["visaControlNumber", "Número de control de visa"],
+  ];
+}
+
+function toInputValue(value, type) {
+  if (value == null) return "";
+  if (type === "date") return String(value).slice(0, 10);
+  return String(value);
+}
+
+function ExtractedDataEditor({ document, loading, onCancel, onSave }) {
+  const fields = editableFieldsForType(document.type);
+  const [values, setValues] = useState(() =>
+    Object.fromEntries(fields.map(([key, , type]) => [key, toInputValue(document.extracted?.[key], type)])),
+  );
+
+  const submit = (event) => {
+    event.preventDefault();
+    onSave(
+      Object.fromEntries(
+        fields.map(([key]) => [key, values[key]?.trim() || null]),
+      ),
+    );
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-5">
+      <p className="text-sm text-slate-600">
+        Corrige los datos para que coincidan exactamente con el documento físico.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-1">
+        {fields.map(([key, label, type = "text"]) => (
+          <label key={key} className="space-y-1">
+            <span className="text-xs font-medium text-slate-500">{label}</span>
+            {key === "sex" ? (
+              <select
+                value={values[key] || ""}
+                onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="">Sin especificar</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+                <option value="X">Otro</option>
+              </select>
+            ) : (
+              <input
+                type={type}
+                value={values[key] || ""}
+                onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              />
+            )}
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end gap-3">
+        <button type="button" onClick={onCancel} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold">Cancelar</button>
+        <button type="submit" disabled={loading} className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{loading ? "Guardando..." : "Guardar cambios"}</button>
+      </div>
+    </form>
+  );
+}
 
 function getApiBaseUrl() {
   const graphqlUrl = process.env.REACT_APP_GRAPHQL_URL;
@@ -318,6 +401,7 @@ export function DocumentDetail() {
   const { addToast } = useToast();
 
   const [deleteModal, setDeleteModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
   const [imageModal, setImageModal] = useState({ isOpen: false, image: null, index: 0 });
   const [imageZoom, setImageZoom] = useState(1);
   const [pollTimedOut, setPollTimedOut] = useState(false);
@@ -347,14 +431,18 @@ export function DocumentDetail() {
     onError: (err) => addToast(`Error: ${err.message}`, "error"),
   });
 
-  const [enqueueOcr, { loading: enqueuingOcr }] = useMutation(ENQUEUE_DOCUMENT_OCR, {
+  const [saveExtractedData, { loading: savingExtractedData }] = useMutation(UPSERT_DOCUMENT_EXTRACTED_DATA, {
+    refetchQueries: [
+      { query: DOCUMENT_BY_ID, variables: { id } },
+      { query: MY_DOCUMENTS },
+      { query: ALL_DOCUMENTS },
+    ],
+    awaitRefetchQueries: true,
     onCompleted: () => {
-      addToast("OCR encolado correctamente", "success");
-      setPollTimedOut(false);
-      pollStartRef.current = Date.now();
-      startPolling(POLL_INTERVAL_MS);
+      addToast("Datos del documento actualizados", "success");
+      setEditModal(false);
     },
-    onError: (err) => addToast(`Error al encolar OCR: ${err.message}`, "error"),
+    onError: (err) => addToast(`Error al guardar: ${err.message}`, "error"),
   });
 
   const [setDocumentStatus, { loading: updatingStatus }] = useMutation(SET_DOCUMENT_STATUS, {
@@ -402,10 +490,10 @@ export function DocumentDetail() {
     await deleteDocument({ variables: { documentId: id } });
   }, [deleteDocument, id]);
 
-  const handleRetryOcr = useCallback(() => {
+  const handleSaveExtractedData = useCallback((data) => {
     if (!id) return;
-    enqueueOcr({ variables: { input: { documentId: id } } });
-  }, [enqueueOcr, id]);
+    saveExtractedData({ variables: { documentId: id, data } });
+  }, [id, saveExtractedData]);
 
   const handleMarkReviewed = useCallback(() => {
     if (!id) return;
@@ -619,16 +707,6 @@ export function DocumentDetail() {
               <h3 className="text-sm font-semibold text-slate-900">Aún procesando</h3>
               <p className="text-xs text-slate-500 mt-0.5">Podés volver más tarde.</p>
             </div>
-            <button
-              onClick={() => {
-                setPollTimedOut(false);
-                pollStartRef.current = Date.now();
-                startPolling(POLL_INTERVAL_MS);
-              }}
-              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition active:scale-[0.98]"
-            >
-              Reintentar polling
-            </button>
           </div>
         </div>
       )}
@@ -672,15 +750,13 @@ export function DocumentDetail() {
                 <p className="text-xs text-slate-500 mt-2">Intentos: {document.ocrAttempts}</p>
               )}
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button
-                onClick={handleRetryOcr}
-                disabled={enqueuingOcr}
-                className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98] disabled:opacity-50"
-              >
-                {enqueuingOcr ? "Encolando..." : "Reintentar OCR"}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setEditModal(true)}
+              className="inline-flex flex-shrink-0 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]"
+            >
+              Editar datos manualmente
+            </button>
           </div>
         </div>
       )}
@@ -742,13 +818,13 @@ export function DocumentDetail() {
                   {updatingStatus ? "Marcando..." : "Marcar como revisado"}
                 </button>
               )}
-              {!isOtherType && status === "OCR_SUCCESS" && !document.extracted?.mrzValid && (
+              {!isOtherType && (
                 <button
-                  onClick={handleRetryOcr}
-                  disabled={enqueuingOcr}
-                  className="w-full inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition active:scale-[0.98] disabled:opacity-50"
+                  type="button"
+                  onClick={() => setEditModal(true)}
+                  className="w-full inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]"
                 >
-                  {enqueuingOcr ? "Encolando..." : "Reintentar OCR"}
+                  Editar datos
                 </button>
               )}
               <button
@@ -885,14 +961,8 @@ export function DocumentDetail() {
                     ? "El documento está siendo procesado por el sistema OCR."
                     : "Este documento aún no ha sido procesado por OCR."}
                 </p>
-                {!isProcessing && status !== "OCR_FAILED" && (
-                  <button
-                    onClick={handleRetryOcr}
-                    disabled={enqueuingOcr}
-                    className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {enqueuingOcr ? "Encolando..." : "Iniciar OCR"}
-                  </button>
+                {!isProcessing && (
+                  <button type="button" onClick={() => setEditModal(true)} className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]">Completar datos manualmente</button>
                 )}
                 <div className="mt-8 pt-6 border-t border-slate-100 text-left">
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -1032,6 +1102,20 @@ export function DocumentDetail() {
             </>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={editModal}
+        onClose={() => setEditModal(false)}
+        title={`Editar ${getDocumentTypeLabel(document.type)}`}
+      >
+        <ExtractedDataEditor
+          key={`${document.id}-${editModal}`}
+          document={document}
+          loading={savingExtractedData}
+          onCancel={() => setEditModal(false)}
+          onSave={handleSaveExtractedData}
+        />
       </Modal>
 
       {/* Delete Modal */}
