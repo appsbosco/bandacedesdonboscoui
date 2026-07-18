@@ -41,7 +41,7 @@ export const MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY = gql`
   query MyTourParticipantDocumentSummary($tourId: ID!) {
     myTourParticipantDocumentSummary(tourId: $tourId) {
       participantId
-      passport { givenNames surname nationality issuingCountry passportNumber documentNumber dateOfBirth sex expirationDate }
+      passport { fullName givenNames surname nationality issuingCountry passportNumber documentNumber dateOfBirth sex expirationDate issueDate }
       visa { visaType visaControlNumber issueDate expirationDate issuingCountry }
     }
   }
