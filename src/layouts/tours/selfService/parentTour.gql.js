@@ -24,6 +24,7 @@ export const GET_MY_CHILDREN_TOUR_ACCESS = gql`
       hasExitPermit
       selfServiceVerified
       selfServiceVerifiedAt
+      itinerarySelfServiceEnabled
       role
       status
       linkedUser {
@@ -44,7 +45,11 @@ export const GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY = gql`
 `;
 export const GET_MY_CHILD_TOUR_ITINERARY = gql`
   query GetMyChildTourItinerary($tourId: ID!, $childUserId: ID!) {
-    myChildTourItinerary(tourId: $tourId, childUserId: $childUserId) { id name reservationNumber notes flights { id departureAt arrivalAt } }
+    myChildTourItinerary(tourId: $tourId, childUserId: $childUserId) {
+      id name reservationNumber notes maxPassengers passengerCount
+      leaders { id firstName firstSurname secondSurname instrument }
+      flights { id airline flightNumber origin destination departureAt arrivalAt departureTimeZone arrivalTimeZone direction }
+    }
   }
 `;
 export const GET_MY_CHILD_TOUR_FLIGHTS = gql`

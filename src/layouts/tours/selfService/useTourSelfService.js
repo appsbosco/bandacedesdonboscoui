@@ -16,9 +16,10 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
   const { data: participantData, loading: participantLoading, error: participantError, refetch: refetchParticipant } = useQuery(GET_MY_TOUR_PARTICIPANT, { variables: { tourId }, skip: !tourId, fetchPolicy: "cache-and-network" });
   const participant = participantData?.myTourParticipant ?? null;
   const isVerified = Boolean(participant?.selfServiceVerified);
+  const itineraryEligible = Boolean(participant?.itinerarySelfServiceEnabled);
   const { data: paymentData, loading: paymentLoading, error: paymentError } = useQuery(GET_MY_TOUR_PAYMENT_ACCOUNT, { variables: { tourId }, skip: !tourId || !paymentsEnabled, fetchPolicy: "cache-and-network" });
   const { data: documentSummaryData, loading: documentSummaryLoading, refetch: refetchDocumentSummary } = useQuery(MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY, { variables: { tourId }, skip: !tourId || !participant, fetchPolicy: "cache-and-network" });
-  const { data: itineraryData, loading: itineraryLoading } = useQuery(MY_TOUR_ITINERARY, { variables: { tourId }, skip: !tourId || !itineraryEnabled || !isVerified, fetchPolicy: "cache-and-network" });
+  const { data: itineraryData, loading: itineraryLoading } = useQuery(MY_TOUR_ITINERARY, { variables: { tourId }, skip: !tourId || !itineraryEnabled || !itineraryEligible || !isVerified, fetchPolicy: "cache-and-network" });
   const { data: flightsData, loading: flightsLoading } = useQuery(MY_TOUR_FLIGHTS, { variables: { tourId }, skip: !tourId || !flightsEnabled || !isVerified, fetchPolicy: "cache-and-network" });
   const [updateInfo, { loading: updateInfoLoading, error: updateInfoError }] = useMutation(UPDATE_MY_TOUR_PARTICIPANT_INFO, { onCompleted: () => { refetchParticipant(); refetchDocumentSummary(); } });
   const [confirmVerificationMutation, { loading: confirmLoading, error: confirmError }] = useMutation(CONFIRM_MY_TOUR_PARTICIPANT_VERIFICATION, { onCompleted: () => refetchParticipant() });
@@ -29,6 +30,7 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     documentSummary: documentSummaryData?.myTourParticipantDocumentSummary ?? null,
     documentSummaryLoading,
     isVerified,
+    itineraryEligible,
     itinerary: itineraryData?.myTourItinerary ?? null,
     itineraryLoading,
     flights: flightsData?.myTourFlights ?? [],

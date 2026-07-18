@@ -363,7 +363,7 @@ function SelfServiceView({ tour }) {
 
   const {
     participant, paymentAccount, documentSummary, documentSummaryLoading,
-    isVerified, itinerary, itineraryLoading, flights, flightsLoading,
+    isVerified, itineraryEligible, itinerary, itineraryLoading, flights, flightsLoading,
     updateParticipantInfo, updateInfoLoading, confirmVerification,
     confirmLoading, confirmError, loading, isLinked, isNotLinkedError,
     participantError,
@@ -371,7 +371,8 @@ function SelfServiceView({ tour }) {
 
   // Calcular tabs visibles para este usuario
   const visibleTabs = SELF_SERVICE_TABS.filter(
-    (t) => selfServiceAccess?.enabled && selfServiceAccess?.[t.moduleKey] !== false
+    (t) => selfServiceAccess?.enabled && selfServiceAccess?.[t.moduleKey] !== false &&
+      (t.id !== "itinerary" || itineraryEligible)
   );
 
   const [activeTab, setActiveTab] = useState(visibleTabs[0]?.id ?? "documents");

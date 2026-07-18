@@ -24,10 +24,11 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
   }, [children, selectedChildUserId]);
   const selectedChild = children.find((child) => child.linkedUser?.id === selectedChildUserId) ?? null;
   const isVerified = Boolean(selectedChild?.selfServiceVerified);
+  const itineraryEligible = Boolean(selectedChild?.itinerarySelfServiceEnabled);
   const variables = { tourId, childUserId: selectedChildUserId };
   const { data: paymentData, loading: paymentLoading } = useQuery(GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT, { variables, skip: !selectedChildUserId || !paymentsEnabled, fetchPolicy: "cache-and-network" });
   const { data: documentSummaryData, loading: documentSummaryLoading, refetch: refetchDocumentSummary } = useQuery(GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY, { variables, skip: !selectedChildUserId, fetchPolicy: "cache-and-network" });
-  const { data: itineraryData, loading: itineraryLoading } = useQuery(GET_MY_CHILD_TOUR_ITINERARY, { variables, skip: !selectedChildUserId || !itineraryEnabled || !isVerified, fetchPolicy: "cache-and-network" });
+  const { data: itineraryData, loading: itineraryLoading } = useQuery(GET_MY_CHILD_TOUR_ITINERARY, { variables, skip: !selectedChildUserId || !itineraryEnabled || !itineraryEligible || !isVerified, fetchPolicy: "cache-and-network" });
   const { data: flightsData, loading: flightsLoading } = useQuery(GET_MY_CHILD_TOUR_FLIGHTS, { variables, skip: !selectedChildUserId || !flightsEnabled || !isVerified, fetchPolicy: "cache-and-network" });
   const [updateChildInfoMutation, { loading: updateInfoLoading, error: updateInfoError }] = useMutation(UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO, { onCompleted: () => { refetchChildren(); refetchDocumentSummary(); } });
   const [confirmChildVerificationMutation, { loading: confirmLoading, error: confirmError }] = useMutation(CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION, { onCompleted: () => refetchChildren() });
@@ -40,6 +41,7 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     documentSummary: documentSummaryData?.myChildTourParticipantDocumentSummary ?? null,
     documentSummaryLoading,
     isVerified,
+    itineraryEligible,
     itinerary: itineraryData?.myChildTourItinerary ?? null,
     itineraryLoading,
     flights: flightsData?.myChildTourFlights ?? [],

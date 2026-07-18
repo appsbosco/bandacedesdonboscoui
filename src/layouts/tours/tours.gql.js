@@ -36,6 +36,7 @@ export const GET_TOUR = gql`
         payments
         rooms
         itinerary
+        itineraryIds
         flights
       }
       createdAt
@@ -62,6 +63,7 @@ export const UPDATE_TOUR_SELF_SERVICE_ACCESS = gql`
         payments
         rooms
         itinerary
+        itineraryIds
         flights
       }
     }
@@ -89,6 +91,7 @@ export const GET_MY_TOUR_PARTICIPANT = gql`
       hasExitPermit
       selfServiceVerified
       selfServiceVerifiedAt
+      itinerarySelfServiceEnabled
       status
       role
       notes

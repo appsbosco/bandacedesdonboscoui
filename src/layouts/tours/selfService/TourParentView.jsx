@@ -32,6 +32,7 @@ export default function TourParentView({ tour }) {
     documentSummary,
     documentSummaryLoading,
     isVerified,
+    itineraryEligible,
     itinerary,
     itineraryLoading,
     flights,
@@ -93,10 +94,12 @@ export default function TourParentView({ tour }) {
 
   // Tabs visibles según selfServiceAccess
   const visibleTabs = TABS.filter(
-    (t) => selfServiceAccess?.[t.moduleKey] !== false
+    (t) => selfServiceAccess?.[t.moduleKey] !== false &&
+      (t.id !== "itinerary" || itineraryEligible)
   );
   const isLockedTab = (tabId) =>
     (tabId === "itinerary" || tabId === "flights") && !isVerified;
+
 
   return (
     <div className="space-y-5">
@@ -112,7 +115,10 @@ export default function TourParentView({ tour }) {
                 <button
                   type="button"
                   key={child.id}
-                  onClick={() => setSelectedChildUserId(cId)}
+                  onClick={() => {
+                    setSelectedChildUserId(cId);
+                    setActiveTab("documents");
+                  }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
                     isSelected
                       ? "bg-blue-50 border-blue-300 text-blue-800"
