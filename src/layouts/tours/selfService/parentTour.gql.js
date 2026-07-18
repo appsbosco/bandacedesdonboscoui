@@ -65,8 +65,8 @@ export const UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO = gql`
   }
 `;
 export const CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION = gql`
-  mutation ConfirmMyChildTourParticipantVerification($tourId: ID!, $childUserId: ID!) {
-    confirmMyChildTourParticipantVerification(tourId: $tourId, childUserId: $childUserId) { id selfServiceVerified selfServiceVerifiedAt }
+  mutation ConfirmMyChildTourParticipantVerification($tourId: ID!, $childUserId: ID!, $acceptResponsibility: Boolean!) {
+    confirmMyChildTourParticipantVerification(tourId: $tourId, childUserId: $childUserId, acceptResponsibility: $acceptResponsibility) { id selfServiceVerified selfServiceVerifiedAt }
   }
 `;
 

@@ -55,6 +55,11 @@ export const GET_TOUR_PARTICIPANTS_DOCS = gql`
         }
       }
       hasExitPermit
+      selfServiceVerified
+      selfServiceVerifiedAt
+      selfServiceVerificationRevokedAt
+      selfServiceVerificationRevocationReason
+      selfServiceVerificationRevokedBy { id name firstSurName }
       # Audit
       createdAt
       updatedAt
@@ -65,6 +70,19 @@ export const GET_TOUR_PARTICIPANTS_DOCS = gql`
         name
         firstSurName
       }
+    }
+  }
+`;
+
+export const REVOKE_PARTICIPANT_VERIFICATION = gql`
+  mutation RevokeParticipantVerification($participantId: ID!, $reason: String!) {
+    revokeTourParticipantSelfServiceVerification(participantId: $participantId, reason: $reason) {
+      id
+      selfServiceVerified
+      selfServiceVerifiedAt
+      selfServiceVerificationRevokedAt
+      selfServiceVerificationRevocationReason
+      selfServiceVerificationRevokedBy { id name firstSurName }
     }
   }
 `;

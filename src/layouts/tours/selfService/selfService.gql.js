@@ -71,7 +71,7 @@ export const UPDATE_MY_TOUR_PARTICIPANT_INFO = gql`
   }
 `;
 export const CONFIRM_MY_TOUR_PARTICIPANT_VERIFICATION = gql`
-  mutation ConfirmMyTourParticipantVerification($tourId: ID!) {
-    confirmMyTourParticipantVerification(tourId: $tourId) { id selfServiceVerified selfServiceVerifiedAt }
+  mutation ConfirmMyTourParticipantVerification($tourId: ID!, $acceptResponsibility: Boolean!) {
+    confirmMyTourParticipantVerification(tourId: $tourId, acceptResponsibility: $acceptResponsibility) { id selfServiceVerified selfServiceVerifiedAt }
   }
 `;

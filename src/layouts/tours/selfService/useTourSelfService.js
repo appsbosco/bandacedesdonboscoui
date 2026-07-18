@@ -38,7 +38,7 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     updateParticipantInfo: (input) => updateInfo({ variables: { tourId, input } }),
     updateInfoLoading,
     updateInfoError,
-    confirmVerification: () => confirmVerificationMutation({ variables: { tourId } }),
+    confirmVerification: () => confirmVerificationMutation({ variables: { tourId, acceptResponsibility: true } }),
     confirmLoading,
     confirmError,
     loading: participantLoading || paymentLoading,

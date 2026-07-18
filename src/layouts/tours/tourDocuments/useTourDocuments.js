@@ -5,6 +5,7 @@ import {
   GET_TOUR_DOCUMENT_EXTRACTED_DATA,
   UPDATE_PARTICIPANT_DOCS,
   UPDATE_PARTICIPANT_VISA_STATUS,
+  REVOKE_PARTICIPANT_VERIFICATION,
 } from "./tourDocuments.gql";
 import {
   getTourReferenceDate,
@@ -49,13 +50,30 @@ export function useTourDocuments(tourId, tour) {
   const [updateParticipantVisaStatus, { loading: savingVisa }] = useMutation(
     UPDATE_PARTICIPANT_VISA_STATUS
   );
+  const [revokeVerification, { loading: revokingVerification }] = useMutation(
+    REVOKE_PARTICIPANT_VERIFICATION
+  );
+
+  const handleRevokeVerification = useCallback(
+    async (participantId, reason) => {
+      try {
+        await revokeVerification({ variables: { participantId, reason } });
+        showToast(
+          "Verificación retirada. El participante deberá revisar y confirmar nuevamente.",
+          "success"
+        );
+        await refetch();
+      } catch (error) {
+        showToast(error.message || "No se pudo retirar la verificación", "error");
+        throw error;
+      }
+    },
+    [refetch, revokeVerification]
+  );
 
   const handleSave = useCallback(
     async (participantId, input) => {
-      const {
-        visaStatusUpdate,
-        ...documentInput
-      } = input || {};
+      const { visaStatusUpdate, ...documentInput } = input || {};
 
       const shouldUpdateDocuments = Object.keys(documentInput).length > 0;
       const shouldUpdateVisa = Boolean(visaStatusUpdate?.status);
@@ -84,7 +102,7 @@ export function useTourDocuments(tourId, tour) {
   const refDate = useMemo(() => getTourReferenceDate(tour), [tour]);
   const hasRefDate = !!refDate;
 
-  const participants = data?.getTourParticipants || [];
+  const participants = useMemo(() => data?.getTourParticipants || [], [data]);
   const extractedByParticipant = useMemo(
     () =>
       new Map(
@@ -143,6 +161,8 @@ export function useTourDocuments(tourId, tour) {
     // Save
     handleSave,
     saving: savingDocs || savingVisa,
+    handleRevokeVerification,
+    revokingVerification,
     // Toast
     toast,
     setToast,

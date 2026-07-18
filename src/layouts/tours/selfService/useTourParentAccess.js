@@ -49,7 +49,7 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     updateChildInfo: (input) => updateChildInfoMutation({ variables: { ...variables, input } }),
     updateInfoLoading,
     updateInfoError,
-    confirmChildVerification: () => confirmChildVerificationMutation({ variables }),
+    confirmChildVerification: () => confirmChildVerificationMutation({ variables: { ...variables, acceptResponsibility: true } }),
     confirmLoading,
     confirmError,
     loading: childrenLoading,

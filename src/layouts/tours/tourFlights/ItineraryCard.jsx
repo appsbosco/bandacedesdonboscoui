@@ -57,33 +57,59 @@ function FlightRow({ flight, onUnassign }) {
   const arrTime = formatTime12(flight.arrivalAt, flight.arrivalTimeZone);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-      <span
-        className={`px-1.5 py-0.5 rounded-full font-semibold text-[10px] border ${dir.badge} flex-shrink-0`}
-      >
-        {dir.emoji} {dir.label}
-      </span>
-      <span className="font-bold text-gray-900 flex-shrink-0">
-        {flight.airline} {flight.flightNumber}
-      </span>
-      <span className="text-gray-500 flex-shrink-0">
-        {flight.origin}→{flight.destination}
-      </span>
-      <span className="flex-1" />
-      <span className="text-gray-400 flex-shrink-0">
-        {formatDate(flight.departureAt, flight.departureTimeZone)}
-      </span>
-      {depTime && (
-        <span className="text-gray-700 font-semibold flex-shrink-0">
-          {depTime}
-          {arrTime && <span className="text-gray-400 font-normal"> – {arrTime}</span>}
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3 text-xs">
+      <div className="flex min-w-0 items-start gap-2">
+        <span
+          className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold ${dir.badge}`}
+        >
+          {dir.emoji} {dir.label}
         </span>
-      )}
-      {onUnassign && (
-        <button type="button" onClick={() => onUnassign(flight.id)} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0" title="Quitar vuelo de este itinerario" aria-label="Quitar vuelo">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      )}
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-bold leading-5 text-gray-900 sm:truncate">
+            {flight.airline} {flight.flightNumber}
+          </p>
+          <p className="mt-0.5 font-semibold text-gray-600">
+            {flight.origin}
+            <span className="px-1 text-gray-300">→</span>
+            {flight.destination}
+          </p>
+        </div>
+        {onUnassign && (
+          <button
+            type="button"
+            onClick={() => onUnassign(flight.id)}
+            className="shrink-0 rounded-md p-2 text-gray-300 hover:bg-red-50 hover:text-red-500"
+            title="Quitar vuelo de este itinerario"
+            aria-label="Quitar vuelo"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-gray-200 pt-2 sm:flex sm:items-center sm:justify-end sm:gap-4">
+        <div>
+          <span className="block text-[10px] uppercase tracking-wide text-gray-400">Fecha</span>
+          <span className="font-semibold text-gray-700">
+            {formatDate(flight.departureAt, flight.departureTimeZone)}
+          </span>
+        </div>
+        {depTime && (
+          <div className="text-right sm:text-left">
+            <span className="block text-[10px] uppercase tracking-wide text-gray-400">Horario</span>
+            <span className="whitespace-nowrap font-bold text-gray-800">
+              {depTime}
+              {arrTime && <span className="font-normal text-gray-400"> – {arrTime}</span>}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -163,38 +189,40 @@ export default function ItineraryCard({
             <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-1">{itinerary.notes}</p>
           )}
         </div>
-        {!readOnly && <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => onEdit(itinerary)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
-            title="Editar itinerario"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(itinerary)}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
-            title="Eliminar itinerario"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
-        </div>}
+        {!readOnly && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => onEdit(itinerary)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
+              title="Editar itinerario"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(itinerary)}
+              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
+              title="Eliminar itinerario"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Capacity bar */}
@@ -272,48 +300,55 @@ export default function ItineraryCard({
       )}
 
       {/* Action buttons */}
-      {!readOnly && <div className="px-5 pb-5 flex gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => onAssignFlights(itinerary)}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition-all"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Vuelos
-        </button>
-        <button
-          type="button"
-          onClick={() => onManageLeaders(itinerary)}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition-all"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-            />
-          </svg>
-          Líderes
-        </button>
-        <button
-          type="button"
-          onClick={() => onAssignPassengers(itinerary)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          Pasajeros
-        </button>
-      </div>}
+      {!readOnly && (
+        <div className="px-5 pb-5 flex gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => onAssignFlights(itinerary)}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Vuelos
+          </button>
+          <button
+            type="button"
+            onClick={() => onManageLeaders(itinerary)}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+              />
+            </svg>
+            Líderes
+          </button>
+          <button
+            type="button"
+            onClick={() => onAssignPassengers(itinerary)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            Pasajeros
+          </button>
+        </div>
+      )}
     </div>
   );
 }

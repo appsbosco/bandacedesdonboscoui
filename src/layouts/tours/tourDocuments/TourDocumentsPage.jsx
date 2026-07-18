@@ -1,22 +1,38 @@
 /* eslint-disable react/prop-types */
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@apollo/client";
 import { useTourDocuments } from "./useTourDocuments";
 import DocumentEditModal from "./DocumentEditModal";
 import DocumentDetailDrawer from "./DocumentDetailDrawer";
 import { Toast } from "../TourHelpers";
-import {
-  getExpiryStatus,
-  getDaysUntilExpiry,
-  EXPIRY_WARNING_DAYS,
-} from "../utils/tourAgeRules";
+import { getExpiryStatus, getDaysUntilExpiry, EXPIRY_WARNING_DAYS } from "../utils/tourAgeRules";
+import { GET_TOUR_ITINERARIES } from "../tourFlights/tourItineraries.gql";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const OVERALL_STATUS_CONFIG = {
-  COMPLETE: { label: "Completo", bg: "#ECFDF5", color: "#065F46", border: "#A7F3D0", dot: "#10B981" },
-  INCOMPLETE: { label: "Incompleto", bg: "#FFFBEB", color: "#92400E", border: "#FDE68A", dot: "#F59E0B" },
+  COMPLETE: {
+    label: "Completo",
+    bg: "#ECFDF5",
+    color: "#065F46",
+    border: "#A7F3D0",
+    dot: "#10B981",
+  },
+  INCOMPLETE: {
+    label: "Incompleto",
+    bg: "#FFFBEB",
+    color: "#92400E",
+    border: "#FDE68A",
+    dot: "#F59E0B",
+  },
   EXPIRED: { label: "Vencido", bg: "#FEF2F2", color: "#991B1B", border: "#FECACA", dot: "#EF4444" },
-  EXPIRING: { label: "Por vencer", bg: "#FFF7ED", color: "#9A3412", border: "#FED7AA", dot: "#F97316" },
+  EXPIRING: {
+    label: "Por vencer",
+    bg: "#FFF7ED",
+    color: "#9A3412",
+    border: "#FED7AA",
+    dot: "#F97316",
+  },
 };
 
 const EXPIRY_STATUS_STYLES = {
@@ -33,6 +49,20 @@ const STATUS_FILTERS = [
   { value: "EXPIRED", label: "Vencidos" },
   { value: "EXPIRING", label: "Por vencer" },
 ];
+
+const DOCUMENT_TABLE_HEADERS = [
+  { key: "participant", label: "Participante", align: "left" },
+  { key: "passport", label: "Pasaporte" },
+  { key: "passportExpiry", label: "Vence pasaporte" },
+  { key: "visa", label: "Visa" },
+  { key: "visaExpiry", label: "Vence visa" },
+  { key: "exitPermit", label: "Permiso salida" },
+  { key: "status", label: "Estado" },
+  { key: "actions", label: "", align: "right" },
+];
+
+const NO_ITINERARY_FILTER = "NONE";
+const EMPTY_ITINERARIES = [];
 
 // Quick filter definitions — each has a key and a predicate(participant, refDate)
 const QUICK_FILTERS = [
@@ -166,6 +196,20 @@ const QUICK_FILTERS = [
     category: "age",
     test: (p) => !p.birthDate,
   },
+  {
+    key: "selfVerified",
+    label: "Verificación confirmada",
+    emoji: "✅",
+    category: "verification",
+    test: (p) => p.selfServiceVerified === true,
+  },
+  {
+    key: "notSelfVerified",
+    label: "Pendiente de verificar",
+    emoji: "⚠️",
+    category: "verification",
+    test: (p) => p.selfServiceVerified !== true,
+  },
 ];
 
 const CATEGORY_LABELS = {
@@ -173,6 +217,7 @@ const CATEGORY_LABELS = {
   visa: "Visa",
   permit: "Permiso salida",
   age: "Edad",
+  verification: "Verificación del participante",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -209,13 +254,13 @@ function ExpiryCell({ date }) {
   const style = EXPIRY_STATUS_STYLES[status];
 
   if (status === "missing") {
-    return <span style={{ fontSize: "10px", color: "#9CA3AF" }}>Sin fecha</span>;
+    return <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Sin fecha</span>;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <span style={{ fontSize: "10px", color: "#4B5563" }}>{formatDate(date)}</span>
-      <span style={{ fontSize: "10px", ...style }}>
+      <span style={{ fontSize: "12px", color: "#4B5563" }}>{formatDate(date)}</span>
+      <span style={{ fontSize: "12px", ...style }}>
         {days >= 0 ? `${days}d` : `Vencido ${Math.abs(days)}d`}
       </span>
     </div>
@@ -228,14 +273,14 @@ function PermitCell({ participant }) {
   if (_isAdult === true) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <span style={{ fontSize: "11px", color: "#9CA3AF" }}>N/A</span>
-        <span style={{ fontSize: "10px", color: "#059669" }}>Adulto</span>
+        <span style={{ fontSize: "12px", color: "#9CA3AF" }}>N/A</span>
+        <span style={{ fontSize: "12px", color: "#059669" }}>Adulto</span>
       </div>
     );
   }
 
   if (!_exitRequired) {
-    return <span style={{ fontSize: "11px", color: "#9CA3AF" }}>N/A</span>;
+    return <span style={{ fontSize: "12px", color: "#9CA3AF" }}>N/A</span>;
   }
 
   return (
@@ -243,12 +288,12 @@ function PermitCell({ participant }) {
       {hasExitPermit ? (
         <>
           <span style={{ color: "#059669", fontWeight: 700, fontSize: "14px" }}>✓</span>
-          <span style={{ fontSize: "10px", color: "#059669" }}>Tiene</span>
+          <span style={{ fontSize: "12px", color: "#059669" }}>Tiene</span>
         </>
       ) : (
         <>
           <span style={{ color: "#F87171", fontWeight: 700, fontSize: "14px" }}>✗</span>
-          <span style={{ fontSize: "10px", color: "#EF4444" }}>Falta</span>
+          <span style={{ fontSize: "12px", color: "#EF4444" }}>Falta</span>
         </>
       )}
     </div>
@@ -326,7 +371,9 @@ function VisaStatusBadge({ participant }) {
         {label}
       </span>
       {participant._visaDeniedLabel && (
-        <span style={{ fontSize: "10px", color: isDenied ? "#B91C1C" : "#9CA3AF", fontWeight: 700 }}>
+        <span
+          style={{ fontSize: "10px", color: isDenied ? "#B91C1C" : "#9CA3AF", fontWeight: 700 }}
+        >
           {participant._visaDeniedLabel}
         </span>
       )}
@@ -337,6 +384,7 @@ function VisaStatusBadge({ participant }) {
 function FilterChip({ filter, active, count, onClick }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         display: "inline-flex",
@@ -350,7 +398,7 @@ function FilterChip({ filter, active, count, onClick }) {
         background: active ? "#EEF2FF" : "#fff",
         color: active ? "#4338CA" : "#6B7280",
         cursor: "pointer",
-        transition: "all 0.15s",
+        transition: "background-color 0.15s, border-color 0.15s, color 0.15s",
         whiteSpace: "nowrap",
       }}
     >
@@ -383,6 +431,19 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [activeQuickFilters, setActiveQuickFilters] = useState(new Set());
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [itineraryFilter, setItineraryFilter] = useState("ALL");
+  const [revokeCandidate, setRevokeCandidate] = useState(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const revokeDialogRef = useRef(null);
+  useEffect(() => {
+    if (revokeCandidate) revokeDialogRef.current?.showModal();
+  }, [revokeCandidate]);
+  const { data: itineraryData } = useQuery(GET_TOUR_ITINERARIES, {
+    variables: { tourId },
+    skip: !tourId,
+    fetchPolicy: "cache-and-network",
+  });
+  const itineraries = itineraryData?.getTourItineraries || EMPTY_ITINERARIES;
 
   const {
     participants,
@@ -399,24 +460,38 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
     closeEdit,
     handleSave,
     saving,
+    handleRevokeVerification,
+    revokingVerification,
     toast,
     setToast,
   } = useTourDocuments(tourId, tour);
+
+  const participantItinerary = useMemo(() => {
+    const map = new Map();
+    itineraries.forEach((itinerary) => {
+      (itinerary.participants || []).forEach((participant) => {
+        map.set(participant.id, { id: itinerary.id, name: itinerary.name });
+      });
+    });
+    return map;
+  }, [itineraries]);
 
   // Enrich with _isAdult for filter predicates
   const enriched = useMemo(
     () =>
       participants.map((p) => ({
         ...p,
-        _isAdult: p._exitRequired === false && !!p.birthDate && !!refDate
-          ? true
-          : p._exitRequired === true
-          ? false
-          : !p.birthDate
-          ? null
-          : null,
+        _itinerary: participantItinerary.get(p.id) || null,
+        _isAdult:
+          p._exitRequired === false && !!p.birthDate && !!refDate
+            ? true
+            : p._exitRequired === true
+            ? false
+            : !p.birthDate
+            ? null
+            : null,
       })),
-    [participants, refDate]
+    [participants, refDate, participantItinerary]
   );
 
   // Compute counts per quick filter on all participants (for badges)
@@ -440,12 +515,20 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
   const clearAllFilters = () => {
     setActiveQuickFilters(new Set());
     setStatusFilter("ALL");
+    setItineraryFilter("ALL");
     setSearch("");
   };
 
   const filtered = useMemo(() => {
     return enriched.filter((p) => {
       if (statusFilter !== "ALL" && p._docStatus !== statusFilter) return false;
+      if (itineraryFilter === NO_ITINERARY_FILTER && p._itinerary) return false;
+      if (
+        itineraryFilter !== "ALL" &&
+        itineraryFilter !== NO_ITINERARY_FILTER &&
+        p._itinerary?.id !== itineraryFilter
+      )
+        return false;
       if (search) {
         const q = search.toLowerCase();
         const name = participantName(p).toLowerCase();
@@ -458,9 +541,10 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
       }
       return true;
     });
-  }, [enriched, statusFilter, search, activeQuickFilters]);
+  }, [enriched, statusFilter, itineraryFilter, search, activeQuickFilters]);
 
-  const hasActiveFilters = activeQuickFilters.size > 0 || statusFilter !== "ALL" || search;
+  const hasActiveFilters =
+    activeQuickFilters.size > 0 || statusFilter !== "ALL" || itineraryFilter !== "ALL" || search;
 
   // Group quick filters by category
   const filtersByCategory = useMemo(() => {
@@ -480,8 +564,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
           Documentos de la gira
         </h2>
         <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6B7280" }}>
-          Pasaportes, visas y permisos de salida de{" "}
-          <strong>{tourName}</strong>
+          Pasaportes, visas y permisos de salida de <strong>{tourName}</strong>
         </p>
         <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#2563EB" }}>
           Los participantes vinculados sincronizan pasaporte, visa y permiso desde Documents.
@@ -502,7 +585,11 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
         <StatCard value={docCounts.COMPLETE} label="Completos" color="#059669" />
         <StatCard value={docCounts.INCOMPLETE} label="Incompletos" color="#D97706" />
         <StatCard value={docCounts.EXPIRED} label="Vencidos" color="#DC2626" />
-        <StatCard value={docCounts.EXPIRING} label={`Por vencer (≤${EXPIRY_WARNING_DAYS}d)`} color="#EA580C" />
+        <StatCard
+          value={docCounts.EXPIRING}
+          label={`Por vencer (≤${EXPIRY_WARNING_DAYS}d)`}
+          color="#EA580C"
+        />
       </div>
 
       {/* Search + status filter bar */}
@@ -528,6 +615,30 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
               onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
             />
 
+            <select
+              value={itineraryFilter}
+              onChange={(event) => setItineraryFilter(event.target.value)}
+              aria-label="Filtrar por itinerario"
+              style={{
+                minWidth: "190px",
+                padding: "8px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "1px solid #E5E7EB",
+                borderRadius: "10px",
+                background: "#fff",
+                color: "#374151",
+              }}
+            >
+              <option value="ALL">Todos los itinerarios</option>
+              <option value={NO_ITINERARY_FILTER}>Sin itinerario asignado</option>
+              {itineraries.map((itinerary) => (
+                <option key={itinerary.id} value={itinerary.id}>
+                  {itinerary.name}
+                </option>
+              ))}
+            </select>
+
             {/* Status pill group */}
             <div
               style={{
@@ -542,6 +653,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
             >
               {STATUS_FILTERS.map((f) => (
                 <button
+                  type="button"
                   key={f.value}
                   onClick={() => setStatusFilter(f.value)}
                   style={{
@@ -554,7 +666,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                     background: statusFilter === f.value ? "#fff" : "transparent",
                     color: statusFilter === f.value ? "#111827" : "#6B7280",
                     boxShadow: statusFilter === f.value ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                    transition: "all 0.15s",
+                    transition: "background-color 0.15s, color 0.15s, box-shadow 0.15s",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -565,6 +677,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
 
             {/* Toggle filter panel */}
             <button
+              type="button"
               onClick={() => setShowFilterPanel((v) => !v)}
               style={{
                 display: "flex",
@@ -572,7 +685,9 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                 gap: "6px",
                 padding: "8px 14px",
                 borderRadius: "10px",
-                border: `1px solid ${showFilterPanel || activeQuickFilters.size > 0 ? "#6366F1" : "#E5E7EB"}`,
+                border: `1px solid ${
+                  showFilterPanel || activeQuickFilters.size > 0 ? "#6366F1" : "#E5E7EB"
+                }`,
                 background: showFilterPanel || activeQuickFilters.size > 0 ? "#EEF2FF" : "#fff",
                 color: showFilterPanel || activeQuickFilters.size > 0 ? "#4338CA" : "#6B7280",
                 fontSize: "12px",
@@ -601,6 +716,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
 
             {hasActiveFilters && (
               <button
+                type="button"
                 onClick={clearAllFilters}
                 style={{
                   padding: "8px 12px",
@@ -670,6 +786,7 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                 if (!f) return null;
                 return (
                   <button
+                    type="button"
                     key={key}
                     onClick={() => toggleQuickFilter(key)}
                     style={{
@@ -707,8 +824,15 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
         <div style={{ textAlign: "center", padding: "48px 0", fontSize: "13px", color: "#9CA3AF" }}>
           Sin participantes que coincidan con los filtros.{" "}
           <button
+            type="button"
             onClick={clearAllFilters}
-            style={{ color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}
+            style={{
+              color: "#6366F1",
+              fontWeight: 600,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
             Limpiar filtros
           </button>
@@ -724,28 +848,33 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
           }}
         >
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", fontSize: "13px", minWidth: "700px", borderCollapse: "collapse" }}>
+            <table
+              style={{
+                width: "100%",
+                fontSize: "13px",
+                minWidth: "700px",
+                borderCollapse: "collapse",
+              }}
+            >
               <thead>
                 <tr style={{ borderBottom: "1px solid #F3F4F6", background: "#F9FAFB" }}>
-                  {["Participante", "Pasaporte", "Vence pasaporte", "Visa", "Vence visa", "Permiso salida", "Estado", ""].map(
-                    (h, i) => (
-                      <th
-                        key={i}
-                        style={{
-                          padding: "10px 12px",
-                          fontSize: "10px",
-                          fontWeight: 700,
-                          color: "#9CA3AF",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          textAlign: i === 0 ? "left" : i === 7 ? "right" : "center",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {h}
-                      </th>
-                    )
-                  )}
+                  {DOCUMENT_TABLE_HEADERS.map((header) => (
+                    <th
+                      key={header.key}
+                      style={{
+                        padding: "10px 12px",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#9CA3AF",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        textAlign: header.align || "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {header.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -757,16 +886,63 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                       background: p._visaDenied ? "#FFF5F5" : "transparent",
                       transition: "background 0.1s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = p._visaDenied ? "#FEE2E2" : "#F9FAFB")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = p._visaDenied ? "#FFF5F5" : "transparent")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = p._visaDenied ? "#FEE2E2" : "#F9FAFB")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = p._visaDenied ? "#FFF5F5" : "transparent")
+                    }
                   >
                     {/* Participant */}
                     <td style={{ padding: "10px 12px" }}>
                       <p style={{ margin: 0, fontWeight: 600, color: "#111827", fontSize: "13px" }}>
                         {participantName(p)}
                       </p>
+                      <div
+                        style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "4px" }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            borderRadius: "9999px",
+                            padding: "2px 7px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            background: p.selfServiceVerified ? "#ECFDF5" : "#F3F4F6",
+                            color: p.selfServiceVerified ? "#047857" : "#6B7280",
+                            border: `1px solid ${p.selfServiceVerified ? "#A7F3D0" : "#E5E7EB"}`,
+                          }}
+                        >
+                          {p.selfServiceVerified
+                            ? "✓ Verificado por participante"
+                            : "Pendiente de verificar"}
+                        </span>
+                        {/* {p._itinerary && (
+                          <span
+                            style={{
+                              borderRadius: "9999px",
+                              padding: "2px 7px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              background: "#EFF6FF",
+                              color: "#1D4ED8",
+                              border: "1px solid #BFDBFE",
+                            }}
+                          >
+                            {p._itinerary.name}
+                          </span>
+                        )} */}
+                      </div>
                       {p._visaDenied && (
-                        <p style={{ margin: "3px 0 0", fontSize: "10px", color: "#B91C1C", fontWeight: 700 }}>
+                        <p
+                          style={{
+                            margin: "3px 0 0",
+                            fontSize: "10px",
+                            color: "#B91C1C",
+                            fontWeight: 700,
+                          }}
+                        >
                           Visa negada{p._visaDeniedLabel ? ` · ${p._visaDeniedLabel}` : ""}
                         </p>
                       )}
@@ -784,15 +960,28 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
                       {p.passportNumber ? (
                         <div>
-                          <span style={{ color: "#059669", fontWeight: 700, fontSize: "14px" }}>✓</span>
-                          <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#9CA3AF", fontFamily: "monospace" }}>
+                          <span style={{ color: "#059669", fontWeight: 700, fontSize: "14px" }}>
+                            ✓
+                          </span>
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: "10px",
+                              color: "#9CA3AF",
+                              fontFamily: "monospace",
+                            }}
+                          >
                             {p.passportNumber}
                           </p>
                         </div>
                       ) : (
                         <div>
-                          <span style={{ color: "#F87171", fontWeight: 700, fontSize: "14px" }}>✗</span>
-                          <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#EF4444" }}>Falta</p>
+                          <span style={{ color: "#F87171", fontWeight: 700, fontSize: "14px" }}>
+                            ✗
+                          </span>
+                          <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#EF4444" }}>
+                            Falta
+                          </p>
                         </div>
                       )}
                     </td>
@@ -836,8 +1025,16 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
 
                     {/* Actions */}
                     <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: "6px",
+                        }}
+                      >
                         <button
+                          type="button"
                           onClick={() => openDetail(p)}
                           style={{
                             padding: "4px 10px",
@@ -854,7 +1051,29 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
                         >
                           Ver
                         </button>
+                        {p.selfServiceVerified && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRevokeCandidate(p);
+                              setRevokeReason("");
+                            }}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              color: "#B91C1C",
+                              border: "1px solid #FECACA",
+                              borderRadius: "8px",
+                              background: "#FEF2F2",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Desverificar
+                          </button>
+                        )}
                         <button
+                          type="button"
                           onClick={() => openEdit(p)}
                           style={{
                             padding: "4px 10px",
@@ -892,7 +1111,9 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
               {filtered.length} de {enriched.length} participante{enriched.length !== 1 ? "s" : ""}
               {activeQuickFilters.size > 0 && (
                 <span style={{ color: "#6366F1", fontWeight: 600 }}>
-                  {" "}· {activeQuickFilters.size} filtro{activeQuickFilters.size !== 1 ? "s" : ""} activo{activeQuickFilters.size !== 1 ? "s" : ""}
+                  {" "}
+                  · {activeQuickFilters.size} filtro{activeQuickFilters.size !== 1 ? "s" : ""}{" "}
+                  activo{activeQuickFilters.size !== 1 ? "s" : ""}
                 </span>
               )}
             </span>
@@ -921,6 +1142,113 @@ export default function TourDocumentsPage({ tourId, tourName, tour }) {
           onClose={closeEdit}
           saving={saving}
         />
+      )}
+
+      {revokeCandidate && (
+        <dialog
+          ref={revokeDialogRef}
+          aria-labelledby="revoke-title"
+          onCancel={() => setRevokeCandidate(null)}
+          className="m-auto border-0 bg-transparent p-0 backdrop:bg-slate-950/55"
+          style={{
+            width: "calc(100% - 32px)",
+            maxWidth: "460px",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              borderRadius: "20px",
+              background: "#fff",
+              boxShadow: "0 24px 64px rgba(15,23,42,0.25)",
+            }}
+          >
+            <div style={{ padding: "22px 24px", borderBottom: "1px solid #E5E7EB" }}>
+              <h3
+                id="revoke-title"
+                style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#991B1B" }}
+              >
+                Retirar verificación
+              </h3>
+              <p style={{ margin: "6px 0 0", fontSize: "13px", lineHeight: 1.5, color: "#64748B" }}>
+                {participantName(revokeCandidate)} perderá acceso al itinerario hasta revisar y
+                confirmar nuevamente.
+              </p>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              <label
+                style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151" }}
+              >
+                Motivo obligatorio
+                <textarea
+                  value={revokeReason}
+                  onChange={(event) => setRevokeReason(event.target.value)}
+                  rows={3}
+                  placeholder="Ej. El número de pasaporte no coincide con el documento físico"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    marginTop: "7px",
+                    resize: "vertical",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "13px",
+                  }}
+                />
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "18px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setRevokeCandidate(null)}
+                  style={{
+                    minHeight: "40px",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    padding: "0 14px",
+                    background: "#fff",
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!revokeReason.trim() || revokingVerification}
+                  onClick={async () => {
+                    try {
+                      await handleRevokeVerification(revokeCandidate.id, revokeReason.trim());
+                      setRevokeCandidate(null);
+                      setRevokeReason("");
+                    } catch {
+                      // El toast conserva el modal y el motivo para que el admin pueda reintentar.
+                    }
+                  }}
+                  style={{
+                    minHeight: "40px",
+                    border: 0,
+                    borderRadius: "10px",
+                    padding: "0 14px",
+                    background: "#B91C1C",
+                    color: "#fff",
+                    fontWeight: 700,
+                    opacity: !revokeReason.trim() || revokingVerification ? 0.45 : 1,
+                  }}
+                >
+                  {revokingVerification ? "Retirando…" : "Retirar verificación"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </dialog>
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
