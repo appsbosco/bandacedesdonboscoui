@@ -91,6 +91,16 @@ export const DOCUMENT_VISIBILITY_SETTINGS = gql`
   }
 `;
 
+export const MY_SENSITIVE_DOCUMENT_EDIT_LOCK = gql`
+  query MySensitiveDocumentEditLock {
+    mySensitiveDocumentEditLock {
+      locked
+      verifiedAt
+      message
+    }
+  }
+`;
+
 export const UPDATE_DOCUMENT_VISIBILITY_SETTINGS = gql`
   mutation UpdateDocumentVisibilitySettings($restrictSensitiveUploadsToAdmins: Boolean!) {
     updateDocumentVisibilitySettings(
@@ -118,10 +128,7 @@ export const ADD_DOCUMENT_IMAGE = gql`
 
 export const UPSERT_DOCUMENT_EXTRACTED_DATA = gql`
   ${DOCUMENT_FRAGMENT}
-  mutation UpsertDocumentExtractedData(
-    $documentId: ID!
-    $data: UpsertDocumentExtractedDataInput!
-  ) {
+  mutation UpsertDocumentExtractedData($documentId: ID!, $data: UpsertDocumentExtractedDataInput!) {
     upsertDocumentExtractedData(documentId: $documentId, data: $data) {
       ...DocumentFragment
     }

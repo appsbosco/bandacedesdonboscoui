@@ -41,7 +41,7 @@ function Field({ label, value, onChange, type = "text" }) {
         type={type}
         value={value || ""}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+        className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
       />
     </label>
   );
@@ -171,6 +171,7 @@ export default function TourSelfServiceDocuments({
   const passport = documentSummary?.passport;
   const visa = documentSummary?.visa;
   const { criteria, passed } = computeVerificationCriteria(participant);
+  const informationLocked = Boolean(participant.selfServiceVerified);
   const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
     await onSaveInfo({
@@ -192,58 +193,64 @@ export default function TourSelfServiceDocuments({
         }`}
       >
         {participant.selfServiceVerified
-          ? "✓ Información verificada. Los cambios de identidad requerirán confirmar nuevamente."
+          ? "✓ Información verificada y bloqueada. Si detectas un error, contacta al administrador antes de viajar."
           : "Confirma que la información está completa y vigente para desbloquear itinerario y vuelos."}
       </div>
       <section className="bg-white rounded-2xl border border-gray-200 p-5">
-        <h3 className="text-sm font-bold mb-4">Datos personales</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Nombre" value={form.firstName} onChange={update("firstName")} />
-          <Field
-            label="Primer apellido"
-            value={form.firstSurname}
-            onChange={update("firstSurname")}
-          />
-          <Field
-            label="Segundo apellido"
-            value={form.secondSurname}
-            onChange={update("secondSurname")}
-          />
-          <Field
-            label="Identificación"
-            value={form.identification}
-            onChange={update("identification")}
-          />
-          <Field
-            label="Correo electrónico"
-            type="email"
-            value={form.email}
-            onChange={update("email")}
-          />
-          <Field label="Teléfono" value={form.phone} onChange={update("phone")} />
-          <Field
-            label="Fecha de nacimiento"
-            type="date"
-            value={form.birthDate}
-            onChange={update("birthDate")}
-          />
-        </div>
-        <div className="flex items-center gap-3 mt-4">
-          <button
-            type="button"
-            onClick={save}
-            disabled={saveLoading}
-            className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl disabled:opacity-50"
-          >
-            {saveLoading ? "Guardando…" : "Guardar datos personales"}
-          </button>
-          {saved && <span className="text-xs text-emerald-600">✓ Guardado</span>}
-        </div>
+        <fieldset disabled={informationLocked}>
+          <h3 className="text-sm font-bold mb-4">Datos personales</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Nombre" value={form.firstName} onChange={update("firstName")} />
+            <Field
+              label="Primer apellido"
+              value={form.firstSurname}
+              onChange={update("firstSurname")}
+            />
+            <Field
+              label="Segundo apellido"
+              value={form.secondSurname}
+              onChange={update("secondSurname")}
+            />
+            <Field
+              label="Identificación"
+              value={form.identification}
+              onChange={update("identification")}
+            />
+            <Field
+              label="Correo electrónico"
+              type="email"
+              value={form.email}
+              onChange={update("email")}
+            />
+            <Field label="Teléfono" value={form.phone} onChange={update("phone")} />
+            <Field
+              label="Fecha de nacimiento"
+              type="date"
+              value={form.birthDate}
+              onChange={update("birthDate")}
+            />
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saveLoading || informationLocked}
+              className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl disabled:opacity-50"
+            >
+              {informationLocked
+                ? "Edición bloqueada"
+                : saveLoading
+                ? "Guardando…"
+                : "Guardar datos personales"}
+            </button>
+            {saved && <span className="text-xs text-emerald-600">✓ Guardado</span>}
+          </div>
+        </fieldset>
       </section>
       <section className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex justify-between mb-1">
           <h3 className="text-sm font-bold">Pasaporte</h3>
-          {!isParentView && (
+          {!isParentView && !informationLocked && (
             <Link to={documentsPath} className="text-xs font-semibold text-blue-600">
               Corregir en Mis Documentos →
             </Link>
@@ -294,7 +301,7 @@ export default function TourSelfServiceDocuments({
       <section className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex justify-between mb-1">
           <h3 className="text-sm font-bold">Visa</h3>
-          {!isParentView && (
+          {!isParentView && !informationLocked && (
             <Link to={documentsPath} className="text-xs font-semibold text-blue-600">
               Corregir en Mis Documentos →
             </Link>

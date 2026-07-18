@@ -11,6 +11,7 @@ import {
   ENQUEUE_DOCUMENT_OCR,
   PROCESS_DOCUMENT_OCR,
   DOCUMENT_VISIBILITY_SETTINGS,
+  MY_SENSITIVE_DOCUMENT_EDIT_LOCK,
 } from "../../graphql/documents/documents.gql";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -284,13 +285,18 @@ export default function NewDocumentPage() {
   const { data: settingsData, loading: settingsLoading } = useQuery(DOCUMENT_VISIBILITY_SETTINGS, {
     fetchPolicy: "cache-and-network",
   });
+  const { data: editLockData, loading: editLockLoading } = useQuery(
+    MY_SENSITIVE_DOCUMENT_EDIT_LOCK
+  );
 
   const currentUser = userData?.getUser;
   const userIsAdmin = isDocumentAdmin(currentUser);
   const restrictSensitiveUploadsToAdmins =
     settingsData?.documentVisibilitySettings?.restrictSensitiveUploadsToAdmins ?? true;
+  const sensitiveEditLock = editLockData?.mySensitiveDocumentEditLock;
 
   const filteredDocumentTypes = Object.values(DOCUMENT_TYPES).filter((type) => {
+    if (sensitiveEditLock?.locked && SENSITIVE_DOCUMENT_TYPES.includes(type.id)) return false;
     if (!restrictSensitiveUploadsToAdmins) return true;
     if (userIsAdmin) return true;
     return !SENSITIVE_DOCUMENT_TYPES.includes(type.id);
@@ -336,9 +342,7 @@ export default function NewDocumentPage() {
           height: uploadResult.height,
           bytes: uploadResult.bytes,
           mimeType:
-            mimeType === "image/pdf"
-              ? "application/pdf"
-              : mimeType || "application/octet-stream",
+            mimeType === "image/pdf" ? "application/pdf" : mimeType || "application/octet-stream",
         };
         if (captureMeta) imageInput.captureMeta = captureMeta;
         await addDocumentImage({ variables: { documentId: docId, image: imageInput } });
@@ -444,7 +448,7 @@ export default function NewDocumentPage() {
           )}
 
           {/* Settings loading */}
-          {settingsLoading && (
+          {(settingsLoading || editLockLoading) && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
               <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-slate-700 animate-spin" />
               <p className="text-sm text-slate-500">Cargando configuración…</p>
@@ -452,12 +456,12 @@ export default function NewDocumentPage() {
           )}
 
           {/* Uploading / Processing */}
-          {!successState && !settingsLoading && uploading && (
+          {!successState && !settingsLoading && !editLockLoading && uploading && (
             <ProcessingState phase={processingPhase} />
           )}
 
           {/* Upload error */}
-          {!successState && !settingsLoading && uploadError && !uploading && (
+          {!successState && !settingsLoading && !editLockLoading && uploadError && !uploading && (
             <UploadErrorState
               error={uploadError}
               onRetry={() => {
@@ -468,7 +472,7 @@ export default function NewDocumentPage() {
           )}
 
           {/* Wizard steps */}
-          {!successState && !settingsLoading && !uploading && !uploadError && (
+          {!successState && !settingsLoading && !editLockLoading && !uploading && !uploadError && (
             <>
               {step === 0 && (
                 <WizardStep1
@@ -480,8 +484,10 @@ export default function NewDocumentPage() {
                   isCreating={false}
                   documentTypes={filteredDocumentTypes}
                   helperMessage={
-                    restrictSensitiveUploadsToAdmins && !userIsAdmin
-                      ? "Pasaporte, visa y permiso de salida no se deben de subir de momento"
+                    sensitiveEditLock?.locked
+                      ? sensitiveEditLock.message
+                      : restrictSensitiveUploadsToAdmins && !userIsAdmin
+                      ? "Pasaporte, visa y permiso de salida no se deben subir de momento"
                       : ""
                   }
                 />

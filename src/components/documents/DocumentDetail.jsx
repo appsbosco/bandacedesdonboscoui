@@ -10,6 +10,7 @@ import {
   MY_DOCUMENTS,
   ALL_DOCUMENTS,
   SET_DOCUMENT_STATUS,
+  MY_SENSITIVE_DOCUMENT_EDIT_LOCK,
 } from "../../graphql/documents/documents.gql";
 import { GET_USERS_BY_ID } from "graphql/queries";
 import { Badge } from "../ui/Badge";
@@ -46,7 +47,7 @@ const COMMON_EDIT_FIELDS = [
   ["nationality", "Nacionalidad"],
   ["issuingCountry", "País emisor"],
   ["passportNumber", "Número de pasaporte"],
-  ["documentNumber", "Número de documento"],
+  // ["documentNumber", "Número de documento"],
   ["dateOfBirth", "Fecha de nacimiento", "date"],
   ["sex", "Sexo"],
   ["issueDate", "Fecha de emisión", "date"],
@@ -71,16 +72,18 @@ function toInputValue(value, type) {
 function ExtractedDataEditor({ document, loading, onCancel, onSave }) {
   const fields = editableFieldsForType(document.type);
   const [values, setValues] = useState(() =>
-    Object.fromEntries(fields.map(([key, , type]) => [key, toInputValue(document.extracted?.[key], type)])),
+    Object.fromEntries(
+      fields.map(([key, , type]) => [key, toInputValue(document.extracted?.[key], type)])
+    )
   );
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    onSave(
-      Object.fromEntries(
-        fields.map(([key]) => [key, values[key]?.trim() || null]),
-      ),
-    );
+    try {
+      await onSave(Object.fromEntries(fields.map(([key]) => [key, values[key]?.trim() || null])));
+    } catch {
+      // Apollo muestra el error; el modal permanece abierto para no perder los cambios.
+    }
   };
 
   return (
@@ -95,7 +98,9 @@ function ExtractedDataEditor({ document, loading, onCancel, onSave }) {
             {key === "sex" ? (
               <select
                 value={values[key] || ""}
-                onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [key]: event.target.value }))
+                }
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               >
                 <option value="">Sin especificar</option>
@@ -107,7 +112,9 @@ function ExtractedDataEditor({ document, loading, onCancel, onSave }) {
               <input
                 type={type}
                 value={values[key] || ""}
-                onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [key]: event.target.value }))
+                }
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               />
             )}
@@ -115,8 +122,20 @@ function ExtractedDataEditor({ document, loading, onCancel, onSave }) {
         ))}
       </div>
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={onCancel} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold">Cancelar</button>
-        <button type="submit" disabled={loading} className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{loading ? "Guardando..." : "Guardar cambios"}</button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {loading ? "Guardando..." : "Guardar cambios"}
+        </button>
       </div>
     </form>
   );
@@ -373,6 +392,7 @@ function DocumentFilePreview({ image, alt, className = "", frameClassName = "", 
         <iframe
           src={buildPdfPreviewUrl(pdfUrl, image.publicId)}
           title={alt || "Vista previa PDF"}
+          sandbox="allow-same-origin allow-downloads"
           className={`w-full border-0 ${compact ? "h-44" : "h-72"} ${frameClassName}`.trim()}
         />
       </div>
@@ -421,6 +441,7 @@ export function DocumentDetail() {
     skip: !id,
     fetchPolicy: "cache-and-network",
   });
+  const { data: editLockData } = useQuery(MY_SENSITIVE_DOCUMENT_EDIT_LOCK);
 
   const [deleteDocument] = useMutation(DELETE_DOCUMENT, {
     refetchQueries: [{ query: MY_DOCUMENTS }],
@@ -431,19 +452,18 @@ export function DocumentDetail() {
     onError: (err) => addToast(`Error: ${err.message}`, "error"),
   });
 
-  const [saveExtractedData, { loading: savingExtractedData }] = useMutation(UPSERT_DOCUMENT_EXTRACTED_DATA, {
-    refetchQueries: [
-      { query: DOCUMENT_BY_ID, variables: { id } },
-      { query: MY_DOCUMENTS },
-      { query: ALL_DOCUMENTS },
-    ],
-    awaitRefetchQueries: true,
-    onCompleted: () => {
-      addToast("Datos del documento actualizados", "success");
-      setEditModal(false);
-    },
-    onError: (err) => addToast(`Error al guardar: ${err.message}`, "error"),
-  });
+  const [saveExtractedData, { loading: savingExtractedData }] = useMutation(
+    UPSERT_DOCUMENT_EXTRACTED_DATA,
+    {
+      refetchQueries: [
+        { query: DOCUMENT_BY_ID, variables: { id } },
+        { query: MY_DOCUMENTS },
+        { query: ALL_DOCUMENTS },
+      ],
+      awaitRefetchQueries: true,
+      onError: (err) => addToast(`Error al guardar: ${err.message}`, "error"),
+    }
+  );
 
   const [setDocumentStatus, { loading: updatingStatus }] = useMutation(SET_DOCUMENT_STATUS, {
     refetchQueries: [
@@ -457,6 +477,12 @@ export function DocumentDetail() {
   });
 
   const document = data?.documentById;
+  const sensitiveEditLock = editLockData?.mySensitiveDocumentEditLock;
+  const isSensitiveEditLocked = Boolean(
+    sensitiveEditLock?.locked &&
+      document &&
+      ["PASSPORT", "VISA", "PERMISO_SALIDA"].includes(document.type)
+  );
   const status = document?.status;
   const isOtherType = document?.type ? NON_OCR_TYPES.has(document.type) : false;
   const canMarkAsReviewed = userIsAdmin && isOtherType && status !== "VERIFIED";
@@ -490,10 +516,17 @@ export function DocumentDetail() {
     await deleteDocument({ variables: { documentId: id } });
   }, [deleteDocument, id]);
 
-  const handleSaveExtractedData = useCallback((data) => {
-    if (!id) return;
-    saveExtractedData({ variables: { documentId: id, data } });
-  }, [id, saveExtractedData]);
+  const handleSaveExtractedData = useCallback(
+    async (data) => {
+      if (!id) return;
+      const result = await saveExtractedData({ variables: { documentId: id, data } });
+      if (result.data?.upsertDocumentExtractedData) {
+        addToast("Datos del documento actualizados", "success");
+        setEditModal(false);
+      }
+    },
+    [addToast, id, saveExtractedData]
+  );
 
   const handleMarkReviewed = useCallback(() => {
     if (!id) return;
@@ -750,14 +783,28 @@ export function DocumentDetail() {
                 <p className="text-xs text-slate-500 mt-2">Intentos: {document.ocrAttempts}</p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setEditModal(true)}
-              className="inline-flex flex-shrink-0 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]"
-            >
-              Editar datos manualmente
-            </button>
+            {!isSensitiveEditLocked && (
+              <button
+                type="button"
+                onClick={() => setEditModal(true)}
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-full px-4 py-2 text-xs font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]"
+              >
+                Editar datos manualmente
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {isSensitiveEditLocked && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4" role="status">
+          <p className="text-sm font-bold text-amber-950">
+            Información bloqueada después de verificar
+          </p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-amber-900">
+            {sensitiveEditLock.message} Este bloqueo evita cambios accidentales en datos que pueden
+            afectar boletos y trámites migratorios.
+          </p>
         </div>
       )}
 
@@ -779,9 +826,10 @@ export function DocumentDetail() {
             ) : (
               <div className="space-y-3">
                 {document.images.map((image, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={image.url}
-                    className="relative group cursor-pointer rounded-xl overflow-hidden ring-1 ring-slate-200"
+                    className="relative block w-full cursor-pointer overflow-hidden rounded-xl text-left ring-1 ring-slate-200"
                     onClick={() => openImageModal(image, index)}
                   >
                     <DocumentFilePreview
@@ -799,7 +847,7 @@ export function DocumentDetail() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all" />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -818,7 +866,7 @@ export function DocumentDetail() {
                   {updatingStatus ? "Marcando..." : "Marcar como revisado"}
                 </button>
               )}
-              {!isOtherType && (
+              {!isOtherType && !isSensitiveEditLocked && (
                 <button
                   type="button"
                   onClick={() => setEditModal(true)}
@@ -827,12 +875,15 @@ export function DocumentDetail() {
                   Editar datos
                 </button>
               )}
-              <button
-                onClick={() => setDeleteModal(true)}
-                className="w-full inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition active:scale-[0.98]"
-              >
-                Eliminar Documento
-              </button>
+              {!isSensitiveEditLocked && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteModal(true)}
+                  className="w-full inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition active:scale-[0.98]"
+                >
+                  Eliminar Documento
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -848,8 +899,9 @@ export function DocumentDetail() {
 
               {/* Preview del archivo si es imagen */}
               {mainImage && (
-                <div
-                  className="rounded-2xl overflow-hidden ring-1 ring-slate-200 mb-6 cursor-pointer"
+                <button
+                  type="button"
+                  className="mb-6 block w-full cursor-pointer overflow-hidden rounded-2xl ring-1 ring-slate-200"
                   onClick={() => openImageModal(mainImage, 0)}
                 >
                   <DocumentFilePreview
@@ -858,7 +910,7 @@ export function DocumentDetail() {
                     className="w-full block max-h-72 object-contain bg-slate-50"
                     frameClassName="max-h-72"
                   />
-                </div>
+                </button>
               )}
 
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -961,8 +1013,14 @@ export function DocumentDetail() {
                     ? "El documento está siendo procesado por el sistema OCR."
                     : "Este documento aún no ha sido procesado por OCR."}
                 </p>
-                {!isProcessing && (
-                  <button type="button" onClick={() => setEditModal(true)} className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]">Completar datos manualmente</button>
+                {!isProcessing && !isSensitiveEditLocked && (
+                  <button
+                    type="button"
+                    onClick={() => setEditModal(true)}
+                    className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold bg-black text-white hover:opacity-90 transition active:scale-[0.98]"
+                  >
+                    Completar datos manualmente
+                  </button>
                 )}
                 <div className="mt-8 pt-6 border-t border-slate-100 text-left">
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -1071,7 +1129,9 @@ export function DocumentDetail() {
           {document.images?.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={showPreviousImage}
+                aria-label="Imagen anterior"
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1084,7 +1144,9 @@ export function DocumentDetail() {
                 </svg>
               </button>
               <button
+                type="button"
                 onClick={showNextImage}
+                aria-label="Imagen siguiente"
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
