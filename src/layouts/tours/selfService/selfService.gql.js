@@ -41,37 +41,112 @@ export const MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY = gql`
   query MyTourParticipantDocumentSummary($tourId: ID!) {
     myTourParticipantDocumentSummary(tourId: $tourId) {
       participantId
-      passport { fullName givenNames surname nationality issuingCountry passportNumber documentNumber dateOfBirth sex expirationDate issueDate }
-      visa { visaType visaControlNumber issueDate expirationDate issuingCountry }
+      passport {
+        fullName
+        givenNames
+        surname
+        nationality
+        issuingCountry
+        passportNumber
+        documentNumber
+        dateOfBirth
+        sex
+        expirationDate
+        issueDate
+      }
+      visa {
+        visaType
+        visaControlNumber
+        issueDate
+        expirationDate
+        issuingCountry
+      }
     }
   }
 `;
 export const MY_TOUR_ITINERARY = gql`
   query MyTourItinerary($tourId: ID!) {
     myTourItinerary(tourId: $tourId) {
-      id name reservationNumber notes maxPassengers passengerCount
-      leaders { id firstName firstSurname secondSurname instrument }
-      flights { id airline flightNumber origin destination departureAt arrivalAt departureTimeZone arrivalTimeZone direction }
+      id
+      name
+      reservationNumber
+      notes
+      maxPassengers
+      passengerCount
+      leaders {
+        id
+        firstName
+        firstSurname
+        secondSurname
+        instrument
+      }
+      flights {
+        id
+        airline
+        flightNumber
+        origin
+        destination
+        departureAt
+        arrivalAt
+        departureTimeZone
+        arrivalTimeZone
+        direction
+      }
     }
   }
 `;
 export const MY_TOUR_FLIGHTS = gql`
   query MyTourFlights($tourId: ID!) {
     myTourFlights(tourId: $tourId) {
-      id airline flightNumber origin destination departureAt arrivalAt departureLocal arrivalLocal direction
-      passengers { participant { id } seatNumber }
+      id
+      airline
+      flightNumber
+      origin
+      destination
+      departureAt
+      arrivalAt
+      departureLocal
+      arrivalLocal
+      direction
+      passengers {
+        participant {
+          id
+        }
+        seatNumber
+      }
     }
   }
 `;
 export const UPDATE_MY_TOUR_PARTICIPANT_INFO = gql`
   mutation UpdateMyTourParticipantInfo($tourId: ID!, $input: MyTourParticipantUpdateInput!) {
     updateMyTourParticipantInfo(tourId: $tourId, input: $input) {
-      id firstName firstSurname secondSurname identification email phone birthDate selfServiceVerified selfServiceVerifiedAt
+      id
+      firstName
+      firstSurname
+      secondSurname
+      identification
+      email
+      phone
+      birthDate
+      selfServiceVerified
+      selfServiceVerifiedAt
     }
   }
 `;
 export const CONFIRM_MY_TOUR_PARTICIPANT_VERIFICATION = gql`
-  mutation ConfirmMyTourParticipantVerification($tourId: ID!, $acceptResponsibility: Boolean!) {
-    confirmMyTourParticipantVerification(tourId: $tourId, acceptResponsibility: $acceptResponsibility) { id selfServiceVerified selfServiceVerifiedAt }
+  mutation ConfirmMyTourParticipantVerification(
+    $tourId: ID!
+    $acceptResponsibility: Boolean!
+    $confirmedFields: [String!]!
+  ) {
+    confirmMyTourParticipantVerification(
+      tourId: $tourId
+      acceptResponsibility: $acceptResponsibility
+      confirmedFields: $confirmedFields
+    ) {
+      id
+      selfServiceVerified
+      selfServiceVerifiedAt
+    }
   }
 `;

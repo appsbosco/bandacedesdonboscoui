@@ -4,14 +4,6 @@ import { Link } from "react-router-dom";
 import { getExpiryStatus } from "../utils/tourAgeRules";
 import { computeVerificationCriteria } from "./verificationCriteria";
 
-const labels = {
-  firstName: "Nombre",
-  firstSurname: "Primer apellido",
-  identification: "Identificación",
-  email: "Correo electrónico",
-  passport: "Pasaporte vigente",
-  visa: "Visa vigente",
-};
 const statusLabel = {
   ok: "Vigente",
   warning: "Por vencer",
@@ -152,6 +144,7 @@ export default function TourSelfServiceDocuments({
   const [form, setForm] = useState({});
   const [saved, setSaved] = useState(false);
   const [showResponsibility, setShowResponsibility] = useState(false);
+  const [reviewChecks, setReviewChecks] = useState({});
   useEffect(
     () =>
       setForm({
@@ -165,6 +158,21 @@ export default function TourSelfServiceDocuments({
       }),
     [participant]
   );
+  useEffect(() => {
+    setReviewChecks({});
+  }, [
+    participant?.id,
+    participant?.selfServiceVerified,
+    participant?.firstName,
+    participant?.firstSurname,
+    participant?.secondSurname,
+    participant?.identification,
+    participant?.email,
+    participant?.passportNumber,
+    participant?.passportExpiry,
+    participant?.hasVisa,
+    participant?.visaExpiry,
+  ]);
   if (!participant) return null;
   const passportStatus = getExpiryStatus(participant.passportExpiry);
   const visaStatus = participant.hasVisa ? getExpiryStatus(participant.visaExpiry) : "missing";
@@ -172,6 +180,43 @@ export default function TourSelfServiceDocuments({
   const visa = documentSummary?.visa;
   const { criteria, passed } = computeVerificationCriteria(participant);
   const informationLocked = Boolean(participant.selfServiceVerified);
+  const passportNumber =
+    passport?.passportNumber || passport?.documentNumber || participant.passportNumber;
+  const verificationRows = [
+    { key: "firstName", label: "Nombre", detail: participant.firstName, ok: criteria.firstName },
+    {
+      key: "firstSurname",
+      label: "Apellidos",
+      detail: [participant.firstSurname, participant.secondSurname].filter(Boolean).join(" "),
+      ok: criteria.firstSurname,
+    },
+    {
+      key: "identification",
+      label: "Identificación",
+      detail: participant.identification,
+      ok: criteria.identification,
+    },
+    { key: "email", label: "Correo electrónico", detail: participant.email, ok: criteria.email },
+    {
+      key: "passport",
+      label: "Pasaporte",
+      detail: `N.º ${passportNumber || "sin registrar"} · Emisión ${displayDate(
+        passport?.issueDate
+      )} · Vence ${displayDate(passport?.expirationDate || participant.passportExpiry)}`,
+      ok: criteria.passport,
+    },
+    {
+      key: "visa",
+      label: "Visa",
+      detail: `${visa?.visaType || "Tipo sin registrar"} · Control ${
+        visa?.visaControlNumber || "sin registrar"
+      } · Emisión ${displayDate(visa?.issueDate)} · Vence ${displayDate(
+        visa?.expirationDate || participant.visaExpiry
+      )}`,
+      ok: criteria.visa,
+    },
+  ];
+  const allReviewed = verificationRows.every((row) => reviewChecks[row.key] === true);
   const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
     await onSaveInfo({
@@ -346,22 +391,53 @@ export default function TourSelfServiceDocuments({
       </section>
       <section className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold">Checklist de verificación</h3>
-        {Object.entries(criteria).map(([key, ok]) => (
-          <div key={key} className="flex justify-between bg-gray-50 rounded-lg px-3 py-2 text-xs">
-            <span>{labels[key]}</span>
-            <span className={ok ? "text-emerald-600" : "text-red-500"}>{ok ? "✓" : "✗"}</span>
-          </div>
+        <p className="text-xs leading-5 text-slate-600">
+          Marca cada casilla únicamente después de compararla con el documento físico.
+        </p>
+        {verificationRows.map((row) => (
+          <label
+            key={row.key}
+            className={`flex items-start gap-3 rounded-xl border px-3 py-3 ${
+              row.ok ? "cursor-pointer border-slate-200 bg-slate-50" : "border-red-200 bg-red-50"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={informationLocked || reviewChecks[row.key] === true}
+              disabled={!row.ok || informationLocked}
+              onChange={(event) =>
+                setReviewChecks((current) => ({
+                  ...current,
+                  [row.key]: event.target.checked,
+                }))
+              }
+              className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-700 disabled:cursor-not-allowed"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-bold text-slate-800">{row.label}</span>
+              <span className="mt-0.5 block break-words text-xs leading-5 text-slate-600">
+                {row.detail || "Información faltante"}
+              </span>
+              {!row.ok && (
+                <span className="mt-1 block text-xs font-semibold text-red-700">
+                  Debes corregir este dato antes de confirmarlo.
+                </span>
+              )}
+            </span>
+          </label>
         ))}
         {confirmError && <p className="text-xs text-red-600">{confirmError.message}</p>}
         <button
           type="button"
           onClick={() => setShowResponsibility(true)}
-          disabled={!passed || confirmLoading || participant.selfServiceVerified}
+          disabled={!passed || !allReviewed || confirmLoading || participant.selfServiceVerified}
           className="w-full px-4 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl disabled:opacity-40"
         >
           {participant.selfServiceVerified
             ? "Información ya verificada"
-            : "Confirmar mi información"}
+            : allReviewed
+            ? "Confirmar mi información"
+            : "Marca todas las casillas para continuar"}
         </button>
       </section>
       {showResponsibility && (
@@ -370,7 +446,7 @@ export default function TourSelfServiceDocuments({
           loading={confirmLoading}
           onCancel={() => setShowResponsibility(false)}
           onConfirm={async () => {
-            await onConfirm();
+            await onConfirm(verificationRows.map((row) => row.key));
             setShowResponsibility(false);
           }}
         />

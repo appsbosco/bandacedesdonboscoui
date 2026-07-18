@@ -38,35 +38,113 @@ export const GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY = gql`
   query GetMyChildTourParticipantDocumentSummary($tourId: ID!, $childUserId: ID!) {
     myChildTourParticipantDocumentSummary(tourId: $tourId, childUserId: $childUserId) {
       participantId
-      passport { fullName givenNames surname nationality issuingCountry passportNumber documentNumber dateOfBirth sex expirationDate issueDate }
-      visa { visaType visaControlNumber issueDate expirationDate issuingCountry }
+      passport {
+        fullName
+        givenNames
+        surname
+        nationality
+        issuingCountry
+        passportNumber
+        documentNumber
+        dateOfBirth
+        sex
+        expirationDate
+        issueDate
+      }
+      visa {
+        visaType
+        visaControlNumber
+        issueDate
+        expirationDate
+        issuingCountry
+      }
     }
   }
 `;
 export const GET_MY_CHILD_TOUR_ITINERARY = gql`
   query GetMyChildTourItinerary($tourId: ID!, $childUserId: ID!) {
     myChildTourItinerary(tourId: $tourId, childUserId: $childUserId) {
-      id name reservationNumber notes maxPassengers passengerCount
-      leaders { id firstName firstSurname secondSurname instrument }
-      flights { id airline flightNumber origin destination departureAt arrivalAt departureTimeZone arrivalTimeZone direction }
+      id
+      name
+      reservationNumber
+      notes
+      maxPassengers
+      passengerCount
+      leaders {
+        id
+        firstName
+        firstSurname
+        secondSurname
+        instrument
+      }
+      flights {
+        id
+        airline
+        flightNumber
+        origin
+        destination
+        departureAt
+        arrivalAt
+        departureTimeZone
+        arrivalTimeZone
+        direction
+      }
     }
   }
 `;
 export const GET_MY_CHILD_TOUR_FLIGHTS = gql`
   query GetMyChildTourFlights($tourId: ID!, $childUserId: ID!) {
-    myChildTourFlights(tourId: $tourId, childUserId: $childUserId) { id airline flightNumber origin destination departureAt arrivalAt departureLocal arrivalLocal direction }
+    myChildTourFlights(tourId: $tourId, childUserId: $childUserId) {
+      id
+      airline
+      flightNumber
+      origin
+      destination
+      departureAt
+      arrivalAt
+      departureLocal
+      arrivalLocal
+      direction
+    }
   }
 `;
 export const UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO = gql`
-  mutation UpdateMyChildTourParticipantInfo($tourId: ID!, $childUserId: ID!, $input: MyTourParticipantUpdateInput!) {
+  mutation UpdateMyChildTourParticipantInfo(
+    $tourId: ID!
+    $childUserId: ID!
+    $input: MyTourParticipantUpdateInput!
+  ) {
     updateMyChildTourParticipantInfo(tourId: $tourId, childUserId: $childUserId, input: $input) {
-      id firstName firstSurname secondSurname identification email phone birthDate selfServiceVerified selfServiceVerifiedAt
+      id
+      firstName
+      firstSurname
+      secondSurname
+      identification
+      email
+      phone
+      birthDate
+      selfServiceVerified
+      selfServiceVerifiedAt
     }
   }
 `;
 export const CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION = gql`
-  mutation ConfirmMyChildTourParticipantVerification($tourId: ID!, $childUserId: ID!, $acceptResponsibility: Boolean!) {
-    confirmMyChildTourParticipantVerification(tourId: $tourId, childUserId: $childUserId, acceptResponsibility: $acceptResponsibility) { id selfServiceVerified selfServiceVerifiedAt }
+  mutation ConfirmMyChildTourParticipantVerification(
+    $tourId: ID!
+    $childUserId: ID!
+    $acceptResponsibility: Boolean!
+    $confirmedFields: [String!]!
+  ) {
+    confirmMyChildTourParticipantVerification(
+      tourId: $tourId
+      childUserId: $childUserId
+      acceptResponsibility: $acceptResponsibility
+      confirmedFields: $confirmedFields
+    ) {
+      id
+      selfServiceVerified
+      selfServiceVerifiedAt
+    }
   }
 `;
 
