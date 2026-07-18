@@ -18,13 +18,16 @@ import ItinerariesManager from "./ItinerariesManager";
 import ItineraryPassengersModal from "./ItineraryPassengersModal";
 import ParticipantsTableView from "./ParticipantsTableView";
 import UnassignedParticipantsView from "./UnassignedParticipantsView";
+import StaffItineraryBoard from "./StaffItineraryBoard";
 import { Toast } from "../TourHelpers";
 
 const TABS = [
   { id: "itineraries", label: "Itinerarios", emoji: "🗓️" },
   { id: "flights", label: "Vuelos", emoji: "✈️" },
-  { id: "unassigned", label: "Sin asignar", emoji: "⚠️" },
-  { id: "participantsTable", label: "Participantes", emoji: "📋" },
+  // { id: "unassigned", label: "Sin asignar", emoji: "⚠️" },
+  { id: "participantsBoard", label: "Distribución", emoji: "↔️" },
+  { id: "staff", label: "Staff e invitados", emoji: "👥" },
+  { id: "participantsTable", label: "Lista participantes", emoji: "📋" },
   { id: "unassignedParticipants", label: "Participantes sin itinerario", emoji: "🙋" },
 ];
 
@@ -66,7 +69,11 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
   } = useTourFlights(tourId);
 
   // ── Itineraries hook (itinerary CRUD + assign flights + assign passengers) ─
-  const needsParticipants = tab === "participantsTable" || tab === "unassignedParticipants";
+  const needsParticipants =
+    tab === "participantsTable" ||
+    tab === "unassignedParticipants" ||
+    tab === "staff" ||
+    tab === "participantsBoard";
   const itinerariesHook = useTourItineraries(tourId, { skipParticipants: !needsParticipants });
   const { unassignedFlights } = itinerariesHook;
 
@@ -92,6 +99,7 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
           </p>
         </div>
         <button
+          type="button"
           onClick={openCreateModal}
           className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
         >
@@ -126,6 +134,7 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
       <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit flex-wrap">
         {TABS.map((t) => (
           <button
+            type="button"
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -235,6 +244,33 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
               assigning={itinerariesHook.assigningPassengers}
               loading={itinerariesHook.participantsLoading}
               tourEndDate={tourEndDate}
+            />
+          )}
+
+          {/* ── STAFF BOARD TAB ── */}
+          {tab === "staff" && (
+            <StaffItineraryBoard
+              itineraries={itinerariesHook.itineraries}
+              unassignedParticipants={itinerariesHook.unassignedParticipants}
+              onAssign={itinerariesHook.handleAssignParticipantToItinerary}
+              onReassign={itinerariesHook.handleReassignPassenger}
+              loading={itinerariesHook.participantsLoading}
+              tourEndDate={tourEndDate}
+              moving={itinerariesHook.assigningPassengers || itinerariesHook.reassigningPassenger}
+            />
+          )}
+
+          {/* ── ALL PARTICIPANTS BOARD TAB ── */}
+          {tab === "participantsBoard" && (
+            <StaffItineraryBoard
+              includeAll
+              itineraries={itinerariesHook.itineraries}
+              unassignedParticipants={itinerariesHook.unassignedParticipants}
+              onAssign={itinerariesHook.handleAssignParticipantToItinerary}
+              onReassign={itinerariesHook.handleReassignPassenger}
+              loading={itinerariesHook.participantsLoading}
+              tourEndDate={tourEndDate}
+              moving={itinerariesHook.assigningPassengers || itinerariesHook.reassigningPassenger}
             />
           )}
         </>
@@ -382,6 +418,7 @@ function UnassignedView({ flights, onEdit, onDelete, onGoToItineraries }) {
           vuelos.
         </p>
         <button
+          type="button"
           onClick={onGoToItineraries}
           className="flex-shrink-0 text-xs font-bold text-amber-800 underline hover:no-underline"
         >

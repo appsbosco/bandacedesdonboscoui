@@ -33,6 +33,11 @@ export const DEFAULT_AGE_BUCKETS = [
 ];
 
 export const SEX_CONFIG = {
+  STAFF: {
+    label: "Staff y huéspedes",
+    short: "STAFF",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+  },
   M: {
     label: "Hombres",
     short: "M",
@@ -253,12 +258,14 @@ export function computeGroups(
   const map = new Map();
 
   for (const p of participants) {
-    const sex = p.sex || sexOverrides.get(p.id) || "UNKNOWN";
+    const isStaffOrGuest = ["STAFF", "GUEST"].includes(p.role);
+    const sex = isStaffOrGuest ? "STAFF" : (p.sex || sexOverrides.get(p.id) || "UNKNOWN");
 
     if (!map.has(sex)) {
       map.set(sex, {
         key: sex,
         sex,
+        role: isStaffOrGuest ? "STAFF" : null,
         sexLabel: SEX_CONFIG[sex]?.label || "Sin sexo",
         ageBucketLabel: null,   // compatibilidad con UI anterior
         ageRangeLabel: null,
@@ -287,7 +294,7 @@ export function computeGroups(
     }
   }
 
-  const sexOrder = { M: 0, F: 1, OTHER: 2, UNKNOWN: 3 };
+  const sexOrder = { STAFF: 0, M: 1, F: 2, OTHER: 3, UNKNOWN: 4 };
 
   return Array.from(map.values()).sort((a, b) => {
     return (sexOrder[a.sex] ?? 9) - (sexOrder[b.sex] ?? 9);
@@ -562,6 +569,7 @@ export function computeRebalanceOps({
       {
         id: r.id,
         capacity: r.capacity,
+        roomUse: r.roomUse || "REGULAR",
         occupants: [...(r.occupants || [])],
       },
     ])
@@ -571,7 +579,7 @@ export function computeRebalanceOps({
   const getSex = (p) => p?.sex || sexOverrides.get(p?.id) || "UNKNOWN";
 
   const isStaff = (pId) =>
-    allParticipants.find((x) => x.id === pId)?.isStaff === true;
+    ["STAFF", "GUEST"].includes(allParticipants.find((x) => x.id === pId)?.role);
 
   /** Dominant sex of a room's current (simulated) occupants. null = empty. */
   const getRoomDominantSex = (roomId) => {
@@ -593,7 +601,12 @@ export function computeRebalanceOps({
 
   /** Returns true if pId can be placed in roomId (sex compatibility). */
   const canGoToRoom = (pId, roomId) => {
-    if (isStaff(pId)) return true;
+    const room = roomMap.get(roomId);
+    if (!room) return false;
+    const participantIsStaff = isStaff(pId);
+    if (room.roomUse === "STAFF") return participantIsStaff;
+    if (room.roomUse === "MIXED") return true;
+    if (participantIsStaff) return false;
 
     const p = allParticipants.find((x) => x.id === pId);
     const pSex = getSex(p || { id: pId });

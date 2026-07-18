@@ -15,9 +15,24 @@ function instrumentLabel(row) {
 }
 
 function participantLabel(row) {
-  const id = row?.identification ? ` · ${row.identification}` : "";
+  const phone = row?.phone ? ` · Tel. ${row.phone}` : "";
   const removed = row?.isRemoved ? " · Retirado" : "";
-  return `${row?.fullName || "Sin nombre"}${id}${removed}`;
+  return `${row?.fullName || "Sin nombre"}${phone}${removed}`;
+}
+
+const reportDateFormatter = new Intl.DateTimeFormat("es-CR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+function formatReportDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "fecha no disponible" : reportDateFormatter.format(date);
+}
+
+function installmentLabel(installment) {
+  return installment.concept || `Cuota ${installment.order}`;
 }
 
 function sortRows(a, b) {
@@ -43,28 +58,98 @@ function groupByInstrument(rows) {
   }));
 }
 
+function isDelinquent(row, now = new Date()) {
+  return (row.installments || []).some((installment) => {
+    if (installment.status === "WAIVED" || (installment.remainingAmount || 0) <= 0) {
+      return false;
+    }
+
+    const dueDate = new Date(installment.dueDate);
+    return !Number.isNaN(dueDate.getTime()) && dueDate < now;
+  });
+}
+
+function pendingOverdueInstallments(row, now = new Date()) {
+  return (row.installments || []).filter((installment) => {
+    if (installment.status === "WAIVED" || (installment.remainingAmount || 0) <= 0) {
+      return false;
+    }
+
+    const dueDate = new Date(installment.dueDate);
+    return !Number.isNaN(dueDate.getTime()) && dueDate < now;
+  });
+}
+
+function buildPaymentSituation(row, now = new Date()) {
+  const installments = [...(row.installments || [])].sort((a, b) => a.order - b.order);
+  const overdue = pendingOverdueInstallments(row, now);
+
+  if (overdue.length) {
+    const details = overdue.map(
+      (installment) =>
+        `${installmentLabel(installment)} (venció ${formatReportDate(
+          installment.dueDate
+        )}; debe ${fmtAmount(installment.remainingAmount || 0)})`
+    );
+    return `MOROSO EN: ${details.join("; ")}`;
+  }
+
+  if ((row.balance || 0) <= 0) {
+    const lastInstallment = [...installments].reverse().find((item) => item.status !== "WAIVED");
+    return lastInstallment
+      ? `100% al día · Plan cancelado hasta ${installmentLabel(
+          lastInstallment
+        )} (${formatReportDate(lastInstallment.dueDate)})`
+      : "100% al día · Sin saldo pendiente";
+  }
+
+  const coveredToDate = [...installments]
+    .reverse()
+    .find((item) => new Date(item.dueDate) <= now && ["PAID", "WAIVED"].includes(item.status));
+  const nextInstallment = installments.find(
+    (item) =>
+      item.status !== "WAIVED" && (item.remainingAmount || 0) > 0 && new Date(item.dueDate) >= now
+  );
+
+  const coveredText = coveredToDate
+    ? `Al día hasta ${installmentLabel(coveredToDate)} (${formatReportDate(coveredToDate.dueDate)})`
+    : `Al día al ${formatReportDate(now)}`;
+  const nextText = nextInstallment
+    ? ` · Próxima: ${installmentLabel(nextInstallment)} vence ${formatReportDate(
+        nextInstallment.dueDate
+      )}`
+    : "";
+
+  return `${coveredText}${nextText}`;
+}
+
 function getReportData(rows = []) {
   const activeRows = rows.filter((row) => !row.isRemoved);
   const sourceRows = activeRows.length ? activeRows : rows;
-  const unpaidRows = sourceRows.filter((row) => (row.totalPaid || 0) <= 0);
-  const paidRows = sourceRows.filter((row) => (row.totalPaid || 0) > 0);
+  const hasPendingBalance = (row) => (row.balance || 0) > 0;
+  const unpaidRows = sourceRows.filter(
+    (row) => (row.totalPaid || 0) <= 0 && hasPendingBalance(row)
+  );
+  const partialRows = sourceRows.filter(
+    (row) => (row.totalPaid || 0) > 0 && hasPendingBalance(row)
+  );
+  const currentRows = sourceRows.filter(
+    (row) => (row.finalAmount || 0) > 0 && !hasPendingBalance(row)
+  );
+  const delinquentRows = sourceRows.filter((row) => hasPendingBalance(row) && isDelinquent(row));
 
   return {
     totalParticipants: sourceRows.length,
     unpaidRows,
-    paidRows,
+    partialRows,
+    currentRows,
+    delinquentRows,
     unpaidGroups: groupByInstrument(unpaidRows),
-    paidGroups: groupByInstrument(paidRows),
-    totalPaid: paidRows.reduce((sum, row) => sum + (row.totalPaid || 0), 0),
+    partialGroups: groupByInstrument(partialRows),
+    currentGroups: groupByInstrument(currentRows),
+    totalPaid: sourceRows.reduce((sum, row) => sum + (row.totalPaid || 0), 0),
     totalPending: sourceRows.reduce((sum, row) => sum + Math.max(0, row.balance || 0), 0),
   };
-}
-
-function buildPaidAmountText(row) {
-  const paid = fmtAmount(row.totalPaid);
-  const pending = Math.max(0, row.balance || 0);
-  const pendingText = pending > 0 ? ` · Debe ${fmtAmount(pending)}` : " · Al día";
-  return `${paid}${pendingText}`;
 }
 
 function buildWhatsappSection(title, groups, rowFormatter) {
@@ -86,24 +171,42 @@ export function buildTourPaymentsWhatsappText({ rows = [], tourName = "Gira" }) 
     `*Control financiero · ${tourName}*`,
     `${data.totalParticipants} participantes activos`,
     `Sin pago: ${data.unpaidRows.length}`,
-    `Con pago: ${data.paidRows.length}`,
+    `Pago parcial: ${data.partialRows.length}`,
+    `Morosos: ${data.delinquentRows.length}`,
+    `100% al día: ${data.currentRows.length}`,
     `Cobrado: ${fmtAmount(data.totalPaid)}`,
+    `Pendiente por cobrar: ${fmtAmount(data.totalPending)}`,
     "",
     buildWhatsappSection(
       "*SIN NINGUN PAGO*",
       data.unpaidGroups,
-      (row) => `${participantLabel(row)} · Debe ${fmtAmount(Math.max(0, row.balance || row.finalAmount || 0))}`
+      (row) =>
+        `${participantLabel(row)} · Debe ${fmtAmount(
+          Math.max(0, row.balance || row.finalAmount || 0)
+        )}\n   ${isDelinquent(row) ? "🔴 " : "✅ "}${buildPaymentSituation(row)}`
     ),
     "",
     buildWhatsappSection(
-      "*CON PAGOS REGISTRADOS*",
-      data.paidGroups,
-      (row) => `${participantLabel(row)} · Pagado ${buildPaidAmountText(row)}`
+      "*PAGO PARCIAL · SALDO PENDIENTE*",
+      data.partialGroups,
+      (row) =>
+        `${participantLabel(row)} · Pagado ${fmtAmount(row.totalPaid || 0)} · Le falta ${fmtAmount(
+          Math.max(0, row.balance || 0)
+        )}\n   ${isDelinquent(row) ? "🔴 " : "✅ "}${buildPaymentSituation(row)}`
+    ),
+    "",
+    buildWhatsappSection(
+      "*✅ 100% AL DIA*",
+      data.currentGroups,
+      (row) =>
+        `${participantLabel(row)} · Pagado ${fmtAmount(row.totalPaid || 0)} · Saldo ${fmtAmount(
+          0
+        )}\n   ✅ ${buildPaymentSituation(row)}`
     ),
   ].join("\n");
 }
 
-function buildPrintGroupHTML(groups, { paid }) {
+function buildPrintGroupHTML(groups, { paid, showStatus = false }) {
   if (!groups.length) {
     return `<div class="empty">Sin registros.</div>`;
   }
@@ -119,7 +222,8 @@ function buildPrintGroupHTML(groups, { paid }) {
     <thead>
       <tr>
         <th>Participante</th>
-        <th>Cedula</th>
+        <th>Teléfono</th>
+        <th>Situación de cuotas</th>
         <th class="num">Total</th>
         <th class="num">Pagado</th>
         <th class="num">Debe</th>
@@ -132,8 +236,10 @@ function buildPrintGroupHTML(groups, { paid }) {
         <td>
           <strong>${escapeHTML(row.fullName || "Sin nombre")}</strong>
           ${row.isRemoved ? `<span class="tag">Retirado</span>` : ""}
+          ${showStatus && isDelinquent(row) ? `<span class="tag late">Moroso</span>` : ""}
         </td>
-        <td>${escapeHTML(row.identification || "-")}</td>
+        <td>${escapeHTML(row.phone || "Sin teléfono")}</td>
+        <td class="situation">${escapeHTML(buildPaymentSituation(row))}</td>
         <td class="num">${escapeHTML(fmtAmount(row.finalAmount || 0))}</td>
         <td class="num ${paid ? "paid" : ""}">${escapeHTML(fmtAmount(row.totalPaid || 0))}</td>
         <td class="num debt">${escapeHTML(fmtAmount(Math.max(0, row.balance || 0)))}</td>
@@ -143,7 +249,9 @@ function buildPrintGroupHTML(groups, { paid }) {
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="3">${group.members.length} participante${group.members.length !== 1 ? "s" : ""}</td>
+        <td colspan="4">${group.members.length} participante${
+        group.members.length !== 1 ? "s" : ""
+      }</td>
         <td class="num paid">${escapeHTML(fmtAmount(group.totalPaid))}</td>
         <td class="num debt">${escapeHTML(fmtAmount(group.totalBalance))}</td>
       </tr>
@@ -202,9 +310,11 @@ export function openTourPaymentsPrint({ rows = [], tourName = "Gira" }) {
     th { background: #f9fafb; color: #6b7280; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
     tfoot td { background: #f9fafb; font-weight: 800; }
     .num { text-align: right; white-space: nowrap; }
+    .situation { min-width: 190px; color: #374151; line-height: 1.35; }
     .paid { color: #047857; font-weight: 800; }
     .debt { color: #b45309; font-weight: 800; }
     .tag { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 99px; background: #fee2e2; color: #b91c1c; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .tag.late { background: #dc2626; color: #ffffff; }
     .empty { padding: 14px; border: 1px dashed #d1d5db; border-radius: 8px; color: #6b7280; font-size: 11px; }
     footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; }
     .no-print { display: flex; }
@@ -226,24 +336,42 @@ export function openTourPaymentsPrint({ rows = [], tourName = "Gira" }) {
       </div>
     </header>
 
-    <div class="stats">
+    <div class="stats" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat"><strong>${data.unpaidRows.length}</strong><span>Sin ningun pago</span></div>
-      <div class="stat"><strong>${data.paidRows.length}</strong><span>Con pagos</span></div>
-      <div class="stat"><strong>${escapeHTML(fmtAmount(data.totalPaid))}</strong><span>Total pagado</span></div>
-      <div class="stat"><strong>${escapeHTML(fmtAmount(data.totalPending))}</strong><span>Por cobrar</span></div>
+      <div class="stat"><strong>${data.partialRows.length}</strong><span>Pago parcial</span></div>
+      <div class="stat"><strong>${data.delinquentRows.length}</strong><span>Morosos</span></div>
+      <div class="stat"><strong>${data.currentRows.length}</strong><span>100% al dia</span></div>
+      <div class="stat"><strong>${escapeHTML(
+        fmtAmount(data.totalPaid)
+      )}</strong><span>Total pagado</span></div>
     </div>
 
     <div class="section-title">
       <h2>Sin ningun pago</h2>
       <span>Agrupado por instrumento</span>
     </div>
-    ${buildPrintGroupHTML(data.unpaidGroups, { paid: false })}
+    ${buildPrintGroupHTML(data.unpaidGroups, { paid: false, showStatus: true })}
 
     <div class="section-title">
-      <h2>Con pagos registrados</h2>
-      <span>Incluye pagado y saldo pendiente</span>
+      <h2>Pago parcial · saldo pendiente</h2>
+      <span>Pagado y monto que le falta a cada participante</span>
     </div>
-    ${buildPrintGroupHTML(data.paidGroups, { paid: true })}
+    ${buildPrintGroupHTML(data.partialGroups, { paid: true, showStatus: true })}
+
+    <div class="section-title">
+      <h2>100% al dia</h2>
+      <span>Sin saldo pendiente</span>
+    </div>
+    ${buildPrintGroupHTML(data.currentGroups, { paid: true })}
+
+    <div class="stats" style="grid-template-columns:repeat(2,1fr);margin-top:22px">
+      <div class="stat"><strong>${escapeHTML(
+        fmtAmount(data.totalPending)
+      )}</strong><span>Total por cobrar</span></div>
+      <div class="stat"><strong>${
+        data.delinquentRows.length
+      }</strong><span>Participantes morosos marcados en rojo</span></div>
+    </div>
 
     <footer>Banda CEDES Don Bosco</footer>
   </main>

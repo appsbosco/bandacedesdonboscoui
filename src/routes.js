@@ -6,11 +6,8 @@ import FactCheckIcon from "@mui/icons-material/FactCheck";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
 import FlagIcon from "@mui/icons-material/Flag";
-import Document from "examples/Icons/Document";
 import SendIcon from "@mui/icons-material/Send";
-import SpaceShip from "examples/Icons/SpaceShip";
 import PaidIcon from "@mui/icons-material/Paid";
 import SchoolIcon from "@mui/icons-material/School";
 import PublicIcon from "@mui/icons-material/Public";
@@ -24,6 +21,17 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import GraphicEqIcon from "@mui/icons-material/GraphicEq";
+import PersonIcon from "@mui/icons-material/Person";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import LoginIcon from "@mui/icons-material/Login";
+import LockResetIcon from "@mui/icons-material/LockReset";
+import InsightsIcon from "@mui/icons-material/Insights";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import GroupsIcon from "@mui/icons-material/Groups";
 
 import AbsencePermissionsPage from "layouts/absencePermissions";
 import SignIn from "layouts/authentication/sign-in";
@@ -218,7 +226,7 @@ const items = {
       name: "Lista de almuerzos",
       key: "lista-almuerzos",
       route: "/lista-almuerzos",
-      icon: muiIcon12(RestaurantIcon),
+      icon: muiIcon12(FormatListBulletedIcon),
       component: <ListaAlmuerzos />,
     }),
   tuner: () =>
@@ -226,7 +234,7 @@ const items = {
       name: "Afinador",
       key: "tuner",
       route: "/tuner",
-      icon: muiIcon12(SentimentSatisfiedAltIcon),
+      icon: muiIcon12(GraphicEqIcon),
       component: <Tuner />,
     }),
   profile: () =>
@@ -234,7 +242,7 @@ const items = {
       name: "Perfil",
       key: "Profile",
       route: "/Profile",
-      icon: muiIcon12(SentimentSatisfiedAltIcon),
+      icon: muiIcon12(PersonIcon),
       component: <Profile />,
     }),
 
@@ -243,7 +251,7 @@ const items = {
       name: "Sign In",
       key: "sign-in",
       route: "/autenticacion/iniciar-sesion",
-      icon: <Document size="12px" />,
+      icon: muiIcon12(LoginIcon),
       component: <SignIn />,
     }),
   signUp: () =>
@@ -251,7 +259,7 @@ const items = {
       name: "Sign Up",
       key: "sign-up",
       route: "/autenticacion/registrarse-privado",
-      icon: <SpaceShip size="12px" />,
+      icon: muiIcon12(PersonAddIcon),
       component: <SignUp />,
     }),
   parentsSignUp: () =>
@@ -259,7 +267,7 @@ const items = {
       name: "Sign Up",
       key: "parents-sign-up",
       route: "/autenticacion/registro-privado",
-      icon: <SpaceShip size="12px" />,
+      icon: muiIcon12(PersonAddIcon),
       component: <ParentsSignUp />,
     }),
   passwordReset: () =>
@@ -267,7 +275,7 @@ const items = {
       name: "Password Reset",
       key: "password-reset",
       route: "/autenticacion/recuperar/:token",
-      icon: <SpaceShip size="12px" />,
+      icon: muiIcon12(LockResetIcon),
       component: <PasswordReset />,
     }),
 
@@ -316,7 +324,7 @@ const items = {
       name: "Asistencia de mi hijo/a",
       key: "parent-dashboard",
       route: "/parent-dashboard",
-      icon: muiIcon12(DashboardIcon),
+      icon: muiIcon12(FamilyRestroomIcon),
       component: <ParentDashboardPage />,
     }),
   payments: () =>
@@ -349,7 +357,7 @@ const items = {
       name: "Asist. a presentaciones",
       key: "performance-attendance",
       route: "/performance-attendance",
-      icon: muiIcon12(FactCheckIcon),
+      icon: muiIcon12(CampaignIcon),
       component: <PerformanceAttendance />,
     }),
 
@@ -366,7 +374,7 @@ const items = {
       name: "Perfil",
       key: "parents-profile",
       route: "/parents-profile",
-      icon: muiIcon12(SentimentSatisfiedAltIcon),
+      icon: muiIcon12(PersonIcon),
       component: <ParentsProfile />,
     }),
 
@@ -394,7 +402,7 @@ const items = {
       name: "Lista de entradas",
       key: "lista-entradas",
       route: "/lista-entradas",
-      icon: muiIcon12(ConfirmationNumberIcon),
+      icon: muiIcon12(FormatListBulletedIcon),
       component: <TicketList />,
     }),
   ticketListDetail: () =>
@@ -416,7 +424,7 @@ const items = {
       name: "Asignar entradas",
       key: "asignar-entradas",
       route: "/asignar-entradas",
-      icon: muiIcon12(ConfirmationNumberIcon),
+      icon: muiIcon12(PersonAddIcon),
       component: <AssignTickets />,
     }),
   ticketScan: ({ name = "Escaneo de entradas", key = "qr-scanner" } = {}) =>
@@ -537,7 +545,7 @@ const items = {
       name: "Mi rendimiento",
       key: "academic-student",
       route: "/academic",
-      icon: muiIcon12(SchoolIcon),
+      icon: muiIcon12(InsightsIcon),
       component: <StudentAcademicPage />,
     }),
 
@@ -546,7 +554,7 @@ const items = {
       name: "Rendimiento académico",
       key: "academic-admin",
       route: "/academic/admin",
-      icon: muiIcon12(SchoolIcon),
+      icon: muiIcon12(ManageAccountsIcon),
       component: <AdminAcademicPage />,
     }),
 
@@ -555,7 +563,7 @@ const items = {
       name: "Rendimiento académico",
       key: "academic-parent",
       route: "/academic/parent",
-      icon: muiIcon12(SchoolIcon),
+      icon: muiIcon12(FamilyRestroomIcon),
       component: <ParentAcademicPage />,
     }),
 
@@ -564,7 +572,7 @@ const items = {
       name: "Seguimiento académico",
       key: "academic-section",
       route: "/academic/section",
-      icon: muiIcon12(SchoolIcon),
+      icon: muiIcon12(GroupsIcon),
       component: <SectionAcademicPage />,
     }),
 };
@@ -605,7 +613,7 @@ export const protectedRoutes = [
     name: "Entradas",
     key: "lista-entradas",
     route: "/lista-entradas",
-    icon: muiIcon12(ConfirmationNumberIcon),
+    icon: muiIcon12(FormatListBulletedIcon),
     component: <TicketList />,
   }),
   items.ticketListDetail(),

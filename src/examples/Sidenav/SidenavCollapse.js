@@ -24,6 +24,7 @@ import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Icon from "@mui/material/Icon";
+import Tooltip from "@mui/material/Tooltip";
 
 // Banda CEDES Don Bosco components
 import SoftBox from "components/SoftBox";
@@ -54,24 +55,36 @@ function SidenavCollapse({
 
   return (
     <>
-      <ListItem component="li">
-        <SoftBox {...rest} sx={(theme) => collapseItem(theme, { active, transparentSidenav })}>
-          <ListItemIcon
-            sx={(theme) => collapseIconBox(theme, { active, transparentSidenav, color })}
+      <Tooltip
+        title={name}
+        placement="right"
+        arrow
+        disableHoverListener={!miniSidenav}
+        disableFocusListener={!miniSidenav}
+      >
+        <ListItem component="li">
+          <SoftBox
+            {...rest}
+            aria-label={miniSidenav ? name : undefined}
+            sx={(theme) => collapseItem(theme, { active, transparentSidenav })}
           >
-            {typeof icon === "string" ? (
-              <Icon sx={(theme) => collapseIcon(theme, { active })}>{icon}</Icon>
-            ) : (
-              icon
-            )}
-          </ListItemIcon>
+            <ListItemIcon
+              sx={(theme) => collapseIconBox(theme, { active, transparentSidenav, color })}
+            >
+              {typeof icon === "string" ? (
+                <Icon sx={(theme) => collapseIcon(theme, { active })}>{icon}</Icon>
+              ) : (
+                icon
+              )}
+            </ListItemIcon>
 
-          <ListItemText
-            primary={name}
-            sx={(theme) => collapseText(theme, { miniSidenav, transparentSidenav, active })}
-          />
-        </SoftBox>
-      </ListItem>
+            <ListItemText
+              primary={name}
+              sx={(theme) => collapseText(theme, { miniSidenav, transparentSidenav, active })}
+            />
+          </SoftBox>
+        </ListItem>
+      </Tooltip>
       {children && (
         <Collapse in={open} unmountOnExit>
           {children}

@@ -70,6 +70,7 @@ function DocumentQuickPreview({ image, alt }) {
       <iframe
         src={buildPdfPreviewUrl(getCloudinaryPdfUrl(image), image.publicId)}
         title={`Vista previa PDF${alt ? ` - ${alt}` : ""}`}
+        sandbox=""
         className="h-full w-full border-0"
       />
     );
@@ -221,7 +222,7 @@ export function DocumentList({
                       disabled={updatingStatus}
                       className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
                     >
-                      Completar
+                      Aprobar documento
                     </button>
                   )}
                 </div>
@@ -234,6 +235,7 @@ export function DocumentList({
         {hasMore && (
           <div className="pt-4">
             <button
+              type="button"
               onClick={onLoadMore}
               disabled={loadingMore}
               className="
@@ -297,7 +299,7 @@ export function DocumentList({
                 disabled={updatingStatus}
                 className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
               >
-                Marcar como completado
+                Aprobar documento
               </button>
             )}
           </div>

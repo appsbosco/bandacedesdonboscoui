@@ -20,20 +20,22 @@ const FLIGHT_DIR = {
   },
 };
 
-function formatDate(iso) {
+function formatDate(iso, timeZone) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("es-CR", {
     day: "2-digit",
     month: "short",
+    ...(timeZone ? { timeZone } : {}),
   });
 }
 
-function formatTime12(iso) {
+function formatTime12(iso, timeZone) {
   if (!iso) return null;
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    ...(timeZone ? { timeZone } : {}),
   });
 }
 
@@ -51,8 +53,8 @@ function participantFullName(p) {
 
 function FlightRow({ flight, onUnassign }) {
   const dir = FLIGHT_DIR[flight.direction] || FLIGHT_DIR.OUTBOUND;
-  const depTime = formatTime12(flight.departureAt);
-  const arrTime = formatTime12(flight.arrivalAt);
+  const depTime = formatTime12(flight.departureAt, flight.departureTimeZone);
+  const arrTime = formatTime12(flight.arrivalAt, flight.arrivalTimeZone);
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100 text-xs">
@@ -68,7 +70,9 @@ function FlightRow({ flight, onUnassign }) {
         {flight.origin}→{flight.destination}
       </span>
       <span className="flex-1" />
-      <span className="text-gray-400 flex-shrink-0">{formatDate(flight.departureAt)}</span>
+      <span className="text-gray-400 flex-shrink-0">
+        {formatDate(flight.departureAt, flight.departureTimeZone)}
+      </span>
       {depTime && (
         <span className="text-gray-700 font-semibold flex-shrink-0">
           {depTime}

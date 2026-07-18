@@ -61,7 +61,7 @@ function sortMembers(members) {
   });
 }
 
-function roleLabel(p, isLeader, fallback = "Pasajero") {
+function roleLabel(p, isLeader, fallback = "Integrante/Pasajero") {
   if (isLeader) return "Líder";
   if (p.role === "STAFF") return "Staff";
   return fallback;

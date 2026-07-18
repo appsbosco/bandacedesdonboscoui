@@ -170,6 +170,7 @@ export function useTourPayments(tourId) {
   const [activeView, setActiveView] = useState("table");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [instrumentFilter, setInstrumentFilter] = useState("ALL");
   const [toast, setToast] = useState(null);
 
   // Modals
@@ -497,6 +498,14 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
   const rawRows = financialTable?.rows ?? EMPTY_ARRAY;
   const tableColumns = financialTable?.columns ?? EMPTY_ARRAY;
 
+  const instrumentOptions = useMemo(
+    () =>
+      [...new Set(rawRows.map((row) => row.instrument?.trim() || "Sin sección"))].sort(
+        (a, b) => a.localeCompare(b, "es", { sensitivity: "base" })
+      ),
+    [rawRows]
+  );
+
   // defaultPlan con useMemo: .find() no debería ejecutarse en cada render
   const defaultPlan = useMemo(() => plans.find((p) => p.isDefault) ?? plans[0] ?? null, [plans]);
 
@@ -514,6 +523,9 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
           !lowerSearch ||
           row.fullName.toLowerCase().includes(lowerSearch) ||
           row.identification.toLowerCase().includes(lowerSearch);
+        const rowInstrument = row.instrument?.trim() || "Sin sección";
+        const matchInstrument =
+          instrumentFilter === "ALL" || rowInstrument === instrumentFilter;
 
         const hasInstallments = row.installments?.length > 0;
         const matchStatus =
@@ -523,7 +535,7 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
           (statusFilter === "WITH_PLAN" && row.hasFinancialAccount && hasInstallments) ||
           row.financialStatus === statusFilter;
 
-        return matchSearch && matchStatus;
+        return matchSearch && matchInstrument && matchStatus;
       })
       .sort((a, b) => {
         if (a.instrument !== b.instrument) {
@@ -532,7 +544,7 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
 
         return a.fullName.localeCompare(b.fullName);
       });
-  }, [rawRows, deferredSearch, statusFilter]);
+  }, [rawRows, deferredSearch, statusFilter, instrumentFilter]);
 
   // ── installmentsByRow — índice pre-computado ─────────────────────────────────
   // Estructura: Map<participantId, Map<order, installment>>
@@ -720,6 +732,9 @@ const [registerPayment, { loading: registering }] = useMutation(REGISTER_PAYMENT
     setSearch,
     statusFilter,
     setStatusFilter,
+    instrumentFilter,
+    setInstrumentFilter,
+    instrumentOptions,
     toast,
     setToast,
     users: usersData?.getUsers ?? EMPTY_ARRAY,

@@ -12,10 +12,17 @@ const ROOM_TYPES = [
   { value: "SUITE", label: "Suite", emoji: "⭐" },
 ];
 
+const ROOM_USES = [
+  { value: "REGULAR", label: "Regular", description: "Hombres o mujeres, según ocupantes" },
+  { value: "STAFF", label: "Staff", description: "Reservada para staff y huéspedes" },
+  { value: "MIXED", label: "Mixta", description: "Permite ocupantes de distintos sexos" },
+];
+
 const EMPTY = {
   hotelName: "",
   roomNumber: "",
   roomType: "DOUBLE",
+  roomUse: "REGULAR",
   capacity: 2,
   floor: "",
   notes: "",
@@ -32,6 +39,7 @@ export default function RoomFormModal({ isOpen, mode, room, onClose, onSubmit, l
         hotelName: room.hotelName || "",
         roomNumber: room.roomNumber || "",
         roomType: room.roomType || "DOUBLE",
+        roomUse: room.roomUse || "REGULAR",
         capacity: room.capacity || 2,
         floor: room.floor || "",
         notes: room.notes || "",
@@ -64,6 +72,7 @@ export default function RoomFormModal({ isOpen, mode, room, onClose, onSubmit, l
       hotelName: form.hotelName.trim(),
       roomNumber: form.roomNumber.trim(),
       roomType: form.roomType,
+      roomUse: form.roomUse,
       capacity: Number(form.capacity),
       floor: form.floor.trim() || null,
       notes: form.notes.trim() || null,
@@ -99,6 +108,35 @@ export default function RoomFormModal({ isOpen, mode, room, onClose, onSubmit, l
 
         {/* Body */}
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          <fieldset>
+            <legend className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
+              Uso de la habitación
+            </legend>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {ROOM_USES.map((option) => {
+                const selected = form.roomUse === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => set("roomUse", option.value)}
+                    className={`min-h-16 rounded-xl border px-3 py-2 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                      selected
+                        ? "border-blue-600 bg-blue-50 text-blue-900"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="block text-sm font-bold">{option.label}</span>
+                    <span className="block mt-0.5 text-[10px] leading-tight text-slate-500">
+                      {option.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
           {/* Room type */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">

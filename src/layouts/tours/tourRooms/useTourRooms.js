@@ -377,6 +377,7 @@ export function useTourRooms(tourId) {
             roomNumber: suggestion.name,
             // ← FIX: use suggestion.capacity, not plannerCapacity
             roomType: capacityToRoomType(suggestion.capacity),
+            roomUse: ["STAFF", "GUEST"].includes(group.role) ? "STAFF" : "REGULAR",
             capacity: suggestion.capacity,
             tourId,
           };

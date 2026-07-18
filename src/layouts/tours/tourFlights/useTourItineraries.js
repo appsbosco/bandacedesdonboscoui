@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_TOUR_ITINERARIES,
   GET_UNASSIGNED_TOUR_FLIGHTS,
   GET_TOUR_PARTICIPANTS_FOR_TABLE,
+  GET_TOUR_AVIANCA_DOCUMENT_DATA,
   CREATE_TOUR_ITINERARY,
   UPDATE_TOUR_ITINERARY,
   DELETE_TOUR_ITINERARY,
@@ -61,13 +62,28 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     fetchPolicy: "cache-and-network",
   });
 
+  const {
+    data: aviancaDocumentsData,
+    refetch: refetchAviancaDocuments,
+  } = useQuery(GET_TOUR_AVIANCA_DOCUMENT_DATA, {
+    variables: { tourId },
+    skip: !tourId || skipParticipants,
+    fetchPolicy: "cache-and-network",
+  });
+
   const refetchAll = useCallback(async () => {
     await Promise.all([
       refetchItineraries(),
       refetchUnassigned(),
-      ...(skipParticipants ? [] : [refetchParticipants()]),
+      ...(skipParticipants ? [] : [refetchParticipants(), refetchAviancaDocuments()]),
     ]);
-  }, [refetchItineraries, refetchUnassigned, refetchParticipants, skipParticipants]);
+  }, [
+    refetchItineraries,
+    refetchUnassigned,
+    refetchParticipants,
+    refetchAviancaDocuments,
+    skipParticipants,
+  ]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const [createItinerary, { loading: creating }] = useMutation(CREATE_TOUR_ITINERARY, {
@@ -249,7 +265,27 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────────
-  const itineraries = itinerariesData?.getTourItineraries || [];
+  const aviancaDocumentsByParticipant = useMemo(
+    () =>
+      new Map(
+        (aviancaDocumentsData?.getTourAviancaDocumentData || []).map((entry) => [
+          entry.participantId,
+          entry,
+        ])
+      ),
+    [aviancaDocumentsData]
+  );
+  const itineraries = useMemo(
+    () =>
+      (itinerariesData?.getTourItineraries || []).map((itinerary) => ({
+        ...itinerary,
+        participants: (itinerary.participants || []).map((participant) => ({
+          ...participant,
+          __aviancaDocuments: aviancaDocumentsByParticipant.get(participant.id) || null,
+        })),
+      })),
+    [itinerariesData, aviancaDocumentsByParticipant]
+  );
   const unassignedFlights = unassignedData?.getUnassignedTourFlights || [];
   const activePassengersItinerary = assignPassengersModalState.itineraryId
     ? itineraries.find((it) => it.id === assignPassengersModalState.itineraryId) ?? null
@@ -261,7 +297,10 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     initialSelectedIds: assignPassengersModalState.initialSelectedIds,
   };
 
-  const allParticipants = participantsData?.getTourParticipants || [];
+  const allParticipants = (participantsData?.getTourParticipants || []).map((participant) => ({
+    ...participant,
+    __aviancaDocuments: aviancaDocumentsByParticipant.get(participant.id) || null,
+  }));
   const assignedParticipantIds = new Set(
     itineraries.flatMap((it) => (it.participants || []).map((p) => p.id))
   );

@@ -10,6 +10,34 @@ const LIGHThex = "F8F9FC";
 const RULEhex = "DAE0EB";
 const TEXThex = "1D2949";
 
+const AVIANCA_HEADERS = [
+  "Reservation Number",
+  "Last Name",
+  "First Name and Middle Name",
+  "Title",
+  "PTC",
+  "Gender",
+  "Date of Birth",
+  "Passport Last Name",
+  "Passport First Name",
+  "Passport Number",
+  "Passport Nationality",
+  "Passport Issue Country",
+  "Passport Expiry Date",
+  "Visa Number",
+  "Visa Type",
+  "Visa Issue Date",
+  "Place of Birth",
+  "Visa Place of Issue",
+  "Visa Country of Application",
+  "Address Type",
+  "Address Country",
+  "Address Details",
+  "Address City",
+  "Address State",
+  "Address Zip Code",
+];
+
 function slugify(str = "") {
   return str
     .normalize("NFD")
@@ -19,8 +47,211 @@ function slugify(str = "") {
     .replace(/^_|_$/g, "");
 }
 
+function itineraryAirline(itinerary = {}) {
+  return (itinerary.flights || []).find((flight) => flight.airline)?.airline || "Aerolinea";
+}
+
+function itineraryRoute(itinerary = {}) {
+  return (itinerary.flights || [])
+    .filter((flight) => flight.origin && flight.destination)
+    .map((flight) => `${flight.origin}-${flight.destination}`)
+    .join("_");
+}
+
+function exportFileName(tourName, itineraries) {
+  const included = itineraries.filter((itinerary) => (itinerary.participants || []).length > 0);
+  if (included.length === 1) {
+    const itinerary = included[0];
+    const parts = [
+      "Nombres",
+      itineraryAirline(itinerary),
+      itinerary.reservationNumber || "Sin reserva",
+      itineraryRoute(itinerary) || itinerary.name,
+    ];
+    return `${slugify(parts.join("_"))}.xlsx`;
+  }
+
+  const aviancaItineraries = included.filter(isAviancaItinerary);
+  if (aviancaItineraries.length > 0) {
+    const reservations = aviancaItineraries
+      .map((itinerary) => itinerary.reservationNumber)
+      .filter(Boolean)
+      .join("_");
+    const routes = aviancaItineraries.map(itineraryRoute).filter(Boolean).join("__");
+    const baseName = slugify(
+      ["Nombres", "Avianca", reservations || "Sin reservas", routes || "Varias rutas"].join("_")
+    );
+    return `${baseName.slice(0, 180)}.xlsx`;
+  }
+
+  return `${slugify(`${tourName}_nombres_por_itinerario`)}.xlsx`;
+}
+
 function participantFullName(p = {}) {
   return [p.firstName, p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
+}
+
+function airlineText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function aviancaText(value = "") {
+  return airlineText(value).trim().replace(/\s+/g, " ");
+}
+
+function isAviancaItinerary(itinerary = {}) {
+  return (itinerary.flights || []).some((flight) =>
+    airlineText(flight.airline).includes("AVIANCA")
+  );
+}
+
+function formatAviancaDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  return `${day}${month[date.getUTCMonth()]}${date.getUTCFullYear()}`;
+}
+
+function aviancaGender(value) {
+  if (value === "M" || value === "F") return value;
+  return "";
+}
+
+function passengerTypeCode(birthDate, departureAt) {
+  if (!birthDate || !departureAt) return "";
+  const birth = new Date(birthDate);
+  const departure = new Date(departureAt);
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(departure.getTime())) return "";
+
+  let age = departure.getUTCFullYear() - birth.getUTCFullYear();
+  const birthdayHasPassed =
+    departure.getUTCMonth() > birth.getUTCMonth() ||
+    (departure.getUTCMonth() === birth.getUTCMonth() &&
+      departure.getUTCDate() >= birth.getUTCDate());
+  if (!birthdayHasPassed) age--;
+  if (age < 2) return "INF";
+  if (age < 12) return "CHD";
+  return "ADT";
+}
+
+function aviancaRow(p = {}, departureAt, reservationNumber) {
+  const passport = p.__aviancaDocuments?.passport || {};
+  const visa = p.__aviancaDocuments?.visa || {};
+  const passengerLastName =
+    passport.surname || [p.firstSurname, p.secondSurname].filter(Boolean).join(" ");
+  const passengerGivenNames = passport.givenNames || p.firstName;
+
+  return [
+    String(reservationNumber || "").trim(),
+    aviancaText(passengerLastName),
+    aviancaText(passengerGivenNames),
+    "",
+    passengerTypeCode(passport.dateOfBirth || p.birthDate, departureAt),
+    aviancaGender(passport.sex || p.sex),
+    formatAviancaDate(passport.dateOfBirth || p.birthDate),
+    aviancaText(passport.surname),
+    aviancaText(passport.givenNames),
+    String(passport.passportNumber || passport.documentNumber || p.passportNumber || "").trim(),
+    aviancaText(passport.nationality),
+    aviancaText(passport.issuingCountry),
+    formatAviancaDate(passport.expirationDate || p.passportExpiry),
+    String(visa.visaControlNumber || visa.documentNumber || "").trim(),
+    aviancaText(visa.visaType),
+    formatAviancaDate(visa.issueDate),
+    "",
+    aviancaText(visa.issuingCountry),
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ];
+}
+
+function uniqueSheetName(baseName, usedNames) {
+  const sanitized = String(baseName || "Avianca")
+    .replace(/[\\/?*\[\]:]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "Avianca";
+  let candidate = sanitized.slice(0, 31);
+  let suffix = 2;
+  while (usedNames.has(candidate)) {
+    const ending = ` ${suffix}`;
+    candidate = `${sanitized.slice(0, 31 - ending.length)}${ending}`;
+    suffix++;
+  }
+  usedNames.add(candidate);
+  return candidate;
+}
+
+function appendAviancaSheets(XLSX, workbook, itineraries) {
+  const aviancaItineraries = itineraries.filter(isAviancaItinerary);
+  const usedNames = new Set(workbook.SheetNames);
+
+  aviancaItineraries.forEach((itinerary, index) => {
+    const firstDepartureAt = (itinerary.flights || [])
+      .map((flight) => flight.departureAt)
+      .filter(Boolean)
+      .sort((a, b) => new Date(a) - new Date(b))[0];
+    const members = [...(itinerary.participants || [])].sort((a, b) => {
+      const surnameA = [a.firstSurname, a.secondSurname].filter(Boolean).join(" ");
+      const surnameB = [b.firstSurname, b.secondSurname].filter(Boolean).join(" ");
+      return (
+        surnameA.localeCompare(surnameB, "es") ||
+        String(a.firstName || "").localeCompare(String(b.firstName || ""), "es")
+      );
+    });
+    const ws = XLSX.utils.aoa_to_sheet([
+      AVIANCA_HEADERS,
+      ...members.map((participant) =>
+        aviancaRow(participant, firstDepartureAt, itinerary.reservationNumber)
+      ),
+    ]);
+
+    ws["!cols"] = AVIANCA_HEADERS.map((header) => ({
+      wch: Math.max(12, Math.min(30, header.length + 2)),
+    }));
+    ws["!autofilter"] = {
+      ref: `A1:${XLSX.utils.encode_col(AVIANCA_HEADERS.length - 1)}${Math.max(
+        1,
+        members.length + 1
+      )}`,
+    };
+    ws["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft" };
+
+    AVIANCA_HEADERS.forEach((_, colIdx) => {
+      const ref = `${XLSX.utils.encode_col(colIdx)}1`;
+      if (ws[ref]) {
+        ws[ref].s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "C8102E" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border: {
+            top: { style: "thin", color: { rgb: RULEhex } },
+            bottom: { style: "thin", color: { rgb: RULEhex } },
+            left: { style: "thin", color: { rgb: RULEhex } },
+            right: { style: "thin", color: { rgb: RULEhex } },
+          },
+        };
+      }
+    });
+
+    const reservation = itinerary.reservationNumber
+      ? `AV ${itinerary.reservationNumber}`
+      : `Avianca ${index + 1}`;
+    XLSX.utils.book_append_sheet(
+      workbook,
+      ws,
+      uniqueSheetName(reservation, usedNames)
+    );
+  });
 }
 
 function givenNames(p = {}) {
@@ -324,6 +555,7 @@ export async function exportTourParticipantsXLSX({
 
   XLSX.utils.book_append_sheet(wb, ws, "Participantes");
   XLSX.utils.book_append_sheet(wb, wsSumm, "Resumen");
+  appendAviancaSheets(XLSX, wb, itineraries);
 
-  XLSX.writeFile(wb, `${slugify(tourName)}_participantes_itinerario.xlsx`);
+  XLSX.writeFile(wb, exportFileName(tourName, itineraries));
 }

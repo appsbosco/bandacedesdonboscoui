@@ -362,6 +362,7 @@ export const GET_FINANCIAL_TABLE = gql`
         hasFinancialAccount
         fullName
         identification
+        phone
         instrument
         visaStatus
         visaDeniedCount

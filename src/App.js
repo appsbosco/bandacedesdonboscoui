@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
 import { Link as RouterLink, Route, Routes, matchPath, useLocation, useNavigate, useParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -16,7 +16,7 @@ import brand from "assets/images/Logo-Banda-Cedes-Don-Bosco.webp";
 import Sidenav from "examples/Sidenav";
 import Configurator from "examples/Configurator";
 
-import { useSoftUIController, setMiniSidenav, setOpenConfigurator } from "context";
+import { useSoftUIController, setOpenConfigurator } from "context";
 import routes, {
   protectedRoutes,
   attendanceRoutes,
@@ -128,28 +128,12 @@ PublicLangRoute.propTypes = {
 export default function App() {
   const { i18n } = useTranslation();
   const [controller, dispatch] = useSoftUIController();
-  const { miniSidenav, direction, layout, openConfigurator, sidenavColor } = controller;
-
-  const [isSidenavHover, setIsSidenavHover] = useState(false);
+  const { direction, layout, openConfigurator, sidenavColor } = controller;
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const token = localStorage.getItem("token");
   const isAuthenticated = useMemo(() => Boolean(token && !isTokenExpired(token)), [token]);
-
-  const handleOnMouseEnter = useCallback(() => {
-    if (miniSidenav && !isSidenavHover) {
-      setMiniSidenav(dispatch, false);
-      setIsSidenavHover(true);
-    }
-  }, [miniSidenav, isSidenavHover, dispatch]);
-
-  const handleOnMouseLeave = useCallback(() => {
-    if (isSidenavHover) {
-      setMiniSidenav(dispatch, true);
-      setIsSidenavHover(false);
-    }
-  }, [isSidenavHover, dispatch]);
 
   const handleConfiguratorOpen = useCallback(() => {
     setOpenConfigurator(dispatch, !openConfigurator);
@@ -264,8 +248,6 @@ export default function App() {
             brand={brand}
             brandName="BCDB"
             routes={filteredNavRoutes}
-            onMouseEnter={handleOnMouseEnter}
-            onMouseLeave={handleOnMouseLeave}
           />
           <Configurator />
         </>

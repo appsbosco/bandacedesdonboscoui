@@ -20,6 +20,8 @@ const ITINERARY_CORE = gql`
       destination
       departureAt
       arrivalAt
+      departureTimeZone
+      arrivalTimeZone
       direction
       passengerCount
     }
@@ -72,6 +74,8 @@ export const GET_UNASSIGNED_TOUR_FLIGHTS = gql`
       destination
       departureAt
       arrivalAt
+      departureTimeZone
+      arrivalTimeZone
       direction
       passengerCount
     }
@@ -92,8 +96,46 @@ export const GET_TOUR_PARTICIPANTS_FOR_TABLE = gql`
       passportExpiry
       instrument
       role
+      hasVisa
+      visaExpiry
       visaStatus
       visaDeniedCount
+    }
+  }
+`;
+
+export const GET_TOUR_AVIANCA_DOCUMENT_DATA = gql`
+  query GetTourAviancaDocumentData($tourId: ID!) {
+    getTourAviancaDocumentData(tourId: $tourId) {
+      participantId
+      passport {
+        fullName
+        givenNames
+        surname
+        nationality
+        issuingCountry
+        documentNumber
+        passportNumber
+        dateOfBirth
+        sex
+        expirationDate
+        issueDate
+      }
+      visa {
+        fullName
+        givenNames
+        surname
+        nationality
+        issuingCountry
+        documentNumber
+        passportNumber
+        visaType
+        visaControlNumber
+        dateOfBirth
+        sex
+        expirationDate
+        issueDate
+      }
     }
   }
 `;

@@ -14,6 +14,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Card from "@mui/material/Card";
 import SoftBox from "components/SoftBox";
 import PropTypes from "prop-types";
+import { useToast } from "../ui/Toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,7 +195,9 @@ function ownerMatchesInstrumentFilter(owner, instrumentFilter) {
 
   const instrument = String(owner?.instrument || "").trim();
   const normalizedInstrument = instrument.toLowerCase();
-  const normalizedRole = String(owner?.role || "").trim().toLowerCase();
+  const normalizedRole = String(owner?.role || "")
+    .trim()
+    .toLowerCase();
 
   if (instrumentFilter === "Staff") {
     return normalizedInstrument === "staff" || normalizedRole === "staff";
@@ -333,15 +336,6 @@ const DOCUMENT_BADGE_STYLES = {
   UPLOADED: { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
 };
 
-// Left-border color class per aggregate status (Tailwind arbitrary values via style)
-const ROW_STATUS_BORDER_COLOR = {
-  COMPLETE: "#10B981",
-  INCOMPLETE: "#38BDF8",
-  EXPIRED: "#EF4444",
-  EXPIRING: "#F59E0B",
-  REJECTED: "#DC2626",
-};
-
 const ADMIN_QUEUE_TABS = [
   { value: "ALL", label: "Todos" },
   { value: "PENDING", label: "Pendientes" },
@@ -405,13 +399,16 @@ const DOCUMENT_KNOWN_INSTRUMENTS = new Set(
 function TabButton({ active, onClick, children, count }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`
-        flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all
+        flex min-h-[40px] shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
         ${
           active
-            ? "bg-slate-900 text-white shadow-sm"
-            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            ? "bg-blue-700 text-white"
+            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
         }
       `}
     >
@@ -476,10 +473,12 @@ function MetricCard({ label, value, hint, tone = "slate" }) {
   }[tone];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${valueColor}`}>{value}</p>
-      <p className="text-xs text-slate-500">{hint}</p>
+    <div className="min-w-[132px] flex-1 px-4 py-3 first:pl-0 last:pr-0 sm:border-r sm:border-slate-200 sm:last:border-r-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <div className="mt-0.5 flex items-baseline gap-2">
+        <p className={`text-xl font-bold tabular-nums ${valueColor}`}>{value}</p>
+        <p className="text-xs text-slate-500">{hint}</p>
+      </div>
     </div>
   );
 }
@@ -501,7 +500,7 @@ function AggregateStatusBadge({ status }) {
         justifyContent: "center",
         padding: "4px 10px",
         borderRadius: "9999px",
-        fontSize: "11px",
+        fontSize: "12px",
         fontWeight: 700,
         background: config.bg,
         color: config.color,
@@ -529,7 +528,7 @@ function DocumentStateBadge({ status }) {
         justifyContent: "center",
         padding: "2px 8px",
         borderRadius: "9999px",
-        fontSize: "10px",
+        fontSize: "12px",
         fontWeight: 700,
         background: style.bg,
         color: style.color,
@@ -554,8 +553,8 @@ function ExpiryInfo({ date }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-      <span style={{ fontSize: "11px", color: "#475569" }}>{formatDate(date)}</span>
-      <span style={{ fontSize: "10px", fontWeight: 700, color: state.color }}>{state.label}</span>
+      <span style={{ fontSize: "12px", color: "#475569" }}>{formatDate(date)}</span>
+      <span style={{ fontSize: "12px", fontWeight: 700, color: state.color }}>{state.label}</span>
     </div>
   );
 }
@@ -901,6 +900,7 @@ function OtherDocumentQuickPreview({ document }) {
         <iframe
           src={buildPdfPreviewUrl(pdfUrl, previewImage.publicId)}
           title={`Vista previa ${document.id}`}
+          sandbox=""
           className="h-44 w-full border-0 pointer-events-none"
         />
       </div>
@@ -1037,7 +1037,16 @@ FullDocumentCard.propTypes = {
 
 // ─── CriticalDocBlock: one row inside UserDetailPanel ─────────────────────────
 
-function CriticalDocBlock({ typeLabel, icon, doc, extraDocs, onComplete, completingDocumentId }) {
+function CriticalDocBlock({
+  typeLabel,
+  icon,
+  doc,
+  extraDocs,
+  ownerLabel,
+  onComplete,
+  completingDocumentId,
+}) {
+  const [confirming, setConfirming] = useState(false);
   if (!doc) {
     return (
       <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
@@ -1102,14 +1111,14 @@ function CriticalDocBlock({ typeLabel, icon, doc, extraDocs, onComplete, complet
           </div>
         </div>
         <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
-          {doc.status !== "VERIFIED" && (
+          {doc.status !== "VERIFIED" && !confirming && (
             <button
               type="button"
-              onClick={() => onComplete(doc)}
+              onClick={() => setConfirming(true)}
               disabled={completingDocumentId === doc.id}
-              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="min-h-[36px] rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              {completingDocumentId === doc.id ? "Marcando..." : "Completar"}
+              Aprobar {typeLabel.toLowerCase()}
             </button>
           )}
           <Link
@@ -1120,6 +1129,38 @@ function CriticalDocBlock({ typeLabel, icon, doc, extraDocs, onComplete, complet
           </Link>
         </div>
       </div>
+
+      {confirming && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3" role="alert">
+          <p className="text-xs font-semibold text-amber-950">
+            ¿Aprobar {typeLabel.toLowerCase()} de {ownerLabel}?
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            El documento quedará marcado como verificado.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                await onComplete(doc);
+                setConfirming(false);
+              }}
+              disabled={completingDocumentId === doc.id}
+              className="min-h-[36px] rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
+            >
+              {completingDocumentId === doc.id ? "Aprobando…" : "Sí, aprobar documento"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={completingDocumentId === doc.id}
+              className="min-h-[36px] rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Volver sin aprobar
+            </button>
+          </div>
+        </div>
+      )}
 
       {extraDocs?.length > 0 && (
         <div className="mt-2 ml-7 space-y-1.5">
@@ -1150,6 +1191,7 @@ CriticalDocBlock.propTypes = {
   typeLabel: PropTypes.string.isRequired,
   icon: PropTypes.string.isRequired,
   onComplete: PropTypes.func.isRequired,
+  ownerLabel: PropTypes.string.isRequired,
   completingDocumentId: PropTypes.string,
   doc: PropTypes.shape({
     id: PropTypes.string,
@@ -1279,6 +1321,7 @@ function UserDetailPanel({
             icon="🛂"
             doc={passportDocs[0] || null}
             extraDocs={passportDocs.slice(1)}
+            ownerLabel={row.ownerLabel}
             onComplete={onCompleteDocument}
             completingDocumentId={completingDocumentId}
           />
@@ -1287,6 +1330,7 @@ function UserDetailPanel({
             icon="🌍"
             doc={visaDocs[0] || null}
             extraDocs={visaDocs.slice(1)}
+            ownerLabel={row.ownerLabel}
             onComplete={onCompleteDocument}
             completingDocumentId={completingDocumentId}
           />
@@ -1295,6 +1339,7 @@ function UserDetailPanel({
             icon="📋"
             doc={permitDocs[0] || null}
             extraDocs={permitDocs.slice(1)}
+            ownerLabel={row.ownerLabel}
             onComplete={onCompleteDocument}
             completingDocumentId={completingDocumentId}
           />
@@ -1360,13 +1405,8 @@ MobileSummaryItem.propTypes = {
 // ─── MobileRowCard: card for mobile list with status left-border ───────────────
 
 function MobileRowCard({ row, expanded, onToggle }) {
-  const borderColor = ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
-
   return (
-    <div
-      className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
-      style={{ borderLeft: `4px solid ${borderColor}` }}
-    >
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1798,6 +1838,7 @@ function MyDocumentsView() {
 // ─── AdminDocumentsView: master-detail layout for admins ──────────────────────
 
 function AdminDocumentsView() {
+  const { addToast } = useToast();
   const getInitialFilters = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
     return {
@@ -1825,6 +1866,14 @@ function AdminDocumentsView() {
   const [sortBy, setSortBy] = useState(initialFilters.sortBy);
   const [activeQueue, setActiveQueue] = useState(initialFilters.activeQueue);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(
+    initialFilters.rowStatusFilter !== "ALL" ||
+      Boolean(initialFilters.typeFilter) ||
+      Boolean(initialFilters.roleFilter) ||
+      Boolean(initialFilters.instrumentFilter) ||
+      initialFilters.otherReviewFilter !== "ALL" ||
+      initialFilters.sortBy !== "name"
+  );
   const [completingDocumentId, setCompletingDocumentId] = useState(null);
 
   const tableTopRef = useRef(null);
@@ -2100,11 +2149,22 @@ function AdminDocumentsView() {
           variables: { documentId: document.id, status: "VERIFIED" },
         });
         await refetch(queryVariables);
+        addToast(
+          `${getDocumentTypeLabel(document.type)} aprobado para ${
+            selectedRow?.ownerLabel || "el integrante"
+          }`,
+          "success"
+        );
+      } catch (mutationError) {
+        addToast(
+          `No se pudo aprobar el documento. ${mutationError.message || "Intenta nuevamente."}`,
+          "error"
+        );
       } finally {
         setCompletingDocumentId(null);
       }
     },
-    [queryVariables, refetch, setDocumentStatus]
+    [addToast, queryVariables, refetch, selectedRow?.ownerLabel, setDocumentStatus]
   );
 
   useEffect(() => {
@@ -2208,6 +2268,7 @@ function AdminDocumentsView() {
     setSortBy("name");
     setActiveQueue("ALL");
     setExpandedRowId(null);
+    setShowFilters(false);
   }, []);
 
   const activeFilterChips = useMemo(() => {
@@ -2314,9 +2375,16 @@ function AdminDocumentsView() {
     setSelectedRow((current) => (current?.id === row.id ? null : row));
   };
 
+  const advancedFilterCount = activeFilterChips.filter(
+    (chip) => chip.key !== "queue" && chip.key !== "query"
+  ).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div
+        className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-2"
+        aria-label="Colas de revisión"
+      >
         {ADMIN_QUEUE_TABS.map((tab) => (
           <TabButton
             key={tab.value}
@@ -2329,216 +2397,243 @@ function AdminDocumentsView() {
         ))}
       </div>
 
-      <div className="sticky top-4 z-10 rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-200/70 backdrop-blur">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <label
-                htmlFor="documents-admin-owner-search"
-                className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
-              >
-                Buscar integrante
+      <section
+        className="sticky top-3 z-10 rounded-xl p-3 shadow-sm backdrop-blur"
+        aria-label="Búsqueda y filtros"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative min-w-0 flex-1 md:max-w-2xl">
+              <label htmlFor="documents-admin-owner-search" className="sr-only">
+                Buscar expediente por nombre, apellido o correo
               </label>
-              <div className="relative">
-                <input
-                  ref={searchInputRef}
-                  id="documents-admin-owner-search"
-                  type="text"
-                  value={ownerSearch}
-                  onChange={(e) => setOwnerSearch(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
-                  placeholder="Nombre, apellido o correo"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-100"
-                />
-                {searchFocused && searchSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/80">
-                    {searchSuggestions.map((row) => (
-                      <button
-                        key={row.id}
-                        type="button"
-                        onMouseDown={() => {
-                          setOwnerSearch(row.ownerLabel);
-                          setActiveQueue("PERSON");
-                          setSelectedRow(row);
-                        }}
-                        className="flex w-full items-start justify-between rounded-xl px-3 py-2 text-left transition hover:bg-slate-50"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold text-slate-900">
-                            {row.ownerLabel}
-                          </span>
-                          <span className="block truncate text-xs text-slate-500">
-                            {row.owner?.email || "Sin correo"}
-                          </span>
+
+              <input
+                ref={searchInputRef}
+                id="documents-admin-owner-search"
+                type="text"
+                value={ownerSearch}
+                onChange={(e) => setOwnerSearch(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
+                placeholder="Buscar expediente por nombre, apellido o correo…"
+                autoComplete="off"
+                className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-16 text-sm text-slate-800 transition placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+              <kbd className="pointer-events-none absolute inset-y-0 right-3 my-auto hidden h-6 items-center rounded border border-slate-200 bg-slate-50 px-1.5 text-[11px] font-medium text-slate-500 sm:flex">
+                ⌘ K
+              </kbd>
+              {searchFocused && searchSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-200/70">
+                  <p className="px-3 py-2 text-xs font-semibold text-slate-500">
+                    Expedientes encontrados
+                  </p>
+                  {searchSuggestions.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onMouseDown={() => {
+                        setOwnerSearch(row.ownerLabel);
+                        setActiveQueue("PERSON");
+                        setSelectedRow(row);
+                      }}
+                      className="flex min-h-[52px] w-full items-center justify-between gap-3 border-t border-slate-100 px-3 py-2 text-left transition hover:bg-blue-50 focus-visible:bg-blue-50 focus-visible:outline-none"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-900">
+                          {row.ownerLabel}
                         </span>
-                        <span className="ml-3 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                          {row.counts.total}
+                        <span className="block truncate text-xs text-slate-500">
+                          {row.owner?.email || "Sin correo"}
                         </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className="block text-xs font-semibold text-blue-700">
+                          Abrir expediente
+                        </span>
+                        <span className="block text-[11px] text-slate-500">
+                          {row.counts.total} documentos
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setActiveQueue("ATTACHMENTS");
-                  setTypeFilter("OTHER");
-                  setOtherReviewFilter("PENDING");
-                  setSortBy("recent");
-                }}
-                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-700"
+                onClick={() => setShowFilters((visible) => !visible)}
+                aria-expanded={showFilters}
+                aria-controls="documents-admin-advanced-filters"
+                className={`inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                  showFilters || advancedFilterCount > 0
+                    ? "border-blue-200 bg-blue-50 text-blue-800"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
               >
-                Cola de adjuntos
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveQueue("URGENT");
-                  setSortBy("recent");
-                }}
-                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Solo urgentes
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5h18M6 12h12m-8 7h4"
+                  />
+                </svg>
+                Filtros
+                {advancedFilterCount > 0 && (
+                  <span className="rounded-full bg-blue-700 px-1.5 py-0.5 text-[11px] leading-none text-white">
+                    {advancedFilterCount}
+                  </span>
+                )}
               </button>
               {activeFilterChips.length > 0 && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                  className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                  Limpiar filtros
+                  Restablecer
                 </button>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-6">
-            <div>
-              <label
-                htmlFor="documents-admin-status-filter"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Estado general
-              </label>
-              <select
-                id="documents-admin-status-filter"
-                value={rowStatusFilter}
-                onChange={(e) => setRowStatusFilter(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                {TABLE_STATUS_FILTERS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+          {showFilters && (
+            <div
+              id="documents-admin-advanced-filters"
+              className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+            >
+              <div>
+                <label
+                  htmlFor="documents-admin-status-filter"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Estado general
+                </label>
+                <select
+                  id="documents-admin-status-filter"
+                  value={rowStatusFilter}
+                  onChange={(e) => setRowStatusFilter(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  {TABLE_STATUS_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="documents-admin-type-filter"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Tipo de documento
+                </label>
+                <select
+                  id="documents-admin-type-filter"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  {TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="documents-admin-role-filter"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Rol
+                </label>
+                <select
+                  id="documents-admin-role-filter"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">Todos los roles</option>
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="documents-admin-instrument-filter"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Instrumento
+                </label>
+                <select
+                  id="documents-admin-instrument-filter"
+                  value={instrumentFilter}
+                  onChange={(e) => setInstrumentFilter(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  {DOCUMENT_INSTRUMENT_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value || "all"} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="documents-admin-sort"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Ordenar por
+                </label>
+                <select
+                  id="documents-admin-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="name">Nombre (A–Z)</option>
+                  <option value="recent">Más reciente primero</option>
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="documents-admin-other-filter"
+                  className="block text-xs text-slate-500 mb-1 font-medium"
+                >
+                  Adjuntos
+                </label>
+                <select
+                  id="documents-admin-other-filter"
+                  value={otherReviewFilter}
+                  onChange={(e) => setOtherReviewFilter(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                  {OTHER_REVIEW_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label
-                htmlFor="documents-admin-type-filter"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Tipo de documento
-              </label>
-              <select
-                id="documents-admin-type-filter"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                {TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="documents-admin-role-filter"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Rol
-              </label>
-              <select
-                id="documents-admin-role-filter"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                <option value="">Todos los roles</option>
-                {roleOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="documents-admin-instrument-filter"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Instrumento
-              </label>
-              <select
-                id="documents-admin-instrument-filter"
-                value={instrumentFilter}
-                onChange={(e) => setInstrumentFilter(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                {DOCUMENT_INSTRUMENT_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value || "all"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="documents-admin-sort"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Ordenar por
-              </label>
-              <select
-                id="documents-admin-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                <option value="name">Nombre (A–Z)</option>
-                <option value="recent">Más reciente primero</option>
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="documents-admin-other-filter"
-                className="block text-xs text-slate-500 mb-1 font-medium"
-              >
-                Adjuntos
-              </label>
-              <select
-                id="documents-admin-other-filter"
-                value={otherReviewFilter}
-                onChange={(e) => setOtherReviewFilter(e.target.value)}
-                className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-700"
-              >
-                {OTHER_REVIEW_FILTERS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          )}
 
           {activeFilterChips.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+              <span className="text-xs font-medium text-slate-500">Aplicados:</span>
               {activeFilterChips.map((chip) => (
                 <FilterChip
                   key={chip.key}
@@ -2550,11 +2645,14 @@ function AdminDocumentsView() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {!loading && !error && (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+          <section
+            className="flex flex-wrap rounded-xl border border-slate-200 bg-white px-4 shadow-sm"
+            aria-label="Resumen de la cola"
+          >
             <MetricCard
               label="Integrantes"
               value={filteredRows.length}
@@ -2585,12 +2683,12 @@ function AdminDocumentsView() {
               hint="requieren atención"
               tone="red"
             />
-          </div>
+          </section>
 
           <div className="flex flex-wrap items-center gap-2 px-1">
             <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
-              Página {currentPage} de {totalPages} · {visibleRows.length} de{" "}
-              {filteredRows.length} integrante{filteredRows.length !== 1 ? "s" : ""}
+              Página {currentPage} de {totalPages} · {visibleRows.length} de {filteredRows.length}{" "}
+              integrante{filteredRows.length !== 1 ? "s" : ""}
             </span>
             {activeFilterChips.length > 0 && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full ring-1 ring-amber-200 font-medium">
@@ -2646,7 +2744,7 @@ function AdminDocumentsView() {
           </div>
 
           <div ref={tableTopRef} className="hidden lg:flex gap-4 items-start scroll-mt-4">
-            <div className="flex-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+            <div className="flex-1 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-[1] bg-slate-50 border-b border-slate-200">
@@ -2673,18 +2771,27 @@ function AdminDocumentsView() {
                   <tbody>
                     {visibleRows.map((row, index) => {
                       const isSelected = selectedRow?.id === row.id;
-                      const borderColor = ROW_STATUS_BORDER_COLOR[row.aggregateStatus] || "#CBD5E1";
-
                       return (
                         <tr
                           key={row.id}
-                          style={{ borderLeft: `4px solid ${borderColor}` }}
                           className={`
                             ${index < visibleRows.length - 1 ? "border-b border-slate-100" : ""}
-                            ${isSelected ? "bg-blue-50/50" : "hover:bg-slate-50"}
-                            cursor-pointer transition-colors
+                            ${
+                              isSelected
+                                ? "bg-blue-50 outline outline-1 -outline-offset-1 outline-blue-300"
+                                : "hover:bg-slate-50"
+                            }
+                            cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600
                           `}
                           onClick={() => handleSelectRow(row)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleSelectRow(row);
+                            }
+                          }}
+                          tabIndex={0}
+                          aria-selected={isSelected}
                         >
                           <td className="px-4 py-4 align-middle">
                             <p className="text-sm font-semibold text-slate-900 leading-tight">
@@ -2756,9 +2863,9 @@ function AdminDocumentsView() {
                                   event.stopPropagation();
                                   setSelectedRow(row);
                                 }}
-                                className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="min-h-[36px] rounded-lg border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                               >
-                                Revisar
+                                Revisar expediente
                               </button>
                               <div
                                 className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all ${
@@ -2826,7 +2933,7 @@ function AdminDocumentsView() {
 
             {selectedRow && (
               <div
-                className="w-96 flex-shrink-0 sticky top-4"
+                className="w-[420px] flex-shrink-0 sticky top-3"
                 style={{ height: "calc(100vh - 140px)" }}
               >
                 <UserDetailPanel
@@ -2868,8 +2975,8 @@ function DocumentsPage() {
 
       <Card>
         <SoftBox p={2}>
-          <div className="min-h-screen bg-slate-50">
-            <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-slate-200">
+          <div className="min-h-screen">
+            <header className="border-b border-slate-200 bg-white">
               <div className="max-w-[1400px] mx-auto px-4 py-4">
                 <div className="flex items-center justify-between mb-1">
                   <h1 className="text-xl font-semibold text-slate-900">
@@ -2918,14 +3025,13 @@ function DocumentsPage() {
               <Link
                 to="/new-document"
                 className="
-                  fixed bottom-10 right-12 z-[1200]
-                  w-14 h-14 rounded-full
-                  bg-primary-600 hover:bg-primary-500
-                  text-black
-                  shadow-xl shadow-primary-200/60
+                  fixed bottom-6 right-6 z-[1200]
+                  min-h-[48px] rounded-xl px-4
+                  bg-blue-700 hover:bg-blue-800
+                  text-white shadow-lg shadow-slate-900/15
                   flex items-center justify-center
-                  transition-all duration-200 hover:scale-105
-                  focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2
+                  gap-2 transition-colors duration-200
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                 "
                 aria-label="Escanear documento"
               >
@@ -2937,6 +3043,7 @@ function DocumentsPage() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
+                <span className="hidden text-sm font-semibold sm:inline">Agregar documento</span>
               </Link>
             )}
           </div>

@@ -7,6 +7,7 @@ export const GET_TOUR_ROOMS = gql`
       hotelName
       roomNumber
       roomType
+      roomUse
       capacity
       floor
       notes
@@ -77,6 +78,7 @@ export const CREATE_TOUR_ROOM = gql`
       hotelName
       roomNumber
       roomType
+      roomUse
       capacity
       floor
       notes
@@ -105,6 +107,7 @@ export const UPDATE_TOUR_ROOM = gql`
       hotelName
       roomNumber
       roomType
+      roomUse
       capacity
       floor
       notes

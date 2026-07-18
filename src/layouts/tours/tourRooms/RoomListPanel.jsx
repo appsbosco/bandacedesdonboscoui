@@ -60,6 +60,7 @@ function roomMinAge(room) {
  * - Si todos son UNKNOWN => "unassigned"
  */
 function getRoomVisualCategory(room, sexOverrides) {
+  if (room.roomUse === "STAFF" || room.roomUse === "MIXED") return "mixed_staff";
   const occupants = room.occupants || [];
   if (occupants.length === 0) return "unassigned";
 
@@ -343,6 +344,11 @@ function RoomPlannerCard({
   const isDragTarget = dragOverRoomId === room.id;
   const isFull = room.occupantCount >= room.capacity;
   const responsibleId = room.responsible?.id || null;
+  const useBadge = {
+    STAFF: { label: "Staff", className: "bg-amber-50 text-amber-800 border-amber-200" },
+    MIXED: { label: "Mixta", className: "bg-violet-50 text-violet-700 border-violet-200" },
+    REGULAR: { label: "Regular", className: "bg-slate-50 text-slate-600 border-slate-200" },
+  }[room.roomUse || "REGULAR"];
 
   return (
     <div
@@ -365,6 +371,10 @@ function RoomPlannerCard({
             <p className="text-xs font-bold text-gray-900 truncate">
               {room.hotelName} · {room.roomNumber}
             </p>
+
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${useBadge.className}`}>
+              {useBadge.label}
+            </span>
 
             {isFull && (
               <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
