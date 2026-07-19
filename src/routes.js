@@ -723,6 +723,10 @@ export const staffRoutes = [
   ...documentsMenu(),
   ...financeMenu(),
 
+  title("Giras", "giras-staff"),
+  items.tours(),
+  items.tourDetail(),
+
   title("Asistencia", "attendance-pages"),
   items.performanceAttendance(),
 
