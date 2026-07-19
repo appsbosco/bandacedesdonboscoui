@@ -20,6 +20,15 @@ test("fails when visa is missing", () => {
   expect(result.criteria.visa).toBe(false);
   expect(result.passed).toBe(false);
 });
+test("does not require a visa for a foreign passport nationality", () => {
+  const result = computeVerificationCriteria(
+    { ...complete(), hasVisa: false, visaExpiry: null },
+    "CAN"
+  );
+  expect(result.visaRequired).toBe(false);
+  expect(result.criteria.visa).toBe(true);
+  expect(result.passed).toBe(true);
+});
 test("fails when required identity fields are blank", () => {
   expect(computeVerificationCriteria({}).passed).toBe(false);
 });

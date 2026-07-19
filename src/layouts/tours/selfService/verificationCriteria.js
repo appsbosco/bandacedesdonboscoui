@@ -13,14 +13,27 @@ export function isDocumentCurrent(expiryDate, warningDays = EXPIRY_WARNING_DAYS)
   return daysUntil > warningDays;
 }
 
-export function computeVerificationCriteria(participant = {}) {
+export function requiresVisaForNationality(nationality) {
+  const normalized = String(nationality || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+  if (!normalized) return true;
+  return ["CRI", "CR", "COSTA RICA", "COSTARRICENSE"].includes(normalized);
+}
+
+export function computeVerificationCriteria(participant = {}, nationality) {
+  const visaRequired = requiresVisaForNationality(nationality);
   const criteria = {
     firstName: Boolean(String(participant.firstName || "").trim()),
     firstSurname: Boolean(String(participant.firstSurname || "").trim()),
     identification: Boolean(String(participant.identification || "").trim()),
     email: isValidEmail(participant.email),
     passport: Boolean(participant.passportNumber) && isDocumentCurrent(participant.passportExpiry),
-    visa: participant.hasVisa === true && isDocumentCurrent(participant.visaExpiry),
+    visa:
+      !visaRequired ||
+      (participant.hasVisa === true && isDocumentCurrent(participant.visaExpiry)),
   };
-  return { criteria, passed: Object.values(criteria).every(Boolean) };
+  return { criteria, passed: Object.values(criteria).every(Boolean), visaRequired };
 }

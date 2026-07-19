@@ -54,7 +54,7 @@ function DocumentField({ label, value, status }) {
   );
 }
 
-function ResponsibilityDialog({ isParentView, loading, onCancel, onConfirm }) {
+function ResponsibilityDialog({ isParentView, loading, visaRequired, onCancel, onConfirm }) {
   const [accepted, setAccepted] = useState(false);
   const dialogRef = useRef(null);
   useEffect(() => {
@@ -84,7 +84,7 @@ function ResponsibilityDialog({ isParentView, loading, onCancel, onConfirm }) {
             Confirma únicamente después de revisar cada dato
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            La información del pasaporte y la visa será utilizada para reservas, emisión de boletos
+            La información del pasaporte{visaRequired ? " y la visa" : ""} será utilizada para reservas, emisión de boletos
             y trámites migratorios. Un nombre, número o fecha incorrectos pueden causar costos
             adicionales, rechazo de abordaje o impedimentos de viaje.
           </p>
@@ -178,7 +178,10 @@ export default function TourSelfServiceDocuments({
   const visaStatus = participant.hasVisa ? getExpiryStatus(participant.visaExpiry) : "missing";
   const passport = documentSummary?.passport;
   const visa = documentSummary?.visa;
-  const { criteria, passed } = computeVerificationCriteria(participant);
+  const { criteria, passed, visaRequired } = computeVerificationCriteria(
+    participant,
+    passport?.nationality
+  );
   const informationLocked = Boolean(participant.selfServiceVerified);
   const passportNumber =
     passport?.passportNumber || passport?.documentNumber || participant.passportNumber;
@@ -205,7 +208,7 @@ export default function TourSelfServiceDocuments({
       )} · Vence ${displayDate(passport?.expirationDate || participant.passportExpiry)}`,
       ok: criteria.passport,
     },
-    {
+    visaRequired && {
       key: "visa",
       label: "Visa",
       detail: `${visa?.visaType || "Tipo sin registrar"} · Control ${
@@ -215,7 +218,7 @@ export default function TourSelfServiceDocuments({
       )}`,
       ok: criteria.visa,
     },
-  ];
+  ].filter(Boolean);
   const allReviewed = verificationRows.every((row) => reviewChecks[row.key] === true);
   const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
@@ -343,6 +346,7 @@ export default function TourSelfServiceDocuments({
           </p>
         )}
       </section>
+      {visaRequired ? (
       <section className="bg-white rounded-2xl border border-gray-200 p-5">
         <div className="flex justify-between mb-1">
           <h3 className="text-sm font-bold">Visa</h3>
@@ -382,6 +386,14 @@ export default function TourSelfServiceDocuments({
           </p>
         )}
       </section>
+      ) : (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <h3 className="text-sm font-bold text-emerald-900">Visa no requerida</h3>
+          <p className="mt-1 text-xs leading-5 text-emerald-700">
+            Por la nacionalidad registrada en el pasaporte ({passport?.nationality}), no necesitas verificar una visa.
+          </p>
+        </section>
+      )}
       <section className="bg-white rounded-2xl border border-gray-200 p-5">
         <h3 className="text-sm font-bold mb-3">Permiso de salida</h3>
         <DocumentField
@@ -444,6 +456,7 @@ export default function TourSelfServiceDocuments({
         <ResponsibilityDialog
           isParentView={isParentView}
           loading={confirmLoading}
+          visaRequired={visaRequired}
           onCancel={() => setShowResponsibility(false)}
           onConfirm={async () => {
             await onConfirm(verificationRows.map((row) => row.key));
