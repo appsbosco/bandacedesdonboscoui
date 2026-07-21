@@ -932,7 +932,7 @@ export function DocumentDetail() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-sm font-semibold text-slate-900">Datos Extraídos</h2>
-                {document.extracted?.mrzValid != null && (
+                {/* {document.extracted?.mrzValid != null && (
                   <span
                     className={`inline-flex items-center gap-1 text-xs font-semibold ${
                       document.extracted.mrzValid ? "text-emerald-600" : "text-red-500"
@@ -940,7 +940,7 @@ export function DocumentDetail() {
                   >
                     {document.extracted.mrzValid ? "MRZ Válido" : "MRZ Inválido"}
                   </span>
-                )}
+                )} */}
               </div>
 
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
