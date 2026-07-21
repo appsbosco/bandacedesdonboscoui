@@ -5,6 +5,7 @@
  * but they all belong to the same itinerary package.
  * Shows capacity bar and leader chips.
  */
+import WhatsAppIcon from "./WhatsAppIcon";
 
 const FLIGHT_DIR = {
   OUTBOUND: { label: "Ida", emoji: "🛫", badge: "bg-blue-50 text-blue-700 border-blue-100" },
@@ -155,6 +156,9 @@ export default function ItineraryCard({
   onAssignPassengers,
   onManageLeaders,
   onUnassignFlight,
+  onToggleLock,
+  onPreview,
+  headerAction = null,
   readOnly = false,
 }) {
   const flights = itinerary.flights || [];
@@ -168,7 +172,7 @@ export default function ItineraryCard({
   const maxPassengers = itinerary.maxPassengers ?? 60;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden">
+    <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden ${itinerary.isLocked ? "border-amber-300 ring-1 ring-amber-100" : "border-gray-200"}`}>
       {/* Top accent bar */}
       <div className="h-1 bg-gradient-to-r from-blue-500 via-amber-400 to-violet-500" />
 
@@ -189,13 +193,35 @@ export default function ItineraryCard({
             <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-1">{itinerary.notes}</p>
           )}
         </div>
-        {!readOnly && (
+        {(headerAction || !readOnly) && (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <button
+            {headerAction}
+            {!readOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onPreview(itinerary)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition-colors hover:bg-emerald-200 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                  title="Previsualizar el grupo de WhatsApp como integrante"
+                  aria-label="Vista del integrante en WhatsApp"
+                >
+                  <WhatsAppIcon className="h-5 w-5" />
+                </button>
+                <button
+              type="button"
+              onClick={() => onToggleLock(itinerary)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${itinerary.isLocked ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"}`}
+              title={itinerary.isLocked ? "Desbloquear itinerario" : "Bloquear lista entregada"}
+            >
+              <LockIcon locked={itinerary.isLocked} />
+              {itinerary.isLocked && <span>Bloqueado</span>}
+                </button>
+                <button
               type="button"
               onClick={() => onEdit(itinerary)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"
-              title="Editar itinerario"
+              disabled={itinerary.isLocked}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all disabled:cursor-not-allowed disabled:opacity-30"
+              title={itinerary.isLocked ? "Desbloqueá el itinerario para editarlo" : "Editar itinerario"}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -205,12 +231,13 @@ export default function ItineraryCard({
                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                 />
               </svg>
-            </button>
-            <button
+                </button>
+                <button
               type="button"
               onClick={() => onDelete(itinerary)}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
-              title="Eliminar itinerario"
+              disabled={itinerary.isLocked}
+              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all disabled:cursor-not-allowed disabled:opacity-30"
+              title={itinerary.isLocked ? "Desbloqueá el itinerario para eliminarlo" : "Eliminar itinerario"}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -220,7 +247,9 @@ export default function ItineraryCard({
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
-            </button>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -285,7 +314,7 @@ export default function ItineraryCard({
             <FlightRow
               key={flight.id}
               flight={flight}
-              onUnassign={readOnly ? null : (fid) => onUnassignFlight(itinerary.id, fid)}
+              onUnassign={readOnly || itinerary.isLocked ? null : (fid) => onUnassignFlight(itinerary.id, fid)}
             />
           ))}
         </div>
@@ -305,7 +334,8 @@ export default function ItineraryCard({
           <button
             type="button"
             onClick={() => onAssignFlights(itinerary)}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition-all"
+            disabled={itinerary.isLocked}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700 transition-all disabled:cursor-not-allowed disabled:opacity-40"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -320,7 +350,8 @@ export default function ItineraryCard({
           <button
             type="button"
             onClick={() => onManageLeaders(itinerary)}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition-all"
+            disabled={itinerary.isLocked}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition-all disabled:cursor-not-allowed disabled:opacity-40"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -335,7 +366,8 @@ export default function ItineraryCard({
           <button
             type="button"
             onClick={() => onAssignPassengers(itinerary)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
+            disabled={itinerary.isLocked}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -350,5 +382,13 @@ export default function ItineraryCard({
         </div>
       )}
     </div>
+  );
+}
+
+function LockIcon({ locked }) {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={locked ? "M7 10V7a5 5 0 0110 0v3m-9 0h8a2 2 0 012 2v7H6v-7a2 2 0 012-2z" : "M8 10V7a4 4 0 017.5-2M6 10h12v9H6v-9z"} />
+    </svg>
   );
 }

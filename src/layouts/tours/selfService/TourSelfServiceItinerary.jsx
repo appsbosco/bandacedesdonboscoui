@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import ItineraryCard from "../tourFlights/ItineraryCard";
+import WhatsAppIcon from "../tourFlights/WhatsAppIcon";
 
 export default function TourSelfServiceItinerary({ itinerary, loading }) {
   if (loading) return <div className="h-72 bg-gray-100 rounded-2xl animate-pulse" />;
@@ -13,7 +14,24 @@ export default function TourSelfServiceItinerary({ itinerary, loading }) {
         </div>
         <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">Publicado</span>
       </div>
-      <ItineraryCard itinerary={itinerary} readOnly />
+      <ItineraryCard
+        itinerary={itinerary}
+        readOnly
+        headerAction={
+          itinerary.whatsappGroupUrl ? (
+            <a
+              href={itinerary.whatsappGroupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition-colors hover:bg-emerald-200 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              aria-label="Unirme al grupo de WhatsApp"
+              title="Unirme al grupo de WhatsApp"
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+            </a>
+          ) : null
+        }
+      />
     </div>
   );
 }

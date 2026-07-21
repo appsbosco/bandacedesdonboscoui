@@ -70,6 +70,7 @@ export const GET_MY_CHILD_TOUR_ITINERARY = gql`
       notes
       maxPassengers
       passengerCount
+      whatsappGroupUrl
       leaders {
         id
         firstName

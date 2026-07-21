@@ -87,8 +87,7 @@ function buildColumns(itineraries, unassignedParticipants, includeAll) {
 
   const unassignedStaff = unassignedParticipants
     .filter(
-      (participant) =>
-        includeAll || participant.role === "STAFF" || participant.role === "GUEST"
+      (participant) => includeAll || participant.role === "STAFF" || participant.role === "GUEST"
     )
     .map((participant) => ({ ...participant, __isLeader: false }))
     .sort(compareParticipants);
@@ -128,7 +127,8 @@ export default function StaffItineraryBoard({
   const moveParticipant = async (participant, sourceId, targetId) => {
     if (!participant || !targetId || sourceId === targetId || moving) return;
     const target = itineraries.find((itinerary) => itinerary.id === targetId);
-    if (!target || (target.seatsRemaining ?? 0) <= 0) return;
+    const source = itineraries.find((itinerary) => itinerary.id === sourceId);
+    if (!target || target.isLocked || source?.isLocked || (target.seatsRemaining ?? 0) <= 0) return;
 
     if (sourceId === "unassigned") {
       await onAssign(targetId, participant.id);
@@ -190,14 +190,24 @@ export default function StaffItineraryBoard({
         {columns.map((column) => {
           const isUnassigned = column.id === "unassigned";
           const isFull = !isUnassigned && (column.itinerary?.seatsRemaining ?? 0) <= 0;
-          const canReceive = selected && selected.sourceId !== column.id && !isFull;
-          const isDropTarget = dropTargetId === column.id && dragging?.sourceId !== column.id && !isFull;
+          const isLocked = Boolean(column.itinerary?.isLocked);
+          const selectedSourceLocked = itineraries.find(
+            (itinerary) => itinerary.id === selected?.sourceId
+          )?.isLocked;
+          const canReceive =
+            selected &&
+            selected.sourceId !== column.id &&
+            !isFull &&
+            !isLocked &&
+            !selectedSourceLocked;
+          const isDropTarget =
+            dropTargetId === column.id && dragging?.sourceId !== column.id && !isFull && !isLocked;
 
           return (
             <div
               key={column.id}
               onDragOver={(event) => {
-                if (isUnassigned || isFull || dragging?.sourceId === column.id) return;
+                if (isUnassigned || isFull || isLocked || dragging?.sourceId === column.id) return;
                 event.preventDefault();
                 setDropTargetId(column.id);
               }}
@@ -207,7 +217,7 @@ export default function StaffItineraryBoard({
               onDrop={(event) => {
                 event.preventDefault();
                 setDropTargetId(null);
-                if (!isUnassigned && dragging) {
+                if (!isUnassigned && !isLocked && dragging) {
                   moveParticipant(dragging.participant, dragging.sourceId, column.id);
                 }
                 setDragging(null);
@@ -216,8 +226,10 @@ export default function StaffItineraryBoard({
                 isDropTarget
                   ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
                   : isUnassigned
-                    ? "border-amber-200"
-                    : "border-slate-200"
+                  ? "border-amber-200"
+                  : isLocked
+                  ? "border-amber-300 bg-amber-50/40"
+                  : "border-slate-200"
               }`}
             >
               <header className="border-b border-slate-200 bg-white px-4 py-3">
@@ -233,6 +245,10 @@ export default function StaffItineraryBoard({
                     <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-800">
                       Pendiente
                     </span>
+                  ) : isLocked ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-800">
+                      🔒
+                    </span>
                   ) : isFull ? (
                     <span className="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-bold text-rose-700">
                       Lleno
@@ -240,7 +256,12 @@ export default function StaffItineraryBoard({
                   ) : null}
                 </div>
                 {!isUnassigned && (
-                  <p className="mt-2 truncate text-[11px] text-slate-400" title={(column.itinerary.flights || []).map((flight) => `${flight.origin}–${flight.destination}`).join(" · ")}>
+                  <p
+                    className="mt-2 truncate text-[11px] text-slate-400"
+                    title={(column.itinerary.flights || [])
+                      .map((flight) => `${flight.origin}–${flight.destination}`)
+                      .join(" · ")}
+                  >
                     {(column.itinerary.flights || []).length > 0
                       ? (column.itinerary.flights || [])
                           .map((flight) => `${flight.origin} → ${flight.destination}`)
@@ -254,7 +275,9 @@ export default function StaffItineraryBoard({
                 {canReceive && (
                   <button
                     type="button"
-                    onClick={() => moveParticipant(selected.participant, selected.sourceId, column.id)}
+                    onClick={() =>
+                      moveParticipant(selected.participant, selected.sourceId, column.id)
+                    }
                     disabled={moving}
                     className="flex min-h-[40px] w-full items-center justify-center rounded-xl border border-blue-300 bg-blue-50 px-3 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
                   >
@@ -269,15 +292,14 @@ export default function StaffItineraryBoard({
                 ) : (
                   column.staff.map((participant) => {
                     const isSelected = selected?.participant.id === participant.id;
-                    const reason = isUnassigned
-                      ? unassignedReason(participant, tourEndDate)
-                      : null;
+                    const reason = isUnassigned ? unassignedReason(participant, tourEndDate) : null;
                     return (
                       <button
                         key={participant.id}
                         type="button"
-                        draggable={!moving}
+                        draggable={!moving && !isLocked}
                         onDragStart={(event) => {
+                          if (isLocked) return;
                           event.dataTransfer.effectAllowed = "move";
                           setDragging({ participant, sourceId: column.id });
                           setSelected({ participant, sourceId: column.id });
@@ -287,11 +309,12 @@ export default function StaffItineraryBoard({
                           setDropTargetId(null);
                         }}
                         onClick={() =>
+                          !isLocked &&
                           setSelected(isSelected ? null : { participant, sourceId: column.id })
                         }
-                        disabled={moving}
+                        disabled={moving || isLocked}
                         aria-pressed={isSelected}
-                        className={`flex min-h-[56px] w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-60 ${
+                        className={`flex min-h-[56px] w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
                           isSelected
                             ? "border-blue-500 bg-blue-50 shadow-sm"
                             : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
@@ -324,11 +347,15 @@ export default function StaffItineraryBoard({
                                 Invitado
                               </span>
                             )}
-                            {!participant.__isLeader && participant.role !== "STAFF" && participant.role !== "GUEST" && (
-                              <span className="truncate text-xs text-slate-500">
-                                {participant.instrument || participant.identification || "Participante"}
-                              </span>
-                            )}
+                            {!participant.__isLeader &&
+                              participant.role !== "STAFF" &&
+                              participant.role !== "GUEST" && (
+                                <span className="truncate text-xs text-slate-500">
+                                  {participant.instrument ||
+                                    participant.identification ||
+                                    "Participante"}
+                                </span>
+                              )}
                             {reason && (
                               <span
                                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${reason.className}`}
@@ -338,7 +365,9 @@ export default function StaffItineraryBoard({
                             )}
                           </span>
                         </span>
-                        <span aria-hidden="true" className="flex-shrink-0 text-slate-300">⠿</span>
+                        <span aria-hidden="true" className="flex-shrink-0 text-slate-300">
+                          ⠿
+                        </span>
                       </button>
                     );
                   })
@@ -350,11 +379,19 @@ export default function StaffItineraryBoard({
       </div>
 
       {selected && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-800" role="status">
+        <div
+          className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-800"
+          role="status"
+        >
           <span>
-            Seleccionaste a <strong>{participantName(selected.participant)}</strong>. Elegí “Mover aquí” en el destino.
+            Seleccionaste a <strong>{participantName(selected.participant)}</strong>. Elegí “Mover
+            aquí” en el destino.
           </span>
-          <button type="button" onClick={() => setSelected(null)} className="font-bold hover:text-blue-950">
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="font-bold hover:text-blue-950"
+          >
             Cancelar
           </button>
         </div>

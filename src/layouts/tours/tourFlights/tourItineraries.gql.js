@@ -12,6 +12,9 @@ const ITINERARY_CORE = gql`
     flightCount
     passengerCount
     leaderCount
+    isLocked
+    lockedAt
+    whatsappGroupUrl
     flights {
       id
       airline
@@ -165,6 +168,16 @@ export const UPDATE_TOUR_ITINERARY = gql`
 export const DELETE_TOUR_ITINERARY = gql`
   mutation DeleteTourItinerary($id: ID!) {
     deleteTourItinerary(id: $id)
+  }
+`;
+
+export const SET_TOUR_ITINERARY_LOCKED = gql`
+  mutation SetTourItineraryLocked($id: ID!, $locked: Boolean!) {
+    setTourItineraryLocked(id: $id, locked: $locked) {
+      id
+      isLocked
+      lockedAt
+    }
   }
 `;
 

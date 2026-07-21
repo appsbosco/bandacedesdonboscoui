@@ -29,7 +29,8 @@ export default function ReassignParticipantModal({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!selected || selected.seatsRemaining <= 0) return;
+    if (!selected || selected.isLocked || sourceItinerary?.isLocked || selected.seatsRemaining <= 0)
+      return;
     await onConfirm(sourceItinerary?.id || null, selected.id, participant.id);
     onClose();
   };
@@ -99,13 +100,14 @@ export default function ReassignParticipantModal({
                 const capacity = itinerary.maxPassengers ?? 0;
                 const occupied = itinerary.passengerCount ?? Math.max(0, capacity - available);
                 const isFull = available === 0;
+                const isLocked = Boolean(itinerary.isLocked);
                 const isSelected = targetId === itinerary.id;
 
                 return (
                   <label
                     key={itinerary.id}
                     className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${
-                      isFull
+                      isFull || isLocked
                         ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
                         : isSelected
                         ? "cursor-pointer border-gray-900 bg-gray-50 ring-1 ring-gray-900"
@@ -117,7 +119,7 @@ export default function ReassignParticipantModal({
                       name="targetItinerary"
                       value={itinerary.id}
                       checked={isSelected}
-                      disabled={isFull || loading}
+                      disabled={isFull || isLocked || loading}
                       onChange={() => setTargetId(itinerary.id)}
                       className="h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-900"
                     />
@@ -131,10 +133,18 @@ export default function ReassignParticipantModal({
                     </span>
                     <span
                       className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                        isFull ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                        isLocked
+                          ? "bg-amber-100 text-amber-800"
+                          : isFull
+                          ? "bg-red-100 text-red-700"
+                          : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
-                      {isFull ? "Sin cupos" : `${available} cupo${available !== 1 ? "s" : ""}`}
+                      {isLocked
+                        ? "🔒"
+                        : isFull
+                        ? "Sin cupos"
+                        : `${available} cupo${available !== 1 ? "s" : ""}`}
                     </span>
                   </label>
                 );
@@ -154,7 +164,13 @@ export default function ReassignParticipantModal({
           </button>
           <button
             type="submit"
-            disabled={!selected || selected.seatsRemaining <= 0 || loading}
+            disabled={
+              !selected ||
+              selected.isLocked ||
+              sourceItinerary?.isLocked ||
+              selected.seatsRemaining <= 0 ||
+              loading
+            }
             className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading

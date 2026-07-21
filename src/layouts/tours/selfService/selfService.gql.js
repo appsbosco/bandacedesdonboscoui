@@ -73,6 +73,7 @@ export const MY_TOUR_ITINERARY = gql`
       notes
       maxPassengers
       passengerCount
+      whatsappGroupUrl
       leaders {
         id
         firstName

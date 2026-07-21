@@ -12,7 +12,7 @@ export const GET_TOUR_FLIGHTS = gql`
       arrivalAt
       direction
       itineraryId
-      itinerary { id name }
+      itinerary { id name isLocked }
       notes
       passengerCount
       passengers {

@@ -77,7 +77,7 @@ function buildGroups(itineraries, unassignedParticipants) {
         __priority: isLeaderOrStaff(p, leaderIds) ? 0 : 1,
       }))
     );
-    return { key: it.id, name: it.name, members };
+    return { key: it.id, name: it.name, members, isLocked: Boolean(it.isLocked) };
   });
 
   if (unassignedParticipants.length > 0) {
@@ -256,7 +256,7 @@ export default function ParticipantsTableView({
             onClick={() => setItineraryFilter(g.key)}
             label={g.name}
             count={g.members.length}
-            emoji={g.key === "unassigned" ? "⚠️" : "🗓️"}
+            emoji={g.key === "unassigned" ? "⚠️" : g.isLocked ? "🔒" : "🗓️"}
           />
         ))}
       </div>
@@ -362,7 +362,7 @@ export default function ParticipantsTableView({
                     }
                     onRemove={(participant) => handleRemove(group, participant)}
                     removingParticipantId={removingParticipantId}
-                    actionsDisabled={removing || reassigning}
+                    actionsDisabled={removing || reassigning || group.isLocked}
                   />
                 ))
               )}
@@ -418,7 +418,18 @@ function GroupRows({
           <td className="px-4 py-2.5 text-gray-900 font-medium">{participantFullName(p) || "—"}</td>
           <td className="px-4 py-2.5 text-gray-500">{p.identification || "—"}</td>
           <td className="px-4 py-2.5 text-gray-500">{p.instrument || "—"}</td>
-          {showItineraryColumn && <td className="px-4 py-2.5 text-gray-500">{group.name}</td>}
+          {showItineraryColumn && (
+            <td className="px-4 py-2.5 text-gray-500">
+              <span className="inline-flex items-center gap-1.5">
+                {group.name}
+                {group.isLocked && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                    🔒 Bloqueado
+                  </span>
+                )}
+              </span>
+            </td>
+          )}
           <td className="px-4 py-2.5">
             {p.__role === "Líder" ? (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">

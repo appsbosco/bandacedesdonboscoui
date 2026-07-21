@@ -14,6 +14,7 @@ import {
   REMOVE_PASSENGERS_FROM_ITINERARY,
   REASSIGN_PASSENGER_TO_ITINERARY,
   SET_ITINERARY_LEADERS,
+  SET_TOUR_ITINERARY_LOCKED,
 } from "./tourItineraries.gql.js";
 
 export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
@@ -27,6 +28,7 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
   const [leadersModal, setLeadersModal] = useState({ open: false, itinerary: null });
   const [assignResult, setAssignResult] = useState(null);
   const [toast, setToast] = useState(null);
+  const [lockModal, setLockModal] = useState({ open: false, itinerary: null });
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
@@ -181,6 +183,23 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     onError: (e) => showToast(e.message, "error"),
   });
 
+  const [setItineraryLocked, { loading: changingLock }] = useMutation(
+    SET_TOUR_ITINERARY_LOCKED,
+    {
+      onCompleted: ({ setTourItineraryLocked: itinerary }) => {
+        showToast(
+          itinerary.isLocked
+            ? "Itinerario bloqueado. La lista entregada quedó protegida"
+            : "Itinerario desbloqueado para edición",
+          "success"
+        );
+        setLockModal({ open: false, itinerary: null });
+        refetchAll();
+      },
+      onError: (e) => showToast(e.message, "error"),
+    }
+  );
+
   // ── Modal helpers ────────────────────────────────────────────────────────────
   const openCreateModal = useCallback(() =>
     setFormModal({ open: true, mode: "create", itinerary: null }), []);
@@ -212,6 +231,10 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     setLeadersModal({ open: true, itinerary }), []);
   const closeLeadersModal = useCallback(() =>
     setLeadersModal({ open: false, itinerary: null }), []);
+  const openLockModal = useCallback((itinerary) =>
+    setLockModal({ open: true, itinerary }), []);
+  const closeLockModal = useCallback(() =>
+    setLockModal({ open: false, itinerary: null }), []);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (input) => {
@@ -262,6 +285,16 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
 
   const handleSetLeaders = async (itineraryId, leaderIds) => {
     await setLeadersMutation({ variables: { itineraryId, leaderIds } });
+  };
+
+  const handleToggleLock = async () => {
+    if (!lockModal.itinerary) return;
+    await setItineraryLocked({
+      variables: {
+        id: lockModal.itinerary.id,
+        locked: !lockModal.itinerary.isLocked,
+      },
+    });
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -322,6 +355,7 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     formModal,
     assignFlightsModal,
     leadersModal,
+    lockModal,
     assignResult,
     openCreateModal,
     openEditModal,
@@ -332,6 +366,8 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     closeAssignPassengersModal,
     openLeadersModal,
     closeLeadersModal,
+    openLockModal,
+    closeLockModal,
     handleSubmit,
     handleDelete,
     handleAssignFlights,
@@ -341,6 +377,7 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     handleRemovePassengers,
     handleReassignPassenger,
     handleSetLeaders,
+    handleToggleLock,
     creating,
     updating,
     deleting,
@@ -349,6 +386,7 @@ export function useTourItineraries(tourId, { skipParticipants = true } = {}) {
     removingPassengers,
     reassigningPassenger,
     settingLeaders,
+    changingLock,
     toast,
     setToast,
     setAssignResult,

@@ -87,6 +87,7 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
     (acc, it) => acc + (it.passengerCount || 0),
     0
   );
+  const lockedItineraries = itinerariesHook.itineraries.filter((itinerary) => itinerary.isLocked);
 
   return (
     <div className="space-y-5">
@@ -160,6 +161,20 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
         ))}
       </div>
 
+      {lockedItineraries.length > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100" aria-hidden="true">🔒</span>
+          <div className="min-w-0">
+            <p className="text-xs font-bold">
+              {lockedItineraries.length} itinerario{lockedItineraries.length !== 1 ? "s" : ""} bloqueado{lockedItineraries.length !== 1 ? "s" : ""}
+            </p>
+            <p className="truncate text-[11px] text-amber-700">
+              {lockedItineraries.map((itinerary) => itinerary.name).join(" · ")} · Sus vuelos y pasajeros no admiten cambios.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {flightsLoading && flights.length === 0 ? (
         <LoadingSkeleton />
@@ -192,6 +207,11 @@ export default function TourFlightsPage({ tourId, tourName, tourEndDate }) {
               closeLeadersModal={itinerariesHook.closeLeadersModal}
               handleSetLeaders={itinerariesHook.handleSetLeaders}
               settingLeaders={itinerariesHook.settingLeaders}
+              lockModal={itinerariesHook.lockModal}
+              openLockModal={itinerariesHook.openLockModal}
+              closeLockModal={itinerariesHook.closeLockModal}
+              handleToggleLock={itinerariesHook.handleToggleLock}
+              changingLock={itinerariesHook.changingLock}
               handleUnassignFlight={itinerariesHook.handleUnassignFlight}
               toast={itinerariesHook.toast}
               setToast={itinerariesHook.setToast}

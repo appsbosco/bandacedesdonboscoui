@@ -57,6 +57,7 @@ export default function UnassignedParticipantsView({
   tourEndDate,
 }) {
   const [selectedParticipant, setSelectedParticipant] = useState(null);
+  const hasUnlockedItinerary = itineraries.some((itinerary) => !itinerary.isLocked);
 
   if (loading && participants.length === 0) {
     return (
@@ -133,7 +134,7 @@ export default function UnassignedParticipantsView({
             <button
               type="button"
               onClick={() => setSelectedParticipant(p)}
-              disabled={itineraries.length === 0 || assigning || reason.blocking}
+              disabled={!hasUnlockedItinerary || assigning || reason.blocking}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Asignar a itinerario
