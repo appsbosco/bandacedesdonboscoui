@@ -30,6 +30,7 @@ import routes, {
 } from "routes";
 
 import { GET_USERS_BY_ID } from "graphql/queries";
+import { buildLoginPath } from "utils/authRedirect";
 import {
   resolveNavRouteDefs,
   resolveRenderedRouteDefs,
@@ -129,7 +130,7 @@ export default function App() {
   const { i18n } = useTranslation();
   const [controller, dispatch] = useSoftUIController();
   const { direction, layout, openConfigurator, sidenavColor } = controller;
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
 
   const token = localStorage.getItem("token");
@@ -162,9 +163,9 @@ export default function App() {
     const isLandingPath = pathname === "/" || LANDING_LANG_RE.test(pathname);
     const isProtectedPath = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
     if (!isAuthenticated && !isLandingPath && isProtectedPath) {
-      navigate("/autenticacion/iniciar-sesion", { replace: true });
+      navigate(buildLoginPath(pathname, search), { replace: true });
     }
-  }, [pathname, isAuthenticated, navigate]);
+  }, [pathname, search, isAuthenticated, navigate]);
 
   const { data: userData } = useQuery(GET_USERS_BY_ID, {
     skip: !isAuthenticated,

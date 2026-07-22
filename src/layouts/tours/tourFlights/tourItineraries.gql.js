@@ -40,6 +40,9 @@ const ITINERARY_CORE = gql`
       passportExpiry
       instrument
       role
+      linkedUser {
+        id
+      }
       hasVisa
       visaExpiry
       visaStatus
@@ -202,7 +205,12 @@ export const UNASSIGN_FLIGHTS_FROM_ITINERARY = gql`
 export const ASSIGN_PASSENGERS_TO_ITINERARY = gql`
   mutation AssignPassengersToItinerary($itineraryId: ID!, $participantIds: [ID!]!) {
     assignPassengersToItinerary(itineraryId: $itineraryId, participantIds: $participantIds) {
-      itinerary { id passengerCount seatsRemaining maxPassengers }
+      itinerary {
+        id
+        passengerCount
+        seatsRemaining
+        maxPassengers
+      }
       assigned
       removed
       skipped
@@ -222,11 +230,21 @@ export const ASSIGN_PASSENGERS_TO_ITINERARY = gql`
 export const REMOVE_PASSENGERS_FROM_ITINERARY = gql`
   mutation RemovePassengersFromItinerary($itineraryId: ID!, $participantIds: [ID!]!) {
     removePassengersFromItinerary(itineraryId: $itineraryId, participantIds: $participantIds) {
-      itinerary { id passengerCount seatsRemaining maxPassengers }
+      itinerary {
+        id
+        passengerCount
+        seatsRemaining
+        maxPassengers
+      }
       assigned
       removed
       skipped
-      conflicts { participantId participantName reason conflictingItinerary }
+      conflicts {
+        participantId
+        participantName
+        reason
+        conflictingItinerary
+      }
       passengerCount
       maxPassengers
       seatsRemaining
@@ -245,11 +263,21 @@ export const REASSIGN_PASSENGER_TO_ITINERARY = gql`
       targetItineraryId: $targetItineraryId
       participantId: $participantId
     ) {
-      itinerary { id passengerCount seatsRemaining maxPassengers }
+      itinerary {
+        id
+        passengerCount
+        seatsRemaining
+        maxPassengers
+      }
       assigned
       removed
       skipped
-      conflicts { participantId participantName reason conflictingItinerary }
+      conflicts {
+        participantId
+        participantName
+        reason
+        conflictingItinerary
+      }
       passengerCount
       maxPassengers
       seatsRemaining

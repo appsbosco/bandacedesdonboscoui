@@ -11,17 +11,21 @@ import TourSelfServiceDocuments from "./TourSelfServiceDocuments";
 import TourSelfServicePayments from "./TourSelfServicePayments";
 import TourSelfServiceItinerary from "./TourSelfServiceItinerary";
 import TourSelfServiceFlights from "./TourSelfServiceFlights";
+import TourTicketTab from "../tourTickets/TourTicketTab";
 
 const TABS = [
   { id: "documents", label: "Documentos", emoji: "📄", moduleKey: "documents" },
-  { id: "payments",  label: "Pagos",      emoji: "💰", moduleKey: "payments"  },
+  { id: "payments", label: "Pagos", emoji: "💰", moduleKey: "payments" },
   { id: "itinerary", label: "Itinerario", emoji: "🗺️", moduleKey: "itinerary" },
   { id: "flights", label: "Vuelos", emoji: "✈️", moduleKey: "flights" },
+  { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
 
-export default function TourParentView({ tour }) {
+export default function TourParentView({ tour, requestedTab }) {
   const { selfServiceAccess } = tour;
-  const [activeTab, setActiveTab] = useState("documents");
+  const [activeTab, setActiveTab] = useState(
+    TABS.some((tab) => tab.id === requestedTab) ? requestedTab : "documents"
+  );
 
   const {
     children,
@@ -85,8 +89,8 @@ export default function TourParentView({ tour }) {
         <p className="text-2xl mb-2">👤</p>
         <p className="text-sm font-bold text-blue-800">Sin hijos vinculados</p>
         <p className="text-xs text-blue-700 mt-1">
-          Ninguno de tus hijos ha sido vinculado como participante de esta gira.
-          Contacta al administrador.
+          Ninguno de tus hijos ha sido vinculado como participante de esta gira. Contacta al
+          administrador.
         </p>
       </div>
     );
@@ -94,12 +98,9 @@ export default function TourParentView({ tour }) {
 
   // Tabs visibles según selfServiceAccess
   const visibleTabs = TABS.filter(
-    (t) => selfServiceAccess?.[t.moduleKey] !== false &&
-      (t.id !== "itinerary" || itineraryEligible)
+    (t) => selfServiceAccess?.[t.moduleKey] !== false && (t.id !== "itinerary" || itineraryEligible)
   );
-  const isLockedTab = (tabId) =>
-    (tabId === "itinerary" || tabId === "flights") && !isVerified;
-
+  const isLockedTab = (tabId) => (tabId === "itinerary" || tabId === "flights") && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -126,7 +127,8 @@ export default function TourParentView({ tour }) {
                   }`}
                 >
                   <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
-                    {child.firstName?.[0]}{child.firstSurname?.[0]}
+                    {child.firstName?.[0]}
+                    {child.firstSurname?.[0]}
                   </span>
                   {child.firstName} {child.firstSurname}
                 </button>
@@ -140,7 +142,8 @@ export default function TourParentView({ tour }) {
       {selectedChild && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
-            {selectedChild.firstName?.[0]}{selectedChild.firstSurname?.[0]}
+            {selectedChild.firstName?.[0]}
+            {selectedChild.firstSurname?.[0]}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">
@@ -179,23 +182,44 @@ export default function TourParentView({ tour }) {
       {selectedChild ? (
         <>
           {activeTab === "documents" && visibleTabs.some((t) => t.id === "documents") && (
-            <TourSelfServiceDocuments participant={selectedChild} documentSummary={documentSummary} documentSummaryLoading={documentSummaryLoading} onSaveInfo={updateChildInfo} saveLoading={updateInfoLoading} onConfirm={confirmChildVerification} confirmLoading={confirmLoading} confirmError={confirmError} isParentView />
+            <TourSelfServiceDocuments
+              participant={selectedChild}
+              documentSummary={documentSummary}
+              documentSummaryLoading={documentSummaryLoading}
+              onSaveInfo={updateChildInfo}
+              saveLoading={updateInfoLoading}
+              onConfirm={confirmChildVerification}
+              confirmLoading={confirmLoading}
+              confirmError={confirmError}
+              isParentView
+            />
           )}
-          {activeTab === "itinerary" && visibleTabs.some((t) => t.id === "itinerary") && (
-            isLockedTab("itinerary") ? <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+          {activeTab === "itinerary" &&
+            visibleTabs.some((t) => t.id === "itinerary") &&
+            (isLockedTab("itinerary") ? (
+              <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+            ) : (
+              <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+            ))}
+          {activeTab === "flights" &&
+            visibleTabs.some((t) => t.id === "flights") &&
+            (isLockedTab("flights") ? (
+              <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+            ) : (
+              <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
+            ))}
+          {activeTab === "flight-ticket" && visibleTabs.some((t) => t.id === "flight-ticket") && (
+            <TourTicketTab tourId={tour.id} participant={selectedChild} />
           )}
-          {activeTab === "flights" && visibleTabs.some((t) => t.id === "flights") && (
-            isLockedTab("flights") ? <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
-          )}
-          {activeTab === "payments" && visibleTabs.some((t) => t.id === "payments") && (
-            paymentLoading ? (
+          {activeTab === "payments" &&
+            visibleTabs.some((t) => t.id === "payments") &&
+            (paymentLoading ? (
               <div className="space-y-2 animate-pulse">
                 <div className="h-32 bg-gray-100 rounded-2xl" />
               </div>
             ) : (
               <TourSelfServicePayments paymentAccount={paymentAccount} />
-            )
-          )}
+            ))}
         </>
       ) : (
         <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
@@ -207,5 +231,20 @@ export default function TourParentView({ tour }) {
 }
 
 function LockedChildTabMessage({ onGoToDocuments }) {
-  return <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center"><p className="text-2xl mb-2">🔒</p><p className="text-sm font-bold text-amber-800">Falta verificar la información de tu hijo</p><p className="text-xs text-amber-700 mt-1 mb-4">Revisa y confirma sus datos personales, pasaporte y visa en Documentos.</p><button type="button" onClick={onGoToDocuments} className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl">Ir a Documentos →</button></div>;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
+      <p className="text-2xl mb-2">🔒</p>
+      <p className="text-sm font-bold text-amber-800">Falta verificar la información de tu hijo</p>
+      <p className="text-xs text-amber-700 mt-1 mb-4">
+        Revisa y confirma sus datos personales, pasaporte y visa en Documentos.
+      </p>
+      <button
+        type="button"
+        onClick={onGoToDocuments}
+        className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl"
+      >
+        Ir a Documentos →
+      </button>
+    </div>
+  );
 }

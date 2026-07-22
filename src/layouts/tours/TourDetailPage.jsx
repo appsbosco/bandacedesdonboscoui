@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { gql, useMutation, useQuery } from "@apollo/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { GET_USERS } from "graphql/queries";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -30,6 +30,8 @@ import TourSelfServiceConfig from "./TourSelfServiceConfig";
 import TourParentView from "./selfService/TourParentView";
 import { CREATE_TOUR_PARTICIPANT, DELETE_TOUR_PARTICIPANT } from "./tours.gql";
 import TourParticipantModal from "./TourParticipantModal";
+import TourTicketTab from "./tourTickets/TourTicketTab";
+import TourTicketAdminPage from "./tourTickets/TourTicketAdminPage";
 
 // Roles con acceso administrativo completo a giras
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
@@ -122,7 +124,9 @@ function AdminQuickActions({ tourId, onCreated }) {
     onCompleted: (data) => {
       const result = data?.deleteTourParticipant;
       setToast({
-        message: `Participante eliminado completamente. Se limpiaron ${result?.cascadeResults?.documents || 0} documento(s).`,
+        message: `Participante eliminado completamente. Se limpiaron ${
+          result?.cascadeResults?.documents || 0
+        } documento(s).`,
         type: "success",
       });
       setDeleteCandidate(null);
@@ -261,6 +265,7 @@ const ADMIN_TABS = [
   { id: "flights", label: "Vuelos", emoji: "✈️" },
   { id: "rooms", label: "Habitaciones", emoji: "🏨" },
   { id: "imports", label: "Importación", emoji: "📋" },
+  { id: "flight-tickets", label: "Tiquetes aéreos", emoji: "🎫" },
 ];
 
 const FINANCIAL_TABS = [
@@ -273,6 +278,7 @@ const SELF_SERVICE_TABS = [
   { id: "payments", label: "Mis pagos", emoji: "💰", moduleKey: "payments" },
   { id: "itinerary", label: "Mi itinerario", emoji: "🗺️", moduleKey: "itinerary" },
   { id: "flights", label: "Mis vuelos", emoji: "✈️", moduleKey: "flights" },
+  { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
@@ -342,15 +348,15 @@ function AdminTabContent({ activeTab, tour, onTourRefetch }) {
         </div>
       );
     case "flights":
-      return (
-        <TourFlightsPage tourId={tour.id} tourName={tour.name} tourEndDate={tour.endDate} />
-      );
+      return <TourFlightsPage tourId={tour.id} tourName={tour.name} tourEndDate={tour.endDate} />;
     case "rooms":
       return <TourRoomsPage tourId={tour.id} tourName={tour.name} />;
     case "payments":
       return <TourPaymentsPage tourId={tour.id} tourName={tour.name} />;
     case "documents":
       return <TourDocumentsPage tourId={tour.id} tourName={tour.name} tour={tour} />;
+    case "flight-tickets":
+      return <TourTicketAdminPage tourId={tour.id} />;
     default:
       return null;
   }
@@ -358,24 +364,44 @@ function AdminTabContent({ activeTab, tour, onTourRefetch }) {
 
 // ─── Vista self-service ───────────────────────────────────────────────────────
 
-function SelfServiceView({ tour }) {
+function SelfServiceView({ tour, requestedTab }) {
   const { selfServiceAccess } = tour;
 
   const {
-    participant, paymentAccount, documentSummary, documentSummaryLoading,
-    isVerified, itineraryEligible, itinerary, itineraryLoading, flights, flightsLoading,
-    updateParticipantInfo, updateInfoLoading, confirmVerification,
-    confirmLoading, confirmError, loading, isLinked, isNotLinkedError,
+    participant,
+    paymentAccount,
+    documentSummary,
+    documentSummaryLoading,
+    isVerified,
+    itineraryEligible,
+    itinerary,
+    itineraryLoading,
+    flights,
+    flightsLoading,
+    updateParticipantInfo,
+    updateInfoLoading,
+    confirmVerification,
+    confirmLoading,
+    confirmError,
+    loading,
+    isLinked,
+    isNotLinkedError,
     participantError,
   } = useTourSelfService({ tourId: tour.id, selfServiceAccess });
 
   // Calcular tabs visibles para este usuario
   const visibleTabs = SELF_SERVICE_TABS.filter(
-    (t) => selfServiceAccess?.enabled && selfServiceAccess?.[t.moduleKey] !== false &&
+    (t) =>
+      selfServiceAccess?.enabled &&
+      selfServiceAccess?.[t.moduleKey] !== false &&
       (t.id !== "itinerary" || itineraryEligible)
   );
 
-  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.id ?? "documents");
+  const [activeTab, setActiveTab] = useState(
+    visibleTabs.some((tab) => tab.id === requestedTab)
+      ? requestedTab
+      : visibleTabs[0]?.id ?? "documents"
+  );
 
   if (loading) {
     return (
@@ -426,8 +452,7 @@ function SelfServiceView({ tour }) {
     );
   }
 
-  const isLockedTab = (tabId) =>
-    (tabId === "itinerary" || tabId === "flights") && !isVerified;
+  const isLockedTab = (tabId) => (tabId === "itinerary" || tabId === "flights") && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -470,24 +495,74 @@ function SelfServiceView({ tour }) {
       )}
 
       {/* Contenido del tab activo */}
-      {activeTab === "documents" && <TourSelfServiceDocuments participant={participant} documentSummary={documentSummary} documentSummaryLoading={documentSummaryLoading} onSaveInfo={updateParticipantInfo} saveLoading={updateInfoLoading} onConfirm={confirmVerification} confirmLoading={confirmLoading} confirmError={confirmError} />}
+      {activeTab === "documents" && (
+        <TourSelfServiceDocuments
+          participant={participant}
+          documentSummary={documentSummary}
+          documentSummaryLoading={documentSummaryLoading}
+          onSaveInfo={updateParticipantInfo}
+          saveLoading={updateInfoLoading}
+          onConfirm={confirmVerification}
+          confirmLoading={confirmLoading}
+          confirmError={confirmError}
+        />
+      )}
       {activeTab === "payments" && <TourSelfServicePayments paymentAccount={paymentAccount} />}
-      {activeTab === "itinerary" && (isLockedTab("itinerary") ? <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />)}
-      {activeTab === "flights" && (isLockedTab("flights") ? <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} /> : <TourSelfServiceFlights flights={flights} loading={flightsLoading} />)}
+      {activeTab === "itinerary" &&
+        (isLockedTab("itinerary") ? (
+          <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+        ) : (
+          <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+        ))}
+      {activeTab === "flights" &&
+        (isLockedTab("flights") ? (
+          <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+        ) : (
+          <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
+        ))}
+      {activeTab === "flight-ticket" && (
+        <TourTicketTab tourId={tour.id} participant={participant} />
+      )}
     </div>
   );
 }
 
 function LockedTabMessage({ onGoToDocuments }) {
-  return <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center"><p className="text-2xl mb-2">🔒</p><p className="text-sm font-bold text-amber-800">Debes verificar tu información primero</p><p className="text-xs text-amber-700 mt-1 mb-4">Confirma tus datos personales, pasaporte y visa en Documentos para desbloquear esta sección.</p><button type="button" onClick={onGoToDocuments} className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl">Ir a Documentos →</button></div>;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
+      <p className="text-2xl mb-2">🔒</p>
+      <p className="text-sm font-bold text-amber-800">Debes verificar tu información primero</p>
+      <p className="text-xs text-amber-700 mt-1 mb-4">
+        Confirma tus datos personales, pasaporte y visa en Documentos para desbloquear esta sección.
+      </p>
+      <button
+        type="button"
+        onClick={onGoToDocuments}
+        className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl"
+      >
+        Ir a Documentos →
+      </button>
+    </div>
+  );
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function TourDetailPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { tour, loading, error, refetch } = useTour();
-  const [activeTab, setActiveTab] = useState("documents");
+  const requestedTab = searchParams.get("tab");
+  const requestedAdminTab = requestedTab === "flight-ticket" ? "flight-tickets" : requestedTab;
+  const [activeTab, setActiveTab] = useState(
+    ADMIN_TABS.some((tab) => tab.id === requestedAdminTab) ? requestedAdminTab : "documents"
+  );
+  const changeAdminTab = (tabId) => {
+    setActiveTab(tabId);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tabId);
+    setSearchParams(next, { replace: true });
+  };
 
   // Use query result directly — UserContext.userData relies on useState with deps (bug)
   // so it may never be set. Apollo cache makes this query free after the first load.
@@ -529,6 +604,7 @@ export default function TourDetailPage() {
               {error?.message || "El ID no corresponde a ninguna gira."}
             </p>
             <button
+              type="button"
               onClick={() => navigate("/tours")}
               className="mt-5 inline-flex items-center gap-2 px-5 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-bold rounded-2xl transition-all"
             >
@@ -548,6 +624,7 @@ export default function TourDetailPage() {
         {/* Breadcrumb */}
         <div className="px-4 mt-1 flex items-center gap-2">
           <button
+            type="button"
             onClick={() => navigate("/tours")}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
@@ -573,7 +650,7 @@ export default function TourDetailPage() {
         {/* Vista padre: hijos vinculados a la gira */}
         {isParent ? (
           <div className="px-4">
-            <TourParentView tour={tour} />
+            <TourParentView tour={tour} requestedTab={requestedTab} />
           </div>
         ) : isAdmin ? (
           <>
@@ -584,8 +661,9 @@ export default function TourDetailPage() {
               <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
                 {ADMIN_TABS.map((tab) => (
                   <button
+                    type="button"
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => changeAdminTab(tab.id)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
                       activeTab === tab.id
                         ? "bg-white text-gray-900 shadow-sm"
@@ -611,6 +689,7 @@ export default function TourDetailPage() {
               <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
                 {FINANCIAL_TABS.map((tab) => (
                   <button
+                    type="button"
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
@@ -632,7 +711,7 @@ export default function TourDetailPage() {
         ) : (
           /* Vista self-service: solo lo que está habilitado */
           <div className="px-4">
-            <SelfServiceView tour={tour} />
+            <SelfServiceView tour={tour} requestedTab={requestedTab} />
           </div>
         )}
       </div>

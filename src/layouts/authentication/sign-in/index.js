@@ -1,11 +1,12 @@
 /* eslint-disable react/prop-types */
 
 import { useContext, useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@apollo/client";
 import jwtDecode from "jwt-decode";
 import { AUTH_USER, REQUEST_RESET_MUTATION } from "graphql/mutations";
 import UserContext from "UserContext";
+import { resolveSafeReturnPath } from "utils/authRedirect";
 import ForgotPasswordModal from "../password-reset/ForgotPasswordModal";
 import cover from "../../../assets/images/cover.webp";
 import "../../../styles.css";
@@ -157,10 +158,22 @@ function Toast({ type, message, onDismiss }) {
   );
 }
 
+function resolvePostLoginPath(token) {
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded?.role === "Taquilla") return "/qr-scanner";
+    if (decoded?.role === "Tickets Admin") return "/lista-entradas";
+  } catch (_) {
+    return "/dashboard";
+  }
+  return "/dashboard";
+}
+
 // ─── SignIn ───────────────────────────────────────────────────────────────────
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const { search } = useLocation();
   const { refreshUserData } = useContext(UserContext);
 
   const [email, setEmail] = useState("");
@@ -172,17 +185,6 @@ const SignIn = () => {
 
   const [authUser] = useMutation(AUTH_USER);
   const [requestReset] = useMutation(REQUEST_RESET_MUTATION);
-
-  const resolvePostLoginPath = (token) => {
-    try {
-      const decoded = jwtDecode(token);
-      if (decoded?.role === "Taquilla") return "/qr-scanner";
-      if (decoded?.role === "Tickets Admin") return "/lista-entradas";
-    } catch (_) {
-      return "/dashboard";
-    }
-    return "/dashboard";
-  };
 
   const showToast = (type, message, duration = 4000) => {
     setToast({ type, message });
@@ -208,7 +210,11 @@ const SignIn = () => {
       localStorage.setItem("token", token);
       showToast("success", "¡Bienvenido! Redirigiendo…");
       refreshUserData();
-      setTimeout(() => navigate(resolvePostLoginPath(token)), 1500);
+      setTimeout(
+        () =>
+          navigate(resolveSafeReturnPath(search, resolvePostLoginPath(token)), { replace: true }),
+        1500
+      );
     } catch (err) {
       showToast("error", err.message.replace("GraphQL error: ", ""));
     } finally {
