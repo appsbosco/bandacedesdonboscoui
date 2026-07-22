@@ -452,7 +452,8 @@ function SelfServiceView({ tour, requestedTab }) {
     );
   }
 
-  const isLockedTab = (tabId) => (tabId === "itinerary" || tabId === "flights") && !isVerified;
+  const isLockedTab = (tabId) =>
+    ["itinerary", "flights", "flight-ticket"].includes(tabId) && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -520,9 +521,12 @@ function SelfServiceView({ tour, requestedTab }) {
         ) : (
           <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
         ))}
-      {activeTab === "flight-ticket" && (
-        <TourTicketTab tourId={tour.id} participant={participant} />
-      )}
+      {activeTab === "flight-ticket" &&
+        (isLockedTab("flight-ticket") ? (
+          <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+        ) : (
+          <TourTicketTab tourId={tour.id} participant={participant} />
+        ))}
     </div>
   );
 }

@@ -100,7 +100,8 @@ export default function TourParentView({ tour, requestedTab }) {
   const visibleTabs = TABS.filter(
     (t) => selfServiceAccess?.[t.moduleKey] !== false && (t.id !== "itinerary" || itineraryEligible)
   );
-  const isLockedTab = (tabId) => (tabId === "itinerary" || tabId === "flights") && !isVerified;
+  const isLockedTab = (tabId) =>
+    ["itinerary", "flights", "flight-ticket"].includes(tabId) && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -208,9 +209,13 @@ export default function TourParentView({ tour, requestedTab }) {
             ) : (
               <TourSelfServiceFlights flights={flights} loading={flightsLoading} />
             ))}
-          {activeTab === "flight-ticket" && visibleTabs.some((t) => t.id === "flight-ticket") && (
-            <TourTicketTab tourId={tour.id} participant={selectedChild} />
-          )}
+          {activeTab === "flight-ticket" &&
+            visibleTabs.some((t) => t.id === "flight-ticket") &&
+            (isLockedTab("flight-ticket") ? (
+              <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+            ) : (
+              <TourTicketTab tourId={tour.id} participant={selectedChild} />
+            ))}
           {activeTab === "payments" &&
             visibleTabs.some((t) => t.id === "payments") &&
             (paymentLoading ? (

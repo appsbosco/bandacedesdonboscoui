@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import { GET_TOUR_ITINERARIES } from "../tourFlights/tourItineraries.gql";
 import TourTicketImportPage from "./TourTicketImportPage";
+import TourTicketAssignmentsPage from "./TourTicketAssignmentsPage";
 import TourTicketTab from "./TourTicketTab";
 import { participantFullName } from "./ticketMatching";
 
@@ -16,7 +17,7 @@ const PREVIEW_STATES = [
 ];
 
 export default function TourTicketAdminPage({ tourId }) {
-  const [view, setView] = useState("import");
+  const [view, setView] = useState("assigned");
   const [itineraryId, setItineraryId] = useState("");
   const [participantId, setParticipantId] = useState("");
   const [previewState, setPreviewState] = useState("assigned");
@@ -70,6 +71,15 @@ export default function TourTicketAdminPage({ tourId }) {
       <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl w-fit">
         <button
           type="button"
+          onClick={() => setView("assigned")}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            view === "assigned" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+          }`}
+        >
+          Tiquetes asignados
+        </button>
+        <button
+          type="button"
           onClick={() => setView("import")}
           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
             view === "import" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
@@ -87,7 +97,9 @@ export default function TourTicketAdminPage({ tourId }) {
           Vista del integrante
         </button>
       </div>
-      {view === "import" ? (
+      {view === "assigned" ? (
+        <TourTicketAssignmentsPage tourId={tourId} />
+      ) : view === "import" ? (
         <TourTicketImportPage tourId={tourId} />
       ) : (
         <section className="space-y-4">

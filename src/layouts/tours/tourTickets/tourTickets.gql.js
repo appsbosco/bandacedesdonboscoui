@@ -112,3 +112,21 @@ export const GET_TICKET_DOWNLOAD = gql`
     }
   }
 `;
+
+export const REASSIGN_TOUR_PARTICIPANT_TICKET = gql`
+  ${TICKET_FIELDS}
+  mutation ReassignTourParticipantTicket($id: ID!, $input: ReassignTourParticipantTicketInput!) {
+    reassignTourParticipantTicket(id: $id, input: $input) {
+      ...TourParticipantTicketFields
+    }
+  }
+`;
+
+export const DELETE_TOUR_PARTICIPANT_TICKET = gql`
+  mutation DeleteTourParticipantTicket($id: ID!) {
+    deleteTourParticipantTicket(id: $id) {
+      success
+      cleanupPending
+    }
+  }
+`;
