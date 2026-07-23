@@ -21,6 +21,10 @@ export const PUBLIC_ROUTE_SEGMENTS = {
     es: "contacto",
     en: "contact",
   },
+  donate: {
+    es: "donar",
+    en: "donate",
+  },
 };
 
 export function normalizePublicLang(lang) {

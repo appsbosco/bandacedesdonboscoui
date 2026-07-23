@@ -5,6 +5,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 
 import en from "./locales/en.json";
 import es from "./locales/es.json";
+import { en as donationEn, es as donationEs } from "./locales/donationCampaign";
 
 i18n
   .use(LanguageDetector)
@@ -12,8 +13,8 @@ i18n
   .init({
     fallbackLng: "en",
     resources: {
-      en: { translation: en },
-      es: { translation: es },
+      en: { translation: { ...en, ...donationEn, nav: { ...en.nav, ...donationEn.nav } } },
+      es: { translation: { ...es, ...donationEs, nav: { ...es.nav, ...donationEs.nav } } },
     },
     interpolation: {
       escapeValue: false,

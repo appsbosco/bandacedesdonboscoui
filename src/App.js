@@ -66,6 +66,7 @@ const Guatemala = lazy(() => import("layouts/guatemala/Guatemala"));
 const Apoyo = lazy(() => import("layouts/apoyo/Apoyo"));
 const VeladaTickets = lazy(() => import("layouts/tickets/BuyTickets"));
 const ColorGuardCamp = lazy(() => import("layouts/ColorGuardCamp/ColorGuardCamp"));
+const DonatePage = lazy(() => import("layouts/donate/DonatePage"));
 const Jacks = lazy(() => import("layouts/sponsors/Jacks"));
 const INS = lazy(() => import("layouts/sponsors/INS"));
 const DocumentDetail = lazy(() =>
@@ -290,6 +291,14 @@ export default function App() {
             element={<PublicLangRoute><Contact /></PublicLangRoute>}
           />
           <Route path="/:lang/contact" element={<PublicLangRoute><Contact /></PublicLangRoute>} />
+          <Route
+            path="/:lang/donar"
+            element={<PublicLangRoute><DonatePage /></PublicLangRoute>}
+          />
+          <Route
+            path="/:lang/donate"
+            element={<PublicLangRoute><DonatePage /></PublicLangRoute>}
+          />
           <Route
             path="/:lang/calendario"
             element={<PublicLangRoute><CalendarListing /></PublicLangRoute>}

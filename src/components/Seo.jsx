@@ -13,7 +13,7 @@ function upsertMeta(selector, attributes) {
   });
 }
 
-export default function Seo({ title, description, image, path }) {
+export default function Seo({ title, description, image, path, type = "website", locale }) {
   useEffect(() => {
     const previousTitle = document.title;
     const currentUrl =
@@ -30,17 +30,34 @@ export default function Seo({ title, description, image, path }) {
     }
 
     upsertMeta('meta[property="og:title"]', { property: "og:title", content: title });
+    upsertMeta('meta[property="og:type"]', { property: "og:type", content: type });
+    upsertMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
+    upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: title });
+    if (description) {
+      upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
+    }
+    if (locale) {
+      upsertMeta('meta[property="og:locale"]', { property: "og:locale", content: locale });
+    }
     if (currentUrl) {
       upsertMeta('meta[property="og:url"]', { property: "og:url", content: currentUrl });
     }
     if (image) {
       upsertMeta('meta[property="og:image"]', { property: "og:image", content: image });
+      upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: image });
     }
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    if (currentUrl) canonical.href = currentUrl;
 
     return () => {
       document.title = previousTitle;
     };
-  }, [description, image, path, title]);
+  }, [description, image, locale, path, title, type]);
 
   return null;
 }
@@ -50,4 +67,6 @@ Seo.propTypes = {
   description: PropTypes.string,
   image: PropTypes.string,
   path: PropTypes.string,
+  type: PropTypes.string,
+  locale: PropTypes.string,
 };
