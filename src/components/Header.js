@@ -39,7 +39,7 @@ const Header = ({ openModal }) => {
           </div>
 
           {/* Desktop navigation links */}
-          <div className="items-center hidden md:flex md:space-x-6 lg:space-x-8">
+          <div className="absolute left-1/2 hidden -translate-x-1/2 items-center lg:flex lg:space-x-8">
             <a
               href={getPublicPath(lang, "home")}
               className='relative duration-200 after:absolute after:left-1/2 after:-bottom-2.5 after:h-0.5 after:w-4 after:-translate-x-1/2 after:rounded-full after:bg-slate-900 after:opacity-0 after:content-[""] font-medium text-slate-700 hover:text-slate-900 hover:after:opacity-25'
@@ -95,7 +95,7 @@ const Header = ({ openModal }) => {
               )} */}
           </div>
 
-          <div className="ml-auto flex items-center md:ml-0">
+          <div className="ml-auto flex items-center">
             {/* Call to action */}
             {isAuthenticated != null &&
             pathname !== "/gira-panama" &&
@@ -176,10 +176,10 @@ const Header = ({ openModal }) => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="ml-4 md:hidden" x-data="{ mobileMenuOpen: false }">
+          <div className="ml-4 lg:hidden" x-data="{ mobileMenuOpen: false }">
             <button
               type="button"
-              className="relative z-50 flex items-center justify-center p-3 transition duration-300 ease-in-out rounded-full shadow-sm cursor-pointer group bg-slate-100/80 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-200/60 focus:outline-none md:hidden"
+              className="relative z-50 flex items-center justify-center p-3 transition duration-300 ease-in-out rounded-full shadow-sm cursor-pointer group bg-slate-100/80 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-slate-200/60 focus:outline-none lg:hidden"
               aria-label="Toggle Navigation"
               onClick={toggleMobileMenu}
             >
@@ -208,7 +208,7 @@ const Header = ({ openModal }) => {
             </button>
 
             {/* Mobile menu container */}
-            <div className="md:hidden">
+            <div className="lg:hidden">
               {/* Background dark overlay when mobile menu is open */}
               {mobileMenuOpen && (
                 <button
