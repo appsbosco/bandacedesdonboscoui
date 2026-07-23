@@ -8,12 +8,12 @@ const Values = lazy(() => import("components/Values"));
 const Decor = lazy(() => import("components/Decors"));
 const Blog = lazy(() => import("components/Blog"));
 const Footer = lazy(() => import("components/Footer"));
-import INSPopupBanner from "components/INSPopupBanner";
+// import INSPopupBanner from "components/INSPopupBanner";
 
 const Landing = () => {
   return (
     <>
-      <INSPopupBanner />
+      {/* <INSPopupBanner /> */}
       <Header />
       <Hero />
       <Suspense fallback={<div style={{ minHeight: "200px" }} />}>
