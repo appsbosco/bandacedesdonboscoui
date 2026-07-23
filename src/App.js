@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
-import { Link as RouterLink, Route, Routes, matchPath, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, Navigate, Route, Routes, matchPath, useLocation, useNavigate, useParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -291,6 +291,8 @@ export default function App() {
             element={<PublicLangRoute><Contact /></PublicLangRoute>}
           />
           <Route path="/:lang/contact" element={<PublicLangRoute><Contact /></PublicLangRoute>} />
+          <Route path="/donar" element={<Navigate replace to="/es/donar" />} />
+          <Route path="/donate" element={<Navigate replace to="/en/donate" />} />
           <Route
             path="/:lang/donar"
             element={<PublicLangRoute><DonatePage /></PublicLangRoute>}
