@@ -203,7 +203,7 @@ function SharePanel({ t, lang, url, announce }) {
       await new Promise((resolve, reject) => {
         image.onload = resolve;
         image.onerror = reject;
-        image.src = "/images/imagen%20vertical.png";
+        image.src = "/images/story-image.png";
       });
       const canvas = document.createElement("canvas");
       canvas.width = 1080;
@@ -229,13 +229,14 @@ function SharePanel({ t, lang, url, announce }) {
         context.quadraticCurveTo(x, y, x + safeRadius, y);
         context.closePath();
       };
-      const imageScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const imageScale =
+        Math.max(canvas.width / image.width, canvas.height / image.height) * 1.16;
       const imageWidth = image.width * imageScale;
       const imageHeight = image.height * imageScale;
       context.drawImage(
         image,
         (canvas.width - imageWidth) / 2,
-        (canvas.height - imageHeight) / 2,
+        0,
         imageWidth,
         imageHeight
       );
@@ -253,11 +254,7 @@ function SharePanel({ t, lang, url, announce }) {
       context.textAlign = "left";
       context.fillStyle = "#bae6fd";
       context.font = "700 34px Arial";
-      context.fillText(
-        `BANDA CEDES DON BOSCO · ${t("donate.eventName").toUpperCase()}`,
-        72,
-        92
-      );
+      context.fillText(t("donate.shareImageEyebrow").toUpperCase(), 72, 92);
       context.fillStyle = "#f8fafc";
       context.font = "800 72px Arial";
       [
@@ -322,15 +319,28 @@ function SharePanel({ t, lang, url, announce }) {
         1405
       );
       context.fillStyle = "#e4002b";
-      drawRoundedRect(72, 1545, 936, 144, 72);
+      drawRoundedRect(72, 1525, 936, 174, 34);
       context.fill();
       context.fillStyle = "#f8fafc";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.font = "800 38px Arial";
-      context.fillText("APOYA A UN INTEGRANTE", 540, 1617);
-      context.font = "700 30px Arial";
-      context.fillText(url.replace(/^https?:\/\//, ""), 540, 1790);
+      context.font = "700 24px Arial";
+      context.fillText(t("donate.shareImageCtaEyebrow").toUpperCase(), 540, 1571, 840);
+      context.font = "900 52px Arial";
+      context.fillText(t("donate.shareImageCta").toUpperCase(), 540, 1641, 840);
+
+      drawRoundedRect(72, 1723, 936, 137, 28);
+      context.fillStyle = "#f8fafc";
+      context.fill();
+      context.strokeStyle = "#7dd3fc";
+      context.lineWidth = 3;
+      context.stroke();
+      context.fillStyle = "#e4002b";
+      context.font = "900 22px Arial";
+      context.fillText(t("donate.shareImageDonateAt").toUpperCase(), 540, 1759);
+      context.fillStyle = "#082f49";
+      context.font = "800 34px Arial";
+      context.fillText(url.replace(/^https?:\/\//, ""), 540, 1812, 840);
 
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob(

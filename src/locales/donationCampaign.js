@@ -149,7 +149,11 @@ const es = {
     shareText:
       "{{participants}} integrantes. Un destino: Desfile de las Rosas. Ayúdanos a reunir los {{remaining}} apoyos de USD 2,200 que aún necesitamos.",
     shareImageMembers: "{{participants}} integrantes.",
-    shareImageDestination: "Un destino.",
+    shareImageDestination: "Un destino:",
+    shareImageEyebrow: "Rumbo al Desfile de las Rosas",
+    shareImageCtaEyebrow: "TU APORTE LOS ACERCA A PASADENA",
+    shareImageCta: "DONA AHORA",
+    shareImageDonateAt: "DONA EN",
     tax: {
       eyebrow: "Su aporte también tiene respaldo fiscal",
       title: "Donaciones con recibo deducible del Impuesto sobre la Renta",
@@ -275,10 +279,8 @@ const en = {
       instructions: "Include your name and the word “Rosas” in the transfer details.",
     },
     collectiveTitle: "Let's complete one member's support",
-    collectiveIntro:
-      "The USD 2,200 needed to support one member can be raised in different ways:",
-    collectivePlanOne:
-      "1 person contributes {{amount}} and fully covers one member's support.",
+    collectiveIntro: "The USD 2,200 needed to support one member can be raised in different ways:",
+    collectivePlanOne: "1 person contributes {{amount}} and fully covers one member's support.",
     collectivePlanMany:
       "{{count}} people contribute {{amount}} each and together fully cover one member's support.",
     storyEyebrow: "Discipline representing Costa Rica",
@@ -338,7 +340,11 @@ const en = {
     shareText:
       "{{participants}} members. One destination. Rose Parade. Help us raise the remaining {{remaining}} USD 2,200 support goals.",
     shareImageMembers: "{{participants}} members.",
-    shareImageDestination: "One destination.",
+    shareImageDestination: "One destination:",
+    shareImageEyebrow: "On our way to the Rose Parade",
+    shareImageCtaEyebrow: "YOUR GIFT BRINGS THEM CLOSER TO PASADENA",
+    shareImageCta: "DONATE NOW",
+    shareImageDonateAt: "DONATE AT",
     nativeShare: "Share from my phone",
     whatsapp: "WhatsApp",
     facebook: "Facebook",
