@@ -153,7 +153,9 @@ function StudentGrid({ t, lang }) {
               ? t("donate.logoProgress.simulationActive", {
                   total: campaignProgress.totalStudentEquivalents,
                 })
-              : t("donate.logoProgress.simulationHelp")}
+              : t("donate.logoProgress.simulationHelp", {
+                  total: campaignProgress.totalStudentEquivalents,
+                })}
           </p>
           <button
             type="button"
@@ -180,7 +182,7 @@ StudentGrid.propTypes = {
   lang: PropTypes.oneOf(["es", "en"]).isRequired,
 };
 
-function SharePanel({ t, url, announce }) {
+function SharePanel({ t, lang, url, announce }) {
   const [copiedKind, setCopiedKind] = useState("");
   const copiedTimer = useRef();
   const message = t("donate.shareText", {
@@ -196,67 +198,159 @@ function SharePanel({ t, url, announce }) {
   );
 
   const downloadStory = async () => {
-    const image = new Image();
-    image.src = "/images/imagen%20vertical.png";
-    await image.decode();
-    const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1920;
-    const context = canvas.getContext("2d");
-    const imageScale = Math.max(canvas.width / image.width, canvas.height / image.height);
-    const imageWidth = image.width * imageScale;
-    const imageHeight = image.height * imageScale;
-    context.drawImage(
-      image,
-      (canvas.width - imageWidth) / 2,
-      (canvas.height - imageHeight) / 2,
-      imageWidth,
-      imageHeight
-    );
-    const overlay = context.createLinearGradient(0, 0, 0, canvas.height);
-    overlay.addColorStop(0, "rgba(8,47,73,.78)");
-    overlay.addColorStop(0.24, "rgba(8,47,73,.44)");
-    overlay.addColorStop(0.38, "rgba(8,47,73,.08)");
-    overlay.addColorStop(0.67, "rgba(8,47,73,.12)");
-    overlay.addColorStop(0.76, "rgba(8,47,73,.68)");
-    overlay.addColorStop(1, "rgba(8,47,73,.94)");
-    context.fillStyle = overlay;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.textBaseline = "top";
-    context.textAlign = "left";
-    context.fillStyle = "#bae6fd";
-    context.font = "700 34px Arial";
-    context.fillText(`BANDA CEDES DON BOSCO · ${t("donate.eventName").toUpperCase()}`, 72, 92);
-    context.fillStyle = "#f8fafc";
-    context.font = "800 72px Arial";
-    [
-      t("donate.shareImageMembers", { participants: donationCampaign.participantCount }),
-      t("donate.shareImageDestination"),
-      `${t("donate.eventName")}.`,
-    ].forEach((line, index) => context.fillText(line, 72, 165 + index * 86));
-    context.fillStyle = "#7dd3fc";
-    context.font = "800 50px Arial";
-    context.fillText(`${campaignProgress.percentage.toFixed(2)}% ALCANZADO`, 72, 1290);
-    context.fillStyle = "#f8fafc";
-    context.font = "600 36px Arial";
-    context.fillText(`${campaignProgress.fundedStudents} aportes equivalentes alcanzados`, 72, 1362);
-    context.fillText(`${campaignProgress.remainingStudents} aportes equivalentes pendientes`, 72, 1420);
-    context.fillStyle = "#e4002b";
-    context.beginPath();
-    context.roundRect(72, 1545, 936, 144, 72);
-    context.fill();
-    context.fillStyle = "#f8fafc";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.font = "800 38px Arial";
-    context.fillText("APOYA A UN INTEGRANTE", 540, 1617);
-    context.font = "700 30px Arial";
-    context.fillText(url.replace(/^https?:\/\//, ""), 540, 1790);
-    const link = document.createElement("a");
-    link.download = "bcdb-rose-parade-story.jpg";
-    link.href = canvas.toDataURL("image/jpeg", 0.92);
-    link.click();
-    trackDonationEvent("campaign_shared", { channel: "story_download" });
+    try {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = "/images/imagen%20vertical.png";
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("canvas-unavailable");
+      const drawRoundedRect = (x, y, width, height, radius) => {
+        const safeRadius = Math.min(radius, width / 2, height / 2);
+        context.beginPath();
+        context.moveTo(x + safeRadius, y);
+        context.lineTo(x + width - safeRadius, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+        context.lineTo(x + width, y + height - safeRadius);
+        context.quadraticCurveTo(
+          x + width,
+          y + height,
+          x + width - safeRadius,
+          y + height
+        );
+        context.lineTo(x + safeRadius, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+        context.lineTo(x, y + safeRadius);
+        context.quadraticCurveTo(x, y, x + safeRadius, y);
+        context.closePath();
+      };
+      const imageScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const imageWidth = image.width * imageScale;
+      const imageHeight = image.height * imageScale;
+      context.drawImage(
+        image,
+        (canvas.width - imageWidth) / 2,
+        (canvas.height - imageHeight) / 2,
+        imageWidth,
+        imageHeight
+      );
+      const overlay = context.createLinearGradient(0, 0, 0, canvas.height);
+      overlay.addColorStop(0, "rgba(8,47,73,.78)");
+      overlay.addColorStop(0.24, "rgba(8,47,73,.44)");
+      overlay.addColorStop(0.38, "rgba(8,47,73,.08)");
+      overlay.addColorStop(0.58, "rgba(8,47,73,.12)");
+      overlay.addColorStop(0.68, "rgba(8,47,73,.78)");
+      overlay.addColorStop(0.84, "rgba(8,47,73,.96)");
+      overlay.addColorStop(1, "rgba(8,47,73,.99)");
+      context.fillStyle = overlay;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.textBaseline = "top";
+      context.textAlign = "left";
+      context.fillStyle = "#bae6fd";
+      context.font = "700 34px Arial";
+      context.fillText(
+        `BANDA CEDES DON BOSCO · ${t("donate.eventName").toUpperCase()}`,
+        72,
+        92
+      );
+      context.fillStyle = "#f8fafc";
+      context.font = "800 72px Arial";
+      [
+        t("donate.shareImageMembers", { participants: donationCampaign.participantCount }),
+        t("donate.shareImageDestination"),
+        `${t("donate.eventName")}.`,
+      ].forEach((line, index) => context.fillText(line, 72, 165 + index * 86));
+
+      drawRoundedRect(48, 1200, 984, 286, 34);
+      context.fillStyle = "rgba(8,47,73,.82)";
+      context.fill();
+      context.strokeStyle = "rgba(125,211,252,.28)";
+      context.lineWidth = 2;
+      context.stroke();
+
+      context.fillStyle = "#7dd3fc";
+      context.font = "800 68px Arial";
+      context.textAlign = "left";
+      context.shadowColor = "rgba(56,189,248,.3)";
+      context.shadowBlur = 18;
+      context.fillText(`${campaignProgress.percentage.toFixed(2)}%`, 72, 1238);
+      context.shadowBlur = 0;
+      context.fillStyle = "#bae6fd";
+      context.font = "800 23px Arial";
+      context.fillText(t("donate.logoProgress.reached").toUpperCase(), 74, 1315);
+      context.fillStyle = "#e0f2fe";
+      context.font = "600 28px Arial";
+      context.textAlign = "right";
+      context.fillText(
+        `${money(donationCampaign.raised, lang)} ${t("donate.raised")}`,
+        1008,
+        1278
+      );
+
+      const progressX = 72;
+      const progressY = 1355;
+      const progressWidth = 936;
+      const progressHeight = 22;
+      drawRoundedRect(progressX, progressY, progressWidth, progressHeight, progressHeight / 2);
+      context.fillStyle = "rgba(255,255,255,.24)";
+      context.fill();
+      const fundedRatio = Math.min(Math.max(campaignProgress.percentage / 100, 0), 1);
+      if (fundedRatio > 0) {
+        const fundedWidth = Math.max(progressHeight, progressWidth * fundedRatio);
+        drawRoundedRect(progressX, progressY, fundedWidth, progressHeight, progressHeight / 2);
+        context.fillStyle = "#38bdf8";
+        context.fill();
+      }
+
+      context.fillStyle = "#e0f2fe";
+      context.font = "600 27px Arial";
+      context.textAlign = "left";
+      context.fillText(
+        t("donate.funded", { count: campaignProgress.fundedStudents }),
+        72,
+        1405
+      );
+      context.textAlign = "right";
+      context.fillText(
+        `${money(campaignProgress.remaining, lang)} ${t("donate.pending")}`,
+        1008,
+        1405
+      );
+      context.fillStyle = "#e4002b";
+      drawRoundedRect(72, 1545, 936, 144, 72);
+      context.fill();
+      context.fillStyle = "#f8fafc";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = "800 38px Arial";
+      context.fillText("APOYA A UN INTEGRANTE", 540, 1617);
+      context.font = "700 30px Arial";
+      context.fillText(url.replace(/^https?:\/\//, ""), 540, 1790);
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (file) => (file ? resolve(file) : reject(new Error("image-generation-failed"))),
+          "image/jpeg",
+          0.92
+        );
+      });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "bcdb-desfile-de-las-rosas-story.jpg";
+      link.href = downloadUrl;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+      trackDonationEvent("campaign_shared", { channel: "story_download" });
+    } catch {
+      announce(t("donate.storyDownloadFailed"));
+    }
   };
   const share = async () => {
     try {
@@ -381,6 +475,7 @@ function SharePanel({ t, url, announce }) {
 
 SharePanel.propTypes = {
   t: PropTypes.func.isRequired,
+  lang: PropTypes.oneOf(["es", "en"]).isRequired,
   url: PropTypes.string.isRequired,
   announce: PropTypes.func.isRequired,
 };
@@ -466,9 +561,11 @@ function DonatePage() {
     : selectedAmount > contributionValue
     ? t("donate.selectedMultipleProgress", {
         count: completeEquivalents,
+        amount: money(contributionRemainder, lang),
         remaining: money(remainingToNext, lang),
       })
     : t("donate.selectedImpact", {
+        amount: money(selectedAmount, lang),
         remaining: money(remainingToNext, lang),
       });
 
@@ -1051,7 +1148,7 @@ function DonatePage() {
           </div>
         </section>
 
-        <SharePanel t={t} url={url} announce={announce} />
+        <SharePanel t={t} lang={lang} url={url} announce={announce} />
         <section className="border-t border-sky-100 bg-white py-20 text-center sm:py-28">
           <div className="mx-auto max-w-4xl px-5">
             <Users className="mx-auto text-sky-700" size={42} />

@@ -95,7 +95,7 @@ const Header = ({ openModal }) => {
               )} */}
           </div>
 
-          <div className="flex items-center">
+          <div className="ml-auto flex items-center md:ml-0">
             {/* Call to action */}
             {isAuthenticated != null &&
             pathname !== "/gira-panama" &&

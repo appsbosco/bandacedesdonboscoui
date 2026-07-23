@@ -3,13 +3,13 @@ import { campaignProgress, donationCampaign } from "../../src/config/donationCam
 const CAMPAIGNS = {
   es: {
     title: `${donationCampaign.participantCount} integrantes. Un destino: Desfile de las Rosas. | Banda CEDES Don Bosco`,
-    description: `Ayúdanos a completar ${campaignProgress.remainingStudents} aportes equivalentes para llevar a nuestros ${donationCampaign.participantCount} integrantes al Desfile de las Rosas.`,
+    description: `Ayúdanos a reunir los ${campaignProgress.remainingStudents} apoyos de USD 2,200 que aún necesitamos para llevar a nuestros ${donationCampaign.participantCount} integrantes al Desfile de las Rosas.`,
     locale: "es_CR",
     canonicalPath: "/es/donar",
   },
   en: {
     title: `${donationCampaign.participantCount} members. One destination: Rose Parade. | Banda CEDES Don Bosco`,
-    description: `Help us complete ${campaignProgress.remainingStudents} equivalent contributions to take our ${donationCampaign.participantCount} members to the Rose Parade.`,
+    description: `Help us raise the remaining ${campaignProgress.remainingStudents} USD 2,200 support goals needed to take our ${donationCampaign.participantCount} members to the Rose Parade.`,
     locale: "en_US",
     canonicalPath: "/en/donate",
   },
