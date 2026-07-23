@@ -10,17 +10,15 @@ import {
   UPSERT_DOCUMENT_EXTRACTED_DATA,
   ENQUEUE_DOCUMENT_OCR,
   PROCESS_DOCUMENT_OCR,
-  DOCUMENT_VISIBILITY_SETTINGS,
   MY_SENSITIVE_DOCUMENT_EDIT_LOCK,
 } from "../../graphql/documents/documents.gql";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { OCR_TYPES, DOCUMENT_TYPES } from "../../utils/constants";
-import { GET_USERS_BY_ID } from "../../graphql/queries";
 import WizardStep1 from "./WizardStep1";
 import WizardStep2 from "./WizardStep2";
 import WizardStep3 from "./WizardStep3";
-import { isDocumentAdmin, SENSITIVE_DOCUMENT_TYPES } from "./documentAccess";
+import { SENSITIVE_DOCUMENT_TYPES } from "./documentAccess";
 
 const STEPS = ["Tipo", "Captura", "Revisión"];
 const DIRECT_UPLOAD_COMPLETE_TYPES = new Set(["PERMISO_SALIDA", "OTHER"]);
@@ -281,25 +279,15 @@ export default function NewDocumentPage() {
   const [upsertExtractedData] = useMutation(UPSERT_DOCUMENT_EXTRACTED_DATA);
   const [enqueueDocumentOcr] = useMutation(ENQUEUE_DOCUMENT_OCR);
   const [processDocumentOcr] = useMutation(PROCESS_DOCUMENT_OCR);
-  const { data: userData } = useQuery(GET_USERS_BY_ID);
-  const { data: settingsData, loading: settingsLoading } = useQuery(DOCUMENT_VISIBILITY_SETTINGS, {
-    fetchPolicy: "cache-and-network",
-  });
   const { data: editLockData, loading: editLockLoading } = useQuery(
     MY_SENSITIVE_DOCUMENT_EDIT_LOCK
   );
 
-  const currentUser = userData?.getUser;
-  const userIsAdmin = isDocumentAdmin(currentUser);
-  const restrictSensitiveUploadsToAdmins =
-    settingsData?.documentVisibilitySettings?.restrictSensitiveUploadsToAdmins ?? true;
   const sensitiveEditLock = editLockData?.mySensitiveDocumentEditLock;
 
   const filteredDocumentTypes = Object.values(DOCUMENT_TYPES).filter((type) => {
     if (sensitiveEditLock?.locked && SENSITIVE_DOCUMENT_TYPES.includes(type.id)) return false;
-    if (!restrictSensitiveUploadsToAdmins) return true;
-    if (userIsAdmin) return true;
-    return !SENSITIVE_DOCUMENT_TYPES.includes(type.id);
+    return true;
   });
 
   useEffect(() => {
@@ -448,7 +436,7 @@ export default function NewDocumentPage() {
           )}
 
           {/* Settings loading */}
-          {(settingsLoading || editLockLoading) && (
+          {editLockLoading && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
               <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-slate-700 animate-spin" />
               <p className="text-sm text-slate-500">Cargando configuración…</p>
@@ -456,12 +444,12 @@ export default function NewDocumentPage() {
           )}
 
           {/* Uploading / Processing */}
-          {!successState && !settingsLoading && !editLockLoading && uploading && (
+          {!successState && !editLockLoading && uploading && (
             <ProcessingState phase={processingPhase} />
           )}
 
           {/* Upload error */}
-          {!successState && !settingsLoading && !editLockLoading && uploadError && !uploading && (
+          {!successState && !editLockLoading && uploadError && !uploading && (
             <UploadErrorState
               error={uploadError}
               onRetry={() => {
@@ -472,7 +460,7 @@ export default function NewDocumentPage() {
           )}
 
           {/* Wizard steps */}
-          {!successState && !settingsLoading && !editLockLoading && !uploading && !uploadError && (
+          {!successState && !editLockLoading && !uploading && !uploadError && (
             <>
               {step === 0 && (
                 <WizardStep1
@@ -486,8 +474,6 @@ export default function NewDocumentPage() {
                   helperMessage={
                     sensitiveEditLock?.locked
                       ? sensitiveEditLock.message
-                      : restrictSensitiveUploadsToAdmins && !userIsAdmin
-                      ? "Pasaporte, visa y permiso de salida no se deben subir de momento"
                       : ""
                   }
                 />
