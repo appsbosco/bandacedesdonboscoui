@@ -2,6 +2,7 @@ export const donationCampaign = {
   goal: 660000,
   raised: 309750,
   contributionPerStudent: 2200,
+  participantCount: 300,
   currency: "USD",
   lastUpdated: "2026-07-22",
   titleKey: "donate.title",
@@ -72,12 +73,21 @@ export const sponsors = [
     alt: "Logotipo de Alimentos Jack's",
   },
   {
-    id: "alberto-varon",
-    name: "Alberto Varón",
-    logo: sponsorLogo("ALBERTO VARÓN.jpeg"),
+    id: "roma",
+    name: "Roma",
+    logo: sponsorLogo("Logo Roma Nuevo (2).webp"),
     level: "collaborator",
     contributionType: "financial",
-    alt: "Logotipo de Alberto Varón",
+    alt: "Logotipo de Roma",
+  },
+
+  {
+    id: "universidad-hispanoamericana",
+    name: "Universidad Hispanoamericana",
+    logo: sponsorLogo("logo UH horizontal.png"),
+    level: "collaborator",
+    contributionType: "financial",
+    alt: "Logotipo de Universidad Hispanoamericana",
   },
   {
     id: "azu",
@@ -104,12 +114,12 @@ export const sponsors = [
     alt: "Logotipo de Farmacias La Bomba",
   },
   {
-    id: "roma",
-    name: "Roma",
-    logo: sponsorLogo("Logo Roma Nuevo (2).webp"),
+    id: "ambitec",
+    name: "Ambitec",
+    logo: sponsorLogo("cropped-logo-ambitec (1).webp"),
     level: "collaborator",
     contributionType: "financial",
-    alt: "Logotipo de Roma",
+    alt: "Logotipo de Ambitec",
   },
   {
     id: "sn",
@@ -142,6 +152,22 @@ export const sponsors = [
     level: "collaborator",
     contributionType: "financial",
     alt: "Logotipo de Laboratorio Echandi",
+  },
+  {
+    id: "alberto-varon",
+    name: "Alberto Varón",
+    logo: sponsorLogo("alberto-varon.jpeg"),
+    level: "collaborator",
+    contributionType: "financial",
+    alt: "Logotipo de Alberto Varón",
+  },
+  {
+    id: "explora-america",
+    name: "Explora América",
+    logo: sponsorLogo("exploramerica_Mesa de trabajo 1-01.webp"),
+    level: "collaborator",
+    contributionType: "financial",
+    alt: "Logotipo de Explora América",
   },
 ];
 

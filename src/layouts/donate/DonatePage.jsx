@@ -1,14 +1,13 @@
 /* eslint-disable react/prop-types */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Copy, Download, Lock, Share2, Users } from "lucide-react";
+import { Check, ChevronDown, Copy, Download, Lock, Share2, Users } from "lucide-react";
 import PropTypes from "prop-types";
 
 import Header from "components/Header";
 import Footer from "components/Footer";
 import Seo from "components/Seo";
 import RoseParadeProgressMark from "components/donations/RoseParadeProgressMark";
-import bandPhoto from "assets/images/cover-landing.webp";
 import {
   campaignProgress,
   cardPayments,
@@ -91,10 +90,13 @@ function StudentGrid({ t, lang }) {
   }, [isSimulating]);
 
   const toggleSimulation = () => {
-    setIsSimulating((current) => {
-      if (!current) setCelebrationKey((key) => key + 1);
-      return !current;
-    });
+    if (isSimulating) {
+      setIsSimulating(false);
+      return;
+    }
+
+    setCelebrationKey((key) => key + 1);
+    setIsSimulating(true);
   };
 
   return (
@@ -179,50 +181,77 @@ StudentGrid.propTypes = {
 };
 
 function SharePanel({ t, url, announce }) {
-  const message = t("donate.shareText", { remaining: campaignProgress.remainingStudents });
+  const [copiedKind, setCopiedKind] = useState("");
+  const copiedTimer = useRef();
+  const message = t("donate.shareText", {
+    participants: donationCampaign.participantCount,
+    remaining: campaignProgress.remainingStudents,
+  });
+
+  useEffect(
+    () => () => {
+      clearTimeout(copiedTimer.current);
+    },
+    []
+  );
+
   const downloadStory = async () => {
     const image = new Image();
-    image.src = "/images/rose-parade-story.jpg";
+    image.src = "/images/imagen%20vertical.png";
     await image.decode();
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
     canvas.height = 1920;
     const context = canvas.getContext("2d");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+    const imageWidth = image.width * imageScale;
+    const imageHeight = image.height * imageScale;
+    context.drawImage(
+      image,
+      (canvas.width - imageWidth) / 2,
+      (canvas.height - imageHeight) / 2,
+      imageWidth,
+      imageHeight
+    );
     const overlay = context.createLinearGradient(0, 0, 0, canvas.height);
-    overlay.addColorStop(0, "rgba(8,47,73,.84)");
-    overlay.addColorStop(0.62, "rgba(8,47,73,.66)");
-    overlay.addColorStop(1, "rgba(8,47,73,.92)");
+    overlay.addColorStop(0, "rgba(8,47,73,.78)");
+    overlay.addColorStop(0.24, "rgba(8,47,73,.44)");
+    overlay.addColorStop(0.38, "rgba(8,47,73,.08)");
+    overlay.addColorStop(0.67, "rgba(8,47,73,.12)");
+    overlay.addColorStop(0.76, "rgba(8,47,73,.68)");
+    overlay.addColorStop(1, "rgba(8,47,73,.94)");
     context.fillStyle = overlay;
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.textBaseline = "top";
+    context.textAlign = "left";
     context.fillStyle = "#bae6fd";
     context.font = "700 34px Arial";
-    context.fillText("BANDA CEDES DON BOSCO · ROSE PARADE", 72, 170);
+    context.fillText(`BANDA CEDES DON BOSCO · ${t("donate.eventName").toUpperCase()}`, 72, 92);
     context.fillStyle = "#f8fafc";
-    context.font = "800 78px Arial";
+    context.font = "800 72px Arial";
     [
-      t("donate.title", { remaining: campaignProgress.remainingStudents }).split(". ")[0] + ".",
-      t("donate.title", { remaining: campaignProgress.remainingStudents }).split(". ")[1] + ".",
-      "Rose Parade.",
-    ].forEach((line, index) => context.fillText(line, 72, 300 + index * 98));
+      t("donate.shareImageMembers", { participants: donationCampaign.participantCount }),
+      t("donate.shareImageDestination"),
+      `${t("donate.eventName")}.`,
+    ].forEach((line, index) => context.fillText(line, 72, 165 + index * 86));
     context.fillStyle = "#7dd3fc";
-    context.font = "800 52px Arial";
-    context.fillText(`${campaignProgress.percentage.toFixed(2)}% ALCANZADO`, 72, 730);
+    context.font = "800 50px Arial";
+    context.fillText(`${campaignProgress.percentage.toFixed(2)}% ALCANZADO`, 72, 1290);
     context.fillStyle = "#f8fafc";
-    context.font = "600 39px Arial";
-    context.fillText(`${campaignProgress.fundedStudents} aportes alcanzados`, 72, 815);
-    context.fillText(`${campaignProgress.remainingStudents} aportes pendientes`, 72, 870);
+    context.font = "600 36px Arial";
+    context.fillText(`${campaignProgress.fundedStudents} aportes equivalentes alcanzados`, 72, 1362);
+    context.fillText(`${campaignProgress.remainingStudents} aportes equivalentes pendientes`, 72, 1420);
     context.fillStyle = "#e4002b";
     context.beginPath();
-    context.roundRect(72, 1510, 936, 150, 75);
+    context.roundRect(72, 1545, 936, 144, 72);
     context.fill();
     context.fillStyle = "#f8fafc";
     context.textAlign = "center";
+    context.textBaseline = "middle";
     context.font = "800 38px Arial";
-    context.fillText("APOYA A UN ESTUDIANTE", 540, 1558);
+    context.fillText("APOYA A UN INTEGRANTE", 540, 1617);
     context.font = "700 30px Arial";
-    context.fillText(url.replace(/^https?:\/\//, ""), 540, 1740);
+    context.fillText(url.replace(/^https?:\/\//, ""), 540, 1790);
     const link = document.createElement("a");
     link.download = "bcdb-rose-parade-story.jpg";
     link.href = canvas.toDataURL("image/jpeg", 0.92);
@@ -233,7 +262,7 @@ function SharePanel({ t, url, announce }) {
     try {
       if (!navigator.share) throw new Error("unsupported");
       await navigator.share({
-        title: t("donate.title", { remaining: campaignProgress.remainingStudents }),
+        title: t("donate.title", { participants: donationCampaign.participantCount }),
         text: message,
         url,
       });
@@ -245,64 +274,105 @@ function SharePanel({ t, url, announce }) {
   const copy = async (kind, value) => {
     try {
       await copyText(value);
-      announce(t(kind === "link" ? "donate.linkCopied" : "donate.messageCopied"));
+      const confirmation = t(kind === "link" ? "donate.linkCopied" : "donate.messageCopied");
+      setCopiedKind(kind);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKind(""), 2500);
+      announce(confirmation);
       trackDonationEvent("campaign_shared", { channel: `copy_${kind}` });
     } catch {
+      setCopiedKind("");
       announce(t("donate.payment.failed"));
     }
   };
   return (
-    <section id="compartir" className="bg-sky-950 py-16 text-white sm:py-20">
-      <div className="mx-auto grid max-w-screen-xl gap-10 px-5 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
+    <section
+      id="compartir"
+      className="relative isolate min-h-[620px] overflow-hidden bg-sky-950 text-white lg:min-h-[760px]"
+    >
+      <picture className="absolute inset-0 -z-20 block h-full w-full">
+        <source media="(min-width: 640px)" srcSet="/images/integrantes.png" />
+        <img
+          src="/images/integrantes.png"
+          alt=""
+          className="h-full w-full object-cover object-[54%_center] sm:object-top"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+      <div className="absolute inset-0 -z-10 bg-sky-950/90 lg:bg-gradient-to-b lg:from-sky-950/25 lg:via-sky-950/40 lg:to-sky-950/95" />
+
+      <div className="mx-auto grid min-h-[620px] max-w-screen-xl items-center gap-10 px-5 py-16 sm:px-6 sm:py-20 lg:min-h-[760px] lg:grid-cols-[0.8fr_1.2fr] lg:items-end lg:px-8 lg:pb-16 lg:pt-[400px]">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-sky-300">Rose Parade</p>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-sky-300">
+            {t("donate.eventName")}
+          </p>
           <h2 className="mt-3 text-3xl font-bold sm:text-4xl">{t("donate.shareTitle")}</h2>
           <p className="mt-4 max-w-lg leading-7 text-sky-100">{message}</p>
           <ActionButton onClick={share} className="mt-7 bg-white text-sky-950 hover:bg-sky-100">
             <Share2 size={19} aria-hidden="true" /> {t("donate.nativeShare")}
           </ActionButton>
         </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => trackDonationEvent("share_channel_selected", { channel: "whatsapp" })}
-            className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-700 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
-          >
-            {t("donate.whatsapp")}
-          </a>
-          <a
-            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => trackDonationEvent("share_channel_selected", { channel: "facebook" })}
-            className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-700 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
-          >
-            {t("donate.facebook")}
-          </a>
-          <ActionButton
-            onClick={() => copy("link", url)}
-            className="border border-sky-700 hover:bg-sky-900"
-          >
-            <Copy size={18} />
-            {t("donate.copyLink")}
-          </ActionButton>
-          <ActionButton
-            onClick={() => copy("message", `${message} ${url}`)}
-            className="border border-sky-700 hover:bg-sky-900"
-          >
-            <Copy size={18} />
-            {t("donate.copyMessage")}
-          </ActionButton>
-          <ActionButton
-            onClick={downloadStory}
-            className="bg-sky-600 hover:bg-sky-500 sm:col-span-2"
-          >
-            <Download size={18} />
-            {t("donate.downloadStory")}
-          </ActionButton>
-          <p className="text-sm leading-6 text-sky-200 sm:col-span-2">{t("donate.storyHelp")}</p>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackDonationEvent("share_channel_selected", { channel: "whatsapp" })}
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
+            >
+              {t("donate.whatsapp")}
+            </a>
+            <a
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackDonationEvent("share_channel_selected", { channel: "facebook" })}
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
+            >
+              {t("donate.facebook")}
+            </a>
+            <ActionButton
+              onClick={() => copy("link", url)}
+              className={`border ${
+                copiedKind === "link"
+                  ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
+                  : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
+              }`}
+            >
+              {copiedKind === "link" ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <Copy size={18} aria-hidden="true" />
+              )}
+              {copiedKind === "link" ? t("donate.linkCopied") : t("donate.copyLink")}
+            </ActionButton>
+            <ActionButton
+              onClick={() => copy("message", `${message} ${url}`)}
+              className={`border ${
+                copiedKind === "message"
+                  ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
+                  : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
+              }`}
+            >
+              {copiedKind === "message" ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <Copy size={18} aria-hidden="true" />
+              )}
+              {copiedKind === "message" ? t("donate.messageCopied") : t("donate.copyMessage")}
+            </ActionButton>
+            <ActionButton
+              onClick={downloadStory}
+              className="bg-sky-600 hover:bg-sky-500 sm:col-span-2"
+            >
+              <Download size={18} />
+              {t("donate.downloadStory")}
+            </ActionButton>
+            <p className="text-sm leading-6 text-sky-100 sm:col-span-2">
+              {t("donate.storyHelp")}
+            </p>
         </div>
       </div>
     </section>
@@ -323,7 +393,9 @@ function DonatePage() {
   const [method, setMethod] = useState("card");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [copiedMethod, setCopiedMethod] = useState("");
   const noticeTimer = useRef();
+  const copiedTimer = useRef();
   const url = `${window.location.origin}/${lang}/${lang === "en" ? "donate" : "donar"}`;
   const card = cardPayments.find((item) => item.amount === amount);
   const selectedAmount = custom !== "" ? Number(custom) : amount;
@@ -344,7 +416,10 @@ function DonatePage() {
 
   useEffect(() => {
     trackDonationEvent("donation_page_view", { language: lang });
-    return () => clearTimeout(noticeTimer.current);
+    return () => {
+      clearTimeout(noticeTimer.current);
+      clearTimeout(copiedTimer.current);
+    };
   }, [lang]);
 
   const announce = (message) => {
@@ -364,32 +439,48 @@ function DonatePage() {
   const handleCopy = async (id, value) => {
     try {
       await copyText(value);
+      setCopiedMethod(id);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedMethod(""), 2500);
       announce(t("donate.payment.copied"));
       trackDonationEvent("bank_details_copied", { method: id });
     } catch {
+      setCopiedMethod("");
       announce(t("donate.payment.failed"));
     }
   };
 
+  const contributionValue = donationCampaign.contributionPerStudent;
+  const completeEquivalents = validAmount ? Math.floor(selectedAmount / contributionValue) : 0;
+  const contributionRemainder = validAmount ? selectedAmount % contributionValue : 0;
+  const remainingToNext = contributionValue - contributionRemainder;
+
   const impactText = !validAmount
     ? t("donate.invalid")
-    : selectedAmount === donationCampaign.contributionPerStudent
+    : selectedAmount === contributionValue
     ? t("donate.selectedComplete")
-    : selectedAmount > donationCampaign.contributionPerStudent &&
-      selectedAmount % donationCampaign.contributionPerStudent === 0
+    : selectedAmount > contributionValue && contributionRemainder === 0
     ? t("donate.selectedMultiple", {
-        count: selectedAmount / donationCampaign.contributionPerStudent,
+        count: completeEquivalents,
+      })
+    : selectedAmount > contributionValue
+    ? t("donate.selectedMultipleProgress", {
+        count: completeEquivalents,
+        remaining: money(remainingToNext, lang),
       })
     : t("donate.selectedImpact", {
-        amount: money(selectedAmount, lang),
-        studentAmount: money(donationCampaign.contributionPerStudent, lang),
+        remaining: money(remainingToNext, lang),
       });
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900">
       <Seo
-        title={t("donate.seo.title", { remaining: campaignProgress.remainingStudents })}
+        title={t("donate.seo.title", {
+          participants: donationCampaign.participantCount,
+          remaining: campaignProgress.remainingStudents,
+        })}
         description={t("donate.seo.description", {
+          participants: donationCampaign.participantCount,
           remaining: campaignProgress.remainingStudents,
         })}
         image={`${window.location.origin}/images/rose-parade-social.jpg`}
@@ -416,11 +507,12 @@ function DonatePage() {
                 {t("donate.rose")}
               </p>
               <h1 className="mt-5 text-5xl font-extrabold leading-[.98] tracking-tight sm:text-6xl lg:text-7xl">
-                {t("donate.title", { remaining: campaignProgress.remainingStudents })}
+                {t("donate.title", { participants: donationCampaign.participantCount })}
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-8 text-sky-50 sm:text-xl">
                 {t("donate.intro", {
                   funded: campaignProgress.fundedStudents,
+                  participants: donationCampaign.participantCount,
                   remaining: campaignProgress.remainingStudents,
                 })}
               </p>
@@ -495,7 +587,7 @@ function DonatePage() {
             <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr]">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[.18em] text-[#e4002b]">
-                  Rose Parade
+                  {t("donate.eventName")}
                 </p>
                 <h2 className="mt-3 text-3xl font-extrabold text-sky-950 sm:text-5xl">
                   {t("donate.chooseTitle")}
@@ -629,10 +721,24 @@ function DonatePage() {
                         </div>
                         <ActionButton
                           onClick={() => handleCopy(item.id, item.value)}
-                          className="shrink-0 border border-slate-300 bg-white px-4 text-sm hover:border-sky-700"
+                          className={`shrink-0 border px-4 text-sm ${
+                            copiedMethod === item.id
+                              ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                              : "border-slate-300 bg-white hover:border-sky-700"
+                          }`}
                         >
-                          <Copy size={17} />
-                          <span className="hidden sm:inline">{t("donate.payment.copy")}</span>
+                          {copiedMethod === item.id ? (
+                            <Check size={17} aria-hidden="true" />
+                          ) : (
+                            <Copy size={17} aria-hidden="true" />
+                          )}
+                          <span className={copiedMethod === item.id ? "" : "hidden sm:inline"}>
+                            {t(
+                              copiedMethod === item.id
+                                ? "donate.payment.copied"
+                                : "donate.payment.copy"
+                            )}
+                          </span>
                         </ActionButton>
                       </div>
                     ))}
@@ -670,16 +776,19 @@ function DonatePage() {
               ].map(([people, each]) => (
                 <div
                   key={people}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-4 sm:gap-7"
+                  className="grid grid-cols-[3.5rem_1fr] items-center gap-4 py-5 sm:grid-cols-[4.5rem_1fr] sm:gap-7"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 font-extrabold text-sky-900">
+                  <span
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-lg font-extrabold text-sky-900 sm:h-16 sm:w-16 sm:text-xl"
+                    aria-hidden="true"
+                  >
                     {people}
                   </span>
-                  <p className="font-semibold text-slate-800">
-                    {t("donate.people", { count: people })}
-                  </p>
-                  <p className="text-right font-extrabold text-sky-950">
-                    {t("donate.each", { amount: each })}
+                  <p className="max-w-3xl font-semibold leading-6 text-slate-800 sm:text-lg sm:leading-7">
+                    {t(people === 1 ? "donate.collectivePlanOne" : "donate.collectivePlanMany", {
+                      count: people,
+                      amount: money(each, lang),
+                    })}
                   </p>
                 </div>
               ))}
@@ -732,7 +841,6 @@ function DonatePage() {
             <h2 className="text-3xl font-extrabold text-sky-950 sm:text-5xl">
               {t("donate.sponsorsTitle")}
             </h2>
-            <p className="mt-4 max-w-3xl leading-7 text-slate-600">{t("donate.sponsorsIntro")}</p>
             {sortedSponsors.length ? (
               <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
                 {sortedSponsors.map((sponsor) => {
@@ -751,7 +859,11 @@ function DonatePage() {
                               }),
                           }
                         : {})}
-                      className={`group flex items-center justify-center rounded-xl border border-slate-200 bg-white p-6 transition-colors duration-200 hover:border-sky-300 ${
+                      className={`group flex items-center justify-center rounded-xl border p-6 transition-colors duration-200 ${
+                        sponsor.darkBackground
+                          ? "border-sky-950 bg-sky-950 hover:border-sky-700 hover:bg-sky-900"
+                          : "border-slate-200 bg-white hover:border-sky-300"
+                      } ${
                         sponsor.featured ? "col-span-2 min-h-44" : "min-h-36"
                       }`}
                     >
@@ -940,27 +1052,21 @@ function DonatePage() {
         </section>
 
         <SharePanel t={t} url={url} announce={announce} />
-        <section className="relative overflow-hidden py-20 text-center text-white sm:py-28">
-          <img
-            src={bandPhoto}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-sky-950/90" />
-          <div className="relative mx-auto max-w-4xl px-5">
-            <Users className="mx-auto text-sky-300" size={42} />
-            <h2 className="mt-5 text-4xl font-extrabold sm:text-6xl">
+        <section className="border-t border-sky-100 bg-white py-20 text-center sm:py-28">
+          <div className="mx-auto max-w-4xl px-5">
+            <Users className="mx-auto text-sky-700" size={42} />
+            <h2 className="mt-5 text-4xl font-extrabold text-sky-950 sm:text-6xl">
               {t("donate.finalTitle", { count: campaignProgress.remainingStudents })}
             </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-sky-100">
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">
               {t("donate.finalBody", {
                 amount: money(donationCampaign.contributionPerStudent, lang),
+                participants: donationCampaign.participantCount,
               })}
             </p>
             <a
               href="#donar-ahora"
-              className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-[#e4002b] px-8 font-bold hover:bg-[#bd0023]"
+              className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-[#e4002b] px-8 font-bold text-white hover:bg-[#bd0023] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
             >
               {t("donate.sticky")}
             </a>
