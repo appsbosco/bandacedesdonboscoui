@@ -1,6 +1,6 @@
 export const donationCampaign = {
   goal: 660000,
-  raised: 309750,
+  raised: 309770,
   contributionPerStudent: 2200,
   participantCount: 300,
   currency: "USD",
