@@ -120,6 +120,41 @@ export const DEFAULT_ZONE_ROWS = {
   FINAL: null,
 };
 
+// One-off free arrangement used for exceptional parade layouts. Keeping the
+// marker inside the slots makes the mode persist without changing the API
+// contract: 10 usable columns + 2 aisle columns + 10 usable columns.
+export const FREE_LAYOUT_ZONE = "BLOQUE_FRENTE";
+export const FREE_LAYOUT_SIDE_COLUMNS = 10;
+export const FREE_LAYOUT_AISLE_WIDTH = 2;
+export const FREE_LAYOUT_COLUMNS = FREE_LAYOUT_SIDE_COLUMNS * 2 + FREE_LAYOUT_AISLE_WIDTH;
+export const FREE_LAYOUT_AISLE_SECTION = "__FREE_LAYOUT_AISLE__";
+
+// Order is front → back in the visual left/right columns exactly as displayed
+// by the builder. Groups in the same nested array share the same depth band.
+export const FREE_LAYOUT_LEFT_GROUPS = [
+  ["DANZA"],
+  ["FLAUTAS"],
+  ["CLARINETES"],
+  ["SAXOFONES", "SAXOFONES_ALTO", "SAXOFON_TENOR", "SAXOFON_BARITONO"],
+];
+
+export const FREE_LAYOUT_RIGHT_GROUPS = [
+  ["COLOR_GUARD"],
+  ["MELOFONOS", "EUFONIOS"],
+  ["TROMBONES"],
+  ["TROMPETAS"],
+  ["TUBAS"],
+  ["PERCUSION", "MALLETS"],
+];
+
+export function isFreeLayoutAisleSlot(slot) {
+  return slot?.section === FREE_LAYOUT_AISLE_SECTION && !slot?.userId;
+}
+
+export function hasFreeLayout(slots = []) {
+  return slots.some(isFreeLayoutAisleSlot);
+}
+
 const PERCUSSION_LAYOUT_KEYS = {
   MALLETS: "PERCUSION__MALLETS",
   PERCUSION: "PERCUSION__PERCUSION",
@@ -134,6 +169,7 @@ export const SECTION_LABEL = {
   FLAUTAS: "Flautas",
   CLARINETES: "Clarinetes",
   SAXOFONES_ALTO: "Saxofón",
+  SAXOFONES: "Saxofones",
   SAXOFON_TENOR: "Saxofón Tenor",
   MELOFONOS: "Melófonos",
   SAXOFON_BARITONO: "Saxofón Barítono",
@@ -143,6 +179,7 @@ export const SECTION_LABEL = {
   MALLETS: "Mallets",
   PERCUSION: "Percusión",
   COLOR_GUARD: "Color Guard",
+  STAFF: "Staff",
 };
 
 function prettifySectionToken(section) {
@@ -294,6 +331,279 @@ function fillGrid(zone, members, columns, explicitRows = null, emptySection = nu
   return slots;
 }
 
+function getFreeLayoutAisleColumns() {
+  const start = FREE_LAYOUT_SIDE_COLUMNS;
+  return new Set(Array.from({ length: FREE_LAYOUT_AISLE_WIDTH }, (_, index) => start + index));
+}
+
+function makeFreeLayoutSlot(row, col, member = null) {
+  const isAisle = getFreeLayoutAisleColumns().has(col);
+  return {
+    zone: FREE_LAYOUT_ZONE,
+    row,
+    col,
+    section: isAisle ? FREE_LAYOUT_AISLE_SECTION : member?.section || null,
+    userId: isAisle ? null : uid(member?.userId) || null,
+    displayName: isAisle ? null : member?.displayName || member?.name || null,
+    avatar: isAisle ? null : member?.avatar || null,
+    // Aisle cells are structural and must never accept a drop.
+    locked: isAisle || Boolean(member?.locked),
+  };
+}
+
+function collectFreeLayoutMembers(sectionGroups, excludedIds, existingSlots) {
+  const excluded = new Set([...(excludedIds || [])].map(uid));
+  const membersById = new Map();
+
+  // Preserve the user's current visual order when converting an existing grid.
+  [...(existingSlots || [])]
+    .sort((a, b) => {
+      const zoneDiff = ZONES.indexOf(a.zone) - ZONES.indexOf(b.zone);
+      if (zoneDiff !== 0) return zoneDiff;
+      if (a.row !== b.row) return a.row - b.row;
+      return a.col - b.col;
+    })
+    .forEach((slot) => {
+      const userId = uid(slot?.userId);
+      if (!userId || excluded.has(userId) || membersById.has(userId)) return;
+      membersById.set(userId, {
+        userId,
+        displayName: slot.displayName || null,
+        avatar: slot.avatar || null,
+        section: slot.section || null,
+        locked: slot.locked || false,
+      });
+    });
+
+  for (const group of sectionGroups || []) {
+    for (const member of group?.members || []) {
+      const userId = uid(member?.userId);
+      if (!userId || excluded.has(userId)) continue;
+      const previous = membersById.get(userId);
+      membersById.set(userId, {
+        userId,
+        displayName: member.name || previous?.displayName || null,
+        avatar: member.avatar || previous?.avatar || null,
+        section: group.section || previous?.section || null,
+        locked: previous?.locked || false,
+      });
+    }
+  }
+
+  return [...membersById.values()];
+}
+
+function getFreeLayoutPlacement(section) {
+  for (let rank = 0; rank < FREE_LAYOUT_LEFT_GROUPS.length; rank++) {
+    const sectionRank = FREE_LAYOUT_LEFT_GROUPS[rank].indexOf(section);
+    if (sectionRank >= 0) return { side: "LEFT", rank, sectionRank };
+  }
+  for (let rank = 0; rank < FREE_LAYOUT_RIGHT_GROUPS.length; rank++) {
+    const sectionRank = FREE_LAYOUT_RIGHT_GROUPS[rank].indexOf(section);
+    if (sectionRank >= 0) return { side: "RIGHT", rank, sectionRank };
+  }
+  // Unknown/custom sections remain visible and default to the back-right side.
+  return { side: "RIGHT", rank: FREE_LAYOUT_RIGHT_GROUPS.length, sectionRank: 0 };
+}
+
+function sortFreeLayoutMembers(members) {
+  return members
+    .map((member, index) => ({ member, index, placement: getFreeLayoutPlacement(member.section) }))
+    .sort((a, b) => {
+      if (a.placement.side !== b.placement.side) {
+        return a.placement.side === "LEFT" ? -1 : 1;
+      }
+      if (a.placement.rank !== b.placement.rank) {
+        return a.placement.rank - b.placement.rank;
+      }
+      if (a.placement.sectionRank !== b.placement.sectionRank) {
+        return a.placement.sectionRank - b.placement.sectionRank;
+      }
+      return a.index - b.index;
+    })
+    .map(({ member }) => member);
+}
+
+function freeLayoutSlotMatchesSide(slot, side) {
+  if (side === "LEFT") return slot.col < FREE_LAYOUT_SIDE_COLUMNS;
+  return slot.col >= FREE_LAYOUT_SIDE_COLUMNS + FREE_LAYOUT_AISLE_WIDTH;
+}
+
+function isFreeLayoutBackfillMember(member) {
+  return member?.section === "STAFF" || member?.section === "DRUM_MAJOR";
+}
+
+function getFreeLayoutOpenSlots(slots, lastRowsFirst = false) {
+  return slots
+    .filter((slot) => !slot.userId && !slot.locked && !isFreeLayoutAisleSlot(slot))
+    .sort((a, b) => {
+      if (a.row !== b.row) return lastRowsFirst ? b.row - a.row : a.row - b.row;
+      return a.col - b.col;
+    });
+}
+
+/**
+ * Build the exceptional 20-column free grid. Every section shares one zone,
+ * while the two exact center columns remain an immutable aisle. Recomputing a
+ * free grid preserves positions already chosen by the user whenever possible.
+ */
+export function computeFreeFormation({
+  sectionGroups = [],
+  excludedIds = [],
+  existingSlots = [],
+  resetToPreset = false,
+}) {
+  const members = sortFreeLayoutMembers(
+    collectFreeLayoutMembers(sectionGroups, excludedIds, existingSlots)
+  );
+  const membersById = new Map(members.map((member) => [uid(member.userId), member]));
+  const backfillMembers = members
+    .filter(isFreeLayoutBackfillMember)
+    .sort((a, b) => (a.section === b.section ? 0 : a.section === "STAFF" ? -1 : 1));
+  const regularMembers = members.filter((member) => !isFreeLayoutBackfillMember(member));
+  const leftMembers = regularMembers.filter(
+    (member) => getFreeLayoutPlacement(member.section).side === "LEFT"
+  );
+  const rightMembers = regularMembers.filter(
+    (member) => getFreeLayoutPlacement(member.section).side === "RIGHT"
+  );
+  const existingIsFree = hasFreeLayout(existingSlots) && !resetToPreset;
+  const existingRows = existingIsFree
+    ? existingSlots.reduce((max, slot) => Math.max(max, Number(slot.row) || 0), 0) + 1
+    : 0;
+  const regularRows = Math.max(
+    1,
+    Math.ceil(leftMembers.length / FREE_LAYOUT_SIDE_COLUMNS),
+    Math.ceil(rightMembers.length / FREE_LAYOUT_SIDE_COLUMNS)
+  );
+  const regularOpenPositions =
+    regularRows * FREE_LAYOUT_SIDE_COLUMNS * 2 - leftMembers.length - rightMembers.length;
+  const additionalBackfillRows = Math.ceil(
+    Math.max(0, backfillMembers.length - regularOpenPositions) / (FREE_LAYOUT_SIDE_COLUMNS * 2)
+  );
+  const rowCount = Math.max(1, existingRows, regularRows + additionalBackfillRows);
+  const slotMap = new Map();
+
+  for (let row = 0; row < rowCount; row++) {
+    for (let col = 0; col < FREE_LAYOUT_COLUMNS; col++) {
+      slotMap.set(`${row}|${col}`, makeFreeLayoutSlot(row, col));
+    }
+  }
+
+  const placedIds = new Set();
+  if (existingIsFree) {
+    for (const slot of existingSlots) {
+      const userId = uid(slot?.userId);
+      const key = `${slot.row}|${slot.col}`;
+      if (
+        !userId ||
+        placedIds.has(userId) ||
+        !membersById.has(userId) ||
+        isFreeLayoutAisleSlot(slot) ||
+        isFreeLayoutAisleSlot(slotMap.get(key))
+      ) {
+        continue;
+      }
+      slotMap.set(
+        key,
+        makeFreeLayoutSlot(slot.row, slot.col, {
+          ...membersById.get(userId),
+          locked: slot.locked || false,
+        })
+      );
+      placedIds.add(userId);
+    }
+  }
+
+  const openSlotsBySide = {
+    LEFT: [...slotMap.values()].filter(
+      (slot) =>
+        !slot.userId && !isFreeLayoutAisleSlot(slot) && freeLayoutSlotMatchesSide(slot, "LEFT")
+    ),
+    RIGHT: [...slotMap.values()].filter(
+      (slot) =>
+        !slot.userId && !isFreeLayoutAisleSlot(slot) && freeLayoutSlotMatchesSide(slot, "RIGHT")
+    ),
+  };
+  const openIndex = { LEFT: 0, RIGHT: 0 };
+  for (const member of regularMembers) {
+    const userId = uid(member.userId);
+    if (placedIds.has(userId)) continue;
+    const preferredSide = getFreeLayoutPlacement(member.section).side;
+    const fallbackSide = preferredSide === "LEFT" ? "RIGHT" : "LEFT";
+    const target =
+      openSlotsBySide[preferredSide][openIndex[preferredSide]++] ||
+      openSlotsBySide[fallbackSide][openIndex[fallbackSide]++];
+    if (!target) break;
+    slotMap.set(
+      `${target.row}|${target.col}`,
+      makeFreeLayoutSlot(target.row, target.col, {
+        ...member,
+        locked: existingIsFree && member.locked,
+      })
+    );
+    placedIds.add(userId);
+  }
+
+  // Staff and Drum Major are intentionally not assigned to either side. Once
+  // every section has its place, they fill the remaining usable cells from the
+  // last row toward the front. Existing manual positions remain untouched.
+  const backfillOpenSlots = getFreeLayoutOpenSlots([...slotMap.values()], true);
+  let backfillOpenIndex = 0;
+  for (const member of backfillMembers) {
+    const userId = uid(member.userId);
+    if (placedIds.has(userId)) continue;
+    const target = backfillOpenSlots[backfillOpenIndex++];
+    if (!target) break;
+    slotMap.set(
+      `${target.row}|${target.col}`,
+      makeFreeLayoutSlot(target.row, target.col, {
+        ...member,
+        locked: existingIsFree && member.locked,
+      })
+    );
+    placedIds.add(userId);
+  }
+
+  return [...slotMap.values()];
+}
+
+export function addMemberToFreeFormation(slots = [], musician) {
+  const userId = uid(musician?.userId);
+  if (!userId || slots.some((slot) => uid(slot.userId) === userId)) return slots;
+
+  const isBackfillMember = isFreeLayoutBackfillMember(musician);
+  const preferredSide = getFreeLayoutPlacement(musician?.section).side;
+  const emptySlot = isBackfillMember
+    ? getFreeLayoutOpenSlots(slots, true)[0]
+    : getFreeLayoutOpenSlots(slots).find((slot) => freeLayoutSlotMatchesSide(slot, preferredSide));
+  if (emptySlot) {
+    return slots.map((slot) =>
+      slotKey(slot) === slotKey(emptySlot)
+        ? makeFreeLayoutSlot(slot.row, slot.col, { ...musician, userId })
+        : slot
+    );
+  }
+
+  const nextRow = slots.length
+    ? slots.reduce((max, slot) => Math.max(max, Number(slot.row) || 0), 0) + 1
+    : 0;
+  const newRow = Array.from({ length: FREE_LAYOUT_COLUMNS }, (_, col) =>
+    makeFreeLayoutSlot(nextRow, col)
+  );
+  const firstOpen = newRow.find(
+    (slot) => !slot.locked && (isBackfillMember || freeLayoutSlotMatchesSide(slot, preferredSide))
+  );
+  return [
+    ...slots,
+    ...newRow.map((slot) =>
+      slotKey(slot) === slotKey(firstOpen)
+        ? makeFreeLayoutSlot(slot.row, slot.col, { ...musician, userId })
+        : slot
+    ),
+  ];
+}
+
 function parseRowPattern(pattern) {
   return String(pattern || "")
     .split(/[,\s]+/)
@@ -388,8 +698,7 @@ function fillPercussionGrid(members, zoneColumns, zoneRows, zonePatterns, fallba
     const baseSlots = pattern
       ? fillPatternGrid("PERCUSION", group.members, pattern, group.section)
       : fillGrid("PERCUSION", group.members, cols, rows, group.section);
-    const groupRows =
-      baseSlots.length > 0 ? Math.max(...baseSlots.map((slot) => slot.row)) + 1 : 0;
+    const groupRows = baseSlots.length > 0 ? Math.max(...baseSlots.map((slot) => slot.row)) + 1 : 0;
     const groupSlots = baseSlots.map((slot) => ({
       ...slot,
       row: slot.row + rowOffset,
@@ -666,6 +975,12 @@ export const SECTION_COLORS = {
     badge: "bg-orange-50    border-orange-300   text-orange-800",
     dark: false,
   },
+  SAXOFONES: {
+    cell: "bg-orange-100   border-orange-400",
+    text: "text-orange-900",
+    badge: "bg-orange-50    border-orange-300   text-orange-800",
+    dark: false,
+  },
   SAXOFON_TENOR: {
     cell: "bg-yellow-100   border-yellow-400",
     text: "text-yellow-900",
@@ -719,6 +1034,12 @@ export const SECTION_COLORS = {
     text: "text-rose-900",
     badge: "bg-rose-50      border-rose-300     text-rose-800",
     dark: false,
+  },
+  STAFF: {
+    cell: "bg-slate-700    border-slate-900",
+    text: "text-white",
+    badge: "bg-slate-100    border-slate-400     text-slate-800",
+    dark: true,
   },
 };
 

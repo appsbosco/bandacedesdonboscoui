@@ -4,20 +4,7 @@
  * automáticamente entre las cuotas pendientes del participante.
  */
 import { useState, useEffect } from "react";
-import { useQuery, gql } from "@apollo/client";
-import { fmtAmount, participantName } from "./useTourPayments";
-
-const GET_PARTICIPANTS_LIGHT = gql`
-  query GetParticipantsForPayment($tourId: ID!) {
-    getTourParticipants(tourId: $tourId) {
-      id
-      firstName
-      firstSurname
-      secondSurname
-      identification
-    }
-  }
-`;
+import { participantName } from "./useTourPayments";
 
 const METHODS = [
   { value: "CASH", label: "Efectivo" },
@@ -40,20 +27,13 @@ export default function RegisterPaymentModal({
   isOpen,
   tourId,
   prefillParticipant,
+  participants = [],
   onClose,
   onSubmit,
   loading,
 }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
-
-  const { data } = useQuery(GET_PARTICIPANTS_LIGHT, {
-    variables: { tourId },
-    skip: !isOpen || !tourId || !!prefillParticipant,
-    fetchPolicy: "cache-and-network",
-  });
-
-  const participants = data?.getTourParticipants || [];
 
   useEffect(() => {
     if (!isOpen) return;
@@ -161,8 +141,8 @@ export default function RegisterPaymentModal({
               >
                 <option value="">Seleccioná un participante…</option>
                 {participants.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {participantName(p)} · {p.identification}
+                  <option key={p.participantId || p.id} value={p.participantId || p.id}>
+                    {p.fullName || participantName(p)} · {p.identification}
                   </option>
                 ))}
               </select>

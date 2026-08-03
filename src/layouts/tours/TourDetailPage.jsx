@@ -5,6 +5,7 @@
  *
  * Comportamiento por rol:
  *   - Admin/Director/Subdirector: vista administrativa completa (todos los tabs)
+ *   - Staff: operación de pagos (solo el tab Pagos)
  *   - Resto: vista self-service (solo tabs habilitados en tour.selfServiceAccess)
  */
 import { useEffect, useMemo, useState } from "react";
@@ -36,6 +37,7 @@ import TourTicketAdminPage from "./tourTickets/TourTicketAdminPage";
 // Roles con acceso administrativo completo a giras
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
 const TOUR_FINANCE_ROLES = new Set(["CEDES Financiero"]);
+const TOUR_PAYMENT_OPERATOR_ROLES = new Set(["Staff"]);
 
 // Query mínima para saber si el actor actual es un User o un Parent.
 // getUser devuelve null para Parents → userData === null solo cuando ha terminado de cargar.
@@ -258,6 +260,10 @@ function isTourFinanceRole(role) {
   return TOUR_FINANCE_ROLES.has(role);
 }
 
+function isTourPaymentOperatorRole(role) {
+  return TOUR_PAYMENT_OPERATOR_ROLES.has(role);
+}
+
 // Todos los tabs disponibles en vista admin
 const ADMIN_TABS = [
   { id: "documents", label: "Documentos", emoji: "📄" },
@@ -337,7 +343,7 @@ function TourInfoCard({ tour }) {
 }
 
 // Vista admin: renderiza el sub-módulo completo por tab
-function AdminTabContent({ activeTab, tour, onTourRefetch }) {
+function AdminTabContent({ activeTab, tour, onTourRefetch, paymentRegistrationOnly = false }) {
   switch (activeTab) {
     case "imports":
       return (
@@ -352,7 +358,13 @@ function AdminTabContent({ activeTab, tour, onTourRefetch }) {
     case "rooms":
       return <TourRoomsPage tourId={tour.id} tourName={tour.name} />;
     case "payments":
-      return <TourPaymentsPage tourId={tour.id} tourName={tour.name} />;
+      return (
+        <TourPaymentsPage
+          tourId={tour.id}
+          tourName={tour.name}
+          registrationOnly={paymentRegistrationOnly}
+        />
+      );
     case "documents":
       return <TourDocumentsPage tourId={tour.id} tourName={tour.name} tour={tour} />;
     case "flight-tickets":
@@ -579,6 +591,8 @@ export default function TourDetailPage() {
 
   const isAdmin = !actorLoading && isAdminRole(currentUser?.role);
   const isTourFinance = !actorLoading && isTourFinanceRole(currentUser?.role);
+  const isTourPaymentOperator =
+    !actorLoading && isTourPaymentOperatorRole(currentUser?.role);
   const isParent = !actorLoading && currentUser === null;
 
   if (loading) {
@@ -710,6 +724,25 @@ export default function TourDetailPage() {
             </div>
             <div className="px-4">
               <AdminTabContent activeTab={activeTab} tour={tour} onTourRefetch={refetch} />
+            </div>
+          </>
+        ) : isTourPaymentOperator ? (
+          <>
+            <div className="px-4">
+              <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl w-fit">
+                <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-gray-900 shadow-sm text-sm font-semibold">
+                  <span>💰</span>
+                  <span>Pagos</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-4">
+              <AdminTabContent
+                activeTab="payments"
+                tour={tour}
+                onTourRefetch={refetch}
+                paymentRegistrationOnly
+              />
             </div>
           </>
         ) : (

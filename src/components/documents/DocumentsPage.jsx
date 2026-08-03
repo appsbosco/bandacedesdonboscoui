@@ -6,7 +6,11 @@ import { SET_DOCUMENT_STATUS } from "../../graphql/documents/documents.gql.js";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentFilters } from "../../components/documents/DocumentsFilters.jsx";
 import { GET_USERS_BY_ID } from "graphql/queries";
-import { isDocumentAdmin, SENSITIVE_DOCUMENT_TYPES } from "./documentAccess";
+import {
+  canReviewReceipts,
+  isDocumentAdmin,
+  SENSITIVE_DOCUMENT_TYPES,
+} from "./documentAccess";
 import { getStatusLabel, maskDocumentNumber } from "../../utils/documentHelpers";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -2966,6 +2970,7 @@ function DocumentsPage() {
 
   const userIsAdmin = isDocumentAdmin(currentUser);
   const isFinanciero = userRole === "CEDES Financiero";
+  const isStaffReviewer = userRole === "Staff" && canReviewReceipts(currentUser);
   const canUploadDocuments = !isFinanciero;
   const [activeTab, setActiveTab] = useState("all");
 
@@ -2993,31 +2998,42 @@ function DocumentsPage() {
                         Admin
                       </span>
                     )}
+                    {isStaffReviewer && (
+                      <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full ring-1 ring-emerald-200 font-semibold">
+                        Revisión de comprobantes
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <p className="text-sm text-slate-500 mb-4">
                   {isFinanciero
                     ? "Documentos adjuntos y comprobantes cargados por los integrantes"
+                    : isStaffReviewer && activeTab === "all"
+                    ? "Revisa y aprueba los comprobantes cargados por los integrantes"
                     : "Filtra, revisa y escanea documentos de los integrantes"}
                 </p>
 
-                {userIsAdmin && !isFinanciero && (
+                {(userIsAdmin && !isFinanciero) || isStaffReviewer ? (
                   <div className="flex gap-2 p-1 bg-slate-100 rounded-full w-fit">
                     <TabButton active={activeTab === "mine"} onClick={() => setActiveTab("mine")}>
                       Mis documentos
                     </TabButton>
                     <TabButton active={activeTab === "all"} onClick={() => setActiveTab("all")}>
-                      Vista admin
+                      {isStaffReviewer ? "Aprobar comprobantes" : "Vista admin"}
                     </TabButton>
                   </div>
-                )}
+                ) : null}
               </div>
             </header>
 
             <main className="mx-auto max-w-[1400px] px-4 py-6">
               {isFinanciero && <FinancieroView />}
-              {!isFinanciero && (!userIsAdmin || activeTab === "mine") && <MyDocumentsView />}
+              {!isFinanciero && !isStaffReviewer && (!userIsAdmin || activeTab === "mine") && (
+                <MyDocumentsView />
+              )}
+              {isStaffReviewer && activeTab === "mine" && <MyDocumentsView />}
+              {isStaffReviewer && activeTab === "all" && <FinancieroView />}
               {!isFinanciero && userIsAdmin && activeTab === "all" && <AdminDocumentsView />}
             </main>
 

@@ -17,6 +17,7 @@ import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { Skeleton } from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
+import { canReviewReceipts, isDocumentAdmin } from "./documentAccess";
 import {
   getStatusColor,
   getStatusLabel,
@@ -181,16 +182,6 @@ function getCloudinaryPdfUrl(image) {
   }
 
   return image.url;
-}
-
-function isAdminUser(user) {
-  if (!user) return false;
-  return (
-    user.role === "Admin" ||
-    user.role === "CEDES Financiero" ||
-    user?.roles?.includes("Admin") ||
-    user?.roles?.includes("CEDES Financiero")
-  );
 }
 
 function getOwnerFullName(owner) {
@@ -434,7 +425,8 @@ export function DocumentDetail() {
   // Current user (for admin check)
   const { data: userData } = useQuery(GET_USERS_BY_ID);
   const currentUser = userData?.getUser;
-  const userIsAdmin = isAdminUser(currentUser);
+  const userIsAdmin = isDocumentAdmin(currentUser);
+  const userCanReviewReceipts = canReviewReceipts(currentUser);
 
   const { data, loading, error, startPolling, stopPolling } = useQuery(DOCUMENT_BY_ID, {
     variables: { id },
@@ -457,7 +449,7 @@ export function DocumentDetail() {
     {
       refetchQueries: [
         { query: DOCUMENT_BY_ID, variables: { id } },
-        { query: userIsAdmin ? ALL_DOCUMENTS : MY_DOCUMENTS },
+        { query: userCanReviewReceipts ? ALL_DOCUMENTS : MY_DOCUMENTS },
       ],
       awaitRefetchQueries: true,
       onError: (err) => addToast(`Error al guardar: ${err.message}`, "error"),
@@ -467,7 +459,7 @@ export function DocumentDetail() {
   const [setDocumentStatus, { loading: updatingStatus }] = useMutation(SET_DOCUMENT_STATUS, {
     refetchQueries: [
       { query: DOCUMENT_BY_ID, variables: { id } },
-      { query: userIsAdmin ? ALL_DOCUMENTS : MY_DOCUMENTS },
+      { query: userCanReviewReceipts ? ALL_DOCUMENTS : MY_DOCUMENTS },
     ],
     awaitRefetchQueries: true,
     onCompleted: () => addToast("Documento marcado como revisado", "success"),
@@ -483,7 +475,15 @@ export function DocumentDetail() {
   );
   const status = document?.status;
   const isOtherType = document?.type ? NON_OCR_TYPES.has(document.type) : false;
-  const canMarkAsReviewed = userIsAdmin && isOtherType && status !== "VERIFIED";
+  const currentUserId = currentUser?.id || currentUser?._id;
+  const ownerId = document?.owner?.id || document?.owner?._id || document?.owner;
+  const isDocumentOwner = Boolean(
+    currentUserId && ownerId && String(currentUserId) === String(ownerId)
+  );
+  const canModifyDocument = userIsAdmin || isDocumentOwner;
+  const canMarkAsReviewed =
+    status !== "VERIFIED" &&
+    ((userIsAdmin && isOtherType) || (userCanReviewReceipts && document?.type === "OTHER"));
 
   // Polling — skip entirely for non-OCR types
   useEffect(() => {
@@ -811,7 +811,7 @@ export function DocumentDetail() {
         {/* Left column: images + owner (admin) + actions */}
         <div className="lg:col-span-1 space-y-4">
           {/* Owner card — solo admin */}
-          {userIsAdmin && document.owner && <OwnerCard owner={document.owner} />}
+          {userCanReviewReceipts && document.owner && <OwnerCard owner={document.owner} />}
 
           {/* Images */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
@@ -873,7 +873,7 @@ export function DocumentDetail() {
                   Editar datos
                 </button>
               )}
-              {!isSensitiveEditLocked && (
+              {canModifyDocument && !isSensitiveEditLocked && (
                 <button
                   type="button"
                   onClick={() => setDeleteModal(true)}

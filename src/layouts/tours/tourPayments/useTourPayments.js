@@ -165,7 +165,7 @@ export function participantName(p) {
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
 
-export function useTourPayments(tourId) {
+export function useTourPayments(tourId, { registrationOnly = false } = {}) {
   // ── UI State ────────────────────────────────────────────────────────────────
   const [activeView, setActiveView] = useState("table");
   const [search, setSearch] = useState("");
@@ -211,7 +211,7 @@ export function useTourPayments(tourId) {
     refetch: refetchSummary,
   } = useQuery(GET_FINANCIAL_SUMMARY, {
     variables: { tourId },
-    skip: !tourId,
+    skip: !tourId || registrationOnly,
     fetchPolicy: "cache-and-network",
   });
 
@@ -221,7 +221,7 @@ export function useTourPayments(tourId) {
     refetch: refetchPlans,
   } = useQuery(GET_PAYMENT_PLANS_BY_TOUR, {
     variables: { tourId },
-    skip: !tourId,
+    skip: !tourId || registrationOnly,
     fetchPolicy: "cache-and-network",
   });
 
@@ -242,14 +242,14 @@ const { data: accountsData, loading: accountsLoading, refetch: refetchAccounts }
   GET_FINANCIAL_ACCOUNTS_BY_TOUR,
   {
     variables: { tourId },
-    skip: !tourId || !accountsEnabled,
+    skip: !tourId || !accountsEnabled || registrationOnly,
     fetchPolicy: "cache-and-network",
   }
 );
 
   const { data: flowData, loading: flowLoading } = useQuery(GET_PAYMENT_FLOW, {
     variables: { tourId },
-    skip: !tourId || activeView !== "summary",
+    skip: !tourId || registrationOnly || activeView !== "summary",
     fetchPolicy: "cache-and-network",
   });
 
@@ -268,8 +268,8 @@ const { data: accountsData, loading: accountsLoading, refetch: refetchAccounts }
   /** Pago registrado o eliminado → cambia tabla + resumen financiero */
   const refetchAfterPayment = useCallback(() => {
     refetchTable();
-    refetchSummary();
-  }, [refetchTable, refetchSummary]);
+    if (!registrationOnly) refetchSummary();
+  }, [refetchTable, refetchSummary, registrationOnly]);
 
   /** Cuenta ajustada → cambia tabla + resumen + lista de cuentas */
   const refetchAfterAccountChange = useCallback(() => {

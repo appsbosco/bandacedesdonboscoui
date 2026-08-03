@@ -15,34 +15,41 @@
  *   openFormationPrint({ slots, columns, zoneColumns, formName, formType })
  */
 
-import { getSectionLabel } from "./formationEngine.js";
+import {
+  FREE_LAYOUT_SIDE_COLUMNS,
+  getSectionLabel,
+  hasFreeLayout,
+  isFreeLayoutAisleSlot,
+} from "./formationEngine.js";
 
 // ── Color tokens (raw CSS values, mirroring SECTION_COLORS in formationEngine) ─
 
 const PRINT_COLORS = {
-  DRUM_MAJOR:       { bg: "#312e81", border: "#1e1b4b", text: "#ffffff" },
-  DANZA:            { bg: "#fdf4ff", border: "#d946ef", text: "#4a044e" },
-  TROMBONES:        { bg: "#f5f3ff", border: "#a78bfa", text: "#2e1065" },
-  FLAUTAS:          { bg: "#eff6ff", border: "#60a5fa", text: "#1e3a8a" },
-  CLARINETES:       { bg: "#f0fdfa", border: "#2dd4bf", text: "#134e4a" },
-  SAXOFONES_ALTO:   { bg: "#fff7ed", border: "#fb923c", text: "#7c2d12" },
-  SAXOFON_TENOR:    { bg: "#fefce8", border: "#facc15", text: "#713f12" },
-  MELOFONOS:        { bg: "#f7fee7", border: "#84cc16", text: "#365314" },
+  DRUM_MAJOR: { bg: "#312e81", border: "#1e1b4b", text: "#ffffff" },
+  DANZA: { bg: "#fdf4ff", border: "#d946ef", text: "#4a044e" },
+  TROMBONES: { bg: "#f5f3ff", border: "#a78bfa", text: "#2e1065" },
+  FLAUTAS: { bg: "#eff6ff", border: "#60a5fa", text: "#1e3a8a" },
+  CLARINETES: { bg: "#f0fdfa", border: "#2dd4bf", text: "#134e4a" },
+  SAXOFONES_ALTO: { bg: "#fff7ed", border: "#fb923c", text: "#7c2d12" },
+  SAXOFONES: { bg: "#fff7ed", border: "#fb923c", text: "#7c2d12" },
+  SAXOFON_TENOR: { bg: "#fefce8", border: "#facc15", text: "#713f12" },
+  MELOFONOS: { bg: "#f7fee7", border: "#84cc16", text: "#365314" },
   SAXOFON_BARITONO: { bg: "#f0fdf4", border: "#4ade80", text: "#14532d" },
-  EUFONIOS:         { bg: "#ecfeff", border: "#22d3ee", text: "#164e63" },
-  TROMPETAS:        { bg: "#fef2f2", border: "#f87171", text: "#7f1d1d" },
-  TUBAS:            { bg: "#f0f9ff", border: "#38bdf8", text: "#0c4a6e" },
-  MALLETS:          { bg: "#f5f3ff", border: "#8b5cf6", text: "#2e1065" },
-  PERCUSION:        { bg: "#f5f5f4", border: "#a8a29e", text: "#1c1917" },
-  COLOR_GUARD:      { bg: "#fff1f2", border: "#fb7185", text: "#881337" },
+  EUFONIOS: { bg: "#ecfeff", border: "#22d3ee", text: "#164e63" },
+  TROMPETAS: { bg: "#fef2f2", border: "#f87171", text: "#7f1d1d" },
+  TUBAS: { bg: "#f0f9ff", border: "#38bdf8", text: "#0c4a6e" },
+  MALLETS: { bg: "#f5f3ff", border: "#8b5cf6", text: "#2e1065" },
+  PERCUSION: { bg: "#f5f5f4", border: "#a8a29e", text: "#1c1917" },
+  COLOR_GUARD: { bg: "#fff1f2", border: "#fb7185", text: "#881337" },
+  STAFF: { bg: "#334155", border: "#0f172a", text: "#ffffff" },
 };
 
 const PRINT_ZONE_LABELS = {
   FRENTE_ESPECIAL: "Frente",
-  BLOQUE_FRENTE:   "Bloque del Frente",
-  PERCUSION:       "Percusión",
-  BLOQUE_ATRAS:    "Bloque de Atrás",
-  FINAL:           "Final",
+  BLOQUE_FRENTE: "Bloque del Frente",
+  PERCUSION: "Percusión",
+  BLOQUE_ATRAS: "Bloque de Atrás",
+  FINAL: "Final",
 };
 
 function escapeHTML(value) {
@@ -72,6 +79,19 @@ function getInitials(fullName) {
  * Width is controlled externally by the parent flex row container.
  */
 function buildCellHTML(slot) {
+  if (isFreeLayoutAisleSlot(slot)) {
+    const showLabel = slot.row === 0 && slot.col === FREE_LAYOUT_SIDE_COLUMNS;
+    return `<div style="position:relative;flex:1 1 0;min-width:0;min-height:50px;border-radius:6px;
+  border:1px dashed #cbd5e1;background:repeating-linear-gradient(135deg,#f8fafc 0,#f8fafc 5px,#fff 5px,#fff 10px);
+  display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">
+  ${
+    showLabel
+      ? '<span style="font-size:6px;font-weight:800;letter-spacing:0.08em;color:#64748b;white-space:nowrap;">PASILLO</span>'
+      : ""
+  }
+</div>`;
+  }
+
   let style, nameColor;
 
   if (!slot.userId) {
@@ -103,13 +123,23 @@ function buildCellHTML(slot) {
   return `<div style="position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;border:1px solid;border-radius:6px;
   min-height:50px;padding:4px 3px;break-inside:avoid;page-break-inside:avoid;${style}">
-  ${avatarHTML ? `<div style="margin-bottom:4px;display:flex;align-items:center;justify-content:center;">${avatarHTML}</div>` : ""}
+  ${
+    avatarHTML
+      ? `<div style="margin-bottom:4px;display:flex;align-items:center;justify-content:center;">${avatarHTML}</div>`
+      : ""
+  }
   <span style="font-size:9px;font-weight:700;line-height:1.3;color:${nameColor};
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(line1)}</span>
-  ${line2
-    ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
-    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(line2)}</span>`
-    : ""}
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(
+      line1
+    )}</span>
+  ${
+    line2
+      ? `<span style="font-size:8px;font-weight:500;line-height:1.3;color:${nameColor};
+    opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHTML(
+      line2
+    )}</span>`
+      : ""
+  }
 </div>`;
 }
 
@@ -157,7 +187,9 @@ function buildZoneHTML(zone, slots, columns) {
     zoneSlots.forEach((s, i) => {
       s._vrow = Math.floor(i / columns);
     });
-    zoneSlots.forEach((s) => { s.row = s._vrow; });
+    zoneSlots.forEach((s) => {
+      s.row = s._vrow;
+    });
   }
 
   return buildRowsHTML(zoneSlots);
@@ -169,7 +201,7 @@ function buildSectionLegendHTML(slots) {
   const seen = new Set();
   const sections = [];
   for (const s of slots) {
-    if (s.section && !seen.has(s.section)) {
+    if (s.section && !isFreeLayoutAisleSlot(s) && !seen.has(s.section)) {
       seen.add(s.section);
       sections.push(s.section);
     }
@@ -263,11 +295,16 @@ function buildPercussionZoneHTML(slots, defaultColumns, zoneColumns) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function openFormationPrint({ slots, columns, zoneColumns = {}, formName, formType }) {
+  const freeLayout = hasFreeLayout(slots);
   const getZoneCols = (zone) => (zoneColumns[zone] != null ? zoneColumns[zone] : columns);
   const ZONES_ORDER = ["FRENTE_ESPECIAL", "BLOQUE_FRENTE", "PERCUSION", "BLOQUE_ATRAS", "FINAL"];
   const presentZones = ZONES_ORDER.filter((z) => slots.some((s) => s.zone === z));
   const totalMembers = slots.filter((s) => s.userId).length;
-  const typeLabel = formType === "DOUBLE" ? "Bloque doble hacia atrás" : "Bloque único";
+  const typeLabel = freeLayout
+    ? "10 + 2 de pasillo + 10"
+    : formType === "DOUBLE"
+    ? "Bloque doble hacia atrás"
+    : "Bloque único";
 
   const zonesHTML = presentZones
     .map((zone, idx) => {
@@ -275,7 +312,7 @@ export function openFormationPrint({ slots, columns, zoneColumns = {}, formName,
         zone === "PERCUSION"
           ? buildPercussionZoneHTML(slots, getZoneCols("PERCUSION"), zoneColumns)
           : buildZoneHTML(zone, slots, getZoneCols(zone));
-      const zoneLabel = PRINT_ZONE_LABELS[zone] || zone;
+      const zoneLabel = freeLayout ? "" : PRINT_ZONE_LABELS[zone] || zone;
 
       // Zone header — break-after:avoid keeps the label with the first row below it
       const header =

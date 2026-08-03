@@ -22,6 +22,9 @@ import {
   DEFAULT_ZONE_ORDERS,
   DEFAULT_ZONE_COLUMNS,
   DEFAULT_ZONE_ROWS,
+  FREE_LAYOUT_COLUMNS,
+  FREE_LAYOUT_SIDE_COLUMNS,
+  FREE_LAYOUT_AISLE_WIDTH,
   INDEPENDENT_COLUMN_ZONES,
   getSectionLabel,
   buildDynamicZonePools,
@@ -31,6 +34,9 @@ import {
   slotKey,
   inferZonesForSection,
   canSectionOccupyZone,
+  hasFreeLayout,
+  computeFreeFormation,
+  addMemberToFreeFormation,
 } from "./formationEngine.js";
 import { openFormationPrint } from "./formationPrint.js";
 import { GET_USERS_BY_ID } from "graphql/queries";
@@ -189,7 +195,9 @@ function reshapeZoneSlotsPreservingLayout(slots, zone, columns, rows = null) {
   // so the layout change always takes effect visually.
   const minRowsForMembers = Math.max(1, Math.ceil(movableSlots.length / columns));
   const targetRows =
-    explicitRows != null ? Math.max(explicitRows, minRowsForMembers) : Math.max(1, Math.ceil(Math.max(zoneSlots.length, movableSlots.length, 1) / columns));
+    explicitRows != null
+      ? Math.max(explicitRows, minRowsForMembers)
+      : Math.max(1, Math.ceil(Math.max(zoneSlots.length, movableSlots.length, 1) / columns));
   const fixedMap = new Map();
   const overflow = [];
 
@@ -310,7 +318,9 @@ function reshapePercussionGroupSlotsPreservingLayout(
   const existingRows = [...new Set(sectionSlots.map((slot) => slot.row))].sort((a, b) => a - b);
   const rowIndexMap = new Map(existingRows.map((row, index) => [row, index]));
   const targetRows =
-    explicitRows != null ? Math.max(explicitRows, minRowsNeeded) : Math.max(1, Math.ceil(Math.max(sectionSlots.length, movableSlots.length, 1) / columns));
+    explicitRows != null
+      ? Math.max(explicitRows, minRowsNeeded)
+      : Math.max(1, Math.ceil(Math.max(sectionSlots.length, movableSlots.length, 1) / columns));
 
   const fixedMap = new Map();
   const overflow = [];
@@ -373,7 +383,13 @@ function reshapePercussionGroupSlotsPreservingLayout(
   return { slots: reshapedSlots, rowCount: targetRows };
 }
 
-function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zoneRows, zonePatterns = {}) {
+function reshapePercussionSlotsPreservingLayout(
+  slots,
+  columns,
+  zoneColumns,
+  zoneRows,
+  zonePatterns = {}
+) {
   const zoneSlots = slots
     .filter((slot) => slot.zone === "PERCUSION")
     .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
@@ -423,7 +439,9 @@ function reshapePercussionSlotsPreservingLayout(slots, columns, zoneColumns, zon
     rowOffset += result.rowCount;
   }
 
-  return [...slots.filter((slot) => slot.zone !== "PERCUSION"), ...reshaped].sort(sortSlotsByPosition);
+  return [...slots.filter((slot) => slot.zone !== "PERCUSION"), ...reshaped].sort(
+    sortSlotsByPosition
+  );
 }
 
 function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns = {}) {
@@ -432,7 +450,13 @@ function normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zo
 
   for (const zone of zones) {
     if (zone === "PERCUSION") {
-      nextSlots = reshapePercussionSlotsPreservingLayout(nextSlots, columns, zoneColumns, zoneRows, zonePatterns);
+      nextSlots = reshapePercussionSlotsPreservingLayout(
+        nextSlots,
+        columns,
+        zoneColumns,
+        zoneRows,
+        zonePatterns
+      );
       continue;
     }
 
@@ -465,7 +489,15 @@ function removeAndCompact(slots, newExcluded) {
 // ─────────────────────────────────────────────────────────────────────────────
 // includeAndExpand  (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zonePatterns, defaultCols) {
+function includeAndExpand(
+  slots,
+  musician,
+  zoneOrders,
+  zoneColumns,
+  zoneRows,
+  zonePatterns,
+  defaultCols
+) {
   const userId = String(musician.userId);
   const section = musician.section;
   let targetZone = null;
@@ -505,7 +537,9 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zo
     }
 
     const targetSlots = percussionSlots.filter(
-      (slot) => (slot.section ? getPercussionLayoutSection(slot.section) : rowSectionMap.get(slot.row)) === layoutSection
+      (slot) =>
+        (slot.section ? getPercussionLayoutSection(slot.section) : rowSectionMap.get(slot.row)) ===
+        layoutSection
     );
 
     const targetEmpty = targetSlots.find((slot) => !slot.userId && !slot.locked);
@@ -527,17 +561,26 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zo
       );
     }
 
-    const targetCols = getZoneLayoutColumns("PERCUSION", defaultCols ?? 1, zoneColumns, layoutSection);
+    const targetCols = getZoneLayoutColumns(
+      "PERCUSION",
+      defaultCols ?? 1,
+      zoneColumns,
+      layoutSection
+    );
     const targetRows = targetSlots.map((slot) => slot.row);
     const startRow = targetRows.length ? Math.min(...targetRows) : 0;
     const nextRow =
       targetRows.length > 0
         ? Math.floor(targetSlots.length / targetCols) + startRow
         : layoutSection === "PERCUSION"
-        ? percussionSlots.filter(
-            (slot) =>
-              (slot.section ? getPercussionLayoutSection(slot.section) : rowSectionMap.get(slot.row)) === "MALLETS"
-          ).reduce((maxRow, slot) => Math.max(maxRow, slot.row), -1) + 1
+        ? percussionSlots
+            .filter(
+              (slot) =>
+                (slot.section
+                  ? getPercussionLayoutSection(slot.section)
+                  : rowSectionMap.get(slot.row)) === "MALLETS"
+            )
+            .reduce((maxRow, slot) => Math.max(maxRow, slot.row), -1) + 1
         : 0;
     const nextCol = targetSlots.length % targetCols;
 
@@ -564,13 +607,11 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zo
     );
   }
 
-  const percussionSection =
-    targetZone === "PERCUSION" ? getPercussionLayoutSection(section) : null;
+  const percussionSection = targetZone === "PERCUSION" ? getPercussionLayoutSection(section) : null;
   const zoneSlots = slots.filter(
     (s) =>
       s.zone === targetZone &&
-      (targetZone !== "PERCUSION" ||
-        getPercussionLayoutSection(s.section) === percussionSection)
+      (targetZone !== "PERCUSION" || getPercussionLayoutSection(s.section) === percussionSection)
   );
   const effectiveCols = getZoneLayoutColumns(targetZone, defaultCols ?? 1, zoneColumns, section);
   const explicitRows = getZoneLayoutRows(targetZone, zoneRows, section);
@@ -588,7 +629,10 @@ function includeAndExpand(slots, musician, zoneOrders, zoneColumns, zoneRows, zo
       sorted.filter((s) => s.section === section && s.userId).pop() || sorted[sorted.length - 1];
     const nextIndex = zoneSlots.length;
     const newRow = Math.floor(nextIndex / effectiveCols);
-    const newCol = lastMember?.col != null ? Math.min(lastMember.col, effectiveCols - 1) : nextIndex % effectiveCols;
+    const newCol =
+      lastMember?.col != null
+        ? Math.min(lastMember.col, effectiveCols - 1)
+        : nextIndex % effectiveCols;
 
     if (explicitRows != null && newRow >= explicitRows) return slots;
 
@@ -872,9 +916,7 @@ function SectionOrderEditor({
       onCrossZoneDrop?.({ section, fromZone, fromIndex, toZone: zone });
     }
   };
-  const availableSections = [...new Set(poolSections ?? [])].filter((s) =>
-    canAccept(s)
-  );
+  const availableSections = [...new Set(poolSections ?? [])].filter((s) => canAccept(s));
   return (
     <div
       className={[
@@ -1042,7 +1084,100 @@ const LIVE_LAYOUT_ROWS = [
   { key: "FINAL", section: null },
 ];
 
-function ZoneLayoutRow({ zone, cols, rows, pattern = "", onChangeCols, onChangeRows, onChangePattern }) {
+function FreeLayoutToggle({ enabled, onChange }) {
+  return (
+    <div
+      className={[
+        "rounded-2xl border p-4 transition-colors",
+        enabled ? "border-amber-300 bg-amber-50/70" : "border-slate-200 bg-slate-50/70",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-800">Excepción: acomodo libre</span>
+            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              20 posiciones + pasillo
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Junta todas las secciones en una sola grilla y permite moverlas sin reglas de zona. El
+            centro queda reservado como pasillo de dos columnas.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sky-700">
+                Izquierda · frente → atrás
+              </span>
+              <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                Danza · Flautas · Clarinetes · Saxofones
+              </p>
+            </div>
+            <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-rose-700">
+                Derecha · frente → atrás
+              </span>
+              <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                Color Guard · Melófonos/Eufonios · Trombones · Trompetas · Tubas · Percusión/Mallets
+              </p>
+            </div>
+            <div className="rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2 sm:col-span-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-700">
+                Staff y Drum Major · relleno final
+              </span>
+              <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                Ocupan los espacios libres de las últimas filas, en cualquiera de los dos lados.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex max-w-sm items-center gap-1" aria-hidden="true">
+            <div className="h-2 flex-[10] rounded-l-full bg-slate-700" />
+            <div className="h-2 flex-[2] bg-amber-300" />
+            <div className="h-2 flex-[10] rounded-r-full bg-slate-700" />
+          </div>
+          <p className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+            {FREE_LAYOUT_SIDE_COLUMNS} posiciones · {FREE_LAYOUT_AISLE_WIDTH} de pasillo ·{" "}
+            {FREE_LAYOUT_SIDE_COLUMNS} posiciones
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Activar acomodo libre temporal"
+          onClick={() => onChange(!enabled)}
+          className={[
+            "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2",
+            enabled ? "bg-amber-500" : "bg-slate-300",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+              enabled ? "translate-x-5" : "translate-x-0",
+            ].join(" ")}
+          />
+        </button>
+      </div>
+      {enabled && (
+        <p className="mt-3 border-t border-amber-200 pt-3 text-xs font-medium text-amber-800">
+          Este es solamente el orden inicial. Podés mover cualquier persona a cualquier posición; el
+          pasillo central es lo único que permanece bloqueado.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ZoneLayoutRow({
+  zone,
+  cols,
+  rows,
+  pattern = "",
+  onChangeCols,
+  onChangeRows,
+  onChangePattern,
+}) {
   const colPresets = ZONE_COLUMN_PRESETS[zone] || [2, 3, 4, 5, 6];
   const rowPresets = ZONE_ROW_PRESETS[zone] || [1, 2, 3, 4];
   const label = ZONE_COLUMNS_LABEL[zone] || zone;
@@ -1154,6 +1289,8 @@ function StepConfig({
   onChangeZonePattern,
   templates,
   onLoadTemplate,
+  freeLayout,
+  onFreeLayoutChange,
   onNext,
 }) {
   const canNext = formName.trim() && columns >= 1;
@@ -1174,109 +1311,112 @@ function StepConfig({
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div className="block text-xs font-medium text-slate-500 mb-2">Tipo de desfile</div>
-          <div className="flex gap-3">
-            {[
-              { v: "SINGLE", label: "Bloque único" },
-              { v: "DOUBLE", label: "Doble hacia atrás" },
-            ].map(({ v, label }) => (
-              <label
-                key={v}
-                className={[
-                  "flex-1 border-2 rounded-xl p-3 cursor-pointer transition-colors text-sm",
-                  formType === v
-                    ? "border-gray-500 bg-indigo-50 font-semibold text-black"
-                    : "border-slate-200 text-slate-600 hover:border-slate-300",
-                ].join(" ")}
-              >
-                <input
-                  type="radio"
-                  value={v}
-                  checked={formType === v}
-                  onChange={() => setFormType(v)}
-                  className="sr-only"
-                />
-                {label}
-              </label>
-            ))}
+      <FreeLayoutToggle enabled={freeLayout} onChange={onFreeLayoutChange} />
+      {!freeLayout && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div className="block text-xs font-medium text-slate-500 mb-2">Tipo de desfile</div>
+            <div className="flex gap-3">
+              {[
+                { v: "SINGLE", label: "Bloque único" },
+                { v: "DOUBLE", label: "Doble hacia atrás" },
+              ].map(({ v, label }) => (
+                <label
+                  key={v}
+                  className={[
+                    "flex-1 border-2 rounded-xl p-3 cursor-pointer transition-colors text-sm",
+                    formType === v
+                      ? "border-gray-500 bg-indigo-50 font-semibold text-black"
+                      : "border-slate-200 text-slate-600 hover:border-slate-300",
+                  ].join(" ")}
+                >
+                  <input
+                    type="radio"
+                    value={v}
+                    checked={formType === v}
+                    onChange={() => setFormType(v)}
+                    className="sr-only"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {formType === "DOUBLE" && (
+              <p className="mt-2 text-xs text-slate-400">
+                Frente → Bloque Frente → Percusión → Bloque Atrás → Final
+              </p>
+            )}
           </div>
-          {formType === "DOUBLE" && (
-            <p className="mt-2 text-xs text-slate-400">
-              Frente → Bloque Frente → Percusión → Bloque Atrás → Final
-            </p>
-          )}
+          <div>
+            <div className="block text-xs font-medium text-slate-500 mb-2">
+              Columnas de vientos *{" "}
+              <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[5, 6, 7, 8, 9, 10].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setColumns(n)}
+                  className={[
+                    "w-9 h-9 rounded-lg border text-sm font-semibold transition-colors",
+                    columns === n
+                      ? "bg-black border-indigo-600 text-white"
+                      : "border-slate-300 text-slate-600 hover:border-indigo-400",
+                  ].join(" ")}
+                >
+                  {n}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={columns}
+                onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
+                className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+          </div>
         </div>
+      )}
+      {!freeLayout && (
         <div>
           <div className="block text-xs font-medium text-slate-500 mb-2">
-            Columnas de vientos *{" "}
-            <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[5, 6, 7, 8, 9, 10].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setColumns(n)}
-                className={[
-                  "w-9 h-9 rounded-lg border text-sm font-semibold transition-colors",
-                  columns === n
-                    ? "bg-black border-indigo-600 text-white"
-                    : "border-slate-300 text-slate-600 hover:border-indigo-400",
-                ].join(" ")}
-              >
-                {n}
-              </button>
-            ))}
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={columns}
-              onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
-              className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-        </div>
-      </div>
-      <div>
-        <div className="block text-xs font-medium text-slate-500 mb-2">
-          Grilla independiente{" "}
-          <span className="ml-1 font-normal text-slate-400">
-            — Danza, Percusión y Color Guard tienen columnas y filas propias
-          </span>
-        </div>
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-            <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
-              Zona · Columnas · Filas
+            Grilla independiente{" "}
+            <span className="ml-1 font-normal text-slate-400">
+              — Danza, Percusión y Color Guard tienen columnas y filas propias
             </span>
           </div>
-          <div className="px-4">
-            {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
-              <ZoneLayoutRow
-                key={key}
-                zone={key}
-                cols={getZoneLayoutColumns(
-                  section ? "PERCUSION" : key,
-                  columns,
-                  zoneColumns,
-                  section
-                )}
-                rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
-                pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
-                onChangeCols={onChangeZoneColumns}
-                onChangeRows={onChangeZoneRows}
-                onChangePattern={
-                  section ? onChangeZonePattern : null
-                }
-              />
-            ))}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+              <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
+                Zona · Columnas · Filas
+              </span>
+            </div>
+            <div className="px-4">
+              {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
+                <ZoneLayoutRow
+                  key={key}
+                  zone={key}
+                  cols={getZoneLayoutColumns(
+                    section ? "PERCUSION" : key,
+                    columns,
+                    zoneColumns,
+                    section
+                  )}
+                  rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
+                  pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
+                  onChangeCols={onChangeZoneColumns}
+                  onChangeRows={onChangeZoneRows}
+                  onChangePattern={section ? onChangeZonePattern : null}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      {templates.length > 0 && (
+      )}
+      {!freeLayout && templates.length > 0 && (
         <div>
           <label
             htmlFor="formation-template"
@@ -1306,7 +1446,7 @@ function StepConfig({
         disabled={!canNext}
         className="px-5 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
       >
-        Configurar orden de secciones →
+        {freeLayout ? "Continuar a exclusiones →" : "Configurar orden de secciones →"}
       </button>
     </div>
   );
@@ -1321,6 +1461,8 @@ function StepLiveLayoutControls({
   onChangeZoneRows,
   zonePatterns,
   onChangeZonePattern,
+  freeLayout,
+  onFreeLayoutChange,
 }) {
   return (
     <div className="mb-4 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60">
@@ -1334,64 +1476,69 @@ function StepLiveLayoutControls({
       </div>
 
       <div className="p-4 space-y-4">
-        <div>
-          <div className="block text-xs font-medium text-slate-500 mb-2">
-            Columnas de vientos
-            <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[5, 6, 7, 8, 9, 10].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setColumns(n)}
-                className={[
-                  "w-9 h-9 rounded-lg border text-sm font-semibold transition-colors",
-                  columns === n
-                    ? "bg-black border-indigo-600 text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400",
-                ].join(" ")}
-              >
-                {n}
-              </button>
-            ))}
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={columns}
-              onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
-              className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-            />
-          </div>
-        </div>
-
-        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-            <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
-              Zona · Columnas · Filas
-            </span>
-          </div>
-          <div className="px-4">
-            {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
-              <ZoneLayoutRow
-                key={key}
-                zone={key}
-                cols={getZoneLayoutColumns(
-                  section ? "PERCUSION" : key,
-                  columns,
-                  zoneColumns,
-                  section
-                )}
-                rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
-                pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
-                onChangeCols={onChangeZoneColumns}
-                onChangeRows={onChangeZoneRows}
-                onChangePattern={section ? onChangeZonePattern : null}
+        <FreeLayoutToggle enabled={freeLayout} onChange={onFreeLayoutChange} />
+        {!freeLayout && (
+          <div>
+            <div className="block text-xs font-medium text-slate-500 mb-2">
+              Columnas de vientos
+              <span className="ml-1 font-normal text-slate-400">(Bloque Frente y Atrás)</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[5, 6, 7, 8, 9, 10].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setColumns(n)}
+                  className={[
+                    "w-9 h-9 rounded-lg border text-sm font-semibold transition-colors",
+                    columns === n
+                      ? "bg-black border-indigo-600 text-white"
+                      : "border-slate-300 bg-white text-slate-600 hover:border-indigo-400",
+                  ].join(" ")}
+                >
+                  {n}
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={columns}
+                onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
+                className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
               />
-            ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {!freeLayout && (
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+              <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">
+                Zona · Columnas · Filas
+              </span>
+            </div>
+            <div className="px-4">
+              {LIVE_LAYOUT_ROWS.map(({ key, section }) => (
+                <ZoneLayoutRow
+                  key={key}
+                  zone={key}
+                  cols={getZoneLayoutColumns(
+                    section ? "PERCUSION" : key,
+                    columns,
+                    zoneColumns,
+                    section
+                  )}
+                  rows={getZoneLayoutRows(section ? "PERCUSION" : key, zoneRows, section)}
+                  pattern={getZoneLayoutPattern(section ? "PERCUSION" : key, zonePatterns, section)}
+                  onChangeCols={onChangeZoneColumns}
+                  onChangeRows={onChangeZoneRows}
+                  onChangePattern={section ? onChangeZonePattern : null}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1408,6 +1555,8 @@ function LayoutSettingsModal({
   onChangeZoneRows,
   zonePatterns,
   onChangeZonePattern,
+  freeLayout,
+  onFreeLayoutChange,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -1470,6 +1619,8 @@ function LayoutSettingsModal({
             onChangeZoneRows={onChangeZoneRows}
             zonePatterns={zonePatterns}
             onChangeZonePattern={onChangeZonePattern}
+            freeLayout={freeLayout}
+            onFreeLayoutChange={onFreeLayoutChange}
           />
         </div>
 
@@ -1830,7 +1981,12 @@ function ExcludedModal({
     for (const grp of sections || []) {
       for (const member of grp.members || []) {
         const userId = String(member.userId);
-        if (seen.has(userId) || excluded.has(userId) || unmappedIds.has(userId) || assignedIds.has(userId)) {
+        if (
+          seen.has(userId) ||
+          excluded.has(userId) ||
+          unmappedIds.has(userId) ||
+          assignedIds.has(userId)
+        ) {
           continue;
         }
         seen.add(userId);
@@ -1897,7 +2053,10 @@ function ExcludedModal({
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h3 id="formations-excluded-modal-title" className="text-base font-bold text-slate-900">
+              <h3
+                id="formations-excluded-modal-title"
+                className="text-base font-bold text-slate-900"
+              >
                 Músicos excluidos
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -1921,7 +2080,10 @@ function ExcludedModal({
             {excludedMusicians.filter((m) => m.source === "pending").length > 0 && (
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                 {excludedMusicians.filter((m) => m.source === "pending").length} pendiente
-                {excludedMusicians.filter((m) => m.source === "pending").length !== 1 ? "s" : ""} por agregar
+                {excludedMusicians.filter((m) => m.source === "pending").length !== 1
+                  ? "s"
+                  : ""}{" "}
+                por agregar
               </span>
             )}
             {(unmapped || []).length > 0 && (
@@ -1952,74 +2114,72 @@ function ExcludedModal({
                     ? "Sin sección"
                     : getSectionLabel(sec)}
                 </div>
-                <span className="text-[11px] text-slate-400 font-semibold">
-                  {members.length}
-                </span>
+                <span className="text-[11px] text-slate-400 font-semibold">{members.length}</span>
               </div>
 
               <div className="space-y-2">
                 {members.map((m) => (
-                <div
-                  key={m.userId}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl"
-                >
-                  {m.avatar ? (
-                    <img
-                      src={m.avatar}
-                      alt={m.name}
-                      loading="lazy"
-                      className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-600 shrink-0 flex items-center justify-center text-[10px] font-bold">
-                      {initials(m.name)}
-                    </div>
-                  )}
+                  <div
+                    key={m.userId}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl"
+                  >
+                    {m.avatar ? (
+                      <img
+                        src={m.avatar}
+                        alt={m.name}
+                        loading="lazy"
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-600 shrink-0 flex items-center justify-center text-[10px] font-bold">
+                        {initials(m.name)}
+                      </div>
+                    )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{m.name}</div>
-                    <div className="mt-0.5 flex items-center gap-2 flex-wrap">
-                      {m.instrument && (
-                        <span className="text-xs text-slate-500">{m.instrument}</span>
-                      )}
-                      <span
-                        className={[
-                          "px-2 py-0.5 rounded-lg text-[11px] font-semibold border",
-                          m.source === "unmapped"
-                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-900 truncate">{m.name}</div>
+                      <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                        {m.instrument && (
+                          <span className="text-xs text-slate-500">{m.instrument}</span>
+                        )}
+                        <span
+                          className={[
+                            "px-2 py-0.5 rounded-lg text-[11px] font-semibold border",
+                            m.source === "unmapped"
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : m.source === "pending"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200",
+                          ].join(" ")}
+                        >
+                          {m.source === "unmapped"
+                            ? "Sin mapear"
                             : m.source === "pending"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200",
+                            ? "Pendiente"
+                            : "Excluido"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {m.source === "unmapped" ? (
+                      <span className="sm:ml-auto text-xs font-semibold text-rose-700 bg-rose-100 rounded-xl px-3 py-1.5 shrink-0">
+                        Revisar instrumento
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onInclude(m.userId)}
+                        className={[
+                          "sm:ml-auto flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-white text-xs font-semibold transition-colors shrink-0 w-full sm:w-auto",
+                          m.source === "pending"
+                            ? "bg-blue-600 hover:bg-blue-500"
+                            : "bg-emerald-600 hover:bg-emerald-500",
                         ].join(" ")}
                       >
-                        {m.source === "unmapped"
-                          ? "Sin mapear"
-                          : m.source === "pending"
-                          ? "Pendiente"
-                          : "Excluido"}
-                      </span>
-                    </div>
+                        {m.source === "pending" ? "+ Agregar" : "+ Incluir"}
+                      </button>
+                    )}
                   </div>
-
-                  {m.source === "unmapped" ? (
-                    <span className="sm:ml-auto text-xs font-semibold text-rose-700 bg-rose-100 rounded-xl px-3 py-1.5 shrink-0">
-                      Revisar instrumento
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onInclude(m.userId)}
-                      className={[
-                        "sm:ml-auto flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-white text-xs font-semibold transition-colors shrink-0 w-full sm:w-auto",
-                        m.source === "pending"
-                          ? "bg-blue-600 hover:bg-blue-500"
-                          : "bg-emerald-600 hover:bg-emerald-500",
-                      ].join(" ")}
-                    >
-                      {m.source === "pending" ? "+ Agregar" : "+ Incluir"}
-                    </button>
-                  )}
-                </div>
                 ))}
               </div>
             </section>
@@ -2065,6 +2225,7 @@ function FormationRoomContent({
   zonePatterns,
   zoneOrders,
   formType,
+  freeLayout,
   canExclude,
   onExclude,
   onInclude,
@@ -2097,6 +2258,7 @@ function FormationRoomContent({
     currentUser,
     initialSlots: formation.slots, // slots de Mongo como fallback
   });
+  const liveFreeLayout = freeLayout || hasFreeLayout(slots);
 
   // ── Sync live slots → parent (para handleSave / handleExport) ──────────────
   const lastSyncedSlotsRef = useRef("");
@@ -2123,12 +2285,18 @@ function FormationRoomContent({
 
   const normalizedLayoutRef = useRef("");
   useEffect(() => {
-    if (isLoading || !slots.length) return;
+    if (isLoading || liveFreeLayout || !slots.length) return;
 
     const layoutSignature = getLayoutSignature(columns, zoneColumns, zoneRows, zonePatterns);
     if (normalizedLayoutRef.current === layoutSignature) return;
 
-    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
+    const normalized = normalizeSlotsToCurrentLayout(
+      slots,
+      columns,
+      zoneColumns,
+      zoneRows,
+      zonePatterns
+    );
     const normalizedSignature = getSlotsSignature(normalized);
     if (normalizedSignature === getSlotsSignature(slots)) {
       normalizedLayoutRef.current = layoutSignature;
@@ -2137,7 +2305,7 @@ function FormationRoomContent({
 
     normalizedLayoutRef.current = layoutSignature;
     setSlots(normalized);
-  }, [isLoading, slots, columns, zoneColumns, zoneRows, zonePatterns, setSlots]);
+  }, [isLoading, liveFreeLayout, slots, columns, zoneColumns, zoneRows, zonePatterns, setSlots]);
 
   // ── Intercept FormationGrid onChange → targeted LiveMap mutations ───────────
   const handleGridChange = useCallback(
@@ -2238,6 +2406,7 @@ function FormationRoomContent({
           zoneColumns={zoneColumns}
           onChange={handleGridChange}
           formType={formType || formation?.type || "DOUBLE"}
+          freeLayout={liveFreeLayout}
           zoneOrders={zoneOrders}
           canExclude={canExclude}
           onExclude={onExclude}
@@ -2331,6 +2500,10 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   const [formName, setFormName] = useState(existingFormation?.name || "");
   const [formType, setFormType] = useState(existingFormation?.type || "SINGLE");
   const [columns, setColumns] = useState(existingFormation?.columns ?? 8);
+  const [freeLayout, setFreeLayout] = useState(() => hasFreeLayout(existingFormation?.slots || []));
+  const standardColumnsRef = useRef(
+    hasFreeLayout(existingFormation?.slots || []) ? 8 : existingFormation?.columns ?? 8
+  );
   const [formNotes, setFormNotes] = useState(existingFormation?.notes || "");
   const [latestUpdatedAt, setLatestUpdatedAt] = useState(existingFormation?.updatedAt ?? null);
   const [showConflictModal, setShowConflictModal] = useState(false);
@@ -2411,6 +2584,9 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     setFormName(existingFormation.name || "");
     setFormType(existingFormation.type || "SINGLE");
     setColumns(existingFormation.columns ?? 8);
+    const existingIsFree = hasFreeLayout(existingFormation.slots || []);
+    setFreeLayout(existingIsFree);
+    if (!existingIsFree) standardColumnsRef.current = existingFormation.columns ?? 8;
     setFormNotes(existingFormation.notes || "");
     setLatestUpdatedAt(existingFormation.updatedAt ?? null);
     setExcluded(new Set((existingFormation.excludedUserIds || []).map(String)));
@@ -2467,18 +2643,123 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     setExternalSlotsSeq((prev) => prev + 1);
   }, []);
 
+  const handleFreeLayoutChange = useCallback(
+    (enabled) => {
+      if (enabled === freeLayout) return;
+
+      if (enabled) {
+        standardColumnsRef.current = columns;
+        const computed = computeFreeFormation({
+          sectionGroups: sections,
+          excludedIds: excluded,
+          existingSlots: slots,
+        });
+        setFreeLayout(true);
+        setColumns(FREE_LAYOUT_COLUMNS);
+        if (slots.length || sections.length) {
+          if (isEdit) pushSlotsToRoom(computed);
+          else setSlots(computed);
+        }
+        setStep((currentStep) => (currentStep === 2 ? 3 : currentStep));
+        return;
+      }
+
+      if (slots.length && sections.length === 0) {
+        setSaveToast({
+          message: "Esperá a que carguen los músicos para salir del acomodo libre",
+          type: "error",
+        });
+        return;
+      }
+
+      if (
+        slots.length &&
+        !window.confirm(
+          "Al salir del acomodo libre se recalcularán las zonas normales y se perderán las posiciones manuales. ¿Querés continuar?"
+        )
+      ) {
+        return;
+      }
+
+      const restoredColumns = Math.max(1, standardColumnsRef.current || 8);
+      const zoneData = buildZones({
+        zoneOrders,
+        sectionGroups: sections,
+        excludedIds: excluded,
+        type: formType,
+      });
+      const computed = computeFormation({
+        zoneData,
+        columns: restoredColumns,
+        zoneColumns,
+        zoneRows,
+        zonePatterns,
+        existingSlots: [],
+      });
+      setFreeLayout(false);
+      setColumns(restoredColumns);
+      if (slots.length || sections.length) {
+        if (isEdit) pushSlotsToRoom(computed);
+        else setSlots(computed);
+      }
+    },
+    [
+      freeLayout,
+      columns,
+      sections,
+      excluded,
+      slots,
+      isEdit,
+      pushSlotsToRoom,
+      setSaveToast,
+      zoneOrders,
+      formType,
+      zoneColumns,
+      zoneRows,
+      zonePatterns,
+    ]
+  );
+
+  const handleApplyFreeLayoutPreset = useCallback(() => {
+    if (!freeLayout) return;
+    if (
+      slots.some((slot) => slot.userId) &&
+      !window.confirm(
+        "Esto restaurará la combinación inicial por lados y reemplazará las posiciones manuales actuales. ¿Querés continuar?"
+      )
+    ) {
+      return;
+    }
+
+    const computed = computeFreeFormation({
+      sectionGroups: sections,
+      excludedIds: excluded,
+      existingSlots: slots,
+      resetToPreset: true,
+    });
+    if (isEdit) pushSlotsToRoom(computed);
+    else setSlots(computed);
+    setSaveToast({ message: "Combinación inicial 10 + 2 + 10 aplicada", type: "success" });
+  }, [freeLayout, slots, sections, excluded, isEdit, pushSlotsToRoom, setSaveToast]);
+
   // ── CREATE mode: normalize slots when layout params change ─────────────────
   // In EDIT mode this runs inside FormationRoomContent; in CREATE mode we need
   // it here so that changing rows/columns in the LayoutSettingsModal immediately
   // reshapes the grid without requiring "Recalcular".
   const createNormalizedRef = useRef("");
   useEffect(() => {
-    if (isEdit || step !== 4 || !slots.length) return;
+    if (isEdit || freeLayout || step !== 4 || !slots.length) return;
 
     const layoutSignature = getLayoutSignature(columns, zoneColumns, zoneRows, zonePatterns);
     if (createNormalizedRef.current === layoutSignature) return;
 
-    const normalized = normalizeSlotsToCurrentLayout(slots, columns, zoneColumns, zoneRows, zonePatterns);
+    const normalized = normalizeSlotsToCurrentLayout(
+      slots,
+      columns,
+      zoneColumns,
+      zoneRows,
+      zonePatterns
+    );
     const normalizedSig = getSlotsSignature(normalized);
     if (normalizedSig === getSlotsSignature(slots)) {
       createNormalizedRef.current = layoutSignature;
@@ -2487,7 +2768,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
 
     createNormalizedRef.current = layoutSignature;
     setSlots(normalized);
-  }, [isEdit, step, slots, columns, zoneColumns, zoneRows, zonePatterns]);
+  }, [isEdit, freeLayout, step, slots, columns, zoneColumns, zoneRows, zonePatterns]);
 
   // ── Load users ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -2496,8 +2777,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
 
   const handleGoToStep2 = useCallback(() => {
     loadUsers({ excludedIds: [], instrumentMappings: [] });
-    setStep(2);
-  }, [loadUsers]);
+    setStep(freeLayout ? 3 : 2);
+  }, [loadUsers, freeLayout]);
 
   // ── Zone order management ───────────────────────────────────────────────────
   const handleZoneOrderChange = useCallback(
@@ -2577,22 +2858,15 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
   const handleExcludeFromGrid = useCallback(
     (userId) => {
       const id = String(userId);
-      setExcluded((prev) => {
-        const next = new Set(prev);
-        next.add(id);
-        // Compute new slot layout and push to both local state + LiveMap
-        setSlots((currentSlots) => {
-          const compacted = removeAndCompact(currentSlots, next);
-          if (isEdit) {
-            setSlots(compacted);
-            setExternalSlotsSeq((s) => s + 1);
-          }
-          return compacted;
-        });
-        return next;
-      });
+      const nextExcluded = new Set(excluded);
+      nextExcluded.add(id);
+      const compacted = removeAndCompact(slots, nextExcluded);
+
+      setExcluded(nextExcluded);
+      if (isEdit) pushSlotsToRoom(compacted);
+      else setSlots(compacted);
     },
-    [isEdit]
+    [excluded, slots, isEdit, pushSlotsToRoom]
   );
 
   const handleIncludeToGrid = useCallback(
@@ -2623,12 +2897,12 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
       }
       if (!musicianInfo) return;
 
-      setExcluded((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        setSlots((currentSlots) => {
-          const expanded = includeAndExpand(
-            currentSlots,
+      const nextExcluded = new Set(excluded);
+      nextExcluded.delete(id);
+      const expanded = freeLayout
+        ? addMemberToFreeFormation(slots, musicianInfo)
+        : includeAndExpand(
+            slots,
             musicianInfo,
             zoneOrders,
             zoneColumns,
@@ -2636,20 +2910,54 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
             zonePatterns,
             columns
           );
-          if (isEdit) {
-            setSlots(expanded);
-            setExternalSlotsSeq((s) => s + 1);
-          }
-          return expanded;
-        });
-        return next;
-      });
+
+      setExcluded(nextExcluded);
+      if (isEdit) pushSlotsToRoom(expanded);
+      else setSlots(expanded);
     },
-    [sections, existingFormation, zoneOrders, zoneColumns, zoneRows, zonePatterns, columns, isEdit]
+    [
+      sections,
+      existingFormation,
+      zoneOrders,
+      zoneColumns,
+      zoneRows,
+      zonePatterns,
+      columns,
+      isEdit,
+      freeLayout,
+      excluded,
+      slots,
+      pushSlotsToRoom,
+    ]
   );
 
   // ── Compute grid ────────────────────────────────────────────────────────────
-  const handleComputeGrid = useCallback(() => {
+  const handleComputeGrid = useCallback(async () => {
+    if (freeLayout) {
+      // Refresh before completing so newly classified Staff/Drum Major members
+      // are not missed when the page has an older roster in memory.
+      let currentSections = sections;
+      try {
+        const refreshed = await loadUsers({ excludedIds: [], instrumentMappings: [] });
+        const refreshedSections = refreshed?.data?.formationUsersBySection?.sections;
+        if (Array.isArray(refreshedSections)) currentSections = refreshedSections;
+      } catch {
+        // useFormationUsers already displays the request error. Completing with
+        // the current roster still keeps the button useful while offline.
+      }
+
+      const computed = computeFreeFormation({
+        sectionGroups: currentSections,
+        excludedIds: excluded,
+        existingSlots: slots,
+      });
+      if (isEdit) pushSlotsToRoom(computed);
+      else setSlots(computed);
+      setColumns(FREE_LAYOUT_COLUMNS);
+      setStep(4);
+      return;
+    }
+
     const zoneData = buildZones({
       zoneOrders,
       sectionGroups: sections,
@@ -2682,6 +2990,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
     slots,
     isEdit,
     pushSlotsToRoom,
+    freeLayout,
+    loadUsers,
   ]);
 
   // ── Build GraphQL inputs ────────────────────────────────────────────────────
@@ -2698,9 +3008,23 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
 
   const buildZoneColumnsInput = useCallback(
     () =>
-      [...new Set([...Object.keys(zoneColumns), ...Object.keys(zoneRows), ...Object.keys(zonePatterns)])].map((zone) => ({
+      [
+        ...new Set([
+          ...Object.keys(zoneColumns),
+          ...Object.keys(zoneRows),
+          ...Object.keys(zonePatterns),
+        ]),
+      ].map((zone) => ({
         zone,
-        columns: zoneColumns[zone] ?? (zone === "FRENTE_ESPECIAL" ? DEFAULT_ZONE_COLUMNS.FRENTE_ESPECIAL : zone === "FINAL" ? DEFAULT_ZONE_COLUMNS.FINAL : zone.includes("PERCUSION") ? DEFAULT_ZONE_COLUMNS.PERCUSION : columns),
+        columns:
+          zoneColumns[zone] ??
+          (zone === "FRENTE_ESPECIAL"
+            ? DEFAULT_ZONE_COLUMNS.FRENTE_ESPECIAL
+            : zone === "FINAL"
+            ? DEFAULT_ZONE_COLUMNS.FINAL
+            : zone.includes("PERCUSION")
+            ? DEFAULT_ZONE_COLUMNS.PERCUSION
+            : columns),
         ...(zoneRows[zone] != null ? { rows: zoneRows[zone] } : {}),
         ...(zonePatterns[zone] ? { pattern: zonePatterns[zone].trim() } : {}),
       })),
@@ -2916,6 +3240,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
               onChangeZonePattern={handleZonePatternChange}
               templates={templates}
               onLoadTemplate={handleLoadTemplate}
+              freeLayout={freeLayout}
+              onFreeLayoutChange={handleFreeLayoutChange}
               onNext={handleGoToStep2}
             />
           )}
@@ -2961,8 +3287,11 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                 <StepBadge n={4} active done={false} />
                 <h2 className="font-semibold text-slate-700">Formación</h2>
                 <span className="text-xs text-slate-400 hidden sm:inline">
-                  {columns} cols
-                  {formType === "DOUBLE" ? " · Doble hacia atrás" : " · Bloque único"}
+                  {freeLayout
+                    ? `${FREE_LAYOUT_SIDE_COLUMNS} + ${FREE_LAYOUT_AISLE_WIDTH} de pasillo + ${FREE_LAYOUT_SIDE_COLUMNS} · Libre`
+                    : `${columns} cols${
+                        formType === "DOUBLE" ? " · Doble hacia atrás" : " · Bloque único"
+                      }`}
                   {" · Arrastrá para mover · 🔒 para bloquear · Clic derecho para opciones"}
                 </span>
                 {isAdmin && (
@@ -3013,6 +3342,8 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                 onChangeZoneRows={handleZoneRowsChange}
                 zonePatterns={zonePatterns}
                 onChangeZonePattern={handleZonePatternChange}
+                freeLayout={freeLayout}
+                onFreeLayoutChange={handleFreeLayoutChange}
               />
 
               {/* ── EDIT: grid lives inside the Liveblocks room ── */}
@@ -3028,6 +3359,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                   zonePatterns={zonePatterns}
                   zoneOrders={zoneOrders}
                   formType={formType}
+                  freeLayout={freeLayout}
                   canExclude={isAdmin}
                   onExclude={handleExcludeFromGrid}
                   onInclude={handleIncludeToGrid}
@@ -3077,6 +3409,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                       zoneColumns={zoneColumns}
                       onChange={setSlots}
                       formType={formType}
+                      freeLayout={freeLayout}
                       zoneOrders={zoneOrders}
                       canExclude={isAdmin}
                       onExclude={handleExcludeFromGrid}
@@ -3095,7 +3428,7 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     ← Exclusiones
                   </button>
                 )}
-                {isAdmin && (
+                {isAdmin && !freeLayout && (
                   <button
                     onClick={() => setStep(2)}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
@@ -3108,7 +3441,16 @@ export default function FormationBuilderPage({ formation: existingFormation = nu
                     onClick={handleComputeGrid}
                     className="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50"
                   >
-                    ↺ Recalcular (respeta bloqueos)
+                    {freeLayout ? "↺ Completar grilla libre" : "↺ Recalcular (respeta bloqueos)"}
+                  </button>
+                )}
+                {isAdmin && freeLayout && sections.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleApplyFreeLayoutPreset}
+                    className="px-4 py-2 border border-amber-300 bg-amber-50 text-amber-800 rounded-xl text-sm font-medium hover:bg-amber-100"
+                  >
+                    Aplicar combinación inicial
                   </button>
                 )}
                 {isAdmin && (

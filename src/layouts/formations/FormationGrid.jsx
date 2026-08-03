@@ -21,10 +21,14 @@ import {
   getSectionLabel,
   SECTION_COLORS,
   DEFAULT_ZONE_ORDERS,
+  FREE_LAYOUT_COLUMNS,
+  FREE_LAYOUT_SIDE_COLUMNS,
+  FREE_LAYOUT_AISLE_WIDTH,
   slotKey,
   swapSlots,
   toggleLock,
   canSwapSlotContents,
+  isFreeLayoutAisleSlot,
 } from "./formationEngine.js";
 
 import { SlotCollaboratorOverlay } from "./SlotCollaboratorOverlay.jsx";
@@ -246,6 +250,24 @@ const SlotCell = memo(function SlotCell({
   onKeyboardMove,
 }) {
   const key = slotKey(slot);
+
+  if (isFreeLayoutAisleSlot(slot)) {
+    const aisleStart = FREE_LAYOUT_SIDE_COLUMNS;
+    const showLabel = slot.row === 0 && slot.col === aisleStart;
+    return (
+      <div
+        ref={(node) => registerSlotNode(key, node)}
+        aria-hidden="true"
+        className="relative min-h-[68px] rounded-lg border border-dashed border-slate-300/80 bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_5px,transparent_5px,transparent_10px)]"
+      >
+        {showLabel && (
+          <span className="absolute left-1/2 top-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-700 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-white shadow-sm">
+            Pasillo central
+          </span>
+        )}
+      </div>
+    );
+  }
 
   const isEmpty = !slot.userId;
   const colors = SECTION_COLORS[slot.section];
@@ -474,9 +496,10 @@ const SlotCell = memo(function SlotCell({
 
 // ─── ZoneTray ─────────────────────────────────────────────────────────────────
 
-const ZoneTray = memo(function ZoneTray({ zone, children }) {
+const ZoneTray = memo(function ZoneTray({ zone, children, freeLayout = false }) {
   const accent = ZONE_ACCENT[zone] || ZONE_ACCENT.BLOQUE_FRENTE;
-  return <div className={[" pt-3 pb-4", "shadow-sm", accent.tray].join(" ")}>{children}</div>;
+  const trayClass = freeLayout ? "border-slate-200 bg-slate-50/70" : accent.tray;
+  return <div className={["pt-3 pb-4", "shadow-sm", trayClass].join(" ")}>{children}</div>;
 });
 
 // ─── ZoneHeader ───────────────────────────────────────────────────────────────
@@ -506,6 +529,38 @@ const ZoneHeader = memo(function ZoneHeader({ zone, inline }) {
   );
 });
 
+const FreeLayoutSideGuide = memo(function FreeLayoutSideGuide() {
+  return (
+    <div
+      className="mb-2 grid gap-[6px]"
+      style={{ gridTemplateColumns: `repeat(${FREE_LAYOUT_COLUMNS}, minmax(64px, 1fr))` }}
+    >
+      <div
+        className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.12em] text-sky-700"
+        style={{ gridColumn: `1 / span ${FREE_LAYOUT_SIDE_COLUMNS}` }}
+      >
+        Izquierda · frente ↑
+      </div>
+      <div
+        className="rounded-lg border border-amber-200 bg-amber-50 px-1 py-1.5 text-center text-[8px] font-bold uppercase tracking-[0.08em] text-amber-700"
+        style={{ gridColumn: `${FREE_LAYOUT_SIDE_COLUMNS + 1} / span ${FREE_LAYOUT_AISLE_WIDTH}` }}
+      >
+        Pasillo
+      </div>
+      <div
+        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.12em] text-rose-700"
+        style={{
+          gridColumn: `${
+            FREE_LAYOUT_SIDE_COLUMNS + FREE_LAYOUT_AISLE_WIDTH + 1
+          } / span ${FREE_LAYOUT_SIDE_COLUMNS}`,
+        }}
+      >
+        Derecha · frente ↑
+      </div>
+    </div>
+  );
+});
+
 // ─── Section legend ───────────────────────────────────────────────────────────
 
 const SectionLegend = memo(function SectionLegend({ slots }) {
@@ -513,7 +568,7 @@ const SectionLegend = memo(function SectionLegend({ slots }) {
     const seen = new Set();
     const out = [];
     for (const s of slots) {
-      if (s.section && !seen.has(s.section)) {
+      if (s.section && !isFreeLayoutAisleSlot(s) && !seen.has(s.section)) {
         seen.add(s.section);
         out.push(s.section);
       }
@@ -720,12 +775,7 @@ const PercussionZoneGrid = memo(function PercussionZoneGrid({
 
 // ─── TouchSelectionBanner ────────────────────────────────────────────────────
 
-const SelectionBanner = memo(function SelectionBanner({
-  selectedKey,
-  slots,
-  onCancel,
-  isTouch,
-}) {
+const SelectionBanner = memo(function SelectionBanner({ selectedKey, slots, onCancel, isTouch }) {
   if (!selectedKey) return null;
   const slot = slots.find((s) => slotKey(s) === selectedKey);
   if (!slot) return null;
@@ -759,6 +809,7 @@ export default function FormationGrid({
   readOnly = false,
   zoneOrders = null,
   formType = "DOUBLE",
+  freeLayout = false,
   collaboratorsBySlot = {},
   onDragBegin,
   onDragComplete,
@@ -855,7 +906,7 @@ export default function FormationGrid({
         return;
       }
       const sourceSlot = slots.find((s) => slotKey(s) === dragging);
-      if (!canSwapSlotContents(sourceSlot, targetSlot, formType)) {
+      if (!freeLayout && !canSwapSlotContents(sourceSlot, targetSlot, formType)) {
         showInvalidDropFeedback(setInvalidDrop, targetKey);
         setDragging(null);
         setDropTarget(null);
@@ -865,7 +916,7 @@ export default function FormationGrid({
       setDragging(null);
       setDropTarget(null);
     },
-    [dragging, slots, onChange, readOnly, formType]
+    [dragging, slots, onChange, readOnly, formType, freeLayout]
   );
 
   const handleTap = useCallback(
@@ -883,7 +934,7 @@ export default function FormationGrid({
           return;
         }
         const sourceSlot = slots.find((s) => slotKey(s) === selected);
-        if (!canSwapSlotContents(sourceSlot, targetSlot, formType)) {
+        if (!freeLayout && !canSwapSlotContents(sourceSlot, targetSlot, formType)) {
           showInvalidDropFeedback(setInvalidDrop, key);
           setSelected(null);
           return;
@@ -892,7 +943,7 @@ export default function FormationGrid({
         setSelected(null);
       }
     },
-    [readOnly, selected, slots, onChange, formType]
+    [readOnly, selected, slots, onChange, formType, freeLayout]
   );
 
   const handleKeyboardMove = useCallback(
@@ -1025,9 +1076,20 @@ export default function FormationGrid({
               {/* Divider entre bloques */}
               {/* {idx > 0 && <ZoneHeader zone={zone} inline={false} />} */}
 
-              <ZoneTray zone={zone}>
+              <ZoneTray zone={zone} freeLayout={freeLayout}>
                 {/* Label dentro del tray */}
-                <ZoneHeader zone={zone} inline={true} />
+                {freeLayout ? (
+                  <div className="mb-3 flex flex-col items-center gap-1 px-4 text-center">
+                    {/* <span className="text-[10px] text-slate-400">
+                      {FREE_LAYOUT_SIDE_COLUMNS} columnas · {FREE_LAYOUT_AISLE_WIDTH} de pasillo ·{" "}
+                      {FREE_LAYOUT_SIDE_COLUMNS} columnas
+                    </span> */}
+                  </div>
+                ) : (
+                  <ZoneHeader zone={zone} inline={true} />
+                )}
+
+                {freeLayout && <FreeLayoutSideGuide />}
 
                 {zone === "PERCUSION" ? (
                   <PercussionZoneGrid

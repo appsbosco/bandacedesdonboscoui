@@ -114,8 +114,8 @@ async function copyTextToClipboard(text) {
   document.body.removeChild(textarea);
 }
 
-export default function TourPaymentsPage({ tourId, tourName }) {
-  const state = useTourPayments(tourId);
+export default function TourPaymentsPage({ tourId, tourName, registrationOnly = false }) {
+  const state = useTourPayments(tourId, { registrationOnly });
 
   const {
     financialTable,
@@ -181,6 +181,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
   } = state;
 
   const hasPlans = plans.length > 0;
+  const visibleViews = registrationOnly ? VIEWS.filter((view) => view.id === "table") : VIEWS;
+  const displayedView = registrationOnly ? "table" : activeView;
   const openRegisterModal = useCallback(() => {
     setRegisterModal({ open: true, participant: null });
   }, [setRegisterModal]);
@@ -324,7 +326,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          {!registrationOnly && <button
             onClick={handleOpenPaymentPrint}
             disabled={!financialTable?.rows?.length}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
@@ -338,8 +340,8 @@ export default function TourPaymentsPage({ tourId, tourName }) {
               />
             </svg>
             PDF financiero
-          </button>
-          <button
+          </button>}
+          {!registrationOnly && <button
             onClick={handleCopyWhatsappReport}
             disabled={!financialTable?.rows?.length}
             className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
@@ -353,7 +355,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
               />
             </svg>
             Lista WhatsApp
-          </button>
+          </button>}
           {/* <button
             onClick={openCreateParticipantModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
@@ -386,7 +388,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
       </div>
 
       {/* ── Sin configuración warning ─────────────────────────────────────── */}
-      {!loading && !financialTable?.rows?.length && !hasPlans && (
+      {!registrationOnly && !loading && !financialTable?.rows?.length && !hasPlans && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
           <span className="text-xl flex-shrink-0">⚠️</span>
           <div className="flex-1">
@@ -405,16 +407,16 @@ export default function TourPaymentsPage({ tourId, tourName }) {
       )}
 
       {/* ── Summary cards (siempre visibles) ─────────────────────────────── */}
-      {summary && <SummaryCards summary={summary} />}
+      {!registrationOnly && summary && <SummaryCards summary={summary} />}
 
       {/* ── View tabs ────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl overflow-x-auto">
-        {VIEWS.map((v) => (
+        {visibleViews.map((v) => (
           <button
             key={v.id}
             onClick={() => setActiveView(v.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
-              activeView === v.id
+              displayedView === v.id
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
             }`}
@@ -426,7 +428,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
       </div>
 
       {/* ── View Content ─────────────────────────────────────────────────── */}
-      {activeView === "table" && (
+      {displayedView === "table" && (
         <FinancialTableView
           financialTable={financialTable}
           tableRows={tableRows}
@@ -446,12 +448,13 @@ export default function TourPaymentsPage({ tourId, tourName }) {
           onOpenDetail={openDetailDrawer}
           onAdjustAccount={openAccountModal}
           onDeleteParticipant={handleDeleteParticipantRequest}
+          canManageAccounts={!registrationOnly}
         />
       )}
 
-      {activeView === "summary" && <SummaryView summary={summary} paymentFlow={paymentFlow} />}
+      {displayedView === "summary" && <SummaryView summary={summary} paymentFlow={paymentFlow} />}
 
-      {activeView === "setup" && (
+      {displayedView === "setup" && (
         <SetupView
           plans={plans}
           onCreatePlan={handleCreatePlanRequest}
@@ -466,26 +469,27 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         isOpen={registerModal.open}
         tourId={tourId}
         prefillParticipant={registerModal.participant}
+        participants={financialTable?.rows ?? []}
         onClose={handleCloseRegisterModal}
         onSubmit={handleRegisterPayment}
         loading={registering}
       />
 
-      <DeletePaymentModal
+      {!registrationOnly && <DeletePaymentModal
         payment={deletePayModal.payment}
         onConfirm={handleDeletePayment}
         onCancel={handleCloseDeletePaymentModal}
         loading={deletingPay}
-      />
+      />}
 
-      <DeleteParticipantModal
+      {!registrationOnly && <DeleteParticipantModal
         participant={deleteParticipantModal.participant}
         onConfirm={handleDeleteParticipant}
         onCancel={handleCloseDeleteParticipantModal}
         loading={deletingParticipant}
-      />
+      />}
 
-      <TourParticipantModal
+      {!registrationOnly && <TourParticipantModal
         isOpen={createParticipantModal.open}
         users={users}
         usersLoading={usersLoading}
@@ -493,9 +497,9 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         onSubmit={handleCreateParticipant}
         creating={creatingParticipant}
         showRemoveTab={false}
-      />
+      />}
 
-      <AccountAdjustModal
+      {!registrationOnly && <AccountAdjustModal
         isOpen={accountModal.open}
         participantId={accountModal.participantId}
         row={accountModal.row}
@@ -505,25 +509,25 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         onClose={handleCloseAccountModal}
         onSubmit={handleUpdateAccount}
         loading={updatingAccount}
-      />
+      />}
 
-      <PaymentPlanModal
+      {!registrationOnly && <PaymentPlanModal
         isOpen={planModal.open}
         mode={planModal.mode}
         plan={planModal.plan}
         onClose={handleClosePlanModal}
         onSubmit={handlePlanSubmit}
         loading={creatingPlan || updatingPlan}
-      />
+      />}
 
-      <SetupFinanceModal
+      {!registrationOnly && <SetupFinanceModal
         isOpen={setupModal.open}
         tourId={tourId}
         plans={plans}
         onClose={handleCloseSetupModal}
         onSubmit={handleSetupAll}
         loading={creatingAccounts || assigningPlan}
-      />
+      />}
 
       <ParticipantDetailDrawer
         isOpen={detailDrawer.open}
@@ -533,6 +537,7 @@ export default function TourPaymentsPage({ tourId, tourName }) {
         onClose={handleCloseDetailDrawer}
         onRegisterPayment={handleDrawerRegisterPayment}
         onDeletePayment={handleDrawerDeletePayment}
+        canDeletePayments={!registrationOnly}
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -635,6 +640,7 @@ const FinancialTableView = memo(function FinancialTableView({
   onOpenDetail,
   onAdjustAccount,
   onDeleteParticipant,
+  canManageAccounts,
 }) {
   const filterCounts = useMemo(() => {
     const rows = (financialTable?.rows ?? []).filter((row) => {
@@ -759,6 +765,7 @@ const FinancialTableView = memo(function FinancialTableView({
                   onOpenDetail={onOpenDetail}
                   onAdjustAccount={onAdjustAccount}
                   onDeleteParticipant={onDeleteParticipant}
+                  canManageAccounts={canManageAccounts}
                 />
               ))}
             </tbody>
@@ -783,6 +790,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
   onOpenDetail,
   onAdjustAccount,
   onDeleteParticipant,
+  canManageAccounts,
 }) {
   const statusConfig =
     FINANCIAL_STATUS_CONFIG[row.financialStatus] || FINANCIAL_STATUS_CONFIG.PENDING;
@@ -945,7 +953,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
               />
             </svg>
           </button>
-          <button
+          {canManageAccounts && <button
             onClick={handleAdjustAccount}
             title={row.hasFinancialAccount ? "Ajustar cuenta" : "Crear cuenta financiera"}
             disabled={row.isRemoved}
@@ -959,8 +967,8 @@ const FinancialTableRow = memo(function FinancialTableRow({
                 d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
               />
             </svg>
-          </button>
-          <button
+          </button>}
+          {canManageAccounts && <button
             onClick={handleDeleteParticipant}
             title="Eliminar participante"
             disabled={row.isRemoved}
@@ -974,7 +982,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-          </button>
+          </button>}
         </div>
       </td>
     </tr>
