@@ -449,7 +449,7 @@ export default function TourPaymentsPage({ tourId, tourName, registrationOnly = 
           instrumentOptions={instrumentOptions}
           onInstrumentChange={handleInstrumentChange}
           onRegisterPayment={handleOpenRegisterForRow}
-          onOpenDetail={registrationOnly ? null : openDetailDrawer}
+          onOpenDetail={openDetailDrawer}
           onAdjustAccount={openAccountModal}
           onDeleteParticipant={handleDeleteParticipantRequest}
           canManageAccounts={!registrationOnly}
@@ -545,18 +545,16 @@ export default function TourPaymentsPage({ tourId, tourName, registrationOnly = 
         />
       )}
 
-      {!registrationOnly && (
-        <ParticipantDetailDrawer
-          isOpen={detailDrawer.open}
-          participantId={detailDrawer.participantId}
-          tourId={detailDrawer.tourId}
-          participant={detailDrawer.participant}
-          onClose={handleCloseDetailDrawer}
-          onRegisterPayment={handleDrawerRegisterPayment}
-          onDeletePayment={handleDrawerDeletePayment}
-          canDeletePayments={!registrationOnly}
-        />
-      )}
+      <ParticipantDetailDrawer
+        isOpen={detailDrawer.open}
+        participantId={detailDrawer.participantId}
+        tourId={detailDrawer.tourId}
+        participant={detailDrawer.participant}
+        onClose={handleCloseDetailDrawer}
+        onRegisterPayment={handleDrawerRegisterPayment}
+        onDeletePayment={handleDrawerDeletePayment}
+        canDeletePayments={!registrationOnly}
+      />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
