@@ -8,26 +8,43 @@
  *   - tour: { id, selfServiceAccess }
  *   - onSaved: () => void  (callback para refetch)
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { UPDATE_TOUR_SELF_SERVICE_ACCESS } from "./tours.gql";
+import { GET_USERS } from "graphql/queries";
+import { UPDATE_TOUR_PAYMENT_OPERATORS, UPDATE_TOUR_SELF_SERVICE_ACCESS } from "./tours.gql";
 import { GET_TOUR_ITINERARIES } from "./tourFlights/tourItineraries.gql";
 
 const MODULE_LABELS = {
-  documents: { label: "Documentos",    emoji: "📄", description: "Visas, pasaportes, permiso de salida" },
-  payments:  { label: "Pagos",         emoji: "💰", description: "Estado de cuenta y cuotas" },
-  rooms:     { label: "Habitaciones",  emoji: "🏨", description: "Habitación asignada" },
-  itinerary: { label: "Itinerario",    emoji: "🗺️", description: "Itinerario de la gira" },
-  flights:   { label: "Vuelos",        emoji: "✈️", description: "Vuelos asignados" },
+  documents: {
+    label: "Documentos",
+    emoji: "📄",
+    description: "Visas, pasaportes, permiso de salida",
+  },
+  payments: { label: "Pagos", emoji: "💰", description: "Estado de cuenta y cuotas" },
+  rooms: { label: "Habitaciones", emoji: "🏨", description: "Habitación asignada" },
+  itinerary: { label: "Itinerario", emoji: "🗺️", description: "Itinerario de la gira" },
+  flights: { label: "Vuelos", emoji: "✈️", description: "Vuelos asignados" },
 };
 
 export default function TourSelfServiceConfig({ tour, onSaved }) {
   const ssa = tour?.selfServiceAccess ?? {
-    enabled: false, documents: true, payments: true,
-    rooms: false, itinerary: false, itineraryIds: [], flights: false,
+    enabled: false,
+    documents: true,
+    payments: true,
+    rooms: false,
+    itinerary: false,
+    itineraryIds: [],
+    flights: false,
   };
 
   const [form, setForm] = useState({ ...ssa });
+  const [paymentOperatorIds, setPaymentOperatorIds] = useState(() =>
+    (tour?.paymentOperatorIds || []).map(String)
+  );
+  const selectedPaymentOperatorIds = useMemo(
+    () => new Set(paymentOperatorIds),
+    [paymentOperatorIds]
+  );
   const [saved, setSaved] = useState(false);
   const { data: itinerariesData, loading: itinerariesLoading } = useQuery(GET_TOUR_ITINERARIES, {
     variables: { tourId: tour?.id },
@@ -36,26 +53,51 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
   });
   const itineraries = itinerariesData?.getTourItineraries || [];
   const selectedItineraryIds = new Set(form.itineraryIds || []);
-
-  const [updateSelfService, { loading }] = useMutation(UPDATE_TOUR_SELF_SERVICE_ACCESS, {
-    onCompleted: () => {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-      onSaved?.();
-    },
-    onError: (e) => alert(e.message || "Error al guardar configuración"),
+  const { data: usersData, loading: usersLoading } = useQuery(GET_USERS, {
+    fetchPolicy: "cache-and-network",
   });
+  const staffUsers = (usersData?.getUsers || [])
+    .filter((user) => user.role === "Staff")
+    .sort((a, b) =>
+      `${a.firstSurName || ""} ${a.name || ""}`.localeCompare(
+        `${b.firstSurName || ""} ${b.name || ""}`,
+        "es"
+      )
+    );
+
+  const [updateSelfService, { loading }] = useMutation(UPDATE_TOUR_SELF_SERVICE_ACCESS);
+  const [updatePaymentOperators, { loading: operatorsLoading }] = useMutation(
+    UPDATE_TOUR_PAYMENT_OPERATORS
+  );
 
   const toggle = (key) => setForm((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (form.enabled && form.itinerary && !(form.itineraryIds || []).length) {
       alert("Selecciona al menos un itinerario para habilitar el acceso.");
       return;
     }
     // Eliminar __typename que Apollo agrega al cache — input types no lo aceptan
     const { __typename, ...cleanInput } = form;
-    updateSelfService({ variables: { tourId: tour.id, input: cleanInput } });
+    try {
+      await Promise.all([
+        updateSelfService({ variables: { tourId: tour.id, input: cleanInput } }),
+        updatePaymentOperators({
+          variables: { tourId: tour.id, userIds: paymentOperatorIds },
+        }),
+      ]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      onSaved?.();
+    } catch (error) {
+      alert(error.message || "Error al guardar la configuración");
+    }
+  };
+
+  const togglePaymentOperator = (userId) => {
+    setPaymentOperatorIds((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]
+    );
   };
 
   return (
@@ -78,9 +120,11 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
               : "bg-gray-50 border-gray-200 text-gray-600"
           }`}
         >
-          <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-            form.enabled ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
-          }`}>
+          <span
+            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+              form.enabled ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
+            }`}
+          >
             {form.enabled && <span className="w-2 h-2 bg-white rounded-full" />}
           </span>
           {form.enabled ? "Habilitado" : "Deshabilitado"}
@@ -88,7 +132,11 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
       </div>
 
       {/* Módulos individuales */}
-      <div className={`space-y-2 transition-opacity ${form.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+      <div
+        className={`space-y-2 transition-opacity ${
+          form.enabled ? "opacity-100" : "opacity-40 pointer-events-none"
+        }`}
+      >
         {Object.entries(MODULE_LABELS).map(([key, { label, emoji, description }]) => (
           <button
             type="button"
@@ -142,23 +190,36 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
               {itineraries.map((itinerary) => {
                 const selected = selectedItineraryIds.has(itinerary.id);
                 return (
-                  <label key={itinerary.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${selected ? "border-blue-400 bg-white shadow-sm" : "border-blue-100 bg-white/60 hover:border-blue-300"}`}>
+                  <label
+                    key={itinerary.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                      selected
+                        ? "border-blue-400 bg-white shadow-sm"
+                        : "border-blue-100 bg-white/60 hover:border-blue-300"
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       checked={selected}
-                      onChange={() => setForm((current) => ({
-                        ...current,
-                        itineraryIds: selected
-                          ? (current.itineraryIds || []).filter((id) => id !== itinerary.id)
-                          : [...(current.itineraryIds || []), itinerary.id],
-                      }))}
+                      onChange={() =>
+                        setForm((current) => ({
+                          ...current,
+                          itineraryIds: selected
+                            ? (current.itineraryIds || []).filter((id) => id !== itinerary.id)
+                            : [...(current.itineraryIds || []), itinerary.id],
+                        }))
+                      }
                       className="mt-0.5 h-4 w-4 accent-blue-600"
                     />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-slate-800">{itinerary.name}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-800">
+                        {itinerary.name}
+                      </span>
                       <span className="block text-[11px] text-slate-500">
                         {itinerary.passengerCount} pasajeros · {itinerary.flightCount} vuelos
-                        {itinerary.reservationNumber ? ` · Reserva ${itinerary.reservationNumber}` : ""}
+                        {itinerary.reservationNumber
+                          ? ` · Reserva ${itinerary.reservationNumber}`
+                          : ""}
                       </span>
                     </span>
                   </label>
@@ -169,19 +230,72 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
         </div>
       )}
 
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-slate-900">Staff que registra pagos</p>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Solo las personas seleccionadas podrán abrir el control financiero y registrar pagos.
+              El resto del staff verá únicamente su propia información.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white">
+            {paymentOperatorIds.length} autorizados
+          </span>
+        </div>
+
+        {usersLoading ? (
+          <div className="h-20 rounded-xl bg-white/70 animate-pulse" />
+        ) : staffUsers.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-amber-200 bg-white p-4 text-center text-xs text-slate-500">
+            No hay usuarios con rol Staff disponibles.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {staffUsers.map((user) => {
+              const selected = selectedPaymentOperatorIds.has(user.id);
+              const fullName = [user.name, user.firstSurName, user.secondSurName]
+                .filter(Boolean)
+                .join(" ");
+              return (
+                <label
+                  key={user.id}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                    selected
+                      ? "border-amber-400 bg-white shadow-sm"
+                      : "border-amber-100 bg-white/60 hover:border-amber-300"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => togglePaymentOperator(user.id)}
+                    className="h-4 w-4 accent-amber-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-slate-800">
+                      {fullName}
+                    </span>
+                    <span className="block truncate text-[11px] text-slate-500">{user.email}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Guardar */}
       <div className="flex items-center gap-3 pt-1">
         <button
           type="button"
           onClick={handleSave}
-          disabled={loading}
+          disabled={loading || operatorsLoading}
           className="px-5 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60"
         >
-          {loading ? "Guardando…" : "Guardar configuración"}
+          {loading || operatorsLoading ? "Guardando…" : "Guardar configuración"}
         </button>
-        {saved && (
-          <span className="text-xs text-emerald-600 font-semibold">✓ Guardado</span>
-        )}
+        {saved && <span className="text-xs text-emerald-600 font-semibold">✓ Guardado</span>}
       </div>
     </div>
   );

@@ -30,6 +30,7 @@ export const GET_TOUR = gql`
       endDate
       status
       description
+      paymentOperatorIds
       selfServiceAccess {
         enabled
         documents
@@ -66,6 +67,15 @@ export const UPDATE_TOUR_SELF_SERVICE_ACCESS = gql`
         itineraryIds
         flights
       }
+    }
+  }
+`;
+
+export const UPDATE_TOUR_PAYMENT_OPERATORS = gql`
+  mutation UpdateTourPaymentOperators($tourId: ID!, $userIds: [ID!]!) {
+    updateTourPaymentOperators(tourId: $tourId, userIds: $userIds) {
+      id
+      paymentOperatorIds
     }
   }
 `;

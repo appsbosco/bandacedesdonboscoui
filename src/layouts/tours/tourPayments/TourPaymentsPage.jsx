@@ -326,36 +326,40 @@ export default function TourPaymentsPage({ tourId, tourName, registrationOnly = 
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {!registrationOnly && <button
-            onClick={handleOpenPaymentPrint}
-            disabled={!financialTable?.rows?.length}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 9V2h12v7m-2 8h2a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2h2m2 5h8v-8h-8v8z"
-              />
-            </svg>
-            PDF financiero
-          </button>}
-          {!registrationOnly && <button
-            onClick={handleCopyWhatsappReport}
-            disabled={!financialTable?.rows?.length}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 10h8M8 14h5m8-2a9 9 0 11-4.22-7.63L21 3l-1.37 4.22A8.96 8.96 0 0121 12z"
-              />
-            </svg>
-            Lista WhatsApp
-          </button>}
+          {!registrationOnly && (
+            <button
+              onClick={handleOpenPaymentPrint}
+              disabled={!financialTable?.rows?.length}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 9V2h12v7m-2 8h2a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2h2m2 5h8v-8h-8v8z"
+                />
+              </svg>
+              PDF financiero
+            </button>
+          )}
+          {!registrationOnly && (
+            <button
+              onClick={handleCopyWhatsappReport}
+              disabled={!financialTable?.rows?.length}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-sm font-bold rounded-2xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h8M8 14h5m8-2a9 9 0 11-4.22-7.63L21 3l-1.37 4.22A8.96 8.96 0 0121 12z"
+                />
+              </svg>
+              Lista WhatsApp
+            </button>
+          )}
           {/* <button
             onClick={openCreateParticipantModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-sm font-bold rounded-2xl active:scale-[0.98] transition-all"
@@ -445,7 +449,7 @@ export default function TourPaymentsPage({ tourId, tourName, registrationOnly = 
           instrumentOptions={instrumentOptions}
           onInstrumentChange={handleInstrumentChange}
           onRegisterPayment={handleOpenRegisterForRow}
-          onOpenDetail={openDetailDrawer}
+          onOpenDetail={registrationOnly ? null : openDetailDrawer}
           onAdjustAccount={openAccountModal}
           onDeleteParticipant={handleDeleteParticipantRequest}
           canManageAccounts={!registrationOnly}
@@ -475,70 +479,84 @@ export default function TourPaymentsPage({ tourId, tourName, registrationOnly = 
         loading={registering}
       />
 
-      {!registrationOnly && <DeletePaymentModal
-        payment={deletePayModal.payment}
-        onConfirm={handleDeletePayment}
-        onCancel={handleCloseDeletePaymentModal}
-        loading={deletingPay}
-      />}
+      {!registrationOnly && (
+        <DeletePaymentModal
+          payment={deletePayModal.payment}
+          onConfirm={handleDeletePayment}
+          onCancel={handleCloseDeletePaymentModal}
+          loading={deletingPay}
+        />
+      )}
 
-      {!registrationOnly && <DeleteParticipantModal
-        participant={deleteParticipantModal.participant}
-        onConfirm={handleDeleteParticipant}
-        onCancel={handleCloseDeleteParticipantModal}
-        loading={deletingParticipant}
-      />}
+      {!registrationOnly && (
+        <DeleteParticipantModal
+          participant={deleteParticipantModal.participant}
+          onConfirm={handleDeleteParticipant}
+          onCancel={handleCloseDeleteParticipantModal}
+          loading={deletingParticipant}
+        />
+      )}
 
-      {!registrationOnly && <TourParticipantModal
-        isOpen={createParticipantModal.open}
-        users={users}
-        usersLoading={usersLoading}
-        onClose={handleCloseCreateParticipantModal}
-        onSubmit={handleCreateParticipant}
-        creating={creatingParticipant}
-        showRemoveTab={false}
-      />}
+      {!registrationOnly && (
+        <TourParticipantModal
+          isOpen={createParticipantModal.open}
+          users={users}
+          usersLoading={usersLoading}
+          onClose={handleCloseCreateParticipantModal}
+          onSubmit={handleCreateParticipant}
+          creating={creatingParticipant}
+          showRemoveTab={false}
+        />
+      )}
 
-      {!registrationOnly && <AccountAdjustModal
-        isOpen={accountModal.open}
-        participantId={accountModal.participantId}
-        row={accountModal.row}
-        tourId={tourId}
-        plans={plans}
-        defaultPlan={state.defaultPlan}
-        onClose={handleCloseAccountModal}
-        onSubmit={handleUpdateAccount}
-        loading={updatingAccount}
-      />}
+      {!registrationOnly && (
+        <AccountAdjustModal
+          isOpen={accountModal.open}
+          participantId={accountModal.participantId}
+          row={accountModal.row}
+          tourId={tourId}
+          plans={plans}
+          defaultPlan={state.defaultPlan}
+          onClose={handleCloseAccountModal}
+          onSubmit={handleUpdateAccount}
+          loading={updatingAccount}
+        />
+      )}
 
-      {!registrationOnly && <PaymentPlanModal
-        isOpen={planModal.open}
-        mode={planModal.mode}
-        plan={planModal.plan}
-        onClose={handleClosePlanModal}
-        onSubmit={handlePlanSubmit}
-        loading={creatingPlan || updatingPlan}
-      />}
+      {!registrationOnly && (
+        <PaymentPlanModal
+          isOpen={planModal.open}
+          mode={planModal.mode}
+          plan={planModal.plan}
+          onClose={handleClosePlanModal}
+          onSubmit={handlePlanSubmit}
+          loading={creatingPlan || updatingPlan}
+        />
+      )}
 
-      {!registrationOnly && <SetupFinanceModal
-        isOpen={setupModal.open}
-        tourId={tourId}
-        plans={plans}
-        onClose={handleCloseSetupModal}
-        onSubmit={handleSetupAll}
-        loading={creatingAccounts || assigningPlan}
-      />}
+      {!registrationOnly && (
+        <SetupFinanceModal
+          isOpen={setupModal.open}
+          tourId={tourId}
+          plans={plans}
+          onClose={handleCloseSetupModal}
+          onSubmit={handleSetupAll}
+          loading={creatingAccounts || assigningPlan}
+        />
+      )}
 
-      <ParticipantDetailDrawer
-        isOpen={detailDrawer.open}
-        participantId={detailDrawer.participantId}
-        tourId={detailDrawer.tourId}
-        participant={detailDrawer.participant}
-        onClose={handleCloseDetailDrawer}
-        onRegisterPayment={handleDrawerRegisterPayment}
-        onDeletePayment={handleDrawerDeletePayment}
-        canDeletePayments={!registrationOnly}
-      />
+      {!registrationOnly && (
+        <ParticipantDetailDrawer
+          isOpen={detailDrawer.open}
+          participantId={detailDrawer.participantId}
+          tourId={detailDrawer.tourId}
+          participant={detailDrawer.participant}
+          onClose={handleCloseDetailDrawer}
+          onRegisterPayment={handleDrawerRegisterPayment}
+          onDeletePayment={handleDrawerDeletePayment}
+          canDeletePayments={!registrationOnly}
+        />
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
@@ -800,7 +818,7 @@ const FinancialTableRow = memo(function FinancialTableRow({
   const visaDeniedLabel = getVisaDeniedLabel(row.visaDeniedCount);
   const hasInstallments = row.installments.length > 0;
   const handleOpenDetail = useCallback(() => {
-    onOpenDetail(row);
+    onOpenDetail?.(row);
   }, [onOpenDetail, row]);
   const handleRegisterPayment = useCallback(() => {
     onRegisterPayment(row);
@@ -817,14 +835,14 @@ const FinancialTableRow = memo(function FinancialTableRow({
 
   return (
     <tr
-      className={`transition-colors cursor-pointer ${
+      className={`transition-colors ${onOpenDetail ? "cursor-pointer" : ""} ${
         row.isRemoved
           ? "bg-red-50/70 hover:bg-red-50"
           : visaDenied
           ? "bg-rose-50/80 hover:bg-rose-50"
           : "hover:bg-gray-50"
       }`}
-      onClick={handleOpenDetail}
+      onClick={onOpenDetail ? handleOpenDetail : undefined}
     >
       <td
         className={`px-4 py-3 sticky left-0 transition-colors ${
@@ -953,36 +971,40 @@ const FinancialTableRow = memo(function FinancialTableRow({
               />
             </svg>
           </button>
-          {canManageAccounts && <button
-            onClick={handleAdjustAccount}
-            title={row.hasFinancialAccount ? "Ajustar cuenta" : "Crear cuenta financiera"}
-            disabled={row.isRemoved}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-              />
-            </svg>
-          </button>}
-          {canManageAccounts && <button
-            onClick={handleDeleteParticipant}
-            title="Eliminar participante"
-            disabled={row.isRemoved}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>}
+          {canManageAccounts && (
+            <button
+              onClick={handleAdjustAccount}
+              title={row.hasFinancialAccount ? "Ajustar cuenta" : "Crear cuenta financiera"}
+              disabled={row.isRemoved}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+            </button>
+          )}
+          {canManageAccounts && (
+            <button
+              onClick={handleDeleteParticipant}
+              title="Eliminar participante"
+              disabled={row.isRemoved}
+              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          )}
         </div>
       </td>
     </tr>

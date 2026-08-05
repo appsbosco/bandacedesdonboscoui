@@ -5,7 +5,7 @@
  *
  * Comportamiento por rol:
  *   - Admin/Director/Subdirector: vista administrativa completa (todos los tabs)
- *   - Staff: operación de pagos (solo el tab Pagos)
+ *   - Staff: vista personal; operadores autorizados ven además Registrar pagos
  *   - Resto: vista self-service (solo tabs habilitados en tour.selfServiceAccess)
  */
 import { useEffect, useMemo, useState } from "react";
@@ -37,7 +37,6 @@ import TourTicketAdminPage from "./tourTickets/TourTicketAdminPage";
 // Roles con acceso administrativo completo a giras
 const ADMIN_ROLES = new Set(["Admin", "Director", "Subdirector"]);
 const TOUR_FINANCE_ROLES = new Set(["CEDES Financiero"]);
-const TOUR_PAYMENT_OPERATOR_ROLES = new Set(["Staff"]);
 
 // Query mínima para saber si el actor actual es un User o un Parent.
 // getUser devuelve null para Parents → userData === null solo cuando ha terminado de cargar.
@@ -260,10 +259,6 @@ function isTourFinanceRole(role) {
   return TOUR_FINANCE_ROLES.has(role);
 }
 
-function isTourPaymentOperatorRole(role) {
-  return TOUR_PAYMENT_OPERATOR_ROLES.has(role);
-}
-
 // Todos los tabs disponibles en vista admin
 const ADMIN_TABS = [
   { id: "documents", label: "Documentos", emoji: "📄" },
@@ -286,6 +281,12 @@ const SELF_SERVICE_TABS = [
   { id: "flights", label: "Mis vuelos", emoji: "✈️", moduleKey: "flights" },
   { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
+
+const PAYMENT_OPERATOR_TAB = {
+  id: "register-payments",
+  label: "Registrar pagos",
+  emoji: "🧾",
+};
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
@@ -376,8 +377,21 @@ function AdminTabContent({ activeTab, tour, onTourRefetch, paymentRegistrationOn
 
 // ─── Vista self-service ───────────────────────────────────────────────────────
 
-function SelfServiceView({ tour, requestedTab }) {
+function SelfServiceView({
+  tour,
+  requestedTab,
+  isStaff = false,
+  canRegisterPayments = false,
+  onTourRefetch,
+}) {
   const { selfServiceAccess } = tour;
+  const effectiveSelfServiceAccess = useMemo(
+    () =>
+      isStaff
+        ? { ...selfServiceAccess, enabled: true, payments: true, flights: true }
+        : selfServiceAccess,
+    [isStaff, selfServiceAccess]
+  );
 
   const {
     participant,
@@ -399,15 +413,20 @@ function SelfServiceView({ tour, requestedTab }) {
     isLinked,
     isNotLinkedError,
     participantError,
-  } = useTourSelfService({ tourId: tour.id, selfServiceAccess });
+  } = useTourSelfService({ tourId: tour.id, selfServiceAccess: effectiveSelfServiceAccess });
 
   // Calcular tabs visibles para este usuario
-  const visibleTabs = SELF_SERVICE_TABS.filter(
-    (t) =>
-      selfServiceAccess?.enabled &&
-      selfServiceAccess?.[t.moduleKey] !== false &&
-      (t.id !== "itinerary" || itineraryEligible)
-  );
+  const visibleTabs = [
+    ...SELF_SERVICE_TABS.filter((t) => {
+      const alwaysAvailableToStaff = isStaff && ["payments", "flights"].includes(t.id);
+      return (
+        (alwaysAvailableToStaff ||
+          (selfServiceAccess?.enabled && selfServiceAccess?.[t.moduleKey] !== false)) &&
+        (t.id !== "itinerary" || itineraryEligible)
+      );
+    }),
+    ...(canRegisterPayments ? [PAYMENT_OPERATOR_TAB] : []),
+  ];
 
   const [activeTab, setActiveTab] = useState(
     visibleTabs.some((tab) => tab.id === requestedTab)
@@ -425,7 +444,7 @@ function SelfServiceView({ tour, requestedTab }) {
   }
 
   // Auto-service no habilitado
-  if (!selfServiceAccess?.enabled) {
+  if (!selfServiceAccess?.enabled && !isStaff) {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
         <p className="text-2xl mb-2">🔒</p>
@@ -465,7 +484,9 @@ function SelfServiceView({ tour, requestedTab }) {
   }
 
   const isLockedTab = (tabId) =>
-    ["itinerary", "flights", "flight-ticket"].includes(tabId) && !isVerified;
+    ["itinerary", "flights", "flight-ticket"].includes(tabId) &&
+    !isVerified &&
+    !(isStaff && tabId === "flights");
 
   return (
     <div className="space-y-5">
@@ -539,6 +560,14 @@ function SelfServiceView({ tour, requestedTab }) {
         ) : (
           <TourTicketTab tourId={tour.id} participant={participant} />
         ))}
+      {activeTab === "register-payments" && (
+        <AdminTabContent
+          activeTab="payments"
+          tour={tour}
+          onTourRefetch={onTourRefetch}
+          paymentRegistrationOnly
+        />
+      )}
     </div>
   );
 }
@@ -591,8 +620,10 @@ export default function TourDetailPage() {
 
   const isAdmin = !actorLoading && isAdminRole(currentUser?.role);
   const isTourFinance = !actorLoading && isTourFinanceRole(currentUser?.role);
-  const isTourPaymentOperator =
-    !actorLoading && isTourPaymentOperatorRole(currentUser?.role);
+  const isStaff = !actorLoading && currentUser?.role === "Staff";
+  const canRegisterTourPayments =
+    isStaff &&
+    (tour?.paymentOperatorIds || []).some((id) => String(id) === String(currentUser?.id));
   const isParent = !actorLoading && currentUser === null;
 
   if (loading) {
@@ -726,25 +757,16 @@ export default function TourDetailPage() {
               <AdminTabContent activeTab={activeTab} tour={tour} onTourRefetch={refetch} />
             </div>
           </>
-        ) : isTourPaymentOperator ? (
-          <>
-            <div className="px-4">
-              <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl w-fit">
-                <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-gray-900 shadow-sm text-sm font-semibold">
-                  <span>💰</span>
-                  <span>Pagos</span>
-                </div>
-              </div>
-            </div>
-            <div className="px-4">
-              <AdminTabContent
-                activeTab="payments"
-                tour={tour}
-                onTourRefetch={refetch}
-                paymentRegistrationOnly
-              />
-            </div>
-          </>
+        ) : isStaff ? (
+          <div className="px-4">
+            <SelfServiceView
+              tour={tour}
+              requestedTab={requestedTab}
+              isStaff
+              canRegisterPayments={canRegisterTourPayments}
+              onTourRefetch={refetch}
+            />
+          </div>
         ) : (
           /* Vista self-service: solo lo que está habilitado */
           <div className="px-4">

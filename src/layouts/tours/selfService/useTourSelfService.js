@@ -10,6 +10,7 @@ import {
 } from "./selfService.gql";
 
 export function useTourSelfService({ tourId, selfServiceAccess }) {
+  const documentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.documents;
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments;
   const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary;
   const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights;
@@ -41,7 +42,7 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     refetch: refetchDocumentSummary,
   } = useQuery(MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY, {
     variables: { tourId },
-    skip: !tourId || !participant,
+    skip: !tourId || !participant || !documentsEnabled,
     fetchPolicy: "cache-and-network",
   });
   const { data: itineraryData, loading: itineraryLoading } = useQuery(MY_TOUR_ITINERARY, {
