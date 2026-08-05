@@ -8,11 +8,12 @@
  *   - tour: { id, selfServiceAccess }
  *   - onSaved: () => void  (callback para refetch)
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { GET_USERS } from "graphql/queries";
 import { UPDATE_TOUR_PAYMENT_OPERATORS, UPDATE_TOUR_SELF_SERVICE_ACCESS } from "./tours.gql";
 import { GET_TOUR_ITINERARIES } from "./tourFlights/tourItineraries.gql";
+import { getEligiblePaymentOperators, reconcilePaymentOperatorIds } from "./paymentOperators";
 
 const MODULE_LABELS = {
   documents: {
@@ -53,17 +54,38 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
   });
   const itineraries = itinerariesData?.getTourItineraries || [];
   const selectedItineraryIds = new Set(form.itineraryIds || []);
-  const { data: usersData, loading: usersLoading } = useQuery(GET_USERS, {
-    fetchPolicy: "cache-and-network",
+  const {
+    data: usersData,
+    loading: usersLoading,
+    error: usersError,
+  } = useQuery(GET_USERS, {
+    fetchPolicy: "network-only",
   });
-  const staffUsers = (usersData?.getUsers || [])
-    .filter((user) => user.role === "Staff")
-    .sort((a, b) =>
-      `${a.firstSurName || ""} ${a.name || ""}`.localeCompare(
-        `${b.firstSurName || ""} ${b.name || ""}`,
-        "es"
-      )
-    );
+  const staffUsers = useMemo(
+    () =>
+      getEligiblePaymentOperators(usersData?.getUsers).sort((a, b) =>
+        `${a.firstSurName || ""} ${a.name || ""}`.localeCompare(
+          `${b.firstSurName || ""} ${b.name || ""}`,
+          "es"
+        )
+      ),
+    [usersData?.getUsers]
+  );
+
+  useEffect(() => {
+    setPaymentOperatorIds((tour?.paymentOperatorIds || []).map(String));
+  }, [tour?.id, tour?.paymentOperatorIds]);
+
+  useEffect(() => {
+    if (!Array.isArray(usersData?.getUsers)) return;
+    setPaymentOperatorIds((current) => {
+      const reconciled = reconcilePaymentOperatorIds(current, usersData.getUsers);
+      return reconciled.length === current.length &&
+        reconciled.every((id, index) => id === current[index])
+        ? current
+        : reconciled;
+    });
+  }, [usersData?.getUsers]);
 
   const [updateSelfService, { loading }] = useMutation(UPDATE_TOUR_SELF_SERVICE_ACCESS);
   const [updatePaymentOperators, { loading: operatorsLoading }] = useMutation(
@@ -77,13 +99,21 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
       alert("Selecciona al menos un itinerario para habilitar el acceso.");
       return;
     }
+    if (usersError || !Array.isArray(usersData?.getUsers)) {
+      alert("No se pudo verificar la lista actual de usuarios Staff. Intenta de nuevo.");
+      return;
+    }
     // Eliminar __typename que Apollo agrega al cache — input types no lo aceptan
     const { __typename, ...cleanInput } = form;
+    const validPaymentOperatorIds = reconcilePaymentOperatorIds(
+      paymentOperatorIds,
+      usersData.getUsers
+    );
     try {
       await Promise.all([
         updateSelfService({ variables: { tourId: tour.id, input: cleanInput } }),
         updatePaymentOperators({
-          variables: { tourId: tour.id, userIds: paymentOperatorIds },
+          variables: { tourId: tour.id, userIds: validPaymentOperatorIds },
         }),
       ]);
       setSaved(true);
@@ -246,6 +276,10 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
 
         {usersLoading ? (
           <div className="h-20 rounded-xl bg-white/70 animate-pulse" />
+        ) : usersError ? (
+          <p className="rounded-xl border border-red-200 bg-white p-4 text-center text-xs text-red-600">
+            No se pudo cargar la lista actual de Staff. Intenta de nuevo.
+          </p>
         ) : staffUsers.length === 0 ? (
           <p className="rounded-xl border border-dashed border-amber-200 bg-white p-4 text-center text-xs text-slate-500">
             No hay usuarios con rol Staff disponibles.
@@ -290,7 +324,13 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={loading || operatorsLoading}
+          disabled={
+            loading ||
+            operatorsLoading ||
+            usersLoading ||
+            Boolean(usersError) ||
+            !Array.isArray(usersData?.getUsers)
+          }
           className="px-5 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60"
         >
           {loading || operatorsLoading ? "Guardando…" : "Guardar configuración"}
