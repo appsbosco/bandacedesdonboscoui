@@ -29,7 +29,11 @@ import TourSelfServiceItinerary from "./selfService/TourSelfServiceItinerary";
 import TourSelfServiceFlights from "./selfService/TourSelfServiceFlights";
 import TourSelfServiceConfig from "./TourSelfServiceConfig";
 import TourParentView from "./selfService/TourParentView";
-import { CREATE_TOUR_PARTICIPANT, DELETE_TOUR_PARTICIPANT } from "./tours.gql";
+import {
+  CREATE_TOUR_PARTICIPANT,
+  DELETE_TOUR_PARTICIPANT,
+  GET_MY_TOUR_CAPABILITIES,
+} from "./tours.gql";
 import TourParticipantModal from "./TourParticipantModal";
 import TourTicketTab from "./tourTickets/TourTicketTab";
 import TourTicketAdminPage from "./tourTickets/TourTicketAdminPage";
@@ -428,11 +432,15 @@ function SelfServiceView({
     ...(canRegisterPayments ? [PAYMENT_OPERATOR_TAB] : []),
   ];
 
-  const [activeTab, setActiveTab] = useState(
+  const [selectedTab, setActiveTab] = useState(
     visibleTabs.some((tab) => tab.id === requestedTab)
       ? requestedTab
+      : isStaff && visibleTabs.some((tab) => tab.id === "payments")
+      ? "payments"
       : visibleTabs[0]?.id ?? "documents"
   );
+  const activeTab =
+    selectedTab === "register-payments" && !canRegisterPayments ? "payments" : selectedTab;
 
   if (loading) {
     return (
@@ -621,9 +629,14 @@ export default function TourDetailPage() {
   const isAdmin = !actorLoading && isAdminRole(currentUser?.role);
   const isTourFinance = !actorLoading && isTourFinanceRole(currentUser?.role);
   const isStaff = !actorLoading && currentUser?.role === "Staff";
-  const canRegisterTourPayments =
-    isStaff &&
-    (tour?.paymentOperatorIds || []).some((id) => String(id) === String(currentUser?.id));
+  const { data: capabilitiesData } = useQuery(GET_MY_TOUR_CAPABILITIES, {
+    variables: { tourId: tour?.id || "" },
+    skip: !tour?.id || !isStaff,
+    fetchPolicy: "network-only",
+  });
+  const canRegisterTourPayments = Boolean(
+    isStaff && capabilitiesData?.myTourCapabilities?.canRegisterPayments
+  );
   const isParent = !actorLoading && currentUser === null;
 
   if (loading) {

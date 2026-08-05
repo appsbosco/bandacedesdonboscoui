@@ -114,6 +114,14 @@ export const GET_MY_TOUR_PARTICIPANT = gql`
   }
 `;
 
+export const GET_MY_TOUR_CAPABILITIES = gql`
+  query GetMyTourCapabilities($tourId: ID!) {
+    myTourCapabilities(tourId: $tourId) {
+      canRegisterPayments
+    }
+  }
+`;
+
 export const CREATE_TOUR = gql`
   mutation CreateTour($input: TourInput!) {
     createTour(input: $input) {
