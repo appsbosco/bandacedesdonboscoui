@@ -23,7 +23,8 @@ const MODULE_LABELS = {
   },
   payments: { label: "Pagos", emoji: "💰", description: "Estado de cuenta y cuotas" },
   rooms: { label: "Habitaciones", emoji: "🏨", description: "Habitación asignada" },
-  itinerary: { label: "Itinerario", emoji: "🗺️", description: "Itinerario de la gira" },
+  schedule: { label: "Itinerario", emoji: "🗓️", description: "Agenda diaria publicada" },
+  itinerary: { label: "Grupo de vuelo", emoji: "🧭", description: "Grupo aéreo asignado" },
   flights: { label: "Vuelos", emoji: "✈️", description: "Vuelos asignados" },
 };
 
@@ -33,6 +34,7 @@ export default function TourSelfServiceConfig({ tour, onSaved }) {
     documents: true,
     payments: true,
     rooms: false,
+    schedule: false,
     itinerary: false,
     itineraryIds: [],
     flights: false,

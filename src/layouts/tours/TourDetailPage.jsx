@@ -25,8 +25,9 @@ import TourDocumentsPage from "./tourDocuments/TourDocumentsPage";
 import { useTourSelfService } from "./selfService/useTourSelfService";
 import TourSelfServiceDocuments from "./selfService/TourSelfServiceDocuments";
 import TourSelfServicePayments from "./selfService/TourSelfServicePayments";
-import TourSelfServiceItinerary from "./selfService/TourSelfServiceItinerary";
 import TourSelfServiceFlights from "./selfService/TourSelfServiceFlights";
+import TourSchedulePage from "./tourSchedules";
+import TourScheduleView from "./tourSchedules/TourScheduleView";
 import TourSelfServiceConfig from "./TourSelfServiceConfig";
 import TourParentView from "./selfService/TourParentView";
 import {
@@ -267,6 +268,7 @@ function isTourFinanceRole(role) {
 const ADMIN_TABS = [
   { id: "documents", label: "Documentos", emoji: "📄" },
   { id: "payments", label: "Pagos", emoji: "💰" },
+  { id: "schedule", label: "Itinerario", emoji: "🗓️" },
   { id: "flights", label: "Vuelos", emoji: "✈️" },
   { id: "rooms", label: "Habitaciones", emoji: "🏨" },
   { id: "imports", label: "Importación", emoji: "📋" },
@@ -281,7 +283,7 @@ const FINANCIAL_TABS = [
 const SELF_SERVICE_TABS = [
   { id: "documents", label: "Mis documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments", label: "Mis pagos", emoji: "💰", moduleKey: "payments" },
-  { id: "itinerary", label: "Mi itinerario", emoji: "🗺️", moduleKey: "itinerary" },
+  { id: "schedule", label: "Itinerario", emoji: "🗓️", moduleKey: "schedule" },
   { id: "flights", label: "Mis vuelos", emoji: "✈️", moduleKey: "flights" },
   { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
@@ -360,6 +362,8 @@ function AdminTabContent({ activeTab, tour, onTourRefetch, paymentRegistrationOn
       );
     case "flights":
       return <TourFlightsPage tourId={tour.id} tourName={tour.name} tourEndDate={tour.endDate} />;
+    case "schedule":
+      return <TourSchedulePage tour={tour} />;
     case "rooms":
       return <TourRoomsPage tourId={tour.id} tourName={tour.name} />;
     case "payments":
@@ -389,6 +393,7 @@ function SelfServiceView({
   onTourRefetch,
 }) {
   const { selfServiceAccess } = tour;
+  const requestedSelfServiceTab = requestedTab === "itinerary" ? "schedule" : requestedTab;
   const effectiveSelfServiceAccess = useMemo(
     () =>
       isStaff
@@ -403,9 +408,8 @@ function SelfServiceView({
     documentSummary,
     documentSummaryLoading,
     isVerified,
-    itineraryEligible,
-    itinerary,
-    itineraryLoading,
+    schedule,
+    scheduleLoading,
     flights,
     flightsLoading,
     updateParticipantInfo,
@@ -426,15 +430,15 @@ function SelfServiceView({
       return (
         (alwaysAvailableToStaff ||
           (selfServiceAccess?.enabled && selfServiceAccess?.[t.moduleKey] !== false)) &&
-        (t.id !== "itinerary" || itineraryEligible)
+        (t.id !== "schedule" || selfServiceAccess?.schedule === true)
       );
     }),
     ...(canRegisterPayments ? [PAYMENT_OPERATOR_TAB] : []),
   ];
 
   const [selectedTab, setActiveTab] = useState(
-    visibleTabs.some((tab) => tab.id === requestedTab)
-      ? requestedTab
+    visibleTabs.some((tab) => tab.id === requestedSelfServiceTab)
+      ? requestedSelfServiceTab
       : isStaff && visibleTabs.some((tab) => tab.id === "payments")
       ? "payments"
       : visibleTabs[0]?.id ?? "documents"
@@ -492,9 +496,7 @@ function SelfServiceView({
   }
 
   const isLockedTab = (tabId) =>
-    ["itinerary", "flights", "flight-ticket"].includes(tabId) &&
-    !isVerified &&
-    !(isStaff && tabId === "flights");
+    ["flight-ticket"].includes(tabId) && !isVerified && !(isStaff && tabId === "flights");
 
   return (
     <div className="space-y-5">
@@ -528,8 +530,8 @@ function SelfServiceView({
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <span>{tab.emoji}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span aria-hidden="true">{tab.emoji}</span>
+              <span>{tab.label}</span>
               {isLockedTab(tab.id) && <span className="text-[10px]">🔒</span>}
             </button>
           ))}
@@ -550,12 +552,17 @@ function SelfServiceView({
         />
       )}
       {activeTab === "payments" && <TourSelfServicePayments paymentAccount={paymentAccount} />}
-      {activeTab === "itinerary" &&
-        (isLockedTab("itinerary") ? (
-          <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
-        ) : (
-          <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
-        ))}
+      {activeTab === "schedule" && (
+        <TourScheduleView
+          schedule={schedule}
+          flights={flights}
+          loading={scheduleLoading}
+          flightsLoading={flightsLoading}
+          showFlights={effectiveSelfServiceAccess?.flights === true}
+          tourName={tour.name}
+          destination={tour.destination}
+        />
+      )}
       {activeTab === "flights" &&
         (isLockedTab("flights") ? (
           <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
@@ -606,7 +613,12 @@ export default function TourDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { tour, loading, error, refetch } = useTour();
   const requestedTab = searchParams.get("tab");
-  const requestedAdminTab = requestedTab === "flight-ticket" ? "flight-tickets" : requestedTab;
+  const requestedAdminTab =
+    requestedTab === "flight-ticket"
+      ? "flight-tickets"
+      : requestedTab === "itinerary"
+      ? "schedule"
+      : requestedTab;
   const [activeTab, setActiveTab] = useState(
     ADMIN_TABS.some((tab) => tab.id === requestedAdminTab) ? requestedAdminTab : "documents"
   );
@@ -732,8 +744,8 @@ export default function TourDetailPage() {
                         : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
-                    <span>{tab.emoji}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span aria-hidden="true">{tab.emoji}</span>
+                    <span>{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -760,8 +772,8 @@ export default function TourDetailPage() {
                         : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
-                    <span>{tab.emoji}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span aria-hidden="true">{tab.emoji}</span>
+                    <span>{tab.label}</span>
                   </button>
                 ))}
               </div>

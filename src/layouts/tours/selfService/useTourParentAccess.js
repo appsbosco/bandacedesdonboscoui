@@ -4,17 +4,17 @@ import {
   GET_MY_CHILDREN_TOUR_ACCESS,
   GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT,
   GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY,
-  GET_MY_CHILD_TOUR_ITINERARY,
   GET_MY_CHILD_TOUR_FLIGHTS,
   UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO,
   CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION,
 } from "./parentTour.gql";
+import { MY_CHILD_TOUR_SCHEDULE } from "../tourSchedules/tourSchedules.gql";
 
 const EMPTY_CHILDREN = [];
 
 export function useTourParentAccess({ tourId, selfServiceAccess }) {
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments !== false;
-  const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary !== false;
+  const scheduleEnabled = selfServiceAccess?.enabled && selfServiceAccess?.schedule === true;
   const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights !== false;
   const [selectedChildUserId, setSelectedChildUserId] = useState(null);
   const {
@@ -35,7 +35,6 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
   const selectedChild =
     children.find((child) => child.linkedUser?.id === selectedChildUserId) ?? null;
   const isVerified = Boolean(selectedChild?.selfServiceVerified);
-  const itineraryEligible = Boolean(selectedChild?.itinerarySelfServiceEnabled);
   const variables = { tourId, childUserId: selectedChildUserId };
   const { data: paymentData, loading: paymentLoading } = useQuery(
     GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT,
@@ -50,14 +49,14 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     skip: !selectedChildUserId,
     fetchPolicy: "cache-and-network",
   });
-  const { data: itineraryData, loading: itineraryLoading } = useQuery(GET_MY_CHILD_TOUR_ITINERARY, {
+  const { data: scheduleData, loading: scheduleLoading } = useQuery(MY_CHILD_TOUR_SCHEDULE, {
     variables,
-    skip: !selectedChildUserId || !itineraryEnabled || !itineraryEligible || !isVerified,
+    skip: !selectedChildUserId || !scheduleEnabled,
     fetchPolicy: "cache-and-network",
   });
   const { data: flightsData, loading: flightsLoading } = useQuery(GET_MY_CHILD_TOUR_FLIGHTS, {
     variables,
-    skip: !selectedChildUserId || !flightsEnabled || !isVerified,
+    skip: !selectedChildUserId || !flightsEnabled,
     fetchPolicy: "cache-and-network",
   });
   const [updateChildInfoMutation, { loading: updateInfoLoading, error: updateInfoError }] =
@@ -80,9 +79,8 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     documentSummary: documentSummaryData?.myChildTourParticipantDocumentSummary ?? null,
     documentSummaryLoading,
     isVerified,
-    itineraryEligible,
-    itinerary: itineraryData?.myChildTourItinerary ?? null,
-    itineraryLoading,
+    schedule: scheduleData?.myChildTourSchedule ?? null,
+    scheduleLoading,
     flights: flightsData?.myChildTourFlights ?? [],
     flightsLoading,
     updateChildInfo: (input) => updateChildInfoMutation({ variables: { ...variables, input } }),

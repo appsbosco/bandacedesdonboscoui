@@ -36,6 +36,7 @@ export const GET_TOUR = gql`
         documents
         payments
         rooms
+        schedule
         itinerary
         itineraryIds
         flights
@@ -63,6 +64,7 @@ export const UPDATE_TOUR_SELF_SERVICE_ACCESS = gql`
         documents
         payments
         rooms
+        schedule
         itinerary
         itineraryIds
         flights

@@ -9,22 +9,23 @@ import { useState } from "react";
 import { useTourParentAccess } from "./useTourParentAccess";
 import TourSelfServiceDocuments from "./TourSelfServiceDocuments";
 import TourSelfServicePayments from "./TourSelfServicePayments";
-import TourSelfServiceItinerary from "./TourSelfServiceItinerary";
 import TourSelfServiceFlights from "./TourSelfServiceFlights";
 import TourTicketTab from "../tourTickets/TourTicketTab";
+import TourScheduleView from "../tourSchedules/TourScheduleView";
 
 const TABS = [
   { id: "documents", label: "Documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments", label: "Pagos", emoji: "💰", moduleKey: "payments" },
-  { id: "itinerary", label: "Itinerario", emoji: "🗺️", moduleKey: "itinerary" },
+  { id: "schedule", label: "Itinerario", emoji: "🗓️", moduleKey: "schedule" },
   { id: "flights", label: "Vuelos", emoji: "✈️", moduleKey: "flights" },
   { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
 
 export default function TourParentView({ tour, requestedTab }) {
   const { selfServiceAccess } = tour;
+  const requestedParentTab = requestedTab === "itinerary" ? "schedule" : requestedTab;
   const [activeTab, setActiveTab] = useState(
-    TABS.some((tab) => tab.id === requestedTab) ? requestedTab : "documents"
+    TABS.some((tab) => tab.id === requestedParentTab) ? requestedParentTab : "documents"
   );
 
   const {
@@ -36,9 +37,8 @@ export default function TourParentView({ tour, requestedTab }) {
     documentSummary,
     documentSummaryLoading,
     isVerified,
-    itineraryEligible,
-    itinerary,
-    itineraryLoading,
+    schedule,
+    scheduleLoading,
     flights,
     flightsLoading,
     updateChildInfo,
@@ -97,11 +97,12 @@ export default function TourParentView({ tour, requestedTab }) {
   }
 
   // Tabs visibles según selfServiceAccess
-  const visibleTabs = TABS.filter(
-    (t) => selfServiceAccess?.[t.moduleKey] !== false && (t.id !== "itinerary" || itineraryEligible)
+  const visibleTabs = TABS.filter((tab) =>
+    tab.id === "schedule"
+      ? selfServiceAccess?.schedule === true
+      : selfServiceAccess?.[tab.moduleKey] !== false
   );
-  const isLockedTab = (tabId) =>
-    ["itinerary", "flights", "flight-ticket"].includes(tabId) && !isVerified;
+  const isLockedTab = (tabId) => tabId === "flight-ticket" && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -119,7 +120,7 @@ export default function TourParentView({ tour, requestedTab }) {
                   key={child.id}
                   onClick={() => {
                     setSelectedChildUserId(cId);
-                    setActiveTab("documents");
+                    if (activeTab !== "schedule") setActiveTab("documents");
                   }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
                     isSelected
@@ -171,8 +172,8 @@ export default function TourParentView({ tour, requestedTab }) {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <span>{tab.emoji}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span aria-hidden="true">{tab.emoji}</span>
+              <span>{tab.label}</span>
               {isLockedTab(tab.id) && <span className="text-[10px]">🔒</span>}
             </button>
           ))}
@@ -195,13 +196,17 @@ export default function TourParentView({ tour, requestedTab }) {
               isParentView
             />
           )}
-          {activeTab === "itinerary" &&
-            visibleTabs.some((t) => t.id === "itinerary") &&
-            (isLockedTab("itinerary") ? (
-              <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} />
-            ) : (
-              <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
-            ))}
+          {activeTab === "schedule" && visibleTabs.some((t) => t.id === "schedule") && (
+            <TourScheduleView
+              schedule={schedule}
+              flights={flights}
+              loading={scheduleLoading}
+              flightsLoading={flightsLoading}
+              showFlights={selfServiceAccess?.flights !== false}
+              tourName={tour.name}
+              destination={tour.destination}
+            />
+          )}
           {activeTab === "flights" &&
             visibleTabs.some((t) => t.id === "flights") &&
             (isLockedTab("flights") ? (

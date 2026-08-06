@@ -3,16 +3,16 @@ import { GET_MY_TOUR_PARTICIPANT } from "../tours.gql";
 import {
   GET_MY_TOUR_PAYMENT_ACCOUNT,
   MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY,
-  MY_TOUR_ITINERARY,
   MY_TOUR_FLIGHTS,
   UPDATE_MY_TOUR_PARTICIPANT_INFO,
   CONFIRM_MY_TOUR_PARTICIPANT_VERIFICATION,
 } from "./selfService.gql";
+import { MY_TOUR_SCHEDULE } from "../tourSchedules/tourSchedules.gql";
 
 export function useTourSelfService({ tourId, selfServiceAccess }) {
   const documentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.documents;
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments;
-  const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary;
+  const scheduleEnabled = selfServiceAccess?.enabled && selfServiceAccess?.schedule;
   const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights;
   const {
     data: participantData,
@@ -26,7 +26,6 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
   });
   const participant = participantData?.myTourParticipant ?? null;
   const isVerified = Boolean(participant?.selfServiceVerified);
-  const itineraryEligible = Boolean(participant?.itinerarySelfServiceEnabled);
   const {
     data: paymentData,
     loading: paymentLoading,
@@ -45,14 +44,14 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     skip: !tourId || !participant || !documentsEnabled,
     fetchPolicy: "cache-and-network",
   });
-  const { data: itineraryData, loading: itineraryLoading } = useQuery(MY_TOUR_ITINERARY, {
+  const { data: scheduleData, loading: scheduleLoading } = useQuery(MY_TOUR_SCHEDULE, {
     variables: { tourId },
-    skip: !tourId || !itineraryEnabled || !itineraryEligible || !isVerified,
+    skip: !tourId || !scheduleEnabled || !participant,
     fetchPolicy: "cache-and-network",
   });
   const { data: flightsData, loading: flightsLoading } = useQuery(MY_TOUR_FLIGHTS, {
     variables: { tourId },
-    skip: !tourId || !flightsEnabled || !isVerified,
+    skip: !tourId || !flightsEnabled || !participant,
     fetchPolicy: "cache-and-network",
   });
   const [updateInfo, { loading: updateInfoLoading, error: updateInfoError }] = useMutation(
@@ -77,9 +76,8 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     documentSummary: documentSummaryData?.myTourParticipantDocumentSummary ?? null,
     documentSummaryLoading,
     isVerified,
-    itineraryEligible,
-    itinerary: itineraryData?.myTourItinerary ?? null,
-    itineraryLoading,
+    schedule: scheduleData?.myTourSchedule ?? null,
+    scheduleLoading,
     flights: flightsData?.myTourFlights ?? [],
     flightsLoading,
     updateParticipantInfo: (input) => updateInfo({ variables: { tourId, input } }),
