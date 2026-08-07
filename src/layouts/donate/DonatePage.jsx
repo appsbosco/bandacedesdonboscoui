@@ -7,6 +7,8 @@ import PropTypes from "prop-types";
 import Header from "components/Header";
 import Footer from "components/Footer";
 import Seo from "components/Seo";
+import GoFundMeSupportOptions from "components/donations/GoFundMeSupportOptions";
+import GoFundMeWidget from "components/donations/GoFundMeWidget";
 import RoseParadeProgressMark from "components/donations/RoseParadeProgressMark";
 import {
   campaignProgress,
@@ -68,9 +70,7 @@ function StudentGrid({ t, lang }) {
   const [celebrationKey, setCelebrationKey] = useState(0);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [reduceMotion, setReduceMotion] = useState(false);
-  const displayedFunded = isSimulating
-    ? campaignProgress.totalStudentEquivalents
-    : funded;
+  const displayedFunded = isSimulating ? campaignProgress.totalStudentEquivalents : funded;
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -217,29 +217,17 @@ function SharePanel({ t, lang, url, announce }) {
         context.lineTo(x + width - safeRadius, y);
         context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
         context.lineTo(x + width, y + height - safeRadius);
-        context.quadraticCurveTo(
-          x + width,
-          y + height,
-          x + width - safeRadius,
-          y + height
-        );
+        context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
         context.lineTo(x + safeRadius, y + height);
         context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
         context.lineTo(x, y + safeRadius);
         context.quadraticCurveTo(x, y, x + safeRadius, y);
         context.closePath();
       };
-      const imageScale =
-        Math.max(canvas.width / image.width, canvas.height / image.height) * 1.16;
+      const imageScale = Math.max(canvas.width / image.width, canvas.height / image.height) * 1.16;
       const imageWidth = image.width * imageScale;
       const imageHeight = image.height * imageScale;
-      context.drawImage(
-        image,
-        (canvas.width - imageWidth) / 2,
-        0,
-        imageWidth,
-        imageHeight
-      );
+      context.drawImage(image, (canvas.width - imageWidth) / 2, 0, imageWidth, imageHeight);
       const overlay = context.createLinearGradient(0, 0, 0, canvas.height);
       overlay.addColorStop(0, "rgba(8,47,73,.78)");
       overlay.addColorStop(0.24, "rgba(8,47,73,.44)");
@@ -283,11 +271,7 @@ function SharePanel({ t, lang, url, announce }) {
       context.fillStyle = "#e0f2fe";
       context.font = "600 28px Arial";
       context.textAlign = "right";
-      context.fillText(
-        `${money(donationCampaign.raised, lang)} ${t("donate.raised")}`,
-        1008,
-        1278
-      );
+      context.fillText(`${money(donationCampaign.raised, lang)} ${t("donate.raised")}`, 1008, 1278);
 
       const progressX = 72;
       const progressY = 1355;
@@ -307,11 +291,7 @@ function SharePanel({ t, lang, url, announce }) {
       context.fillStyle = "#e0f2fe";
       context.font = "600 27px Arial";
       context.textAlign = "left";
-      context.fillText(
-        t("donate.funded", { count: campaignProgress.fundedStudents }),
-        72,
-        1405
-      );
+      context.fillText(t("donate.funded", { count: campaignProgress.fundedStudents }), 72, 1405);
       context.textAlign = "right";
       context.fillText(
         `${money(campaignProgress.remaining, lang)} ${t("donate.pending")}`,
@@ -419,64 +399,62 @@ function SharePanel({ t, lang, url, announce }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => trackDonationEvent("share_channel_selected", { channel: "whatsapp" })}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
-            >
-              {t("donate.whatsapp")}
-            </a>
-            <a
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => trackDonationEvent("share_channel_selected", { channel: "facebook" })}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
-            >
-              {t("donate.facebook")}
-            </a>
-            <ActionButton
-              onClick={() => copy("link", url)}
-              className={`border ${
-                copiedKind === "link"
-                  ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
-                  : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
-              }`}
-            >
-              {copiedKind === "link" ? (
-                <Check size={18} aria-hidden="true" />
-              ) : (
-                <Copy size={18} aria-hidden="true" />
-              )}
-              {copiedKind === "link" ? t("donate.linkCopied") : t("donate.copyLink")}
-            </ActionButton>
-            <ActionButton
-              onClick={() => copy("message", `${message} ${url}`)}
-              className={`border ${
-                copiedKind === "message"
-                  ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
-                  : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
-              }`}
-            >
-              {copiedKind === "message" ? (
-                <Check size={18} aria-hidden="true" />
-              ) : (
-                <Copy size={18} aria-hidden="true" />
-              )}
-              {copiedKind === "message" ? t("donate.messageCopied") : t("donate.copyMessage")}
-            </ActionButton>
-            <ActionButton
-              onClick={downloadStory}
-              className="bg-sky-600 hover:bg-sky-500 sm:col-span-2"
-            >
-              <Download size={18} />
-              {t("donate.downloadStory")}
-            </ActionButton>
-            <p className="text-sm leading-6 text-sky-100 sm:col-span-2">
-              {t("donate.storyHelp")}
-            </p>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`${message} ${url}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackDonationEvent("share_channel_selected", { channel: "whatsapp" })}
+            className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
+          >
+            {t("donate.whatsapp")}
+          </a>
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackDonationEvent("share_channel_selected", { channel: "facebook" })}
+            className="inline-flex min-h-12 items-center justify-center rounded-full border border-sky-600/80 bg-sky-950/70 px-5 font-semibold hover:bg-sky-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400"
+          >
+            {t("donate.facebook")}
+          </a>
+          <ActionButton
+            onClick={() => copy("link", url)}
+            className={`border ${
+              copiedKind === "link"
+                ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
+                : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
+            }`}
+          >
+            {copiedKind === "link" ? (
+              <Check size={18} aria-hidden="true" />
+            ) : (
+              <Copy size={18} aria-hidden="true" />
+            )}
+            {copiedKind === "link" ? t("donate.linkCopied") : t("donate.copyLink")}
+          </ActionButton>
+          <ActionButton
+            onClick={() => copy("message", `${message} ${url}`)}
+            className={`border ${
+              copiedKind === "message"
+                ? "border-emerald-300 bg-emerald-950/80 text-emerald-100"
+                : "border-sky-600/80 bg-sky-950/70 hover:bg-sky-900"
+            }`}
+          >
+            {copiedKind === "message" ? (
+              <Check size={18} aria-hidden="true" />
+            ) : (
+              <Copy size={18} aria-hidden="true" />
+            )}
+            {copiedKind === "message" ? t("donate.messageCopied") : t("donate.copyMessage")}
+          </ActionButton>
+          <ActionButton
+            onClick={downloadStory}
+            className="bg-sky-600 hover:bg-sky-500 sm:col-span-2"
+          >
+            <Download size={18} />
+            {t("donate.downloadStory")}
+          </ActionButton>
+          <p className="text-sm leading-6 text-sky-100 sm:col-span-2">{t("donate.storyHelp")}</p>
         </div>
       </div>
     </section>
@@ -501,6 +479,7 @@ function DonatePage() {
   const [copiedMethod, setCopiedMethod] = useState("");
   const noticeTimer = useRef();
   const copiedTimer = useRef();
+  const bacFlowRef = useRef(null);
   const url = `${window.location.origin}/${lang}/${lang === "en" ? "donate" : "donar"}`;
   const card = cardPayments.find((item) => item.amount === amount);
   const selectedAmount = custom !== "" ? Number(custom) : amount;
@@ -691,7 +670,20 @@ function DonatePage() {
 
         <section id="donar-ahora" className="scroll-mt-6 bg-white py-16 sm:py-24">
           <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
-            <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr]">
+            <GoFundMeSupportOptions
+              onCardClick={() => {
+                setMethod("card");
+                setCheckoutOpen(false);
+                bacFlowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.setTimeout(() => bacFlowRef.current?.querySelector("button")?.focus(), 450);
+              }}
+            />
+
+            <div
+              ref={bacFlowRef}
+              id="donacion-con-tarjeta"
+              className="mt-16 grid scroll-mt-6 gap-12 border-t border-slate-200 pt-16 lg:grid-cols-[.85fr_1.15fr]"
+            >
               <div>
                 <p className="text-sm font-bold uppercase tracking-[.18em] text-[#e4002b]">
                   {t("donate.eventName")}
@@ -793,6 +785,13 @@ function DonatePage() {
                         onClick={() => {
                           setCheckoutOpen(true);
                           trackDonationEvent("donation_checkout_opened", { amount });
+                          trackDonationEvent("bac_donation_cta_click", {
+                            locale: lang,
+                            page: window.location.pathname,
+                            source: "donation_page",
+                            donation_method: "bac",
+                            amount,
+                          });
                         }}
                         className="mt-5 w-full bg-[#e4002b] text-white hover:bg-[#bd0023]"
                       >
@@ -862,6 +861,30 @@ function DonatePage() {
                 )}
               </div>
             </div>
+
+            <section
+              id="gofundme"
+              aria-labelledby="gofundme-section-title"
+              className="mt-16 border-t border-slate-200 pt-16 sm:mt-24 sm:pt-20"
+            >
+              <div className="mx-auto max-w-2xl text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+                  {t("gofundme.widgetSection.eyebrow")}
+                </p>
+                <h2
+                  id="gofundme-section-title"
+                  className="mt-3 text-3xl font-extrabold text-sky-950 sm:text-4xl"
+                >
+                  {t("gofundme.widgetSection.title")}
+                </h2>
+                <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-600">
+                  {t("gofundme.widgetSection.body")}
+                </p>
+              </div>
+              <div className="mx-auto mt-7 max-w-[480px] overflow-hidden">
+                <GoFundMeWidget source="donation_page" />
+              </div>
+            </section>
           </div>
         </section>
 
@@ -970,9 +993,7 @@ function DonatePage() {
                         sponsor.darkBackground
                           ? "border-sky-950 bg-sky-950 hover:border-sky-700 hover:bg-sky-900"
                           : "border-slate-200 bg-white hover:border-sky-300"
-                      } ${
-                        sponsor.featured ? "col-span-2 min-h-44" : "min-h-36"
-                      }`}
+                      } ${sponsor.featured ? "col-span-2 min-h-44" : "min-h-36"}`}
                     >
                       <img
                         src={sponsor.logo}

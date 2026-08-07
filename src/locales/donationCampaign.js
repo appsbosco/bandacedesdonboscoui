@@ -2,6 +2,42 @@ const es = {
   nav: {
     campaign: "Donar",
   },
+  gofundme: {
+    officialCampaign: "Campaña oficial en GoFundMe",
+    campaignName: "Ayuda a Costa Rica a marchar en el Desfile de las Rosas",
+    description:
+      "Apoya a nuestros jóvenes músicos en su camino para representar a Costa Rica en el Desfile de las Rosas.",
+    openCampaign: "Abrir GoFundMe",
+    loading: "Cargando la campaña oficial de GoFundMe",
+    widgetLabel: "Campaña oficial de la Banda CEDES Don Bosco en GoFundMe",
+    modal: {
+      title: "Apoya a la Banda CEDES Don Bosco",
+      description:
+        "Tu aporte ayuda a que nuestros jóvenes músicos representen a Costa Rica en el Desfile de las Rosas.",
+      close: "Cerrar campaña de GoFundMe",
+    },
+    landing: {
+      title: "Apoya a la Banda CEDES Don Bosco",
+      body: "Ayuda a nuestros jóvenes músicos a representar a Costa Rica en el Desfile de las Rosas. Elige cómo deseas apoyar a la banda.",
+      primary: "Apoyar en GoFundMe",
+      secondary: "Donar con tarjeta",
+    },
+    options: {
+      title: "Elige cómo deseas apoyar a la banda",
+      gofundmeTitle: "GoFundMe",
+      gofundmeBody:
+        "Apoya nuestro camino hacia el Desfile de las Rosas mediante nuestra campaña oficial de GoFundMe.",
+      gofundmeCta: "Donar en GoFundMe",
+      cardTitle: "Tarjeta de crédito o débito",
+      cardBody: "Realiza tu aporte de forma segura mediante BAC Credomatic.",
+      cardCta: "Donar con tarjeta",
+    },
+    widgetSection: {
+      eyebrow: "Campaña internacional",
+      title: "Apoya la campaña oficial en GoFundMe",
+      body: "Conoce la historia de la banda y aporta directamente desde nuestra campaña oficial. También puedes abrirla en una nueva pestaña.",
+    },
+  },
   donate: {
     seo: {
       title:
@@ -194,6 +230,41 @@ const es = {
 const en = {
   nav: {
     campaign: "Donate",
+  },
+  gofundme: {
+    officialCampaign: "Official GoFundMe campaign",
+    campaignName: "Help Costa Rica march in the Rose Parade",
+    description:
+      "Support our young musicians on their journey to represent Costa Rica at the Rose Parade.",
+    openCampaign: "Open GoFundMe",
+    loading: "Loading the official GoFundMe campaign",
+    widgetLabel: "Banda CEDES Don Bosco official GoFundMe campaign",
+    modal: {
+      title: "Support the CEDES Don Bosco Band",
+      description:
+        "Your contribution helps our young musicians represent Costa Rica at the Rose Parade.",
+      close: "Close GoFundMe campaign",
+    },
+    landing: {
+      title: "Support the CEDES Don Bosco Band",
+      body: "Help our young musicians represent Costa Rica at the Rose Parade. Choose the way you would like to support the band.",
+      primary: "Support us on GoFundMe",
+      secondary: "Donate by card",
+    },
+    options: {
+      title: "Choose how you'd like to support the band",
+      gofundmeTitle: "GoFundMe",
+      gofundmeBody: "Support our Rose Parade journey through our official GoFundMe campaign.",
+      gofundmeCta: "Donate on GoFundMe",
+      cardTitle: "Credit or debit card",
+      cardBody: "Make a secure contribution through BAC Credomatic.",
+      cardCta: "Donate by card",
+    },
+    widgetSection: {
+      eyebrow: "International campaign",
+      title: "Support the official GoFundMe campaign",
+      body: "Read the band's story and contribute directly through our official campaign. You can also open it in a new tab.",
+    },
   },
   donate: {
     seo: {

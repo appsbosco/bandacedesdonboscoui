@@ -1,7 +1,12 @@
 // DonationSection.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
+import { ExternalLink } from "lucide-react";
+
+import GoFundMeModal from "components/donations/GoFundMeModal";
+import { GOFUNDME_AUTO_MODAL_SESSION_KEY } from "config/gofundme";
+import { trackDonationEvent } from "utils/donationAnalytics";
 
 // ============================================
 // CONFIGURACIÓN DE DONACIONES (EDITABLE)
@@ -81,6 +86,7 @@ const BANK_TRANSFER_OPTIONS = [
 ];
 
 const BANK_ACCOUNT_NAME = "Asociación de Oratorios Salesianos Don Bosco";
+let goFundMeAutoModalHandled = false;
 
 const copyToClipboard = async (text) => {
   try {
@@ -600,10 +606,74 @@ const BankTransferSection = () => {
 // COMPONENTE PRINCIPAL
 // ============================================
 const DonationSection = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(1);
   const [showImpactModal, setShowImpactModal] = useState(false);
+  const [showGoFundMeModal, setShowGoFundMeModal] = useState(false);
+  const [goFundMeSource, setGoFundMeSource] = useState("landing_section");
   const impactButtonRef = useRef(null);
+  const bacOptionsRef = useRef(null);
+  const locale = i18n.language?.startsWith("en") ? "en" : "es";
+
+  const analyticsDetails = useCallback(
+    (source, method = "gofundme") => ({
+      locale,
+      page: window.location.pathname,
+      source,
+      donation_method: method,
+    }),
+    [locale]
+  );
+
+  const markAutoModalShown = useCallback(() => {
+    goFundMeAutoModalHandled = true;
+    try {
+      window.sessionStorage?.setItem(GOFUNDME_AUTO_MODAL_SESSION_KEY, "true");
+    } catch {
+      // Browsers may block sessionStorage; the in-memory listeners are still removed.
+    }
+  }, []);
+
+  const openGoFundMeModal = useCallback(
+    (source) => {
+      setGoFundMeSource(source);
+      setShowGoFundMeModal(true);
+      markAutoModalShown();
+      trackDonationEvent("gofundme_modal_open", analyticsDetails(source));
+    },
+    [analyticsDetails, markAutoModalShown]
+  );
+
+  const closeGoFundMeModal = useCallback(
+    (reason) => {
+      setShowGoFundMeModal(false);
+      markAutoModalShown();
+      trackDonationEvent("gofundme_modal_close", {
+        ...analyticsDetails(goFundMeSource),
+        reason,
+      });
+    },
+    [analyticsDetails, goFundMeSource, markAutoModalShown]
+  );
+
+  useEffect(() => {
+    let alreadyShown = goFundMeAutoModalHandled;
+    try {
+      alreadyShown =
+        alreadyShown || window.sessionStorage?.getItem(GOFUNDME_AUTO_MODAL_SESSION_KEY) === "true";
+    } catch {
+      alreadyShown = false;
+    }
+    if (alreadyShown) return undefined;
+    openGoFundMeModal("landing_auto_load");
+    return undefined;
+  }, [openGoFundMeModal, showGoFundMeModal]);
+
+  const focusBacOptions = () => {
+    trackDonationEvent("bac_donation_cta_click", analyticsDetails("landing_section", "bac"));
+    bacOptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => bacOptionsRef.current?.querySelector("button")?.focus(), 450);
+  };
 
   return (
     <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28">
@@ -637,9 +707,29 @@ const DonationSection = () => {
           <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-600 dark:text-slate-300 sm:text-lg">
             {t("donation.header.subtitle")}
           </p>
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => {
+                trackDonationEvent("gofundme_cta_click", analyticsDetails("landing_section"));
+                openGoFundMeModal("landing_section");
+              }}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-700 px-7 font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 sm:w-auto"
+            >
+              {t("gofundme.landing.primary")}
+              <ExternalLink size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={focusBacOptions}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full border-2 border-[#e4002b] bg-white px-7 font-bold text-[#c70027] transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 dark:bg-slate-900 dark:text-red-300 sm:w-auto"
+            >
+              {t("gofundme.landing.secondary")}
+            </button>
+          </div>
         </div>
 
-        <div className="mx-auto mb-10 max-w-5xl">
+        <div ref={bacOptionsRef} className="mx-auto mb-10 max-w-5xl scroll-mt-6">
           <div className="mb-6 flex items-center justify-center">
             <button
               ref={impactButtonRef}
@@ -670,7 +760,13 @@ const DonationSection = () => {
                 key={option.amount}
                 option={option}
                 isActive={activeIndex === index}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => {
+                  setActiveIndex(index);
+                  trackDonationEvent(
+                    "bac_donation_cta_click",
+                    analyticsDetails("landing_card", "bac")
+                  );
+                }}
               />
             ))}
           </div>
@@ -738,6 +834,11 @@ const DonationSection = () => {
         isOpen={showImpactModal}
         onClose={() => setShowImpactModal(false)}
         triggerRef={impactButtonRef}
+      />
+      <GoFundMeModal
+        isOpen={showGoFundMeModal}
+        onClose={closeGoFundMeModal}
+        source={goFundMeSource}
       />
     </section>
   );
