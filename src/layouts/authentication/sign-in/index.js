@@ -357,7 +357,7 @@ const SignIn = () => {
           </button>
         </form>
 
-        {/* Sign up link */}
+        {/* Registro público deshabilitado temporalmente.
         <p className="mt-8 text-sm text-slate-500 text-center">
           ¿No tenés cuenta?{" "}
           <Link
@@ -367,6 +367,7 @@ const SignIn = () => {
             Registrarse
           </Link>
         </p>
+        */}
       </div>
 
       {/* ── Right panel: image (desktop only) ── */}
