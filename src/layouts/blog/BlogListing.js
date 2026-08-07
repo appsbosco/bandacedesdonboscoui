@@ -5,6 +5,7 @@ import Footer from "components/Footer";
 import BlogHero from "./blog-hero-bg.svg";
 import { useTranslation } from "react-i18next";
 import { getBlogArticleHref, getBlogArticles } from "./blogArticles";
+import BrandArtwork from "components/BrandArtwork";
 
 const articlesPerPage = 3;
 
@@ -26,12 +27,14 @@ const BlogListing = () => {
   };
 
   return (
-    <div>
+    <div className="public-brand">
       <Header />
 
       <section className="relative overflow-hidden bg-white lg:px-8">
-        <div className="relative max-w-screen-xl px-5 py-16 mx-auto sm:px-6 lg:px-8 bg-slate-50 sm:py-24 lg:rounded-b-3xl lg:py-32">
+        <div className="brand-hero relative max-w-screen-xl overflow-hidden px-5 py-16 mx-auto sm:px-6 lg:px-8 bg-slate-50 sm:py-24 lg:rounded-b-3xl lg:py-32">
           <img src={BlogHero} alt="" className="absolute inset-0 w-full h-full" />
+          <BrandArtwork artwork="foliage" motion="reverse" className="absolute -left-14 -top-12 w-52 -rotate-12 opacity-25 sm:w-72" />
+          <BrandArtwork artwork="leaves" className="absolute -right-10 bottom-0 w-36 rotate-12 opacity-35 sm:w-52" />
           <div className="relative flex flex-col items-center justify-center">
             <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl">
               {t("blog.listing.hero_title_prefix")}{" "}
@@ -113,7 +116,7 @@ const BlogListing = () => {
             {currentArticles.map((article) => (
               <div key={article.id}>
                 <Link to={getBlogArticleHref(locale, article)}>
-                  <article className="flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
+                  <article className="brand-card flex flex-col items-start justify-between shadow-sm rounded-2xl bg-slate-50 shadow-sky-100/50 ring-1 ring-slate-100">
                     <div className="w-full px-4 pt-4">
                       <div className="relative block w-full overflow-hidden group aspect-w-16 aspect-h-9 rounded-xl md:aspect-w-3 md:aspect-h-2">
                         <img
@@ -206,7 +209,8 @@ const BlogListing = () => {
 
           {/* Pagination */}
           <div className="flex items-center justify-center gap-2 mt-20">
-            <span
+            <button
+              type="button"
               className={`inline-flex items-center justify-center w-20 h-10 text-sm font-medium rounded-full shadow-sm bg-slate-50 text-slate-500/60 hover:bg-white hover:text-blue-500 shadow-sky-100/50 ring-1 ring-slate-900/5 transition-colors duration-300 ease-in-out ${
                 currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
               }`}
@@ -218,12 +222,13 @@ const BlogListing = () => {
               disabled={currentPage === 1}
             >
               {t("blog.listing.previous")}
-            </span>
+            </button>
 
             {/* Generate page numbers based on the number of articles */}
             {Array.from({ length: Math.ceil(articles.length / articlesPerPage) }).map(
               (_, index) => (
-                <span
+                <button
+                  type="button"
                   key={index}
                   className={`inline-flex items-center justify-center w-10 h-10 text-sm font-medium rounded-full shadow-sm hover:bg-white hover:text-blue-500 ${
                     currentPage === index + 1
@@ -233,11 +238,12 @@ const BlogListing = () => {
                   onClick={() => paginate(index + 1)}
                 >
                   {index + 1}
-                </span>
+                </button>
               )
             )}
 
-            <span
+            <button
+              type="button"
               className={`inline-flex items-center justify-center w-20 h-10 text-sm font-medium rounded-full shadow-sm bg-slate-50 text-slate-500/60 shadow-sky-100/50 ring-1 ring-slate-900/5 hover:bg-white hover:text-blue-500 transition-colors ${
                 currentPage === Math.ceil(articles.length / articlesPerPage)
                   ? "opacity-50 cursor-not-allowed"
@@ -251,7 +257,7 @@ const BlogListing = () => {
               disabled={currentPage === Math.ceil(articles.length / articlesPerPage)}
             >
               {t("blog.listing.next")}
-            </span>
+            </button>
           </div>
         </div>
       </section>

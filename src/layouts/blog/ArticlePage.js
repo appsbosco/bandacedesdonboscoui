@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import Header from "components/Header";
 import Footer from "components/Footer";
 import { getBlogArticleBySlug } from "./blogArticles";
+import BrandArtwork from "components/BrandArtwork";
 
 const ArticlePage = () => {
   const { slug, lang } = useParams();
@@ -126,7 +127,7 @@ const ArticlePage = () => {
   };
 
   return (
-    <>
+    <div className="public-brand">
       <Header />
       <head>
         <title>Blog Banda CEDES Don Bosco</title>
@@ -139,7 +140,17 @@ const ArticlePage = () => {
 
       <article>
         {/* Article Header */}
-        <header className="relative py-16 bg-slate-50 sm:pt-24 lg:pt-28">
+        <header className="brand-hero relative overflow-hidden py-16 bg-slate-50 sm:pt-24 lg:pt-28">
+          <BrandArtwork
+            artwork="foliage"
+            motion="reverse"
+            className="absolute -left-16 top-8 w-52 -rotate-12 opacity-20 sm:w-72"
+          />
+          <BrandArtwork
+            artwork="leaves"
+            motion="subtle"
+            className="absolute -right-10 top-20 w-32 rotate-12 opacity-30 sm:w-44"
+          />
           <div className="absolute inset-x-0 bottom-0 bg-white h-1/4"></div>
           <div className="relative max-w-6xl px-4 mx-auto text-center sm:px-6 lg:px-8">
             <a
@@ -212,7 +223,7 @@ const ArticlePage = () => {
               </span>
             </div>
             <div className="w-full max-w-4xl mx-auto mt-16">
-              <div className="relative block w-full overflow-hidden shadow-lg aspect-w-16 aspect-h-9 rounded-3xl shadow-sky-100/50 md:aspect-w-3 md:aspect-h-2">
+              <div className="brand-card relative block w-full overflow-hidden shadow-lg aspect-w-16 aspect-h-9 rounded-3xl shadow-sky-100/50 md:aspect-w-3 md:aspect-h-2">
                 <img
                   src={article.images[0]}
                   alt="Banda CEDES Don Bosco"
@@ -449,7 +460,7 @@ const ArticlePage = () => {
         </div>
       </article>
       <Footer />
-    </>
+    </div>
   );
 };
 

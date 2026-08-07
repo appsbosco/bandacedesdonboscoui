@@ -3,17 +3,23 @@ import Header from "components/Header";
 import Footer from "components/Footer";
 import BlogHero from "./blog-hero-bg.svg";
 import { useTranslation } from "react-i18next";
+import BrandArtwork from "components/BrandArtwork";
 
 const CalendarListing = () => {
   const { t } = useTranslation();
 
   return (
-    <div>
+    <div className="public-brand">
       <Header />
 
       <section className="relative overflow-hidden bg-white lg:px-8">
-        <div className="relative max-w-screen-xl px-5 py-16 mx-auto sm:px-6 lg:px-8 bg-slate-50 sm:py-24 lg:rounded-b-3xl lg:py-32">
+        <div className="brand-hero relative max-w-screen-xl overflow-hidden px-5 py-16 mx-auto sm:px-6 lg:px-8 bg-slate-50 sm:py-24 lg:rounded-b-3xl lg:py-32">
           <img src={BlogHero} alt="" className="absolute inset-0 w-full h-full" />
+          <BrandArtwork
+            artwork="volcano"
+            motion="subtle"
+            className="brand-art-gold absolute -bottom-6 right-2 w-32 opacity-35 sm:-bottom-8 sm:right-8 sm:w-44"
+          />
           <div className="relative flex flex-col items-center justify-center">
             <h1 className="text-5xl font-semibold text-center font-display text-slate-900 sm:text-6xl">
               {t("calendar.hero.title")}{" "}
@@ -44,9 +50,14 @@ const CalendarListing = () => {
             {t("calendar.upcoming.title")}
           </h2>
 
-          <section className="bg-white  antialiased">
+          <section className="relative bg-white antialiased">
+            <BrandArtwork
+              artwork="turtle"
+              motion="reverse"
+              className="brand-art-gold absolute left-1/2 top-5 w-20 -translate-x-1/2 opacity-75 sm:w-24"
+            />
             <div className="max-w-screen-xl px-4 py-8 mx-auto lg:px-6 sm:py-16 lg:py-24">
-              <div className=" flex items-center justify-center text-center">
+              <div className="flex items-center justify-center pt-24 text-center">
                 <p>{t("calendar.upcoming.empty")}</p>
               </div>
               {/* <div className="flow-root max-w-3xl mx-auto mt-8 sm:mt-12 lg:mt-8">

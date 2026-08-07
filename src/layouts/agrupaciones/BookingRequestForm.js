@@ -14,7 +14,7 @@ import {
 } from "./costaRicaGeo";
 
 const inputClassName =
-  "block w-full rounded-2xl border-0 bg-slate-50 px-4 py-4 text-sm leading-5 text-slate-900 shadow-sm shadow-sky-100/50 ring-1 ring-inset ring-slate-200 transition duration-200 ease-in-out placeholder:text-slate-400 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-600/60 disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded-2xl border-0 bg-slate-50 px-4 py-4 text-sm leading-5 text-slate-900 shadow-sm shadow-slate-200/50 ring-1 ring-inset ring-slate-200 transition duration-200 ease-in-out placeholder:text-slate-400 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#df8c26]/60 disabled:cursor-not-allowed disabled:opacity-60";
 
 const EVENT_TYPE_OPTIONS = {
   es: [
@@ -95,7 +95,7 @@ function StepPill({ index, title, isActive, isDone }) {
           isActive
             ? "bg-slate-900 text-white ring-slate-900"
             : isDone
-            ? "bg-sky-50 text-sky-700 ring-sky-200"
+            ? "bg-[#df8c26]/10 text-[#b66c10] ring-[#df8c26]/25"
             : "bg-white text-slate-400 ring-slate-200",
         ].join(" ")}
       >
@@ -108,7 +108,7 @@ function StepPill({ index, title, isActive, isDone }) {
         <p
           className={[
             "truncate text-sm font-semibold",
-            isActive ? "text-slate-900" : isDone ? "text-sky-700" : "text-slate-400",
+            isActive ? "text-slate-900" : isDone ? "text-[#b66c10]" : "text-slate-400",
           ].join(" ")}
         >
           {title}
@@ -367,7 +367,7 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
       <div className="mx-auto max-w-screen-xl px-5 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[0.82fr,1.18fr] lg:gap-10">
           <div className="min-w-0 rounded-[32px] bg-white p-8 shadow-sm shadow-sky-100/60 ring-1 ring-slate-100 sm:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-sky-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#b66c10]">
               {ensembleName}
             </p>
             <h2 className="mt-4 text-4xl font-semibold font-display text-slate-900 sm:text-5xl">
@@ -397,18 +397,18 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
               </div>
             </div> */}
 
-            <div className="mt-8 rounded-[28px] bg-gradient-to-br from-slate-900 to-sky-800 p-6 text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-100/80">
+            <div className="mt-8 rounded-[28px] bg-[#152346] p-6 text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f6f0e6]/80">
                 Paso {step + 1} de {stepFields.length}
               </p>
               <p className="mt-2 text-lg font-semibold text-white">{copy.steps[step]}</p>
-              <p className="mt-3 text-lg leading-7 text-sky-50">{copy.stepDescriptions[step]}</p>
+              <p className="mt-3 text-lg leading-7 text-[#fffdf7]">{copy.stepDescriptions[step]}</p>
             </div>
           </div>
 
           <div className="min-w-0 overflow-hidden rounded-[32px] bg-white p-8 shadow-sm shadow-sky-100/60 ring-1 ring-slate-100 sm:p-10">
             <div className="mb-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b66c10]">
                 Paso {step + 1} de {stepFields.length}
               </p>
               <h3 className="mt-2 text-2xl font-semibold font-display text-slate-900 sm:text-3xl">
@@ -417,7 +417,7 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
             </div>
             <div className="mb-8 h-2 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-slate-900 to-sky-700 transition-all duration-300"
+                className="h-full rounded-full bg-[#df8c26] transition-[width] duration-300"
                 style={{ width: `${((step + 1) / stepFields.length) * 100}%` }}
               />
             </div>
@@ -823,7 +823,7 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
                     <input
                       type="checkbox"
                       name="acceptedDataPolicy"
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#df8c26] focus:ring-[#df8c26]"
                       checked={formik.values.acceptedDataPolicy}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
@@ -863,7 +863,7 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
                   <button
                     type="button"
                     onClick={goNext}
-                    className="inline-flex items-center justify-center rounded-full bg-slate-900 px-7 py-3 text-sm font-semibold text-white transition hover:bg-sky-800"
+                    className="inline-flex items-center justify-center rounded-full bg-[#152346] px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#24375f]"
                   >
                     {copy.next}
                   </button>
@@ -871,7 +871,7 @@ export default function BookingRequestForm({ ensembleKey, ensembleName, locale }
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center justify-center rounded-full bg-slate-900 px-7 py-3 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center rounded-full bg-[#152346] px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#24375f] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? copy.submitting : copy.submit}
                   </button>

@@ -9,14 +9,15 @@ import mision from "../assets/images/mision.webp";
 import vision from "../assets/images/vision.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { useTranslation } from "react-i18next";
+import BrandArtwork from "./BrandArtwork";
 
 const About = () => {
   const { t } = useTranslation();
 
   return (
-    <>
+    <div className="public-brand">
       <Header />
-      <section className="relative bg-slate-50/50">
+      <section className="brand-hero relative overflow-hidden bg-slate-50/50">
         <LazyLoadImage
           src={about}
           alt=""
@@ -59,6 +60,11 @@ const About = () => {
             src={aboutHero}
             alt=""
             className="absolute inset-0 object-cover object-top w-full h-full"
+          />
+          <BrandArtwork
+            artwork="sloth"
+            motion="reverse"
+            className="brand-art-gold absolute right-2 top-4 z-10 w-44 rotate-[-3deg] opacity-95 sm:right-6 sm:top-8 sm:w-52 lg:right-8 lg:top-10 lg:w-56"
           />
           <svg
             width="229"
@@ -104,7 +110,8 @@ const About = () => {
         </div>
       </section>
 
-      <section className="py-16 overflow-hidden bg-white sm:py-24 lg:py-32">
+      <section className="relative py-16 overflow-hidden bg-white sm:py-24 lg:py-32">
+        <BrandArtwork artwork="leaves" className="absolute -left-8 bottom-6 w-28 -rotate-12 opacity-40 sm:w-40" />
         <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-y-16 gap-x-8 sm:gap-y-20 lg:grid-cols-2">
             <div className="lg:order-2">
@@ -235,7 +242,7 @@ const About = () => {
       </section>
 
       <Footer />
-    </>
+    </div>
   );
 };
 

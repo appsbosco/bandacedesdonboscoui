@@ -12,19 +12,19 @@ const Footer = lazy(() => import("components/Footer"));
 
 const Landing = () => {
   return (
-    <>
+    <div className="public-brand">
       {/* <INSPopupBanner /> */}
       <Header />
       <Hero />
       <Suspense fallback={<div style={{ minHeight: "200px" }} />}>
-        <DonationSection />
+        {/* <DonationSection /> */}
         <SponsorBadge />
         <Values />
         <Decor />
         <Blog />
         <Footer />
       </Suspense>
-    </>
+    </div>
   );
 };
 

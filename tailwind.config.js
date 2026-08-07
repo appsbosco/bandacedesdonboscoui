@@ -3,6 +3,14 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      colors: {
+        cedes: {
+          navy: "#152346",
+          gold: "#df8c26",
+          ivory: "#f6f0e6",
+          paper: "#fffdf7",
+        },
+      },
       fontFamily: {
         costarica: ['"Costa Rica"', '"Gochi Hand"', "cursive"],
       },

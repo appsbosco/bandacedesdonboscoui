@@ -2,13 +2,24 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import HeroSection from "./HeroImages";
 import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
+import BrandArtwork from "./BrandArtwork";
 
 const Hero = () => {
   const { i18n, t } = useTranslation();
   const lang = normalizePublicLang(i18n.language?.slice(0, 2));
 
   return (
-    <section className="relative py-20 overflow-hidden lg:py-24">
+    <section className="brand-hero relative py-20 overflow-hidden lg:py-24">
+      <BrandArtwork
+        artwork="sloth"
+        motion="reverse"
+        className="brand-art-gold absolute -right-4 -top-6 z-10 w-40 rotate-[-4deg] opacity-90 sm:-right-2 sm:-top-8 sm:w-48 lg:right-20 lg:-top-12 lg:w-64"
+      />
+      <BrandArtwork
+        artwork="foliage"
+        motion="reverse"
+        className="absolute -bottom-16 -left-20 w-56 -rotate-12 opacity-20 sm:w-72"
+      />
       <svg
         width="1728"
         height="894"
@@ -80,7 +91,7 @@ const Hero = () => {
           <div className="flex flex-wrap items-center justify-center mt-10 gap-y-6 gap-x-10 lg:justify-start">
             <a
               href={getPublicPath(lang, "contact")}
-              className="h-11 bg-slate-900 text-white hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none"
+              className="h-11 bg-slate-900 text-white hover:scale-[1.02] hover:bg-sky-800 inline-flex items-center rounded-full gap-2.5 justify-center px-7 py-3 text-md font-semibold leading-none outline-offset-2 transition-all duration-200 ease-in-out active:transition-none motion-reduce:transform-none"
             >
               {t("hero.contact")}
             </a>

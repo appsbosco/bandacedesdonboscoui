@@ -20,6 +20,290 @@
   }
 }
 
+:root {
+  --cedes-navy: #152346;
+  --cedes-gold: #df8c26;
+  --cedes-ivory: #f6f0e6;
+  --cedes-paper: #fffdf7;
+  --cedes-ink-soft: #46516a;
+}
+
+/* Public brand layer. Kept scoped so internal products retain their own UI theme. */
+.public-brand {
+  color: var(--cedes-navy);
+  background: var(--cedes-paper);
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+.public-brand :where(h1, h2) {
+  overflow-wrap: anywhere;
+}
+
+.public-brand .bg-white {
+  background-color: var(--cedes-paper);
+}
+
+.public-brand .bg-slate-50,
+.public-brand .bg-slate-50\/50,
+.public-brand .bg-slate-50\/80,
+.public-brand .bg-slate-100,
+.public-brand .bg-slate-100\/80 {
+  background-color: var(--cedes-ivory);
+}
+
+.public-brand .bg-sky-50,
+.public-brand .bg-sky-50\/70,
+.public-brand .bg-sky-100 {
+  background-color: color-mix(in srgb, var(--cedes-gold) 10%, var(--cedes-paper));
+}
+
+.public-brand .text-slate-900,
+.public-brand .text-sky-900 {
+  color: var(--cedes-navy);
+}
+
+.public-brand .text-slate-700,
+.public-brand .text-slate-600,
+.public-brand .text-slate-500 {
+  color: var(--cedes-ink-soft);
+}
+
+.public-brand .text-sky-700,
+.public-brand .text-sky-600,
+.public-brand .text-blue-500 {
+  color: var(--cedes-gold);
+}
+
+.public-brand .hover\:text-blue-500:hover,
+.public-brand .hover\:text-sky-600:hover,
+.public-brand .group:hover .group-hover\:text-sky-900 {
+  color: var(--cedes-gold);
+}
+
+.public-brand .fill-sky-200\/75,
+.public-brand .fill-sky-200\/90 {
+  fill: color-mix(in srgb, var(--cedes-gold) 68%, transparent);
+}
+
+.public-brand .bg-slate-900,
+.public-brand .bg-slate-900\/90,
+.public-brand .bg-sky-600,
+.public-brand .bg-sky-700,
+.public-brand .bg-sky-700\/90,
+.public-brand .bg-sky-800,
+.public-brand .bg-sky-900 {
+  background-color: var(--cedes-navy);
+}
+
+.public-brand .from-slate-50 {
+  --tw-gradient-from: var(--cedes-ivory) var(--tw-gradient-from-position);
+  --tw-gradient-to: color-mix(in srgb, var(--cedes-ivory) 0%, transparent)
+    var(--tw-gradient-to-position);
+}
+
+.public-brand .from-slate-50\/50 {
+  --tw-gradient-from: color-mix(in srgb, var(--cedes-ivory) 50%, transparent)
+    var(--tw-gradient-from-position);
+  --tw-gradient-to: transparent var(--tw-gradient-to-position);
+}
+
+.public-brand .via-slate-50 {
+  --tw-gradient-to: color-mix(in srgb, var(--cedes-ivory) 0%, transparent)
+    var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--cedes-ivory) var(--tw-gradient-via-position),
+    var(--tw-gradient-to);
+}
+
+.public-brand .via-white,
+.public-brand .to-white {
+  --tw-gradient-to: var(--cedes-paper) var(--tw-gradient-to-position);
+}
+
+.public-brand .from-sky-500\/5,
+.public-brand .from-sky-500\/10,
+.public-brand .from-sky-50,
+.public-brand .from-sky-100\/20 {
+  --tw-gradient-from: color-mix(in srgb, var(--cedes-gold) 9%, transparent)
+    var(--tw-gradient-from-position);
+  --tw-gradient-to: transparent var(--tw-gradient-to-position);
+}
+
+.public-brand .to-sky-500\/5,
+.public-brand .to-sky-500\/10 {
+  --tw-gradient-to: color-mix(in srgb, var(--cedes-gold) 7%, transparent)
+    var(--tw-gradient-to-position);
+}
+
+.public-brand .via-sky-400\/5,
+.public-brand .via-sky-400\/10 {
+  --tw-gradient-to: transparent var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from),
+    color-mix(in srgb, var(--cedes-gold) 8%, transparent) var(--tw-gradient-via-position),
+    var(--tw-gradient-to);
+}
+
+.public-brand .border-slate-200,
+.public-brand .border-slate-600\/90,
+.public-brand .ring-slate-100,
+.public-brand .ring-slate-200 {
+  border-color: color-mix(in srgb, var(--cedes-navy) 16%, transparent);
+  --tw-ring-color: color-mix(in srgb, var(--cedes-navy) 16%, transparent);
+}
+
+.public-brand .shadow-sky-100,
+.public-brand .shadow-sky-100\/40,
+.public-brand .shadow-sky-100\/50,
+.public-brand .shadow-sky-100\/60 {
+  --tw-shadow-color: color-mix(in srgb, var(--cedes-navy) 10%, transparent);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+.public-brand .focus\:ring-sky-600\/60:focus,
+.public-brand .focus\:ring-sky-600:focus,
+.public-brand .focus\:ring-sky-900\/20:focus {
+  --tw-ring-color: color-mix(in srgb, var(--cedes-gold) 64%, transparent);
+}
+
+.public-brand :where(a, button, input, textarea):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--cedes-gold) 82%, transparent);
+  outline-offset: 3px;
+}
+
+.public-brand header {
+  background-color: color-mix(in srgb, var(--cedes-paper) 94%, var(--cedes-gold));
+  border-color: color-mix(in srgb, var(--cedes-navy) 12%, transparent);
+}
+
+.public-brand header nav > div:nth-child(2) a::after {
+  background-color: var(--cedes-gold);
+  opacity: 0;
+}
+
+.public-brand header nav > div:nth-child(2) a:hover::after {
+  opacity: 1;
+}
+
+.public-brand header a[aria-current="page"] {
+  color: var(--cedes-navy);
+  font-weight: 700;
+}
+
+.public-brand header a[aria-current="page"]::after {
+  width: 1.5rem;
+  background-color: var(--cedes-gold);
+  opacity: 1;
+}
+
+.brand-hero {
+  isolation: isolate;
+  background-color: var(--cedes-ivory) !important;
+}
+
+.brand-hero::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--cedes-gold) 14%, transparent), transparent 28%),
+    radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--cedes-navy) 10%, transparent), transparent 32%);
+}
+
+.brand-art-gold {
+  filter: brightness(0) saturate(100%) invert(58%) sepia(85%) saturate(1161%) hue-rotate(347deg)
+    brightness(94%) contrast(86%);
+}
+
+.brand-newsletter {
+  background-color: var(--cedes-gold) !important;
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--cedes-navy) 18%, transparent);
+}
+
+.brand-newsletter :where(h3, p) {
+  color: var(--cedes-navy) !important;
+}
+
+.brand-newsletter input {
+  background-color: color-mix(in srgb, var(--cedes-paper) 92%, transparent) !important;
+  color: var(--cedes-navy) !important;
+}
+
+.brand-newsletter input::placeholder {
+  color: color-mix(in srgb, var(--cedes-navy) 62%, transparent) !important;
+}
+
+.brand-newsletter button {
+  background-color: var(--cedes-navy) !important;
+  color: var(--cedes-paper) !important;
+}
+
+.brand-card {
+  box-shadow: 0 16px 45px color-mix(in srgb, var(--cedes-navy) 8%, transparent) !important;
+}
+
+.public-brand .prose :where(h2, h3, strong) {
+  color: var(--cedes-navy);
+}
+
+.public-brand .prose a {
+  color: var(--cedes-gold);
+}
+
+@media (max-width: 639px) {
+  .public-brand h1.text-5xl {
+    font-size: clamp(2.35rem, 10.25vw, 2.75rem);
+    line-height: 1.06;
+  }
+
+  .public-brand h2.text-4xl,
+  .public-brand h2.text-5xl {
+    font-size: clamp(2.15rem, 9.5vw, 2.75rem);
+    line-height: 1.08;
+  }
+
+  .public-brand h1 .whitespace-nowrap,
+  .public-brand h2 .whitespace-nowrap {
+    white-space: normal;
+  }
+}
+
+@keyframes brand-scroll-drift {
+  from {
+    translate: 0 var(--brand-scroll-start, 10px);
+  }
+
+  to {
+    translate: 0 var(--brand-scroll-end, -10px);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .brand-scroll-art {
+      animation: brand-scroll-drift 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry -10% exit 110%;
+      will-change: translate;
+    }
+
+    .brand-scroll-art--reverse {
+      --brand-scroll-start: -12px;
+      --brand-scroll-end: 12px;
+    }
+
+    .brand-scroll-art--far {
+      --brand-scroll-start: 18px;
+      --brand-scroll-end: -18px;
+    }
+
+    .brand-scroll-art--subtle {
+      --brand-scroll-start: 8px;
+      --brand-scroll-end: -8px;
+    }
+  }
+}
+
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .conecta-scroll-art {

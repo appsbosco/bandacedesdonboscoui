@@ -7,6 +7,7 @@ import { SEND_EMAIL } from "graphql/mutations";
 import { useMutation } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import { normalizePublicLang } from "utils/publicRoutes";
+import BrandArtwork from "./BrandArtwork";
 
 const Contact = () => {
   const [sendEmail] = useMutation(SEND_EMAIL);
@@ -20,8 +21,7 @@ const Contact = () => {
     const emailData = {
       from: form.email.value,
       to: "banda@cedesdonbosco.ed.cr",
-      subject:
-        lang === "en" ? "Banda CEDES Don Bosco Contact" : "Contacto Banda CEDES Don Bosco",
+      subject: lang === "en" ? "Banda CEDES Don Bosco Contact" : "Contacto Banda CEDES Don Bosco",
       html: `
 
       <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -49,20 +49,30 @@ const Contact = () => {
                 height: auto;
               "
             />
-                <h1 style="font-size:28px;font-weight:bold;margin-top:48px">👉 De: ${form.name.value}</h1>
+                <h1 style="font-size:28px;font-weight:bold;margin-top:48px">👉 De: ${
+                  form.name.value
+                }</h1>
                 <table style="margin:24px 0" align="center" border="0" cellPadding="0" cellSpacing="0" role="presentation" width="100%">
                   <tbody>
                     <tr>
                       <td>
-                        <p style="font-size:16px;line-height:26px;margin:16px 0"><a target="_blank" style="color:#FF6363;text-decoration:none" href="">Correo: ${form.email.value} </a></p>
-                        <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Phone" : "Contacto"}: ${form.phone.value} </p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0"><a target="_blank" style="color:#FF6363;text-decoration:none" href="">Correo: ${
+                          form.email.value
+                        } </a></p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">${
+                          lang === "en" ? "Phone" : "Contacto"
+                        }: ${form.phone.value} </p>
 
-                        <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Message" : "Mensaje"}: ${form.message.value} </p>
+                        <p style="font-size:16px;line-height:26px;margin:16px 0">${
+                          lang === "en" ? "Message" : "Mensaje"
+                        }: ${form.message.value} </p>
                       </td>
                     </tr>
                   </tbody>
                 </table>
-                <p style="font-size:16px;line-height:26px;margin:16px 0">${lang === "en" ? "Best regards" : "Saludos"}<br />- Banda CEDES Don Bosco</p>
+                <p style="font-size:16px;line-height:26px;margin:16px 0">${
+                  lang === "en" ? "Best regards" : "Saludos"
+                }<br />- Banda CEDES Don Bosco</p>
                 <p
                 style="
                   font-size: 14px;
@@ -72,7 +82,7 @@ const Contact = () => {
                   margin-bottom: 10px;
                 "
               >
-                Copyright © 2025 Banda CEDES Don Bosco. Todos los derechos
+                Copyright © 2026 Banda CEDES Don Bosco. Todos los derechos
                 reservados
               </p>               
               </td>
@@ -108,10 +118,15 @@ const Contact = () => {
   };
 
   return (
-    <>
+    <div className="public-brand">
       <Header />
 
-      <section className="relative overflow-hidden bg-white">
+      <section className="brand-hero relative overflow-hidden bg-white">
+        <BrandArtwork
+          artwork="hummingbird"
+          motion="far"
+          className="absolute right-4 top-24 z-10 w-40 rotate-[-8deg] opacity-75 sm:right-8 sm:w-52 lg:right-12 lg:top-28 lg:w-60"
+        />
         <div className="max-w-screen-xl mx-auto">
           <div className="lg:columns-2 lg:gap-8">
             {/* Contact */}
@@ -336,7 +351,7 @@ const Contact = () => {
         </div>
       </section>
       <Footer />
-    </>
+    </div>
   );
 };
 

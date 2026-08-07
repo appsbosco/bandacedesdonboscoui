@@ -3,6 +3,7 @@ import newsletter from "../assets/images/newsletter-bg.svg";
 import logocedes from "../assets/images/logocedeswhite.webp";
 import { useTranslation } from "react-i18next";
 import { getPublicPath, normalizePublicLang } from "utils/publicRoutes";
+import BrandArtwork from "./BrandArtwork";
 
 const Footer = () => {
   const { t, i18n } = useTranslation();
@@ -14,7 +15,7 @@ const Footer = () => {
         <div className="relative">
           <div className="absolute inset-x-0 bottom-0 h-1/2 bg-slate-900"></div>
           <div className="relative max-w-screen-xl px-4 mx-auto sm:px-6 lg:px-8">
-            <div className="relative px-5 py-12 overflow-hidden rounded-2xl bg-sky-700 sm:px-16 lg:py-14">
+            <div className="brand-newsletter relative px-5 py-12 overflow-hidden rounded-2xl bg-sky-700 sm:px-16 lg:py-14">
               <img
                 src={newsletter}
                 alt=""
@@ -41,7 +42,7 @@ const Footer = () => {
                     className="h-14 w-full rounded-full border-0 bg-white/10 py-3.5 pl-5 pr-32 text-sm leading-5 text-sky-50 placeholder-sky-100/90 outline-none ring-1 ring-white/25 backdrop-blur duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white/30 sm:pl-6"
                     required
                     placeholder={t("footer.input_placeholder")}
-                    autoComplete="text"
+                    autoComplete="email"
                   />
                   <button
                     type="submit"
@@ -83,7 +84,17 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <footer className="pt-20 pb-8 overflow-hidden bg-slate-900 sm:pt-24 sm:pb-12 lg:pt-32">
+        <footer className="relative pt-20 pb-8 overflow-hidden bg-slate-900 sm:pt-24 sm:pb-12 lg:pt-32">
+          <BrandArtwork
+            artwork="volcano"
+            motion="subtle"
+            className="absolute -bottom-10 left-1/2 w-[34rem] -translate-x-1/2 opacity-[0.07] sm:w-[48rem]"
+          />
+          <BrandArtwork
+            artwork="leaves"
+            motion="reverse"
+            className="absolute -right-12 top-16 w-44 rotate-12 opacity-25 sm:w-60"
+          />
           <div className="max-w-screen-xl px-5 mx-auto sm:px-6 lg:px-8">
             <div className="grid items-center max-w-xl gap-5 mx-auto lg:mx-0 lg:max-w-none lg:grid-cols-12 lg:gap-12 xl:gap-20">
               <div className="lg:col-span-7">

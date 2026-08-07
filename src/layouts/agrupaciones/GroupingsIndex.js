@@ -5,6 +5,7 @@ import Seo from "components/Seo";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { ENSEMBLE_ORDER, getEnsembleContent, getLocaleContent } from "./content";
 import { getPublicPath } from "utils/publicRoutes";
+import BrandArtwork from "components/BrandArtwork";
 
 export default function GroupingsIndex() {
   const { lang } = useParams();
@@ -13,7 +14,7 @@ export default function GroupingsIndex() {
   const hasOddCount = ENSEMBLE_ORDER.length % 2 !== 0;
 
   return (
-    <>
+    <div className="public-brand">
       <Seo
         title={content.listing.seoTitle}
         description={content.listing.seoDescription}
@@ -22,8 +23,13 @@ export default function GroupingsIndex() {
       <Header />
 
       <section className="relative overflow-hidden bg-white lg:px-8 pt-10">
-        <div className="relative max-w-screen-xl px-5 py-16 mx-auto bg-slate-50 sm:px-6 sm:py-24 lg:rounded-3xl lg:px-8 lg:py-28">
-          <div className="max-w-3xl">
+        <div className="brand-hero relative max-w-screen-xl overflow-hidden px-5 py-16 mx-auto bg-slate-50 sm:px-6 sm:py-24 lg:rounded-3xl lg:px-8 lg:py-28">
+          <BrandArtwork
+            artwork="jaguar"
+            motion="far"
+            className="brand-art-gold absolute -bottom-1 right-3 w-36 opacity-75 sm:right-8 sm:w-48 lg:right-12 lg:w-56"
+          />
+          <div className="relative z-10 max-w-3xl pr-12 sm:pr-28 lg:pr-0">
             <p className="text-sm font-semibold tracking-[0.22em] text-sky-700 uppercase">
               {content.listing.eyebrow}
             </p>
@@ -48,7 +54,7 @@ export default function GroupingsIndex() {
               return (
                 <article
                   key={slug}
-                  className={`overflow-hidden rounded-[32px] bg-slate-50 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 ${
+                  className={`brand-card overflow-hidden rounded-[32px] bg-slate-50 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100 ${
                     isFeaturedOddCard ? "md:col-span-2" : ""
                   }`}
                 >
@@ -95,6 +101,6 @@ export default function GroupingsIndex() {
       </section>
 
       <Footer />
-    </>
+    </div>
   );
 }

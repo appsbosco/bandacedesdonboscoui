@@ -8,10 +8,11 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import BookingRequestForm from "./BookingRequestForm";
 import { ENSEMBLE_META, getEnsembleContent } from "./content";
 import { getPublicPath } from "utils/publicRoutes";
+import BrandArtwork from "components/BrandArtwork";
 
 function StatCard({ title, text }) {
   return (
-    <div className="rounded-3xl bg-slate-50 p-6 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100">
+    <div className="brand-card rounded-3xl bg-slate-50 p-6 shadow-sm shadow-sky-100/50 ring-1 ring-slate-100">
       <h3 className="text-xl font-semibold font-display text-slate-900">{title}</h3>
       <p className="mt-3 text-sm leading-7 text-slate-700">{text}</p>
     </div>
@@ -31,10 +32,6 @@ export default function GroupingPage() {
   const [showFloatingCta, setShowFloatingCta] = useState(false);
   const ensemble = getEnsembleContent(locale, slug);
   const meta = ENSEMBLE_META[slug];
-
-  if (!ensemble || !meta) {
-    return null;
-  }
 
   const listingPath = getPublicPath(locale, "ensembles");
   const currentPath = getPublicPath(locale, "ensembles", slug);
@@ -105,8 +102,12 @@ export default function GroupingPage() {
     };
   }, []);
 
+  if (!ensemble || !meta) {
+    return null;
+  }
+
   return (
-    <>
+    <div className="public-brand">
       <Seo
         title={ensemble.seoTitle}
         description={ensemble.seoDescription}
@@ -115,7 +116,12 @@ export default function GroupingPage() {
       />
       <Header />
 
-      <section className="relative overflow-hidden bg-white">
+      <section className="brand-hero relative overflow-hidden bg-white">
+        <BrandArtwork
+          artwork="jaguar"
+          motion="reverse"
+          className="brand-art-gold absolute -left-8 top-40 w-36 -rotate-6 opacity-45 sm:-left-4 sm:w-44 lg:left-auto lg:right-8 lg:top-12 lg:w-56 lg:opacity-60"
+        />
         <div className="max-w-screen-xl px-5 py-16 mx-auto sm:px-6 lg:px-8 lg:py-20">
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
             <Link to={listingPath} className="transition hover:text-slate-700">
@@ -313,6 +319,6 @@ export default function GroupingPage() {
           </div>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
