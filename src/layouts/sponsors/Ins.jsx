@@ -1186,8 +1186,8 @@ export default function INSSponsorPage() {
                 Gracias a {"INS"} por creer en el talento costarricense 🇨🇷
               </p>
               <p className="text-white/80 text-lg">
-                Copyright &copy; 2025 Banda CEDES Don Bosco - Todos los derechos reservados -
-                {" "}Desarrollado por{" "}
+                Copyright &copy; 2026 Banda CEDES Don Bosco - Todos los derechos reservados -{" "}
+                Desarrollado por{" "}
                 <a
                   href="https://josuechinchilla.com"
                   target="_blank"

@@ -727,7 +727,7 @@ const DiamondSponsor = () => {
               🇨🇷 Gracias por creer en el talento costarricense
             </p>
             <p className="text-white/60 text-sm">
-              Copyright © 2025 Banda CEDES Don Bosco - Todos los derechos reservados
+              Copyright © 2026 Banda CEDES Don Bosco - Todos los derechos reservados
             </p>
           </div>
         </div>

@@ -61,11 +61,6 @@ const About = () => {
             alt=""
             className="absolute inset-0 object-cover object-top w-full h-full"
           />
-          <BrandArtwork
-            artwork="sloth"
-            motion="reverse"
-            className="brand-art-gold absolute right-2 top-4 z-10 w-44 rotate-[-3deg] opacity-95 sm:right-6 sm:top-8 sm:w-52 lg:right-8 lg:top-10 lg:w-56"
-          />
           <svg
             width="229"
             height="40"
@@ -125,7 +120,7 @@ const About = () => {
                       viewBox="0 0 329 31"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
-                      className="absolute top-[70%] left-1/2 h-[0.62em] w-auto -translate-x-1/2 fill-sky-200/90"
+                      className="absolute left-0 top-[82%] z-0 h-[0.34em] w-full fill-sky-200/75 sm:top-2/3 sm:h-[0.6em]"
                     >
                       <mask
                         id="mask0_239_1189"
@@ -146,7 +141,7 @@ const About = () => {
                       </g>
                     </svg>
 
-                    <span className="relative text-sky-700"> {t("about.trajectory_subtitle")}</span>
+                    <span className="relative z-10 text-sky-700"> {t("about.trajectory_subtitle")}</span>
                   </span>
                 </h2>
 
