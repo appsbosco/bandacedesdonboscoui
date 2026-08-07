@@ -7,14 +7,13 @@ export const es = {
       imageAlt: "Banda CEDES Don Bosco rumbo a Pasadena",
     },
     hero: {
-      imageAlt:
-        "Cuatro integrantes de la Banda CEDES Don Bosco con sus uniformes e instrumentos",
+      imageAlt: "Cuatro integrantes de la Banda CEDES Don Bosco con sus uniformes e instrumentos",
       logoAlt: "Banda CEDES Don Bosco",
       origin: "Costa Rica",
       destination: "Pasadena",
       eyebrow: "Ayúdanos a llegar a",
       title: "Pasadena",
-      body: "Sé parte de este sueño y ayúdanos a llevar la música de CEDES Don Bosco aún más lejos.",
+      body: "Sé parte de este sueño y ayúdanos a llevar la música de nuestros jóvenes aún más lejos.",
     },
     gofundme: {
       eyebrow: "La forma más fácil de ayudar",
@@ -80,7 +79,7 @@ export const en = {
       destination: "Pasadena",
       eyebrow: "Help us reach",
       title: "Pasadena",
-      body: "Be part of this dream and help us carry the music of CEDES Don Bosco even farther.",
+      body: "Be part of this dream and help us carry the music of our school even farther.",
     },
     gofundme: {
       eyebrow: "The easiest way to help",
