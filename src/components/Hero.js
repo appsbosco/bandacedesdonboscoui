@@ -13,7 +13,7 @@ const Hero = () => {
       <BrandArtwork
         artwork="sloth"
         motion="reverse"
-        className="brand-art-gold absolute -right-4 -top-6 z-10 w-40 rotate-[-4deg] opacity-90 sm:-right-2 sm:-top-8 sm:w-48 lg:right-20 lg:-top-12 lg:w-64"
+        className="brand-art-gold-soft absolute -right-4 -top-6 z-10 w-40 rotate-[-4deg] opacity-65 sm:-right-2 sm:-top-8 sm:w-48 sm:opacity-75 lg:right-20 lg:-top-12 lg:w-64 lg:opacity-80"
       />
       <BrandArtwork
         artwork="foliage"

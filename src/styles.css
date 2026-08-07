@@ -215,6 +215,11 @@
     brightness(94%) contrast(86%);
 }
 
+.brand-art-gold-soft {
+  filter: brightness(0) saturate(100%) invert(58%) sepia(85%) saturate(1161%) hue-rotate(347deg)
+    brightness(94%) contrast(86%) saturate(72%) brightness(92%);
+}
+
 .brand-newsletter {
   background-color: var(--cedes-gold) !important;
   box-shadow: 0 24px 70px color-mix(in srgb, var(--cedes-navy) 18%, transparent);
