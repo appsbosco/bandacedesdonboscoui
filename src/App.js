@@ -294,8 +294,19 @@ export default function App() {
           <Route path="/:lang/contact" element={<PublicLangRoute><Contact /></PublicLangRoute>} />
           <Route path="/donar" element={<Navigate replace to="/es/donar" />} />
           <Route path="/donate" element={<Navigate replace to="/en/donate" />} />
-          <Route path="/conecta" element={<ConectaPage />} />
-          <Route path="/es/conecta" element={<Navigate replace to="/conecta" />} />
+          <Route
+            path="/conecta"
+            element={
+              <Navigate
+                replace
+                to={`/${normalizePublicLang(i18n.language?.slice(0, 2))}/conecta`}
+              />
+            }
+          />
+          <Route
+            path="/:lang/conecta"
+            element={<PublicLangRoute><ConectaPage /></PublicLangRoute>}
+          />
           <Route
             path="/:lang/donar"
             element={<PublicLangRoute><DonatePage /></PublicLangRoute>}

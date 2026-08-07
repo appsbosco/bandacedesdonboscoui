@@ -6,6 +6,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import en from "./locales/en.json";
 import es from "./locales/es.json";
 import { en as donationEn, es as donationEs } from "./locales/donationCampaign";
+import { en as conectaEn, es as conectaEs } from "./locales/conecta";
 
 i18n
   .use(LanguageDetector)
@@ -13,8 +14,22 @@ i18n
   .init({
     fallbackLng: "en",
     resources: {
-      en: { translation: { ...en, ...donationEn, nav: { ...en.nav, ...donationEn.nav } } },
-      es: { translation: { ...es, ...donationEs, nav: { ...es.nav, ...donationEs.nav } } },
+      en: {
+        translation: {
+          ...en,
+          ...donationEn,
+          ...conectaEn,
+          nav: { ...en.nav, ...donationEn.nav },
+        },
+      },
+      es: {
+        translation: {
+          ...es,
+          ...donationEs,
+          ...conectaEs,
+          nav: { ...es.nav, ...donationEs.nav },
+        },
+      },
     },
     interpolation: {
       escapeValue: false,
