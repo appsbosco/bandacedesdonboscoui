@@ -506,6 +506,23 @@ function DonatePage() {
     };
   }, [lang]);
 
+  useEffect(() => {
+    if (window.location.hash !== "#donacion-con-tarjeta") return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        bacFlowRef.current?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+          block: "start",
+        });
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   const announce = (message) => {
     setNotice(message);
     clearTimeout(noticeTimer.current);

@@ -67,6 +67,7 @@ const Apoyo = lazy(() => import("layouts/apoyo/Apoyo"));
 const VeladaTickets = lazy(() => import("layouts/tickets/BuyTickets"));
 const ColorGuardCamp = lazy(() => import("layouts/ColorGuardCamp/ColorGuardCamp"));
 const DonatePage = lazy(() => import("layouts/donate/DonatePage"));
+const ConectaPage = lazy(() => import("layouts/conecta/ConectaPage"));
 const Jacks = lazy(() => import("layouts/sponsors/Jacks"));
 const INS = lazy(() => import("layouts/sponsors/INS"));
 const DocumentDetail = lazy(() =>
@@ -293,6 +294,8 @@ export default function App() {
           <Route path="/:lang/contact" element={<PublicLangRoute><Contact /></PublicLangRoute>} />
           <Route path="/donar" element={<Navigate replace to="/es/donar" />} />
           <Route path="/donate" element={<Navigate replace to="/en/donate" />} />
+          <Route path="/conecta" element={<ConectaPage />} />
+          <Route path="/es/conecta" element={<Navigate replace to="/conecta" />} />
           <Route
             path="/:lang/donar"
             element={<PublicLangRoute><DonatePage /></PublicLangRoute>}

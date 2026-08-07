@@ -3,6 +3,9 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        costarica: ['"Costa Rica"', '"Gochi Hand"', "cursive"],
+      },
       keyframes: {
         "slide-up": {
           "0%": { transform: "translateY(100%)", opacity: 0 },

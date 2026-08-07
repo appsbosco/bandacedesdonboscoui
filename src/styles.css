@@ -2,6 +2,55 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+@font-face {
+  font-family: "Costa Rica";
+  src: url("./assets/fonts/CostaRica.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@keyframes conecta-scroll-drift {
+  from {
+    translate: 0 var(--conecta-scroll-start, 14px);
+  }
+
+  to {
+    translate: 0 var(--conecta-scroll-end, -14px);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .conecta-scroll-art {
+      animation: conecta-scroll-drift 1s linear both;
+      animation-timeline: view(block);
+      animation-range: entry -10% exit 110%;
+      will-change: translate;
+    }
+
+    .conecta-scroll-art--reverse {
+      --conecta-scroll-start: -14px;
+      --conecta-scroll-end: 14px;
+    }
+
+    .conecta-scroll-art--far {
+      --conecta-scroll-start: 22px;
+      --conecta-scroll-end: -22px;
+    }
+
+    .conecta-scroll-art--reverse.conecta-scroll-art--far {
+      --conecta-scroll-start: -22px;
+      --conecta-scroll-end: 22px;
+    }
+
+    .conecta-scroll-art--subtle {
+      --conecta-scroll-start: 8px;
+      --conecta-scroll-end: -8px;
+    }
+  }
+}
+
 /* Add your custom CSS styles here */
 /* For example: */
 .font-display {
