@@ -4,6 +4,7 @@ import {
   GET_MY_CHILDREN_TOUR_ACCESS,
   GET_MY_CHILD_TOUR_PAYMENT_ACCOUNT,
   GET_MY_CHILD_TOUR_PARTICIPANT_DOCUMENT_SUMMARY,
+  GET_MY_CHILD_TOUR_ITINERARY,
   GET_MY_CHILD_TOUR_FLIGHTS,
   UPDATE_MY_CHILD_TOUR_PARTICIPANT_INFO,
   CONFIRM_MY_CHILD_TOUR_PARTICIPANT_VERIFICATION,
@@ -15,6 +16,7 @@ const EMPTY_CHILDREN = [];
 export function useTourParentAccess({ tourId, selfServiceAccess }) {
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments !== false;
   const scheduleEnabled = selfServiceAccess?.enabled && selfServiceAccess?.schedule === true;
+  const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary === true;
   const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights !== false;
   const [selectedChildUserId, setSelectedChildUserId] = useState(null);
   const {
@@ -54,6 +56,11 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     skip: !selectedChildUserId || !scheduleEnabled,
     fetchPolicy: "cache-and-network",
   });
+  const { data: itineraryData, loading: itineraryLoading } = useQuery(GET_MY_CHILD_TOUR_ITINERARY, {
+    variables,
+    skip: !selectedChildUserId || !itineraryEnabled || !isVerified,
+    fetchPolicy: "cache-and-network",
+  });
   const { data: flightsData, loading: flightsLoading } = useQuery(GET_MY_CHILD_TOUR_FLIGHTS, {
     variables,
     skip: !selectedChildUserId || !flightsEnabled,
@@ -81,6 +88,8 @@ export function useTourParentAccess({ tourId, selfServiceAccess }) {
     isVerified,
     schedule: scheduleData?.myChildTourSchedule ?? null,
     scheduleLoading,
+    itinerary: itineraryData?.myChildTourItinerary ?? null,
+    itineraryLoading,
     flights: flightsData?.myChildTourFlights ?? [],
     flightsLoading,
     updateChildInfo: (input) => updateChildInfoMutation({ variables: { ...variables, input } }),

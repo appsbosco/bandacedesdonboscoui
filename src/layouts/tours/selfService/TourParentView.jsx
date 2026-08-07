@@ -10,6 +10,7 @@ import { useTourParentAccess } from "./useTourParentAccess";
 import TourSelfServiceDocuments from "./TourSelfServiceDocuments";
 import TourSelfServicePayments from "./TourSelfServicePayments";
 import TourSelfServiceFlights from "./TourSelfServiceFlights";
+import TourSelfServiceItinerary from "./TourSelfServiceItinerary";
 import TourTicketTab from "../tourTickets/TourTicketTab";
 import TourScheduleView from "../tourSchedules/TourScheduleView";
 
@@ -17,6 +18,7 @@ const TABS = [
   { id: "documents", label: "Documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments", label: "Pagos", emoji: "💰", moduleKey: "payments" },
   { id: "schedule", label: "Itinerario", emoji: "🗓️", moduleKey: "schedule" },
+  { id: "itinerary", label: "Grupo de vuelo", emoji: "🧭", moduleKey: "itinerary" },
   { id: "flights", label: "Vuelos", emoji: "✈️", moduleKey: "flights" },
   { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
@@ -39,6 +41,8 @@ export default function TourParentView({ tour, requestedTab }) {
     isVerified,
     schedule,
     scheduleLoading,
+    itinerary,
+    itineraryLoading,
     flights,
     flightsLoading,
     updateChildInfo,
@@ -102,7 +106,7 @@ export default function TourParentView({ tour, requestedTab }) {
       ? selfServiceAccess?.schedule === true
       : selfServiceAccess?.[tab.moduleKey] !== false
   );
-  const isLockedTab = (tabId) => tabId === "flight-ticket" && !isVerified;
+  const isLockedTab = (tabId) => ["flight-ticket", "itinerary"].includes(tabId) && !isVerified;
 
   return (
     <div className="space-y-5">
@@ -207,6 +211,12 @@ export default function TourParentView({ tour, requestedTab }) {
               destination={tour.destination}
             />
           )}
+          {activeTab === "itinerary" && visibleTabs.some((t) => t.id === "itinerary") &&
+            (isLockedTab("itinerary") ? (
+              <LockedChildTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+            ) : (
+              <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+            ))}
           {activeTab === "flights" &&
             visibleTabs.some((t) => t.id === "flights") &&
             (isLockedTab("flights") ? (

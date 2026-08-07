@@ -3,6 +3,7 @@ import { GET_MY_TOUR_PARTICIPANT } from "../tours.gql";
 import {
   GET_MY_TOUR_PAYMENT_ACCOUNT,
   MY_TOUR_PARTICIPANT_DOCUMENT_SUMMARY,
+  MY_TOUR_ITINERARY,
   MY_TOUR_FLIGHTS,
   UPDATE_MY_TOUR_PARTICIPANT_INFO,
   CONFIRM_MY_TOUR_PARTICIPANT_VERIFICATION,
@@ -13,6 +14,7 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
   const documentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.documents;
   const paymentsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.payments;
   const scheduleEnabled = selfServiceAccess?.enabled && selfServiceAccess?.schedule;
+  const itineraryEnabled = selfServiceAccess?.enabled && selfServiceAccess?.itinerary;
   const flightsEnabled = selfServiceAccess?.enabled && selfServiceAccess?.flights;
   const {
     data: participantData,
@@ -49,6 +51,11 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     skip: !tourId || !scheduleEnabled || !participant,
     fetchPolicy: "cache-and-network",
   });
+  const { data: itineraryData, loading: itineraryLoading } = useQuery(MY_TOUR_ITINERARY, {
+    variables: { tourId },
+    skip: !tourId || !itineraryEnabled || !participant || !isVerified,
+    fetchPolicy: "cache-and-network",
+  });
   const { data: flightsData, loading: flightsLoading } = useQuery(MY_TOUR_FLIGHTS, {
     variables: { tourId },
     skip: !tourId || !flightsEnabled || !participant,
@@ -78,6 +85,8 @@ export function useTourSelfService({ tourId, selfServiceAccess }) {
     isVerified,
     schedule: scheduleData?.myTourSchedule ?? null,
     scheduleLoading,
+    itinerary: itineraryData?.myTourItinerary ?? null,
+    itineraryLoading,
     flights: flightsData?.myTourFlights ?? [],
     flightsLoading,
     updateParticipantInfo: (input) => updateInfo({ variables: { tourId, input } }),

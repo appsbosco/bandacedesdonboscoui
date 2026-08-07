@@ -26,6 +26,7 @@ import { useTourSelfService } from "./selfService/useTourSelfService";
 import TourSelfServiceDocuments from "./selfService/TourSelfServiceDocuments";
 import TourSelfServicePayments from "./selfService/TourSelfServicePayments";
 import TourSelfServiceFlights from "./selfService/TourSelfServiceFlights";
+import TourSelfServiceItinerary from "./selfService/TourSelfServiceItinerary";
 import TourSchedulePage from "./tourSchedules";
 import TourScheduleView from "./tourSchedules/TourScheduleView";
 import TourSelfServiceConfig from "./TourSelfServiceConfig";
@@ -284,6 +285,7 @@ const SELF_SERVICE_TABS = [
   { id: "documents", label: "Mis documentos", emoji: "📄", moduleKey: "documents" },
   { id: "payments", label: "Mis pagos", emoji: "💰", moduleKey: "payments" },
   { id: "schedule", label: "Itinerario", emoji: "🗓️", moduleKey: "schedule" },
+  { id: "itinerary", label: "Grupo de vuelo", emoji: "🧭", moduleKey: "itinerary" },
   { id: "flights", label: "Mis vuelos", emoji: "✈️", moduleKey: "flights" },
   { id: "flight-ticket", label: "Tiquete aéreo", emoji: "🎫", moduleKey: "flights" },
 ];
@@ -410,6 +412,8 @@ function SelfServiceView({
     isVerified,
     schedule,
     scheduleLoading,
+    itinerary,
+    itineraryLoading,
     flights,
     flightsLoading,
     updateParticipantInfo,
@@ -496,7 +500,7 @@ function SelfServiceView({
   }
 
   const isLockedTab = (tabId) =>
-    ["flight-ticket"].includes(tabId) && !isVerified && !(isStaff && tabId === "flights");
+    ["flight-ticket", "itinerary"].includes(tabId) && !isVerified && !(isStaff && tabId === "flights");
 
   return (
     <div className="space-y-5">
@@ -563,6 +567,12 @@ function SelfServiceView({
           destination={tour.destination}
         />
       )}
+      {activeTab === "itinerary" &&
+        (isLockedTab("itinerary") ? (
+          <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
+        ) : (
+          <TourSelfServiceItinerary itinerary={itinerary} loading={itineraryLoading} />
+        ))}
       {activeTab === "flights" &&
         (isLockedTab("flights") ? (
           <LockedTabMessage onGoToDocuments={() => setActiveTab("documents")} />
