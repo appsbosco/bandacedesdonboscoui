@@ -12,11 +12,18 @@ export const CREATE_ORDER_OPTIMIZED = gql`
       orderDate
       isCompleted
       products {
+        id
         quantity
+        quantityPickedUp
+        status
+        fulfillmentDate
         productId {
           id
           name
           price
+          category
+          photo
+          availableForDays
         }
       }
     }
@@ -83,37 +90,74 @@ export const updateCacheAfterDeleteProduct = (cache, { data: { deleteProduct } }
 };
 
 export const RECORD_PICKUP_MUTATION = gql`
-  mutation RecordPickup($orderId: ID!, $itemId: ID!, $quantityPickedUp: Int!, $pickedUpAt: String) {
+  mutation RecordPickup(
+    $orderId: ID!
+    $itemId: ID!
+    $quantityPickedUp: Int!
+    $pickedUpAt: String
+    $lunchDay: String!
+    $paymentMethod: String!
+  ) {
     recordPickup(
       orderId: $orderId
       itemId: $itemId
       quantityPickedUp: $quantityPickedUp
       pickedUpAt: $pickedUpAt
+      lunchDay: $lunchDay
+      paymentMethod: $paymentMethod
     ) {
       id
       isCompleted
       products {
         id
+        productId {
+          id
+          name
+          price
+          category
+          availableForDays
+        }
         quantity
         quantityPickedUp
         status
         pickedUpAt
+        fulfillmentDate
+        pickupRecords {
+          quantity
+          paymentMethod
+          unitPrice
+          pickedUpAt
+        }
       }
     }
   }
 `;
 
 export const COMPLETE_ORDER_MUTATION = gql`
-  mutation CompleteOrder($orderId: ID!) {
-    completeOrder(orderId: $orderId) {
+  mutation CompleteOrder($orderId: ID!, $lunchDay: String!, $paymentMethod: String!) {
+    completeOrder(orderId: $orderId, lunchDay: $lunchDay, paymentMethod: $paymentMethod) {
       id
       isCompleted
       products {
         id
+        productId {
+          id
+          name
+          price
+          category
+          availableForDays
+        }
         quantity
         quantityPickedUp
         status
         pickedUpAt
+        fulfillmentDate
+        pickupRecords {
+          quantity
+          paymentMethod
+          unitPrice
+          pickedUpAt
+        }
       }
     }
   }

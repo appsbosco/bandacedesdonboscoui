@@ -3,9 +3,9 @@
 // Uber Eats Style + Performance Optimized
 // ===========================
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client";
-import { Tabs, Tab, Box, Fab, Tooltip } from "@mui/material";
+import { Fab, Tooltip } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 
 // Layout Components
@@ -34,9 +34,6 @@ import { isProductAvailable } from "../../utils/date";
 import { CREATE_PRODUCT } from "graphql/mutations";
 import { GET_USERS_BY_ID } from "graphql/queries";
 
-// Assets
-import HeroBg from "../../assets/images/almuerzo/bg.jpg";
-
 // ===========================
 // MAIN COMPONENT
 // ===========================
@@ -44,6 +41,8 @@ import HeroBg from "../../assets/images/almuerzo/bg.jpg";
 const Almuerzos = () => {
   // ====== State ======
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [currentTab, setCurrentTab] = useState(0); // 0: Catálogo, 1: Mis Pedidos
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -53,6 +52,19 @@ const Almuerzos = () => {
     severity: "success",
     key: 0,
   });
+
+  useEffect(() => {
+    const ignoreResizeObserverNotice = (event) => {
+      const message = event?.message || event?.error?.message || "";
+      if (message.includes("ResizeObserver loop")) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+
+    window.addEventListener("error", ignoreResizeObserverNotice, true);
+    return () => window.removeEventListener("error", ignoreResizeObserverNotice, true);
+  }, []);
 
   // ====== Cart Hook ======
   const {
@@ -94,14 +106,6 @@ const Almuerzos = () => {
   // ====== Mutations ======
   const [createOrder, { loading: orderLoading }] = useMutation(CREATE_ORDER_OPTIMIZED, {
     update: (cache, result) => updateCacheAfterCreateOrder(cache, result, userId),
-    onCompleted: () => {
-      clearCart();
-      showToast("¡Pedido creado exitosamente! 🎉", "success");
-      setCurrentTab(1); // Switch to "Mis Pedidos" tab
-    },
-    onError: (error) => {
-      showToast(`Error al crear pedido: ${error.message}`, "error");
-    },
   });
 
   const [deleteProduct] = useMutation(DELETE_PRODUCT_OPTIMIZED, {
@@ -126,10 +130,10 @@ const Almuerzos = () => {
     },
 
     onCompleted: () => {
-      showToast("Producto eliminado exitosamente", "success");
+      showToast("Producto ocultado. Los pedidos anteriores se conservan.", "success");
     },
     onError: () => {
-      showToast("Error al eliminar producto", "error");
+      showToast("Error al ocultar producto", "error");
     },
   });
 
@@ -152,13 +156,13 @@ const Almuerzos = () => {
         return;
       }
       addItem(product, quantity);
-      showToast(`${product.name} añadido al carrito`, "success");
+      // showToast(`${product.name} añadido al carrito`, "success");
     },
     [addItem, showToast]
   );
 
   const handleCheckout = useCallback(async () => {
-    if (!userId || isCartEmpty) return;
+    if (!userId || isCartEmpty) return false;
 
     const products = cartArray.map(({ product, quantity }) => ({
       productId: product.id,
@@ -167,10 +171,19 @@ const Almuerzos = () => {
 
     try {
       await createOrder({ variables: { userId, products } });
+      return true;
     } catch (error) {
       console.error("Error creating order:", error);
+      showToast(`Error al crear pedido: ${error.message}`, "error");
+      return false;
     }
-  }, [userId, cartArray, isCartEmpty, createOrder]);
+  }, [userId, cartArray, isCartEmpty, createOrder, showToast]);
+
+  const handleCheckoutSuccess = useCallback(() => {
+    clearCart();
+    showToast("¡Pedido creado exitosamente! 🎉", "success");
+    setCurrentTab(1);
+  }, [clearCart, showToast]);
 
   const handleDeleteProduct = useCallback(
     async (productId) => {
@@ -184,7 +197,7 @@ const Almuerzos = () => {
         console.error("Error deleting product:", error);
       }
     },
-    [deleteProduct]
+    [deleteProduct, removeItem]
   );
 
   const handleAddProduct = useCallback(
@@ -211,10 +224,20 @@ const Almuerzos = () => {
   // ====== Filtered Products ======
   const filteredProducts = useMemo(() => {
     if (!productsData?.products) return [];
-    return productsData.products.filter(
-      (p) => selectedCategory === "" || p.category === selectedCategory
-    );
-  }, [productsData, selectedCategory]);
+    const searchTerm = productSearch.trim().toLocaleLowerCase("es");
+    return productsData.products.filter((product) => {
+      const matchesCategory = selectedCategory === "" || product.category === selectedCategory;
+      const matchesDay = selectedDay === "" || product.availableForDays === selectedDay;
+      const matchesSearch =
+        !searchTerm ||
+        [product.name, product.description, product.category].some((value) =>
+          String(value || "")
+            .toLocaleLowerCase("es")
+            .includes(searchTerm)
+        );
+      return matchesCategory && matchesDay && matchesSearch;
+    });
+  }, [productsData, selectedCategory, selectedDay, productSearch]);
 
   // ====== Loading State ======
   if (userLoading) {
@@ -230,141 +253,191 @@ const Almuerzos = () => {
   // ====== Render ======
   return (
     <DashboardLayout>
-      <div className="overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden bg-white text-slate-950">
         <DashboardNavbar />
 
-        <div className="mb-6 mt-6">
-          <div className="relative overflow-hidden rounded-2xl border border-default-200 bg-white">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-10"
-              style={{ backgroundImage: `url(${HeroBg})` }}
-              aria-hidden="true"
-            />
-            {/* Overlay blanco para mantenerlo limpio */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/70" />
-
-            <div className="relative p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-default-950 leading-tight">
-                    Almuerzos
-                  </h1>
-                  <p className="text-sm text-default-600 mt-1">
-                    {currentTab === 0
-                      ? "Elegí tus productos y confirmá."
-                      : "Tus pedidos recientes aparecerán aquí."}
-                  </p>
-                </div>
-
-                {isAdmin && (
-                  <span className="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border border-default-200 bg-default-50 text-default-700">
-                    Admin
-                  </span>
-                )}
-              </div>
+        <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-5 sm:px-6 sm:pt-8 lg:px-8">
+          <header className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                Almuerzos
+              </h1>
+              <p className="mt-1 text-sm text-slate-500 sm:text-base">
+                {currentTab === 0
+                  ? "Elegí lo que querés y armá tu pedido."
+                  : "Consultá el estado de tus pedidos."}
+              </p>
             </div>
-          </div>
-        </div>
+            {isAdmin && (
+              <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
+                Administración
+              </span>
+            )}
+          </header>
 
-        {/* Tabs: Catálogo / Mis Pedidos */}
-        <Box className="mb-6">
-          <Tabs
-            value={currentTab}
-            onChange={(e, newValue) => setCurrentTab(newValue)}
-            aria-label="Navegación principal"
-            className="border-b border-gray-200"
+          <div
+            className="mb-6 grid grid-cols-2 rounded-full bg-slate-100 p-1"
+            role="tablist"
+            aria-label="Navegación de almuerzos"
           >
-            <Tab label="🍽️ Catálogo" />
-            <Tab label="📋 Mis Pedidos" />
-          </Tabs>
-        </Box>
+            {[
+              { id: 0, label: "Catálogo" },
+              { id: 1, label: "Mis pedidos" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={currentTab === tab.id}
+                onClick={() => setCurrentTab(tab.id)}
+                className={`min-h-[44px] rounded-full px-4 text-sm font-extrabold transition-[background-color,color,box-shadow] ${
+                  currentTab === tab.id
+                    ? "bg-white text-slate-950 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Tab Panels */}
-        <div className="grid xl:grid-cols-3 gap-6 mb-8 min-w-0">
-          {/* Left Column: Catalog or Orders */}
-          <div className="xl:col-span-2 min-w-0">
-            {currentTab === 0 ? (
-              <div>
-                {/* Category Bar */}
-                <CategoryBar
-                  selectedCategory={selectedCategory}
-                  onCategoryChange={setSelectedCategory}
-                />
-
-                {/* Products Section */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Productos</h2>
-                    {isAdmin && (
-                      <Tooltip title="Agregar producto">
-                        <Fab
-                          color="primary"
-                          size="small"
-                          onClick={() => setModalOpen(true)}
-                          aria-label="Agregar producto"
-                        >
-                          <AddIcon />
-                        </Fab>
-                      </Tooltip>
-                    )}
-                  </div>
-
-                  <ProductGrid
-                    products={filteredProducts}
-                    loading={productsLoading}
-                    onAddToCart={handleAddToCart}
-                    onDeleteProduct={handleDeleteProduct}
-                    userRole={userRole}
+          {/* Tab Panels */}
+          <div
+            className={`grid min-w-0 gap-8 ${
+              currentTab === 0 && !isCartEmpty
+                ? "xl:grid-cols-[minmax(0,1fr)_380px]"
+                : "grid-cols-1"
+            }`}
+          >
+            {/* Left Column: Catalog or Orders */}
+            <div className="min-w-0">
+              {currentTab === 0 ? (
+                <div>
+                  {/* Category Bar */}
+                  <CategoryBar
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={setSelectedCategory}
                   />
 
-                  {productsError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-6">
-                      <p className="text-red-600 font-medium">Error al cargar productos</p>
+                  <div className="hide-scrollbar flex gap-2 overflow-x-auto border-b border-slate-100 py-4 [scrollbar-width:none]">
+                    {[
+                      { id: "", label: "Esta semana" },
+                      { id: "Sábado", label: "Sábado" },
+                      { id: "Domingo", label: "Domingo" },
+                    ].map((day) => (
+                      <button
+                        key={day.id}
+                        type="button"
+                        onClick={() => setSelectedDay(day.id)}
+                        aria-pressed={selectedDay === day.id}
+                        className={`whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold transition-colors ${
+                          selectedDay === day.id
+                            ? "bg-slate-950 text-white"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Products Section */}
+                  <div className="mt-6">
+                    <div className="mb-3 flex items-end justify-between gap-3">
+                      <div>
+                        <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                          {productSearch
+                            ? `Resultados para “${productSearch}”`
+                            : selectedCategory || "Para esta semana"}
+                        </h2>
+                        <p className="mt-0.5 text-sm text-slate-500">
+                          {filteredProducts.length} opción
+                          {filteredProducts.length !== 1 ? "es" : ""}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500 sm:hidden">
+                          {filteredProducts.length !== 1 ? " Deslizá →" : ""}
+                        </span>
+                        {isAdmin && (
+                          <Tooltip title="Agregar producto">
+                            <Fab
+                              size="small"
+                              onClick={() => setModalOpen(true)}
+                              aria-label="Agregar producto"
+                              sx={{
+                                bgcolor: "#ffffff",
+                                color: "black",
+                                "&:hover": { bgcolor: "#1e293b" },
+                              }}
+                            >
+                              <AddIcon />
+                            </Fab>
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
-                  )}
+
+                    <ProductGrid
+                      products={filteredProducts}
+                      loading={productsLoading}
+                      onAddToCart={handleAddToCart}
+                      onDeleteProduct={handleDeleteProduct}
+                      userRole={userRole}
+                    />
+
+                    {productsError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-6">
+                        <p className="text-red-600 font-medium">Error al cargar productos</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <OrdersHistory userId={userId} />
+              ) : (
+                <OrdersHistory userId={userId} />
+              )}
+            </div>
+
+            {/* Right Column: Cart Sidebar (Only on Catalog Tab) */}
+            {currentTab === 0 && !isCartEmpty && (
+              <aside className="min-w-0">
+                <CartSidebar
+                  cartArray={cartArray}
+                  totalPrice={totalPrice}
+                  onUpdateQuantity={updateQuantity}
+                  onRemove={removeItem}
+                  onCheckout={handleCheckout}
+                  onCheckoutSuccess={handleCheckoutSuccess}
+                  isCheckingOut={orderLoading}
+                />
+              </aside>
             )}
           </div>
 
-          {/* Right Column: Cart Sidebar (Only on Catalog Tab) */}
-          {currentTab === 0 && (
-            <div className="xl:col-span-1 min-w-0">
-              <CartSidebar
-                cartArray={cartArray}
-                totalPrice={totalPrice}
-                onUpdateQuantity={updateQuantity}
-                onRemove={removeItem}
-                onCheckout={handleCheckout}
-                isCheckingOut={orderLoading}
-              />
-            </div>
+          {/* Add Product Modal */}
+          {isAdmin && (
+            <AddLunchModal
+              open={modalOpen}
+              onClose={() => setModalOpen(false)}
+              title="Agregar Producto"
+              onSubmit={handleAddProduct}
+            />
           )}
-        </div>
 
-        {/* Add Product Modal */}
-        {isAdmin && (
-          <AddLunchModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            title="Agregar Producto"
-            onSubmit={handleAddProduct}
+          <Toast
+            open={toast.open}
+            message={toast.message}
+            severity={toast.severity}
+            toastKey={toast.key}
+            duration={toast.severity === "success" ? 2800 : 3600}
+            onClose={closeToast}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
           />
-        )}
 
-        <Toast
-          open={toast.open}
-          message={toast.message}
-          severity={toast.severity}
-          toastKey={toast.key}
-          duration={toast.severity === "success" ? 2800 : 3600}
-          onClose={closeToast}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        />
-
-        <Footer />
+          <div className="mt-16 pb-4 sm:mt-20">
+            <Footer links={[]} />
+          </div>
+        </main>
       </div>
     </DashboardLayout>
   );

@@ -47,7 +47,7 @@ function Footer({ company, links }) {
       width="100%"
       display="flex"
       flexDirection={{ xs: "column", lg: "row" }}
-      justifyContent="space-between"
+      justifyContent={links.length > 0 ? "space-between" : "center"}
       alignItems="center"
       px={1.5}
     >
@@ -78,25 +78,27 @@ function Footer({ company, links }) {
           <InstagramIcon fontSize="small" />
         </Link>
       </SoftBox>
-      <SoftBox
-        component="ul"
-        sx={({ breakpoints }) => ({
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "center",
-          listStyle: "none",
-          mt: 3,
-          mb: 0,
-          p: 0,
+      {links.length > 0 && (
+        <SoftBox
+          component="ul"
+          sx={({ breakpoints }) => ({
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "center",
+            listStyle: "none",
+            mt: 3,
+            mb: 0,
+            p: 0,
 
-          [breakpoints.up("lg")]: {
-            mt: 0,
-          },
-        })}
-      >
-        {renderLinks()}
-      </SoftBox>
+            [breakpoints.up("lg")]: {
+              mt: 0,
+            },
+          })}
+        >
+          {renderLinks()}
+        </SoftBox>
+      )}
     </SoftBox>
   );
 }

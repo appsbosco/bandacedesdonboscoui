@@ -9,21 +9,23 @@ import PropTypes from "prop-types";
 
 // Empty State Component
 const EmptyState = ({ message, icon = "🍽️" }) => (
-  <div className="col-span-full flex flex-col items-center justify-center py-20">
-    <div className="text-6xl mb-4">{icon}</div>
-    <p className="text-xl text-gray-500 font-medium">{message}</p>
+  <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl">
+      {icon}
+    </div>
+    <p className="text-base font-bold text-slate-700">{message}</p>
+    <p className="mt-1 text-sm text-slate-400">Probá con otra categoría.</p>
   </div>
 );
 
 // Loading Skeleton
 const ProductSkeleton = () => (
-  <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-    <Skeleton variant="rectangular" height={192} />
-    <div className="p-4 space-y-3">
+  <div className="w-[82%] max-w-[340px] shrink-0 snap-start sm:w-auto sm:max-w-none sm:min-w-0 sm:overflow-hidden sm:rounded-2xl">
+    <Skeleton variant="rectangular" className="aspect-[16/10] rounded-2xl" />
+    <div className="space-y-2 px-1 py-3 sm:p-3">
       <Skeleton variant="text" width="40%" />
       <Skeleton variant="text" width="90%" />
       <Skeleton variant="text" width="70%" />
-      <Skeleton variant="rectangular" height={40} className="rounded-full" />
     </div>
   </div>
 );
@@ -32,7 +34,7 @@ const ProductGrid = React.memo(({ products, loading, onAddToCart, onDeleteProduc
   // Loading state
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="hide-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 pr-16 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-3">
         {[...Array(8)].map((_, i) => (
           <ProductSkeleton key={i} />
         ))}
@@ -47,15 +49,19 @@ const ProductGrid = React.memo(({ products, loading, onAddToCart, onDeleteProduc
 
   // Products grid
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="hide-scrollbar -mx-4 flex snap-x snap-mandatory scroll-smooth scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 pr-16 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-3">
       {products.map((product) => (
-        <ProductCard
+        <div
           key={product.id}
-          product={product}
-          onAddToCart={onAddToCart}
-          onDelete={onDeleteProduct}
-          userRole={userRole}
-        />
+          className="w-[82%] max-w-[340px] shrink-0 snap-start sm:w-auto sm:max-w-none sm:min-w-0"
+        >
+          <ProductCard
+            product={product}
+            onAddToCart={onAddToCart}
+            onDelete={onDeleteProduct}
+            userRole={userRole}
+          />
+        </div>
       ))}
     </div>
   );

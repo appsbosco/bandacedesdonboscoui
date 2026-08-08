@@ -4,7 +4,7 @@
 
 import React from "react";
 import PropTypes from "prop-types";
-import { Drawer, IconButton, useMediaQuery, Chip } from "@mui/material";
+import { Drawer, IconButton, useMediaQuery } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
@@ -13,8 +13,9 @@ import QuantityStepper from "./QuantityStepper";
 // ---------------------------
 // Utils
 // ---------------------------
+const currencyFormatter = new Intl.NumberFormat("es-CR");
 const formatCurrencyCRC = (value) =>
-  `₡${new Intl.NumberFormat("es-CR").format(Number.isFinite(value) ? value : 0)}`;
+  `₡${currencyFormatter.format(Number.isFinite(value) ? value : 0)}`;
 
 const safeNumber = (v) => {
   const n = Number(v);
@@ -32,50 +33,26 @@ const CartOpenButton = React.memo(({ onClick, count, totalPrice, ariaLabel }) =>
       onClick={onClick}
       aria-label={ariaLabel}
       className="
-        fixed bottom-6 right-6 z-[1200]
-        flex items-center gap-3
-        bg-black text-white
-        rounded-full
-        pl-4 pr-3 py-3
-        shadow-2xl
-        hover:bg-gray-900
+        fixed bottom-4 left-4 right-4 z-[1200]
+        flex min-h-[56px] items-center justify-between gap-3
+        rounded-xl bg-slate-950 px-4 py-3 text-white
+        shadow-[0_12px_30px_rgba(15,23,42,0.28)]
+        hover:bg-slate-800
         active:scale-95
-        transition-all
-        ring-1 ring-black/10
+        transition-[background-color,transform]
+        xl:bottom-8 xl:left-auto xl:right-8 xl:min-w-[250px] xl:rounded-full
       "
       style={{
         paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
       }}
     >
-      {/* Icon bubble */}
-      <span className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10">
-        <ShoppingCartIcon style={{ fontSize: 22 }} />
-      </span>
-
-      {/* Text */}
-      <span className="flex flex-col leading-tight text-left">
-        <span className="text-sm font-semibold">Carrito</span>
-        {/* total (subtle, very Uber-like) */}
-        <span className="text-xs text-white/80 font-medium">{formatCurrencyCRC(safeTotal)}</span>
-      </span>
-
-      {/* Count badge */}
-      {count > 0 && (
-        <span
-          className="
-            ml-1
-            bg-white text-black
-            text-xs font-extrabold
-            rounded-full
-            min-w-[22px] h-[22px]
-            px-1
-            flex items-center justify-center
-          "
-          aria-label={`Productos en carrito: ${count}`}
-        >
-          {count}
+      <span className="flex items-center gap-2 text-left">
+        <ShoppingCartIcon style={{ fontSize: 21 }} />
+        <span className="text-sm font-extrabold">
+          Ver carrito{count > 0 ? ` · ${count}` : ""}
         </span>
-      )}
+      </span>
+      <span className="text-sm font-extrabold">{formatCurrencyCRC(safeTotal)}</span>
     </button>
   );
 });
@@ -92,14 +69,14 @@ const CartItem = React.memo(({ item, onUpdateQuantity, onRemove }) => {
   const subtotal = price * quantity;
 
   return (
-    <div className="flex gap-3 pb-4 mb-4 border-b border-gray-200">
+    <div className="grid grid-cols-[80px_minmax(0,1fr)_36px] gap-3 border-b border-slate-100 py-4 first:pt-0">
       {/* Product Image */}
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+      <div className="h-20 w-20 overflow-hidden rounded-xl bg-slate-100">
         {product?.photo ? (
           <img
             src={product.photo}
             alt={product.name || "Producto"}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-contain"
             loading="lazy"
           />
         ) : (
@@ -110,21 +87,21 @@ const CartItem = React.memo(({ item, onUpdateQuantity, onRemove }) => {
       </div>
 
       {/* Product Info */}
-      <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 text-sm line-clamp-1 mb-1">
+      <div className="min-w-0">
+        <h4 className="line-clamp-2 text-sm font-extrabold leading-tight text-slate-950">
           {product?.name || "Producto"}
         </h4>
 
-        <p className="text-xs text-gray-500 mb-2">{formatCurrencyCRC(price)}</p>
+        <p className="mb-2 mt-1 text-xs text-slate-500">{formatCurrencyCRC(price)} c/u</p>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <QuantityStepper
             value={quantity}
             onChange={(newQty) => onUpdateQuantity(product.id, newQty)}
             size="small"
           />
 
-          <p className="text-sm font-bold text-gray-900 whitespace-nowrap">
+          <p className="whitespace-nowrap text-sm font-extrabold text-slate-950">
             {formatCurrencyCRC(subtotal)}
           </p>
         </div>
@@ -136,8 +113,7 @@ const CartItem = React.memo(({ item, onUpdateQuantity, onRemove }) => {
         onClick={() => onRemove(product.id)}
         aria-label={`Eliminar ${product?.name || "producto"}`}
         sx={{
-          alignSelf: "flex-start",
-          mt: 0.25,
+          alignSelf: "start",
           color: "rgba(107,114,128,1)",
           "&:hover": { color: "#DC2626" },
         }}
@@ -167,31 +143,42 @@ const CartContent = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="relative px-4 py-4 sm:px-6 border-b border-gray-200">
-        <div className="flex items-center justify-center gap-2">
-          <ShoppingCartIcon className="text-gray-700" />
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Tu Orden</h2>
-        </div>
-
+      <div
+        className={`relative border-b border-slate-100 px-5 pb-5 sm:px-6 ${
+          onClose ? "pt-20" : "pt-6"
+        }`}
+      >
         {onClose && (
           <IconButton
             onClick={onClose}
             aria-label="Cerrar carrito"
             sx={{
               position: "absolute",
-              right: 8,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "rgba(17,24,39,1)",
+              left: 12,
+              top: 18,
+              color: "#0f172a",
+              width: 44,
+              height: 44,
             }}
           >
             <CloseIcon />
           </IconButton>
         )}
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
+            Tu pedido
+          </h2>
+          {!isEmpty && (
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+              {cartArray.length} producto{cartArray.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+
       </div>
 
       {/* Items */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+      <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-10">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
@@ -203,60 +190,60 @@ const CartContent = ({
             <p className="text-sm text-gray-400 mt-2">Añade productos para comenzar</p>
           </div>
         ) : (
-          <div className="space-y-0">
-            {cartArray.map((it, idx) => (
-              <CartItem
-                key={it?.product?.id ?? it?.product?.name ?? idx}
-                item={it}
-                onUpdateQuantity={onUpdateQuantity}
-                onRemove={onRemove}
-              />
-            ))}
+          <div>
+            <div>
+              {cartArray.map((it) => (
+                <CartItem
+                  key={it.product.id}
+                  item={it}
+                  onUpdateQuantity={onUpdateQuantity}
+                  onRemove={onRemove}
+                />
+              ))}
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="ml-auto mt-4 flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-5 text-sm font-extrabold text-slate-900 transition-colors hover:bg-slate-200"
+              >
+                <span className="text-xl" aria-hidden="true">
+                  +
+                </span>
+                Agregar productos
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Footer */}
       {!isEmpty && (
-        <div className="px-4 py-4 sm:px-6 border-t border-gray-200 bg-white">
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 space-y-4">
-            {/* Total */}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm sm:text-base font-semibold text-gray-700">Total</span>
-              <span className="text-xl sm:text-2xl font-extrabold text-gray-900 whitespace-nowrap">
-                {formatCurrencyCRC(safeNumber(totalPrice))}
-              </span>
-            </div>
-
-            {/* Checkout */}
-            <button
-              onClick={onCheckout}
-              disabled={isCheckingOut}
-              aria-label="Confirmar pedido"
-              className={`
-                w-full py-3 sm:py-4 rounded-full font-bold text-base transition-all duration-200
-                ${
-                  isCheckingOut
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-800 active:scale-95 shadow-lg"
-                }
-              `}
-            >
-              {isCheckingOut ? "Procesando..." : "Confirmar pedido"}
-            </button>
-
-            <div className="flex justify-center">
-              <Chip
-                label="Revisa tu orden antes de confirmar"
-                size="small"
-                sx={{
-                  bgcolor: "rgba(243,244,246,1)",
-                  color: "rgba(75,85,99,1)",
-                  fontWeight: 600,
-                }}
-              />
-            </div>
+        <div
+          className="shrink-0 border-t border-slate-100 bg-white px-5 pt-4 sm:px-6"
+          style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className="text-base font-bold text-slate-700">Subtotal</span>
+            <span className="whitespace-nowrap text-2xl font-black text-slate-950">
+              {formatCurrencyCRC(safeNumber(totalPrice))}
+            </span>
           </div>
+          <button
+            onClick={onCheckout}
+            disabled={isCheckingOut}
+            aria-label="Confirmar pedido"
+            className={`min-h-[54px] w-full rounded-xl text-base font-extrabold transition-[background-color,transform] ${
+              isCheckingOut
+                ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                : "bg-slate-950 text-white hover:bg-slate-800 active:scale-[0.98]"
+            }`}
+          >
+            {isCheckingOut ? "Procesando…" : "Confirmar pedido"}
+          </button>
+          <p className="mt-2 text-center text-xs text-slate-400">
+            Revisá cantidades y productos antes de confirmar.
+          </p>
         </div>
       )}
     </div>
@@ -272,21 +259,32 @@ const CartSidebar = ({
   onUpdateQuantity,
   onRemove,
   onCheckout,
+  onCheckoutSuccess,
   isCheckingOut,
 }) => {
-  // Tailwind lg breakpoint: 1024px (drawer on <=1023px)
-  const isDrawerMode = useMediaQuery("(max-width: 1023px)");
+  const isDrawerMode = useMediaQuery("(max-width: 1279px)");
 
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [desktopOpen, setDesktopOpen] = React.useState(true);
 
-  const openMobileDrawer = () => setMobileOpen(true);
-  const closeMobileDrawer = () => setMobileOpen(false);
+  const openMobileDrawer = React.useCallback(() => setMobileOpen(true), []);
+  const closeMobileDrawer = React.useCallback(() => setMobileOpen(false), []);
 
-  const openDesktop = () => setDesktopOpen(true);
-  const closeDesktop = () => setDesktopOpen(false);
+  const cartCount = Array.isArray(cartArray)
+    ? cartArray.reduce((total, item) => total + safeNumber(item.quantity), 0)
+    : 0;
 
-  const cartCount = Array.isArray(cartArray) ? cartArray.length : 0;
+  const submitOrder = React.useCallback(async () => {
+    const created = await onCheckout();
+    if (!created) return;
+
+    if (isDrawerMode) {
+      closeMobileDrawer();
+      window.setTimeout(onCheckoutSuccess, 240);
+      return;
+    }
+
+    onCheckoutSuccess();
+  }, [closeMobileDrawer, isDrawerMode, onCheckout, onCheckoutSuccess]);
 
   // ---------------------------
   // Mobile / Tablet: Drawer
@@ -294,31 +292,42 @@ const CartSidebar = ({
   if (isDrawerMode) {
     return (
       <>
-        {/* UberEats-like open button */}
-        <CartOpenButton
-          onClick={openMobileDrawer}
-          count={cartCount}
-          totalPrice={totalPrice}
-          ariaLabel="Abrir carrito"
-        />
+        {!mobileOpen && (
+          <CartOpenButton
+            onClick={openMobileDrawer}
+            count={cartCount}
+            totalPrice={totalPrice}
+            ariaLabel="Abrir carrito"
+          />
+        )}
 
         <Drawer
-          anchor="right"
+          anchor="bottom"
           open={mobileOpen}
           onClose={closeMobileDrawer}
-          ModalProps={{ keepMounted: true }}
+          sx={{
+            zIndex: 1400,
+            width: "100vw",
+            "& .MuiDrawer-paper": {
+              margin: 0,
+              width: "100vw",
+              backdropFilter: "none",
+            },
+          }}
+          ModalProps={{ keepMounted: false }}
           PaperProps={{
             sx: {
-              width: { xs: "92vw", sm: 420 },
+              width: "100%",
               maxWidth: "100vw",
-              height: { xs: "calc(100% - 24px)", sm: "100%" },
-              m: { xs: "12px", sm: 0 },
-              borderRadius: { xs: 3, sm: 0 },
+              height: "100dvh",
+              maxHeight: "100dvh",
+              margin: 0,
+              borderRadius: 0,
+              backgroundColor: "#fff",
               overflow: "hidden",
-              paddingBottom: "env(safe-area-inset-bottom)",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0px 20px 60px rgba(0,0,0,0.18), 0px 2px 10px rgba(0,0,0,0.08)",
+              boxShadow: "0 -16px 50px rgba(15,23,42,0.18)",
             },
           }}
         >
@@ -327,7 +336,7 @@ const CartSidebar = ({
             totalPrice={totalPrice}
             onUpdateQuantity={onUpdateQuantity}
             onRemove={onRemove}
-            onCheckout={onCheckout}
+            onCheckout={submitOrder}
             isCheckingOut={isCheckingOut}
             onClose={closeMobileDrawer}
           />
@@ -340,30 +349,16 @@ const CartSidebar = ({
   // Desktop: Sticky sidebar (collapsible)
   // ---------------------------
   return (
-    <>
-      {!desktopOpen && (
-        <CartOpenButton
-          onClick={openDesktop}
-          count={cartCount}
-          totalPrice={totalPrice}
-          ariaLabel="Abrir carrito"
-        />
-      )}
-
-      {desktopOpen && (
-        <div className="sticky top-4 h-[calc(100vh-2rem)] bg-white border border-gray-200 rounded-3xl shadow-xl overflow-hidden w-full lg:w-[360px] xl:w-[420px]">
-          <CartContent
-            cartArray={cartArray}
-            totalPrice={totalPrice}
-            onUpdateQuantity={onUpdateQuantity}
-            onRemove={onRemove}
-            onCheckout={onCheckout}
-            isCheckingOut={isCheckingOut}
-            onClose={closeDesktop}
-          />
-        </div>
-      )}
-    </>
+    <div className="sticky top-4 h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <CartContent
+        cartArray={cartArray}
+        totalPrice={totalPrice}
+        onUpdateQuantity={onUpdateQuantity}
+        onRemove={onRemove}
+        onCheckout={submitOrder}
+        isCheckingOut={isCheckingOut}
+      />
+    </div>
   );
 };
 
@@ -424,6 +419,7 @@ CartSidebar.propTypes = {
   onUpdateQuantity: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
   onCheckout: PropTypes.func.isRequired,
+  onCheckoutSuccess: PropTypes.func.isRequired,
   isCheckingOut: PropTypes.bool,
 };
 

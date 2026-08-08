@@ -15,6 +15,7 @@ import {
   REPORT_DAY_BREAKDOWN,
   REPORT_PRODUCT_RANGE,
   REPORT_DAILY_SUMMARY,
+  REPORT_PAYMENT_SUMMARY,
 } from "graphql/queries/orders";
 import { COMPLETE_ORDER_MUTATION, RECORD_PICKUP_MUTATION } from "graphql/mutations/orders";
 
@@ -23,6 +24,12 @@ import { COMPLETE_ORDER_MUTATION, RECORD_PICKUP_MUTATION } from "graphql/mutatio
 // ─────────────────────────────────────────────
 
 const crcNumberFormatter = new Intl.NumberFormat("es-CR");
+const costaRicaDateInputFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Costa_Rica",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 const formatCRC = (v) => `₡${crcNumberFormatter.format(Number.isFinite(v) ? v : 0)}`;
 
 function toDate(value) {
@@ -73,8 +80,6 @@ const calcTotal = (order) =>
 const calcItems = (order) =>
   (order?.products || []).reduce((a, p) => a + Number(p?.quantity ?? 0), 0);
 
-const DAY_ORDER = ["Sábado", "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-
 const normalizeText = (value) =>
   String(value || "")
     .normalize("NFD")
@@ -83,6 +88,57 @@ const normalizeText = (value) =>
     .toLowerCase();
 
 const productDay = (item) => item?.productId?.availableForDays?.trim() || "Sin día asignado";
+
+const WEEKDAY_INDEX = {
+  domingo: 0,
+  lunes: 1,
+  martes: 2,
+  miercoles: 3,
+  jueves: 4,
+  viernes: 5,
+  sabado: 6,
+};
+
+const serviceDateLabelFormatter = new Intl.DateTimeFormat("es-CR", {
+  timeZone: "America/Costa_Rica",
+  weekday: "long",
+  day: "numeric",
+  month: "short",
+});
+
+const serviceDateForItem = (item, order) => {
+  const savedDate = toDate(item?.fulfillmentDate);
+  if (savedDate) return costaRicaDateInputFormatter.format(savedDate);
+
+  const orderDate = toDate(order?.orderDate);
+  const targetDay = WEEKDAY_INDEX[normalizeText(productDay(item))];
+  if (!orderDate || targetDay === undefined) return null;
+
+  const localOrderDate = costaRicaDateInputFormatter.format(orderDate);
+  const inferredDate = new Date(`${localOrderDate}T12:00:00.000-06:00`);
+  inferredDate.setDate(inferredDate.getDate() + ((targetDay - inferredDate.getDay() + 7) % 7));
+  return costaRicaDateInputFormatter.format(inferredDate);
+};
+
+const weekRange = (referenceDate) => {
+  const base = new Date(`${referenceDate}T12:00:00.000-06:00`);
+  const daysSinceMonday = (base.getDay() + 6) % 7;
+  const start = new Date(base);
+  start.setDate(base.getDate() - daysSinceMonday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return {
+    start: costaRicaDateInputFormatter.format(start),
+    end: costaRicaDateInputFormatter.format(end),
+  };
+};
+
+const formatServiceDate = (value) => {
+  if (!value) return "Sin fecha";
+  const date = new Date(`${value}T12:00:00.000-06:00`);
+  const label = serviceDateLabelFormatter.format(date);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
 
 const isLunchProduct = (product) => {
   const category = normalizeText(product?.productId?.category);
@@ -121,13 +177,7 @@ const summarizeProducts = (orders, dayFilter = null) => {
 };
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function weekAgo() {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+  return costaRicaDateInputFormatter.format(new Date());
 }
 
 // ─────────────────────────────────────────────
@@ -181,18 +231,17 @@ const ItemStatusPill = ({ status }) => {
   );
 };
 
-const OrderStatusPill = ({ isCompleted }) => (
-  <span
-    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-      isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-    }`}
-  >
+const OrderStatusPill = ({ status }) => {
+  const itemStatus = ITEM_STATUS[status] || ITEM_STATUS.pending;
+  return (
     <span
-      className={`w-1.5 h-1.5 rounded-full ${isCompleted ? "bg-emerald-500" : "bg-amber-500"}`}
-    />
-    {isCompleted ? "Completada" : "Pendiente"}
-  </span>
-);
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${itemStatus.bg} ${itemStatus.text}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${itemStatus.dot}`} />
+      {itemStatus.label}
+    </span>
+  );
+};
 
 const FilterPill = ({ active, onClick, children }) => (
   <button
@@ -243,13 +292,147 @@ const Notice = ({ notice }) => {
   );
 };
 
+const PAYMENT_METHODS = [
+  { id: "sinpe", label: "SINPE", detail: "Transferencia móvil", icon: "📱" },
+  { id: "cash", label: "Efectivo", detail: "Pago en el momento", icon: "💵" },
+];
+
+const getOrderDayStatus = (order) => {
+  const total = calcItems(order);
+  const pickedUp = (order?.products || []).reduce(
+    (sum, item) => sum + Number(item?.quantityPickedUp || 0),
+    0
+  );
+  if (total > 0 && pickedUp >= total) return "completed";
+  if (pickedUp > 0) return "partial";
+  return "pending";
+};
+
+const summarizeOrderPayments = (order) =>
+  (order?.products || []).reduce(
+    (summary, item) => {
+      (item?.pickupRecords || []).forEach((record) => {
+        const method = record?.paymentMethod;
+        if (method !== "sinpe" && method !== "cash") return;
+        const unitPrice = Number(record?.unitPrice ?? item?.productId?.price ?? 0);
+        summary[method] += Number(record?.quantity || 0) * unitPrice;
+      });
+      return summary;
+    },
+    { sinpe: 0, cash: 0 }
+  );
+
+const PaymentSummaryBadges = ({ payments }) => {
+  const entries = [
+    { id: "sinpe", label: "SINPE", icon: "📱", amount: payments.sinpe },
+    { id: "cash", label: "Efectivo", icon: "💵", amount: payments.cash },
+  ].filter((entry) => entry.amount > 0);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5" aria-label="Pagos registrados">
+      {entries.map((entry) => (
+        <span
+          key={entry.id}
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700"
+        >
+          <span aria-hidden="true">{entry.icon}</span>
+          {entry.label} {formatCRC(entry.amount)}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const PaymentMethodPicker = ({ value, onChange, disabled = false }) => (
+  <div>
+    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+      ¿Cómo hizo el pago?
+    </p>
+    <div className="grid grid-cols-2 gap-2">
+      {PAYMENT_METHODS.map((method) => {
+        const selected = value === method.id;
+        return (
+          <button
+            key={method.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(method.id)}
+            aria-pressed={selected}
+            className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-all disabled:opacity-50 ${
+              selected
+                ? "border-rose-600 bg-rose-50 ring-2 ring-rose-100"
+                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <span className="text-xl" aria-hidden="true">
+              {method.icon}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-slate-900">{method.label}</span>
+              <span className="block truncate text-[11px] text-slate-500">{method.detail}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const CompleteDayModal = ({ order, lunchDay, displayDay, loading, onClose, onConfirm }) => {
+  const [paymentMethod, setPaymentMethod] = useState(null);
+
+  const handlePayment = (method) => {
+    setPaymentMethod(method);
+    onConfirm(method);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
+      style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="complete-day-title"
+    >
+      <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="border-b border-slate-100 px-6 pb-4 pt-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-rose-700">{displayDay}</p>
+          <h3 id="complete-day-title" className="mt-1 text-lg font-bold text-slate-900">
+            Completar retiro del día
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            {getFullName(order?.userId)} · Solo se completarán los productos de {displayDay}.
+          </p>
+        </div>
+        <div className="space-y-5 p-6">
+          <PaymentMethodPicker value={paymentMethod} onChange={handlePayment} disabled={loading} />
+          <p className="text-center text-xs text-slate-400">
+            {loading ? "Guardando el retiro…" : "Al elegir el método, se guarda de inmediato."}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─────────────────────────────────────────────
 // PickupModal
 // ─────────────────────────────────────────────
 
-const PickupModal = ({ order, onClose, onSuccess }) => {
+const PickupModal = ({ order, lunchDay, displayDay, onClose, onSuccess }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [qty, setQty] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState(null);
   const [notice, showNotice] = useNotice();
 
   const [recordPickup, { loading }] = useMutation(RECORD_PICKUP_MUTATION, {
@@ -274,6 +457,7 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
     if (!item) return showNotice("error", "Seleccioná un producto.");
     if (qty < 1 || qty > maxQty)
       return showNotice("error", `Cantidad debe ser entre 1 y ${maxQty}.`);
+    if (!paymentMethod) return showNotice("error", "Seleccioná SINPE o efectivo.");
 
     try {
       await recordPickup({
@@ -282,6 +466,8 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
           itemId: item.id,
           quantityPickedUp: Number(qty),
           pickedUpAt: new Date().toISOString(),
+          lunchDay,
+          paymentMethod,
         },
       });
       showNotice("success", "Retiro registrado.");
@@ -298,17 +484,25 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center p-4"
       style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pickup-modal-title"
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Registrar retiro</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{getFullName(order.userId)}</p>
+            <h3 id="pickup-modal-title" className="text-base font-bold text-slate-900">
+              Registrar retiro
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {getFullName(order.userId)} · {displayDay}
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Cerrar registro de retiro"
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
           >
             ✕
@@ -376,12 +570,14 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  aria-label="Disminuir cantidad"
                   onClick={() => setQty((v) => Math.max(1, v - 1))}
                   className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center transition-colors"
                 >
                   −
                 </button>
                 <input
+                  aria-label="Cantidad a retirar"
                   type="number"
                   min={1}
                   max={maxQty}
@@ -391,6 +587,7 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
                 />
                 <button
                   type="button"
+                  aria-label="Aumentar cantidad"
                   onClick={() => setQty((v) => Math.min(maxQty, v + 1))}
                   className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center transition-colors"
                 >
@@ -401,11 +598,19 @@ const PickupModal = ({ order, onClose, onSuccess }) => {
             </div>
           )}
 
+          {selectedItem && (
+            <PaymentMethodPicker
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              disabled={loading}
+            />
+          )}
+
           {/* CTA */}
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading || !selectedItem || pendingItems.length === 0}
+            disabled={loading || !selectedItem || !paymentMethod || pendingItems.length === 0}
             className="w-full py-3 rounded-2xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-rose-700 hover:bg-rose-800 active:scale-[0.98] text-white shadow-sm"
           >
             {loading ? "Registrando…" : "Confirmar retiro"}
@@ -431,6 +636,7 @@ const ProductsDetail = ({ order }) => {
         const qty = Number(p?.quantity ?? 0);
         const qpu = Number(p?.quantityPickedUp ?? 0);
         const price = Number(p?.productId?.price ?? 0);
+        const itemPayments = summarizeOrderPayments({ products: [p] });
         return (
           <div key={p?.id || idx} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
             <div className="flex items-center justify-between mb-2">
@@ -451,9 +657,10 @@ const ProductsDetail = ({ order }) => {
             </div>
             <ProgressBar value={qpu} max={qty} />
             {p?.pickedUpAt && (
-              <p className="text-xs text-slate-400 mt-1.5">
-                Último retiro: {fmtDateTime(p.pickedUpAt)}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>Último retiro: {fmtDateTime(p.pickedUpAt)}</span>
+                <PaymentSummaryBadges payments={itemPayments} />
+              </div>
             )}
           </div>
         );
@@ -467,26 +674,26 @@ const DayPreparationSummary = ({ group }) => {
   const extraUnits = group.summary.extras.reduce((total, product) => total + product.quantity, 0);
 
   return (
-    <div className="mx-5 mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+    <div className="mx-4 mb-3 rounded-2xl bg-slate-50 px-3 py-3 sm:mx-5 sm:mb-4 sm:border sm:border-slate-200 sm:px-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
         <div className="grid grid-cols-3 divide-x divide-slate-200 shrink-0">
           {[
             ["Pedidos", group.orders.length],
             ["Almuerzos", lunchUnits],
             ["Extras", extraUnits],
           ].map(([name, value]) => (
-            <div key={name} className="px-3 sm:px-5 text-center first:pl-0">
-              <p className="text-lg font-extrabold text-slate-900">{value}</p>
-              <p className="text-xs font-semibold text-slate-500">{name}</p>
+            <div key={name} className="px-2 text-center sm:px-5 sm:first:pl-0">
+              <p className="text-base font-extrabold text-slate-900 sm:text-lg">{value}</p>
+              <p className="text-[11px] font-semibold text-slate-500 sm:text-xs">{name}</p>
             </div>
           ))}
         </div>
         <div className="hidden lg:block h-10 w-px bg-slate-200" />
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
+        <div className="hide-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none] lg:flex-wrap lg:overflow-visible">
           {[...group.summary.lunches, ...group.summary.extras].map((product) => (
             <div
               key={product.id}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5"
             >
               <span className="text-sm font-semibold text-slate-700">{product.name}</span>
               <span className="text-sm font-extrabold text-slate-900">{product.quantity}</span>
@@ -503,24 +710,23 @@ const DayPreparationSummary = ({ group }) => {
 // ─────────────────────────────────────────────
 
 const ReportsPanel = () => {
-  const [tab, setTab] = useState("daily");
-  const [startDate, setStartDate] = useState(() => weekAgo());
+  const [tab, setTab] = useState("payments");
+  const [startDate, setStartDate] = useState(() => today());
   const [endDate, setEndDate] = useState(() => today());
   const [rangeError, setRangeError] = useState(null);
 
   const vars = { startDate, endDate };
 
-  const [fetchDaily, { data: dailyData, loading: loadDaily }] = useLazyQuery(REPORT_DAILY_SUMMARY, {
-    fetchPolicy: "network-only",
-  });
-  const [fetchProduct, { data: productData, loading: loadProduct }] = useLazyQuery(
-    REPORT_PRODUCT_RANGE,
+  const [fetchDaily, { data: dailyData, loading: loadDaily, error: dailyError }] = useLazyQuery(
+    REPORT_DAILY_SUMMARY,
     { fetchPolicy: "network-only" }
   );
-  const [fetchBreakdown, { data: breakdownData, loading: loadBreakdown }] = useLazyQuery(
-    REPORT_DAY_BREAKDOWN,
-    { fetchPolicy: "network-only" }
-  );
+  const [fetchProduct, { data: productData, loading: loadProduct, error: productError }] =
+    useLazyQuery(REPORT_PRODUCT_RANGE, { fetchPolicy: "network-only" });
+  const [fetchBreakdown, { data: breakdownData, loading: loadBreakdown, error: breakdownError }] =
+    useLazyQuery(REPORT_DAY_BREAKDOWN, { fetchPolicy: "network-only" });
+  const [fetchPayments, { data: paymentData, loading: loadPayments, error: paymentError }] =
+    useLazyQuery(REPORT_PAYMENT_SUMMARY, { fetchPolicy: "network-only" });
 
   const validate = () => {
     if (!startDate || !endDate) return "Ingresá ambas fechas.";
@@ -535,6 +741,7 @@ const ReportsPanel = () => {
       return;
     }
     setRangeError(null);
+    if (tab === "payments") fetchPayments({ variables: vars });
     if (tab === "daily") fetchDaily({ variables: vars });
     if (tab === "product") fetchProduct({ variables: vars });
     if (tab === "breakdown") fetchBreakdown({ variables: vars });
@@ -543,16 +750,20 @@ const ReportsPanel = () => {
   const daily = dailyData?.reportDailySummary || [];
   const products = productData?.reportProductRange || [];
   const breakdown = breakdownData?.reportDayBreakdown || [];
+  const paymentReport = paymentData?.reportPaymentSummary;
 
-  const isLoading = loadDaily || loadProduct || loadBreakdown;
+  const isLoading = loadDaily || loadProduct || loadBreakdown || loadPayments;
+  const reportError = paymentError || dailyError || productError || breakdownError;
 
   return (
     <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <div>
-          <h2 className="text-base font-bold text-slate-900">Reportes de preparación</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Cuánto preparar por día y por producto</p>
+          <h2 className="text-base font-bold text-slate-900">Reportes de almuerzos</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Cierre de ingresos y control de preparación
+          </p>
         </div>
       </div>
 
@@ -561,8 +772,11 @@ const ReportsPanel = () => {
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
           <div className="flex gap-2 flex-1 flex-wrap">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-500">Desde</label>
+              <label htmlFor="report-start-date" className="text-xs font-semibold text-slate-500">
+                Desde
+              </label>
               <input
+                id="report-start-date"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -570,14 +784,28 @@ const ReportsPanel = () => {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-500">Hasta</label>
+              <label htmlFor="report-end-date" className="text-xs font-semibold text-slate-500">
+                Hasta
+              </label>
               <input
+                id="report-end-date"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-200"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                const currentDay = today();
+                setStartDate(currentDay);
+                setEndDate(currentDay);
+              }}
+              className="self-end rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100"
+            >
+              Hoy
+            </button>
           </div>
           <button
             type="button"
@@ -594,6 +822,7 @@ const ReportsPanel = () => {
       {/* Tabs */}
       <div className="flex border-b border-slate-100">
         {[
+          { id: "payments", label: "Ingresos" },
           { id: "daily", label: "Por día" },
           { id: "product", label: "Por producto" },
           { id: "breakdown", label: "Desglose" },
@@ -622,8 +851,150 @@ const ReportsPanel = () => {
           </div>
         )}
 
+        {!isLoading && reportError && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-bold text-red-700">No se pudo generar el reporte</p>
+            <p className="mt-1 text-xs text-red-600">{reportError.message}</p>
+          </div>
+        )}
+
+        {/* Payment Summary */}
+        {!isLoading &&
+          !reportError &&
+          tab === "payments" &&
+          (!paymentReport ? (
+            <p className="py-8 text-center text-sm text-slate-400">
+              Elegí el día o rango y generá el cierre de ingresos.
+            </p>
+          ) : paymentReport.totalAmount === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-base font-bold text-slate-700">No hay pagos registrados</p>
+              <p className="mt-1 text-sm text-slate-400">
+                No se encontraron retiros cobrados en este período.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  {
+                    label: "Total ingresado",
+                    value: paymentReport.totalAmount,
+                    detail: `${paymentReport.totalUnits} unidades cobradas`,
+                    tone: "bg-slate-900 text-white",
+                  },
+                  {
+                    label: "SINPE",
+                    value: paymentReport.sinpeAmount,
+                    detail: "Transferencias recibidas",
+                    tone: "border border-blue-200 bg-blue-50 text-blue-950",
+                  },
+                  {
+                    label: "Efectivo",
+                    value: paymentReport.cashAmount,
+                    detail: "Dinero en caja",
+                    tone: "border border-emerald-200 bg-emerald-50 text-emerald-950",
+                  },
+                ].map((summary) => (
+                  <div key={summary.label} className={`rounded-2xl p-4 ${summary.tone}`}>
+                    <p className="text-xs font-bold uppercase tracking-wide opacity-70">
+                      {summary.label}
+                    </p>
+                    <p className="mt-1 text-2xl font-extrabold tracking-tight">
+                      {formatCRC(summary.value)}
+                    </p>
+                    <p className="mt-1 text-xs opacity-65">{summary.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Ingresos por producto</h3>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Unidades retiradas y forma de pago
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {paymentReport.byProduct.length} productos
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        {["Producto", "Unidades", "SINPE", "Efectivo", "Total"].map((header) => (
+                          <th
+                            key={header}
+                            className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500"
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {paymentReport.byProduct.map((product) => (
+                        <tr key={product.productId} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-sm font-bold text-slate-800">
+                            {product.name}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{product.units}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-blue-700">
+                            {formatCRC(product.sinpeAmount)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-emerald-700">
+                            {formatCRC(product.cashAmount)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-extrabold text-slate-900">
+                            {formatCRC(product.totalAmount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {paymentReport.byDay.length > 1 && (
+                <div>
+                  <h3 className="mb-3 text-sm font-bold text-slate-900">Cierre por día</h3>
+                  <div className="space-y-2">
+                    {paymentReport.byDay.map((day) => (
+                      <div
+                        key={day.date}
+                        className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 px-4 py-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-6"
+                      >
+                        <p className="col-span-2 text-sm font-bold text-slate-800 sm:col-span-1">
+                          {day.date}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          SINPE{" "}
+                          <strong className="block text-sm text-blue-700">
+                            {formatCRC(day.sinpeAmount)}
+                          </strong>
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Efectivo{" "}
+                          <strong className="block text-sm text-emerald-700">
+                            {formatCRC(day.cashAmount)}
+                          </strong>
+                        </p>
+                        <p className="col-span-2 text-right text-sm font-extrabold text-slate-900 sm:col-span-1">
+                          {formatCRC(day.totalAmount)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
         {/* Daily Summary */}
         {!isLoading &&
+          !reportError &&
           tab === "daily" &&
           (daily.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-8">
@@ -681,6 +1052,7 @@ const ReportsPanel = () => {
 
         {/* Product Range */}
         {!isLoading &&
+          !reportError &&
           tab === "product" &&
           (products.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-8">
@@ -725,6 +1097,7 @@ const ReportsPanel = () => {
 
         {/* Day Breakdown */}
         {!isLoading &&
+          !reportError &&
           tab === "breakdown" &&
           (breakdown.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-8">
@@ -773,6 +1146,114 @@ const ReportsPanel = () => {
   );
 };
 
+const OrderMobileCard = ({ order, isOpen, isBusy, onToggle, onPickup, onComplete }) => {
+  const pickedUp = (order.products || []).reduce(
+    (sum, item) => sum + Number(item.quantityPickedUp || 0),
+    0
+  );
+  const status = getOrderDayStatus(order);
+  const hasPending = status !== "completed";
+  const payments = summarizeOrderPayments(order);
+
+  return (
+    <article
+      className={`mx-4 overflow-hidden rounded-2xl border bg-white shadow-sm ${
+        status === "completed" ? "border-emerald-200" : "border-slate-200"
+      }`}
+    >
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-extrabold text-slate-900">{order.__name}</h3>
+            <p className="mt-0.5 text-xs text-slate-400">
+              #{String(order.id).slice(0, 8)} · {fmtDateTime(order.orderDate)}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <OrderStatusPill status={status} />
+            <p className="mt-2 text-lg font-extrabold text-slate-950">{formatCRC(order.__total)}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(order.products || []).map((item) => (
+            <span
+              key={item.id}
+              className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700"
+            >
+              {item.quantity}× {item.productId?.name || "Producto"}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-600">
+              {status === "completed"
+                ? "Retiro completo"
+                : `${pickedUp} de ${order.__items} retiradas`}
+            </span>
+            {status !== "completed" && (
+              <span className="font-bold text-rose-700">{order.__items - pickedUp} pendientes</span>
+            )}
+          </div>
+          <ProgressBar
+            value={pickedUp}
+            max={order.__items}
+            color={status === "completed" ? "bg-emerald-500" : "bg-rose-600"}
+          />
+        </div>
+
+        {(payments.sinpe > 0 || payments.cash > 0) && (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Pago registrado
+            </span>
+            <PaymentSummaryBadges payments={payments} />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/70 p-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 ${
+            !hasPending ? "col-span-2" : ""
+          }`}
+        >
+          {isOpen ? "Ocultar detalle" : "Ver detalle"}
+        </button>
+        {hasPending && (
+          <button
+            type="button"
+            onClick={onPickup}
+            className="min-h-[44px] rounded-xl bg-slate-800 px-3 text-sm font-bold text-white transition-colors hover:bg-slate-900"
+          >
+            Retiro parcial
+          </button>
+        )}
+        {hasPending && (
+          <button
+            type="button"
+            onClick={onComplete}
+            disabled={isBusy}
+            className="col-span-2 min-h-[46px] rounded-xl bg-rose-700 px-4 text-sm font-extrabold text-white transition-colors hover:bg-rose-800 disabled:opacity-50"
+          >
+            {isBusy ? "Guardando…" : `Completar las ${order.__items - pickedUp} pendientes`}
+          </button>
+        )}
+      </div>
+
+      {isOpen && (
+        <div className="border-t border-slate-100 bg-white p-4">
+          <ProductsDetail order={order} />
+        </div>
+      )}
+    </article>
+  );
+};
+
 // ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
@@ -785,11 +1266,13 @@ const ListaAlmuerzos = () => {
 
   const [expandedId, setExpandedId] = useState(null);
   const [pickupOrderId, setPickupOrderId] = useState(null);
+  const [completeOrderId, setCompleteOrderId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("orders"); // orders | reports
   const [selectedLunchDay, setSelectedLunchDay] = useState("");
+  const [weekReferenceDate, setWeekReferenceDate] = useState(() => today());
   const debouncedSearch = useDebounced(search, 180);
   const [notice, showNotice] = useNotice();
   const [completingId, setCompletingId] = useState(null);
@@ -799,7 +1282,7 @@ const ListaAlmuerzos = () => {
       cache.modify({
         id: cache.identify({ __typename: "Order", id: completed.id }),
         fields: {
-          isCompleted: () => true,
+          isCompleted: () => completed.isCompleted,
           products: () => completed.products,
         },
       });
@@ -822,10 +1305,6 @@ const ListaAlmuerzos = () => {
 
   const orders = useMemo(() => {
     let list = enriched;
-    if (filterStatus === "completed") list = list.filter((o) => o.isCompleted);
-    if (filterStatus === "pending") list = list.filter((o) => !o.isCompleted);
-    if (filterStatus === "partial")
-      list = list.filter((o) => !o.isCompleted && o.products?.some((p) => p.status === "partial"));
 
     const q = debouncedSearch.trim().toLowerCase();
     if (q) {
@@ -844,15 +1323,20 @@ const ListaAlmuerzos = () => {
       if (sortBy === "total_asc") return a.__total - b.__total;
       return 0;
     });
-  }, [enriched, filterStatus, sortBy, debouncedSearch]);
+  }, [enriched, sortBy, debouncedSearch]);
 
   const preparationGroups = useMemo(() => {
     const groups = new Map();
+    const range = weekRange(weekReferenceDate);
     orders.forEach((order) => {
       (order.products || []).forEach((item) => {
-        const day = productDay(item);
-        if (!groups.has(day)) groups.set(day, new Map());
-        groups.get(day).set(order.id, order);
+        const serviceDate = serviceDateForItem(item, order);
+        if (!serviceDate || serviceDate < range.start || serviceDate > range.end) return;
+        if (!groups.has(serviceDate)) groups.set(serviceDate, new Map());
+        const dayOrders = groups.get(serviceDate);
+        const groupedOrder = dayOrders.get(order.id) || { ...order, products: [] };
+        groupedOrder.products.push(item);
+        dayOrders.set(order.id, groupedOrder);
       });
     });
 
@@ -862,57 +1346,71 @@ const ListaAlmuerzos = () => {
         return {
           key,
           orders: dayOrders,
-          summary: summarizeProducts(dayOrders, key),
+          summary: summarizeProducts(dayOrders),
         };
       })
-      .sort((a, b) => {
-        const aIndex = DAY_ORDER.indexOf(a.key);
-        const bIndex = DAY_ORDER.indexOf(b.key);
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
-  }, [orders]);
+      .sort((a, b) => a.key.localeCompare(b.key));
+  }, [orders, weekReferenceDate]);
 
   const activeLunchDay =
     preparationGroups.some((group) => group.key === selectedLunchDay) && selectedLunchDay
       ? selectedLunchDay
       : preparationGroups[0]?.key || "";
   const selectedPreparationGroup = preparationGroups.find((group) => group.key === activeLunchDay);
+  const activeLunchDayName = selectedPreparationGroup?.orders?.[0]?.products?.[0]
+    ? productDay(selectedPreparationGroup.orders[0].products[0])
+    : "";
+  const activeLunchDayLabel = activeLunchDay ? formatServiceDate(activeLunchDay) : "esta semana";
   const lunchDayOrders = (selectedPreparationGroup?.orders || []).map((order) => {
-    const dayProducts = (order.products || []).filter(
-      (item) => productDay(item) === activeLunchDay
-    );
-    const dayOrder = { ...order, products: dayProducts };
-    return { ...dayOrder, __items: calcItems(dayOrder), __total: calcTotal(dayOrder) };
+    const dayOrder = order;
+    return {
+      ...dayOrder,
+      isCompleted:
+        dayOrder.products.length > 0 &&
+        dayOrder.products.every((item) => item.status === "completed"),
+      __items: calcItems(dayOrder),
+      __total: calcTotal(dayOrder),
+    };
+  });
+  const visibleLunchDayOrders = lunchDayOrders.filter((order) => {
+    if (filterStatus === "all") return true;
+    return getOrderDayStatus(order) === filterStatus;
   });
 
   const stats = useMemo(() => {
-    const total = ordersRaw.length;
-    const completed = ordersRaw.filter((o) => o.isCompleted).length;
-    const partial = ordersRaw.filter(
-      (o) => !o.isCompleted && o.products?.some((p) => p.status === "partial")
+    const weekOrderMap = new Map();
+    preparationGroups.forEach((group) => {
+      group.orders.forEach((order) => {
+        const current = weekOrderMap.get(order.id) || { ...order, products: [] };
+        current.products.push(...order.products);
+        weekOrderMap.set(order.id, current);
+      });
+    });
+    const weekOrders = [...weekOrderMap.values()];
+    const total = weekOrders.length;
+    const completed = weekOrders.filter(
+      (order) =>
+        order.products.length > 0 && order.products.every((item) => item.status === "completed")
     ).length;
+    const partial = weekOrders.filter((order) => getOrderDayStatus(order) === "partial").length;
     const pending = total - completed;
-    const amount = ordersRaw.reduce((a, o) => a + calcTotal(o), 0);
+    const amount = weekOrders.reduce((sum, order) => sum + calcTotal(order), 0);
     return { total, completed, partial, pending, amount };
-  }, [ordersRaw]);
+  }, [preparationGroups]);
 
   const toggleExpand = useCallback((id) => {
     setExpandedId((p) => (p === id ? null : id));
   }, []);
 
   const onComplete = useCallback(
-    async (orderId) => {
+    async (orderId, paymentMethod) => {
       try {
         setCompletingId(orderId);
         await completeOrder({
-          variables: { orderId },
-          optimisticResponse: {
-            completeOrder: { __typename: "Order", id: orderId, isCompleted: true, products: [] },
-          },
+          variables: { orderId, lunchDay: activeLunchDayName, paymentMethod },
         });
-        showNotice("success", "Orden marcada como completada.");
+        setCompleteOrderId(null);
+        showNotice("success", `Retiro de ${activeLunchDayLabel} completado.`);
       } catch (e) {
         console.error(e);
         showNotice("error", "No se pudo completar la orden.");
@@ -920,10 +1418,15 @@ const ListaAlmuerzos = () => {
         setCompletingId(null);
       }
     },
-    [completeOrder, showNotice]
+    [activeLunchDayLabel, activeLunchDayName, completeOrder, showNotice]
   );
 
-  const pickupOrder = pickupOrderId ? ordersRaw.find((o) => o.id === pickupOrderId) : null;
+  const pickupOrder = pickupOrderId
+    ? lunchDayOrders.find((order) => order.id === pickupOrderId)
+    : null;
+  const completionOrder = completeOrderId
+    ? lunchDayOrders.find((order) => order.id === completeOrderId)
+    : null;
 
   return (
     <DashboardLayout>
@@ -933,22 +1436,35 @@ const ListaAlmuerzos = () => {
       {pickupOrder && (
         <PickupModal
           order={pickupOrder}
+          lunchDay={activeLunchDayName}
+          displayDay={activeLunchDayLabel}
           onClose={() => setPickupOrderId(null)}
           onSuccess={() => showNotice("success", "Retiro registrado correctamente.")}
         />
       )}
 
-      <div className="page-content space-y-6">
+      {completionOrder && (
+        <CompleteDayModal
+          order={completionOrder}
+          lunchDay={activeLunchDayName}
+          displayDay={activeLunchDayLabel}
+          loading={completingId === completionOrder.id}
+          onClose={() => setCompleteOrderId(null)}
+          onConfirm={(paymentMethod) => onComplete(completionOrder.id, paymentMethod)}
+        />
+      )}
+
+      <div className="page-content space-y-4 sm:space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 ">
-          <div className="p-4 mt-1">
+        <div className="flex items-center justify-between gap-3 pt-2 sm:items-end">
+          <div className="px-1 py-2 sm:mt-1 sm:p-4">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Pedidos</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block">
               Gestioná retiros parciales y consultá reportes de preparación.
             </p>
           </div>
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start sm:self-auto">
+          <div className="flex shrink-0 items-center gap-1 self-start rounded-full bg-slate-100 p-1 sm:self-auto sm:rounded-2xl">
             {[
               { id: "orders", label: "Historial" },
               { id: "reports", label: "Reportes" },
@@ -957,7 +1473,7 @@ const ListaAlmuerzos = () => {
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                className={`rounded-full px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] sm:rounded-xl sm:px-4 sm:text-sm ${
                   activeTab === t.id
                     ? "bg-white shadow-sm text-slate-900"
                     : "text-slate-500 hover:text-slate-700"
@@ -971,7 +1487,23 @@ const ListaAlmuerzos = () => {
 
         {/* Stats */}
         {activeTab === "orders" && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <>
+            <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-slate-200 bg-white md:hidden">
+              {[
+                { label: "Pedidos", value: stats.total },
+                { label: "Pendientes", value: stats.pending },
+                { label: "Total", value: formatCRC(stats.amount) },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="min-w-0 border-r border-slate-100 px-2 py-3 text-center last:border-r-0"
+                >
+                  <p className="truncate text-base font-extrabold text-slate-950">{stat.value}</p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="hidden grid-cols-2 gap-4 md:grid lg:grid-cols-4">
             {[
               { label: "Total pedidos", value: stats.total, sub: "Todos los estados" },
               { label: "Monto total", value: formatCRC(stats.amount), sub: "Suma de órdenes" },
@@ -994,7 +1526,8 @@ const ListaAlmuerzos = () => {
                 <p className="text-xs text-slate-400 mt-1">{s.sub}</p>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
 
         {/* Reports Tab */}
@@ -1002,34 +1535,25 @@ const ListaAlmuerzos = () => {
 
         {/* Orders Tab */}
         {activeTab === "orders" && (
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
+          <div className="overflow-hidden border-y border-slate-200 bg-white sm:rounded-3xl sm:border">
             {/* Sticky controls */}
             <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-100">
-              <div className="px-5 py-4 space-y-3">
+              <div className="space-y-3 px-4 py-3 sm:px-5 sm:py-4">
                 <Notice notice={notice} />
 
-                <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
-                  <div className="relative w-full md:w-96">
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Buscar por nombre o ID…"
-                      className="w-full border border-slate-200 rounded-full pl-4 pr-24 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white"
-                    />
-                    {search && (
-                      <button
-                        onClick={() => setSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded-full hover:bg-slate-100"
-                      >
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">
+                    <span className="font-bold text-slate-900">
+                      {visibleLunchDayOrders.length}
+                    </span>{" "}
+                    pedidos
+                  </p>
+                  <div className="hidden items-center gap-2 sm:flex">
                     <span className="text-xs text-slate-500 font-semibold whitespace-nowrap">
                       Orden:
                     </span>
                     <select
+                      aria-label="Ordenar pedidos"
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
                       className="border border-slate-200 rounded-full px-4 py-2 text-sm bg-white focus:outline-none"
@@ -1040,12 +1564,27 @@ const ListaAlmuerzos = () => {
                       <option value="total_asc">Total: menor → mayor</option>
                     </select>
                   </div>
+                  <details className="relative sm:hidden">
+                    <summary className="cursor-pointer list-none rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+                      Ordenar
+                    </summary>
+                    <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                      <select
+                        aria-label="Ordenar pedidos"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm focus:outline-none"
+                      >
+                        <option value="newest">Más recientes</option>
+                        <option value="oldest">Más antiguos</option>
+                        <option value="total_desc">Mayor total</option>
+                        <option value="total_asc">Menor total</option>
+                      </select>
+                    </div>
+                  </details>
                 </div>
 
                 <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-                  <span className="text-xs text-slate-500 font-semibold mr-1 whitespace-nowrap">
-                    Filtro:
-                  </span>
                   {[
                     { id: "all", label: "Todos" },
                     { id: "pending", label: "Pendientes" },
@@ -1075,26 +1614,15 @@ const ListaAlmuerzos = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-0.5">
-                  <p className="text-xs text-slate-400">
-                    <span className="font-semibold text-slate-700">{orders.length}</span> resultados
-                  </p>
-                </div>
               </div>
             </div>
 
             {!loading && !error && orders.length > 0 && (
               <div className="border-b border-slate-200 bg-white">
                 <div
-                  className="px-5 py-4"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
-                    alignItems: "end",
-                    gap: "16px",
-                  }}
+                  className="grid grid-cols-2 items-end gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(220px,1fr)_minmax(200px,0.8fr)_minmax(220px,0.9fr)] lg:gap-4"
                 >
-                  <div style={{ minWidth: 0 }}>
+                  <div className="hidden min-w-0 lg:block">
                     <p className="text-base font-bold text-slate-900 whitespace-nowrap">
                       Resumen para preparar
                     </p>
@@ -1102,12 +1630,30 @@ const ListaAlmuerzos = () => {
                       Elegí el día del almuerzo para filtrar el listado.
                     </p>
                   </div>
-                  <div style={{ width: "100%", maxWidth: "320px", justifySelf: "end" }}>
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="lunch-week-filter"
+                      className="mb-1.5 block truncate text-[11px] font-bold text-slate-600 sm:text-xs"
+                    >
+                      Semana
+                    </label>
+                    <input
+                      id="lunch-week-filter"
+                      type="date"
+                      value={weekReferenceDate}
+                      onChange={(event) => {
+                        setWeekReferenceDate(event.target.value);
+                        setSelectedLunchDay("");
+                      }}
+                      className="block h-11 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    />
+                  </div>
+                  <div className="min-w-0">
                     <label
                       htmlFor="lunch-day-filter"
-                      className="block text-xs font-bold text-slate-600 mb-1.5"
+                      className="mb-1.5 block truncate text-[11px] font-bold text-slate-600 sm:text-xs"
                     >
-                      Día del almuerzo
+                      Entrega
                     </label>
                     <div className="relative">
                       <select
@@ -1130,7 +1676,7 @@ const ListaAlmuerzos = () => {
                       >
                         {preparationGroups.map((group) => (
                           <option key={group.key} value={group.key}>
-                            {group.key}
+                            {formatServiceDate(group.key)}
                           </option>
                         ))}
                       </select>
@@ -1148,6 +1694,39 @@ const ListaAlmuerzos = () => {
                 {selectedPreparationGroup && (
                   <DayPreparationSummary group={selectedPreparationGroup} />
                 )}
+
+                <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
+                  <label
+                    htmlFor="order-person-search"
+                    className="mb-1.5 block text-xs font-bold text-slate-600"
+                  >
+                    Buscar persona
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="order-person-search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Nombre, apellido o ID…"
+                      className="block h-11 w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-20 text-sm font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    >
+                      ⌕
+                    </span>
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1169,99 +1748,40 @@ const ListaAlmuerzos = () => {
             )}
 
             {/* Empty */}
-            {!loading && !error && orders.length === 0 && (
+            {!loading && !error && visibleLunchDayOrders.length === 0 && (
               <div className="py-16 text-center">
                 <p className="text-4xl mb-3">📋</p>
                 <p className="text-base font-semibold text-slate-600">Sin resultados</p>
-                <p className="text-sm text-slate-400 mt-1">Cambiá el filtro o la búsqueda.</p>
+                <p className="text-sm text-slate-400 mt-1">
+                  No hay pedidos de {activeLunchDayLabel || "esta semana"} con estos filtros.
+                </p>
               </div>
             )}
 
             {/* MOBILE CARDS */}
-            {!loading && !error && orders.length > 0 && (
+            {!loading && !error && visibleLunchDayOrders.length > 0 && (
               <div className="md:hidden py-4 space-y-3">
-                {lunchDayOrders.map((order) => {
+                {visibleLunchDayOrders.map((order) => {
                   const isOpen = expandedId === order.id;
                   const isBusy = completingId === order.id;
-                  const hasPending = order.products?.some((p) => p.status !== "completed");
 
                   return (
-                    <div
+                    <OrderMobileCard
                       key={order.id}
-                      className="mx-4 border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-900">{order.__name}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            #{String(order.id).slice(0, 8)}
-                          </p>
-                          <p className="text-xs text-slate-400">{fmtDateTime(order.orderDate)}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <OrderStatusPill isCompleted={order.isCompleted} />
-                          <p className="text-sm font-extrabold text-slate-900">
-                            {formatCRC(order.__total)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Progress summary */}
-                      {!order.isCompleted && (
-                        <div className="mb-3">
-                          <ProgressBar
-                            value={order.products?.reduce((a, p) => a + p.quantityPickedUp, 0) || 0}
-                            max={order.__items}
-                          />
-                          <p className="text-xs text-slate-400 mt-1">
-                            {order.products?.reduce((a, p) => a + p.quantityPickedUp, 0) || 0} de{" "}
-                            {order.__items} unidades retiradas
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => toggleExpand(order.id)}
-                          className="text-sm font-semibold text-rose-700 hover:text-rose-800"
-                        >
-                          {isOpen ? "Ocultar" : "Ver detalle"} · {order.__items} items
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                          {hasPending && (
-                            <button
-                              onClick={() => setPickupOrderId(order.id)}
-                              className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors"
-                            >
-                              Retirar
-                            </button>
-                          )}
-                          {!order.isCompleted && (
-                            <button
-                              onClick={() => onComplete(order.id)}
-                              disabled={isBusy}
-                              className="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-700 text-white hover:bg-rose-800 disabled:opacity-50 transition-colors"
-                            >
-                              {isBusy ? "…" : "Completar todo"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {isOpen && (
-                        <div className="mt-3 pt-3 border-t border-slate-100">
-                          <ProductsDetail order={order} />
-                        </div>
-                      )}
-                    </div>
+                      order={order}
+                      isOpen={isOpen}
+                      isBusy={isBusy}
+                      onToggle={() => toggleExpand(order.id)}
+                      onPickup={() => setPickupOrderId(order.id)}
+                      onComplete={() => setCompleteOrderId(order.id)}
+                    />
                   );
                 })}
               </div>
             )}
 
             {/* DESKTOP TABLE */}
-            {!loading && !error && orders.length > 0 && (
+            {!loading && !error && visibleLunchDayOrders.length > 0 && (
               <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-100">
                   <thead className="bg-slate-50">
@@ -1279,19 +1799,21 @@ const ListaAlmuerzos = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {lunchDayOrders.map((order) => {
+                    {visibleLunchDayOrders.map((order) => {
                       const isOpen = expandedId === order.id;
                       const isBusy = completingId === order.id;
                       const pickedUp =
                         order.products?.reduce((a, p) => a + (p.quantityPickedUp || 0), 0) || 0;
                       const hasPending = order.products?.some((p) => p.status !== "completed");
+                      const status = getOrderDayStatus(order);
+                      const payments = summarizeOrderPayments(order);
 
                       return (
                         <React.Fragment key={order.id}>
                           <tr className="hover:bg-slate-50/80 transition-colors">
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
-                                <OrderStatusPill isCompleted={order.isCompleted} />
+                                <OrderStatusPill status={status} />
                                 <button
                                   onClick={() => toggleExpand(order.id)}
                                   className="text-xs font-semibold text-rose-700 hover:text-rose-800 hover:underline"
@@ -1318,6 +1840,7 @@ const ListaAlmuerzos = () => {
                                 <p className="text-xs text-slate-400">
                                   {pickedUp} / {order.__items} unidades
                                 </p>
+                                <PaymentSummaryBadges payments={payments} />
                               </div>
                             </td>
 
@@ -1337,7 +1860,7 @@ const ListaAlmuerzos = () => {
                                 )}
                                 {!order.isCompleted ? (
                                   <button
-                                    onClick={() => onComplete(order.id)}
+                                    onClick={() => setCompleteOrderId(order.id)}
                                     disabled={isBusy}
                                     className="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-700 text-white hover:bg-rose-800 disabled:opacity-50 transition-colors active:scale-95"
                                   >
@@ -1397,7 +1920,10 @@ export default ListaAlmuerzos;
 // ─────────────────────────────────────────────
 
 ItemStatusPill.propTypes = { status: PropTypes.string };
-OrderStatusPill.propTypes = { isCompleted: PropTypes.bool };
+OrderStatusPill.propTypes = { status: PropTypes.string };
+PaymentSummaryBadges.propTypes = {
+  payments: PropTypes.shape({ sinpe: PropTypes.number, cash: PropTypes.number }).isRequired,
+};
 ProgressBar.propTypes = { value: PropTypes.number, max: PropTypes.number, color: PropTypes.string };
 FilterPill.propTypes = {
   active: PropTypes.bool,
@@ -1431,6 +1957,15 @@ const OrderItemShape = PropTypes.shape({
   quantityPickedUp: PropTypes.number,
   status: PropTypes.string,
   pickedUpAt: PropTypes.string,
+  fulfillmentDate: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.object]),
+  pickupRecords: PropTypes.arrayOf(
+    PropTypes.shape({
+      quantity: PropTypes.number,
+      paymentMethod: PropTypes.string,
+      unitPrice: PropTypes.number,
+      pickedUpAt: PropTypes.string,
+    })
+  ),
   productId: ProductShape,
 });
 
@@ -1462,6 +1997,16 @@ DayPreparationSummary.propTypes = {
 };
 PickupModal.propTypes = {
   order: OrderShape.isRequired,
+  lunchDay: PropTypes.string.isRequired,
+  displayDay: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func,
+};
+OrderMobileCard.propTypes = {
+  order: OrderShape.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  isBusy: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  onPickup: PropTypes.func.isRequired,
+  onComplete: PropTypes.func.isRequired,
 };

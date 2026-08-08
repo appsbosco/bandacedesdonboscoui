@@ -2,16 +2,14 @@
 // PRODUCT CARD COMPONENT
 // ===========================
 
-import React, { useState, useCallback } from "react";
-import { IconButton, Chip, Tooltip } from "@mui/material";
+import React, { useCallback } from "react";
+import { IconButton, Tooltip } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import QuantityStepper from "./QuantityStepper";
+import AddIcon from "@mui/icons-material/Add";
 import { isProductAvailable, getClosingMessage } from "../../../utils/date";
 import PropTypes from "prop-types";
 
 const ProductCard = React.memo(({ product, onAddToCart, onDelete, userRole }) => {
-  const [localQuantity, setLocalQuantity] = useState(1);
-
   const isAvailable = isProductAvailable(product.closingDate);
   const closingMessage = getClosingMessage(product.closingDate);
 
@@ -19,15 +17,14 @@ const ProductCard = React.memo(({ product, onAddToCart, onDelete, userRole }) =>
 
   const handleAddToCart = useCallback(() => {
     if (isAvailable) {
-      onAddToCart(product, localQuantity);
-      setLocalQuantity(1); // Reset after adding
+      onAddToCart(product, 1);
     }
-  }, [product, localQuantity, isAvailable, onAddToCart]);
+  }, [product, isAvailable, onAddToCart]);
 
   const handleDelete = useCallback(
     (e) => {
       e.stopPropagation();
-      if (window.confirm(`¿Eliminar "${product.name}"?`)) {
+    if (window.confirm(`¿Ocultar "${product.name}" del catálogo? Los pedidos anteriores se conservarán.`)) {
         onDelete(product.id);
       }
     },
@@ -35,100 +32,82 @@ const ProductCard = React.memo(({ product, onAddToCart, onDelete, userRole }) =>
   );
 
   return (
-    <div className="group relative bg-white border border-gray-200 rounded-2xl overflow-visible pr-12 hover:shadow-2xl hover:border-blue-500 transition-all duration-300">
-      {/* Product Image */}
-      <div className="relative h-48 overflow-hidden bg-gray-100">
-        <img
-          src={product.photo}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          loading="lazy"
-        />
-
-        <div className="absolute top-3 left-0 right-0 mx-2 z-20 flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <Chip
-              label={closingMessage}
-              size="small"
-              className={`font-semibold ${
-                isAvailable ? "bg-white text-black" : "bg-red-500 text-white"
-              }`}
-              sx={{
-                maxWidth: "100%",
-                "& .MuiChip-label": {
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                },
-              }}
-            />
+    <article className="group overflow-hidden bg-white transition-shadow sm:rounded-2xl sm:hover:shadow-lg">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[16/10]">
+        {product.photo && (
+          <img
+            src={product.photo}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl"
+          />
+        )}
+        {product.photo ? (
+          <img
+            src={product.photo}
+            alt={product.name}
+            className="relative h-full w-full object-contain p-2"
+            loading="lazy"
+          />
+        ) : (
+          <div className="relative flex h-full w-full items-center justify-center text-sm font-semibold text-slate-400">
+            Sin fotografía
           </div>
-
+        )}
+        <span
+          className={`absolute left-2 top-2 max-w-[calc(100%-3.5rem)] truncate rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${
+            isAvailable ? "bg-white text-slate-800" : "bg-slate-900 text-white"
+          }`}
+        >
+          {closingMessage}
+        </span>
+        <div className="absolute right-2 top-2 z-10">
           {isAdmin && (
-            <Tooltip title="Eliminar producto">
+            <Tooltip title="Ocultar producto">
               <IconButton
                 size="small"
                 onClick={handleDelete}
                 className="bg-white shadow-lg hover:bg-red-50 shrink-0"
-                aria-label={`Eliminar ${product.name}`}
+                aria-label={`Ocultar ${product.name}`}
               >
                 <DeleteIcon className="text-red-600" fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        {/* Category & Name */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-            {product.category}
-          </p>
-          <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{product.name}</h3>
-        </div>
-
-        {/* Description */}
-        <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">{product.description}</p>
-
-        {/* Available Days (if present) */}
-        {product.availableForDays && (
-          <p className="text-xs text-blue-600 font-medium">📅 {product.availableForDays}</p>
-        )}
-
-        {/* Price & Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-100 min-w-0">
-          <div className="text-2xl font-bold text-gray-900">₡{product.price.toLocaleString()}</div>
-
-          <div className="shrink-0">
-            <QuantityStepper
-              value={localQuantity}
-              onChange={setLocalQuantity}
-              disabled={!isAvailable}
-              size="small"
-            />
-          </div>
-        </div>
-
-        {/* Add to Cart Button */}
         <button
+          type="button"
           onClick={handleAddToCart}
           disabled={!isAvailable}
           aria-label={`Añadir ${product.name} al carrito`}
-          className={`
-            w-full py-3 rounded-full font-semibold text-sm transition-all duration-200
-            ${
-              isAvailable
-                ? "bg-black text-white hover:bg-gray-800 active:scale-95"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }
-          `}
+          className={`absolute bottom-2 right-2 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white shadow-md transition-transform active:scale-90 ${
+            isAvailable
+              ? "bg-slate-950 text-white hover:scale-105"
+              : "cursor-not-allowed bg-slate-200 text-slate-400"
+          }`}
         >
-          {isAvailable ? "+ Añadir al carrito" : "No disponible"}
+          <AddIcon fontSize="small" />
         </button>
       </div>
-    </div>
+
+      <div className="flex min-w-0 flex-col px-1 pb-2 pt-3 sm:p-3 sm:pt-3">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+          {product.category}
+        </p>
+        <h3 className="mt-1 line-clamp-2 text-base font-extrabold leading-tight text-slate-950 sm:text-lg">
+          {product.name}
+        </h3>
+        <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-slate-500">
+          {product.description}
+        </p>
+        {product.availableForDays && (
+          <p className="mt-2 text-xs font-bold text-slate-600">📅 {product.availableForDays}</p>
+        )}
+        <p className="mt-auto pt-3 text-lg font-extrabold text-slate-950">
+          ₡{product.price.toLocaleString("es-CR")}
+        </p>
+      </div>
+    </article>
   );
 });
 

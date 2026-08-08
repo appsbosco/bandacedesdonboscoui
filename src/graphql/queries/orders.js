@@ -16,6 +16,7 @@ export const GET_PRODUCTS_OPTIMIZED = gql`
       photo
       closingDate
       availableForDays
+      isActive
     }
   }
 `;
@@ -28,12 +29,18 @@ export const GET_ORDERS_BY_USER_OPTIMIZED = gql`
       orderDate
       isCompleted
       products {
+        id
         quantity
+        quantityPickedUp
+        status
+        fulfillmentDate
         productId {
           id
           name
           price
           category
+          photo
+          availableForDays
         }
       }
     }
@@ -66,6 +73,13 @@ export const GET_ORDERS = gql`
         quantityPickedUp
         status
         pickedUpAt
+        fulfillmentDate
+        pickupRecords {
+          quantity
+          paymentMethod
+          unitPrice
+          pickedUpAt
+        }
       }
     }
   }
@@ -106,6 +120,32 @@ export const REPORT_DAY_BREAKDOWN = gql`
         totalOrdered
         totalPickedUp
         totalPending
+      }
+    }
+  }
+`;
+
+export const REPORT_PAYMENT_SUMMARY = gql`
+  query ReportPaymentSummary($startDate: String!, $endDate: String!) {
+    reportPaymentSummary(startDate: $startDate, endDate: $endDate) {
+      totalUnits
+      sinpeAmount
+      cashAmount
+      totalAmount
+      byProduct {
+        productId
+        name
+        units
+        sinpeAmount
+        cashAmount
+        totalAmount
+      }
+      byDay {
+        date
+        units
+        sinpeAmount
+        cashAmount
+        totalAmount
       }
     }
   }
