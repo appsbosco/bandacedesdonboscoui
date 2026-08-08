@@ -615,23 +615,20 @@ const EventPickerCard = ({ event, isSelected, onClick }) => (
     type="button"
     onClick={() => onClick(event.id)}
     className={`
-      w-full text-left rounded-2xl border transition-all overflow-hidden group
+      group w-full overflow-hidden rounded-2xl border p-5 text-left transition-all
       ${
         isSelected
-          ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-100"
-          : "border-gray-200 bg-white shadow-sm hover:shadow-md hover:border-gray-300"
+          ? "border-slate-950 bg-slate-50 ring-2 ring-slate-950/10"
+          : "border-slate-200 bg-white hover:border-slate-400"
       }
     `}
   >
-    <div
-      className={`h-1 w-full ${isSelected ? "bg-blue-500" : "bg-gray-200 group-hover:bg-gray-300"}`}
-    />
-    <div className="p-5">
+    <div>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
           <h3
             className={`text-base font-bold truncate transition-colors ${
-              isSelected ? "text-blue-900" : "text-gray-900 group-hover:text-gray-700"
+              isSelected ? "text-slate-950" : "text-slate-950 group-hover:text-slate-700"
             }`}
           >
             {event.title}
@@ -639,7 +636,7 @@ const EventPickerCard = ({ event, isSelected, onClick }) => (
           <div className="flex items-center gap-1.5 mt-1">
             <svg
               className={`w-3.5 h-3.5 flex-shrink-0 ${
-                isSelected ? "text-blue-500" : "text-gray-400"
+                isSelected ? "text-slate-950" : "text-slate-400"
               }`}
               fill="none"
               viewBox="0 0 24 24"
@@ -652,29 +649,29 @@ const EventPickerCard = ({ event, isSelected, onClick }) => (
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <span className={`text-xs ${isSelected ? "text-blue-700" : "text-gray-500"}`}>
+            <span className={`text-xs ${isSelected ? "text-slate-700" : "text-slate-500"}`}>
               {formatEventDate(event.date)}
             </span>
           </div>
         </div>
         <span
           className={`text-[11px] px-2 py-1 rounded-full font-semibold uppercase tracking-wide ${
-            isSelected ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+            isSelected ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-500"
           }`}
         >
           Presentacion
         </span>
       </div>
 
-      <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-        <span className={`text-xs font-medium ${isSelected ? "text-blue-700" : "text-gray-400"}`}>
+      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+        <span className={`text-xs font-semibold ${isSelected ? "text-slate-950" : "text-slate-500"}`}>
           {isSelected ? "Evento seleccionado" : "Seleccionar evento"}
         </span>
         <svg
           className={`w-4 h-4 transition-transform ${
             isSelected
-              ? "text-blue-600"
-              : "text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5"
+              ? "text-slate-950"
+              : "text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-600"
           }`}
           fill="none"
           viewBox="0 0 24 24"
@@ -719,7 +716,7 @@ const UserAvatar = ({ user, size = "md", busNumber }) => {
     <div
       className={`
       flex-shrink-0 ${sizes[size]} rounded-full
-      bg-gradient-to-br from-blue-400 to-blue-600
+      bg-slate-950
       flex items-center justify-center text-white font-bold
       ${ringClass}
     `}
@@ -916,8 +913,8 @@ Toggle.propTypes = {
 // Stat card
 const StatCard = ({ label, value, color = "text-gray-900", highlight }) => (
   <div
-    className={`rounded-xl p-3 text-center border ${
-      highlight ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
+    className={`p-3 text-center ${
+      highlight ? "bg-amber-50" : "bg-transparent"
     }`}
   >
     <div className={`text-xl sm:text-2xl font-bold font-mono ${color}`}>{value}</div>
@@ -1039,16 +1036,16 @@ const TABS = [
 ];
 
 const TabBar = ({ active, onChange, tabs }) => (
-  <div className="flex border-b border-gray-200 bg-white">
+  <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2 pt-2 sm:px-4">
     {tabs.map((tab) => (
       <button
         key={tab.id}
         onClick={() => onChange(tab.id)}
-        className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 text-xs font-semibold transition-all border-b-2
+        className={`flex min-h-12 min-w-[88px] flex-1 items-center justify-center gap-1 rounded-t-xl border-b-2 px-3 py-3 text-xs font-semibold transition-all
           ${
             active === tab.id
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+              ? "border-slate-950 bg-slate-50 text-slate-950"
+              : "border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600"
           }`}
       >
         {tab.icon}
@@ -3496,6 +3493,7 @@ const ExclusionsTab = ({ eventId, roster, isAdmin, onRefetch }) => {
           </svg>
           <input
             type="text"
+            aria-label="Buscar persona excluida"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar en excluidos…"
@@ -3953,7 +3951,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
   return (
     <div className="space-y-3 pb-28">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         <StatCard label="Presentes" value={statsVisible.present} color="text-emerald-600" />
         <StatCard label="Ausentes" value={statsVisible.absent} color="text-red-600" />
         <StatCard label="Pendientes" value={statsVisible.pending} color="text-gray-400" />
@@ -3964,7 +3962,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => handleMarkAll("PRESENT")}
-            className="py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
           >
             <svg
               className="w-4 h-4"
@@ -3979,7 +3977,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
           </button>
           <button
             onClick={() => handleMarkAll("ABSENT")}
-            className="py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-100 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200"
           >
             <svg
               className="w-4 h-4"
@@ -4021,11 +4019,13 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar persona…"
-            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            aria-label="Buscar persona en la asistencia del evento"
+            className="min-h-12 w-full rounded-2xl border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-950 placeholder-slate-400 focus:border-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-950/10"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
+              aria-label="Limpiar búsqueda"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -4087,7 +4087,7 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
       </div>
 
       {/* List */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         {showGrouped ? (
           groupedSections.length === 0 ? (
             <div className="py-14 text-center text-sm text-gray-400">Roster vacío</div>
@@ -4168,8 +4168,8 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
 
       {/* Save bar */}
       {hasUnsaved && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 shadow-lg z-[1200]">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-[1200] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-10px_35px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
             <span className="text-sm font-medium text-amber-600">
               {unsavedCount} cambio{unsavedCount !== 1 ? "s" : ""} sin guardar
             </span>
@@ -4177,14 +4177,14 @@ const AttendanceTab = ({ eventId, roster, summary, isAdmin, userSection, onRefet
               <button
                 onClick={() => setLocalAttendance({})}
                 disabled={isSaving}
-                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                className="min-h-12 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
               >
                 Descartar
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="flex min-h-12 items-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 {isSaving ? <Spinner size="sm" /> : null}
                 {isSaving ? "Guardando…" : "Guardar asistencia"}
@@ -4334,13 +4334,13 @@ const EventLogisticsPage = () => {
       <DashboardLayout>
         <DashboardNavbar />
 
-        <SoftBox py={3}>
-          <Card>
-            <SoftBox p={3}>
+        <main className="mx-auto w-full max-w-[1440px] pb-8 pt-3 sm:px-4 sm:pt-6">
+          <section className="rounded-3xl border border-slate-200 bg-white px-4 py-5 sm:px-6 sm:py-7">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
                 <div>
-                  <SoftTypography variant="h6">Logística de presentaciones</SoftTypography>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Asistencia por evento</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Presentaciones</h1>
+                  <p className="mt-1 text-sm text-slate-500">
                     Selecciona una presentación para entrar a su página de asistencia.
                   </p>
                 </div>
@@ -4370,11 +4370,10 @@ const EventLogisticsPage = () => {
                   ))}
                 </div>
               )}
-            </SoftBox>
-          </Card>
-        </SoftBox>
+          </section>
+        </main>
 
-        <Footer />
+        <div className="mt-10 pb-4"><Footer links={[]} /></div>
 
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
@@ -4387,8 +4386,8 @@ const EventLogisticsPage = () => {
     <DashboardLayout>
       <DashboardNavbar />
 
-      <SoftBox py={3}>
-        <Card>
+      <SoftBox py={3} sx={{ maxWidth: "1440px", mx: "auto" }}>
+        <Card sx={{ borderRadius: { xs: 0, sm: "24px" }, boxShadow: "none", border: "1px solid #e2e8f0", overflow: "hidden" }}>
           {/* ── Card header ─────────────────────────────────────────────── */}
           <SoftBox p={3}>
             {/* Title row */}
@@ -4410,14 +4409,14 @@ const EventLogisticsPage = () => {
                   Volver a presentaciones
                 </button>
 
-                <SoftTypography variant="h6">
-                  Logística de presentaciones
+                <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+                  {selectedEventDetails?.title || "Presentación"}
                   {selectedEventDetails && (
-                    <span className="ml-2 text-sm font-normal text-gray-500">
-                      — {selectedEventDetails.title}
+                    <span className="mt-1 block text-sm font-normal text-slate-500">
+                      {formatEventDate(selectedEventDetails.date)} · Logística y asistencia
                     </span>
                   )}
-                </SoftTypography>
+                </h1>
               </div>
 
               {/* Summary pills */}
@@ -4522,7 +4521,7 @@ const EventLogisticsPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="px-3 sm:px-4 py-4 bg-gray-50 min-h-[400px]">
+              <div className="min-h-[400px] bg-slate-50 px-3 py-4 sm:px-4">
                 {isAdmin && activeTab === "config" && (
                   <ConfigTab
                     eventId={selectedEvent}
@@ -4566,7 +4565,7 @@ const EventLogisticsPage = () => {
         </Card>
       </SoftBox>
 
-      <Footer />
+      <div className="mt-10 pb-4"><Footer links={[]} /></div>
 
       {/* Global toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

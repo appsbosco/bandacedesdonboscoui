@@ -352,11 +352,11 @@ const WorstAttendancePanel = ({ users = [], topN = 8 }) => {
   if (sorted.length === 0) return null;
 
   return (
-    <div className="mx-4 sm:mx-0 mb-4 bg-white rounded-lg border border-red-200 shadow-sm overflow-hidden">
+    <div className="mx-4 mb-4 overflow-hidden rounded-2xl border border-rose-200 bg-white sm:mx-0">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full px-4 py-3 flex items-center justify-between bg-red-50 hover:bg-red-100 transition-colors"
+        className="flex min-h-12 w-full items-center justify-between bg-rose-50 px-4 py-3 transition-colors hover:bg-rose-100"
       >
         <div className="flex items-center gap-2">
           <span className="text-red-600 font-bold text-sm">⚠ Peor asistencia</span>
@@ -921,7 +921,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
 
   return (
     <div
-      className="group border-b border-gray-100 hover:bg-gray-50 transition-colors"
+      className="group mx-3 mb-2 rounded-2xl border border-slate-200 bg-white transition-colors hover:border-slate-300 min-[1024px]:mx-0 min-[1024px]:mb-0 min-[1024px]:rounded-none min-[1024px]:border-x-0 min-[1024px]:border-t-0"
       onClick={open}
       role="button"
       tabIndex={0}
@@ -935,7 +935,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
     >
       <div className="block min-[1024px]:hidden px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
             {record.user?.name?.[0] || "?"}
             {record.user?.firstSurName?.[0] || ""}
           </div>
@@ -985,7 +985,7 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
 
       <div className="hidden min-[1024px]:grid min-[1024px]:grid-cols-12 gap-4 px-4 py-3 items-center">
         <div className="col-span-3 flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
             {record.user?.name?.[0] || "?"}
             {record.user?.firstSurName?.[0] || ""}
           </div>
@@ -1041,37 +1041,37 @@ const AttendanceRow = ({ record, searchTerm, onOpenDetails }) => {
 
 const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilterChange }) => {
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <section className="bg-white px-4 pb-4 sm:rounded-t-3xl sm:border sm:border-slate-200 sm:px-6 sm:pt-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Historial de Asistencia</h1>
+          <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Control y seguimiento</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Historial de asistencia</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Registro completo de todas las asistencias
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-50 rounded-lg">
-          <span className="text-xs font-medium text-gray-600">Total Registros:</span>
-          <span className="text-base sm:text-lg font-bold text-gray-900">{stats.total}</span>
+      <div className="mb-4 grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-3">
+        <div className="text-center">
+          <span className="block text-xl font-bold text-slate-950">{stats.total}</span>
+          <span className="text-xs font-semibold text-slate-500">Registros</span>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-50 rounded-lg">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-          <span className="text-xs font-medium text-emerald-700">Presentes:</span>
-          <span className="text-base sm:text-lg font-bold text-emerald-900">{stats.present}</span>
+        <div className="text-center">
+          <span className="block text-xl font-bold text-emerald-700">{stats.present}</span>
+          <span className="text-xs font-semibold text-slate-500">Presentes</span>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 rounded-lg">
-          <div className="w-2 h-2 bg-red-500 rounded-full" />
-          <span className="text-xs font-medium text-red-700">Ausencias:</span>
-          <span className="text-base sm:text-lg font-bold text-red-900">{stats.absent}</span>
+        <div className="text-center">
+          <span className="block text-xl font-bold text-rose-700">{stats.absent}</span>
+          <span className="text-xs font-semibold text-slate-500">Ausencias</span>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <div className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-blue-500">
+      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <div className="col-span-2 flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-slate-950/10 lg:col-span-1">
           <span className="text-gray-600 text-sm">Fecha:</span>
           <DatePicker
+            aria-label="Filtrar por fecha"
             selected={selectedDate}
             onChange={(date) => onDateChange(date)}
             dateFormat="dd/MM/yyyy"
@@ -1092,9 +1092,10 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
         </div>
 
         <select
+          aria-label="Filtrar por estado"
           value={filters.status}
           onChange={(e) => onFilterChange("status", e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="min-h-11 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950/10"
         >
           <option value="all">Todos los estados</option>
           <option value="PRESENT">Presente</option>
@@ -1106,9 +1107,10 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
         </select>
 
         <select
+          aria-label="Filtrar por instrumento"
           value={filters.instrument}
           onChange={(e) => onFilterChange("instrument", e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="min-h-11 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950/10"
         >
           <option value="all">Todos los instrumentos</option>
           {filters.instruments.map((inst) => (
@@ -1119,9 +1121,10 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
         </select>
 
         <select
+          aria-label="Filtrar por sección"
           value={filters.section}
           onChange={(e) => onFilterChange("section", e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="col-span-2 min-h-11 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950/10 lg:col-span-1"
         >
           <option value="all">Todas las secciones</option>
           {filters.sections.map((section) => (
@@ -1139,7 +1142,7 @@ const AttendanceHeader = ({ stats, filters, selectedDate, onDateChange, onFilter
         <div className="col-span-2">Estado</div>
         <div className="col-span-3">Asistencia</div>
       </div>
-    </div>
+    </section>
   );
 };
 
@@ -1155,7 +1158,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
   }, []);
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <div className="sticky top-0 z-20 bg-white px-4 py-3 sm:border-x sm:border-slate-200 sm:px-6">
       <div className="relative">
         <input
           ref={inputRef}
@@ -1163,7 +1166,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults }) => {
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Buscar por nombre, instrumento..."
-          className="block w-full pl-10 pr-10 py-2.5 sm:py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
+          className="block min-h-12 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 pr-10 text-sm leading-5 text-slate-950 placeholder-slate-500 transition-all focus:border-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10"
           aria-label="Buscar"
         />
         {searchTerm && (
@@ -1396,7 +1399,7 @@ const AttendanceHistoryTable = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white sm:rounded-3xl sm:bg-slate-50">
       <AttendanceHeader
         stats={stats}
         filters={filters}
@@ -1417,8 +1420,8 @@ const AttendanceHistoryTable = () => {
         <WorstAttendancePanel users={worstUsers} topN={5} />
       </div>
 
-      <div className="px-0 sm:px-4 py-4 sm:py-2">
-        <div className="bg-white rounded-none sm:rounded-lg shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+      <div className="px-0 pb-4 sm:px-4 sm:pb-6">
+        <div className="overflow-hidden bg-white sm:rounded-2xl sm:border sm:border-slate-200">
           {paginationError && validAttendances.length > 0 && (
             <div className="px-4 py-3 text-sm text-amber-700 bg-amber-50 border-b border-amber-100">
               Se cargó parte del historial, pero faltan páginas por recuperar: {paginationError}

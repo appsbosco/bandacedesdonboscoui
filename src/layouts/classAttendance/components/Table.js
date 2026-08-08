@@ -176,7 +176,7 @@ const JustInput = memo(
 // ─────────────────────────────────────────────
 // StudentRow
 // ─────────────────────────────────────────────
-const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, disabled }) => {
+const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, disabled, mode }) => {
   if (!student) return null;
 
   const name = getFullName(student);
@@ -228,7 +228,7 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
           <SavedBadge isSaved={isSaved} />
         </div>
 
-        <div>
+        {mode === "attendance" && <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
             Asistencia
           </p>
@@ -243,9 +243,9 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
               />
             ))}
           </div>
-        </div>
+        </div>}
 
-        {needsJust && (
+        {mode === "attendance" && needsJust && (
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Justificación
@@ -266,7 +266,7 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
           </div>
         )}
 
-        <div>
+        {mode === "payment" && <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
             Estado de Pago
           </p>
@@ -277,11 +277,14 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
                 option={opt}
                 isActive={curPayment === opt.value}
                 onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
-                disabled={disabled}
+                disabled={disabled || !curAttendance}
               />
             ))}
           </div>
-        </div>
+          {!curAttendance && (
+            <p className="mt-2 text-xs font-medium text-amber-700">Marca la asistencia antes de registrar el pago.</p>
+          )}
+        </div>}
       </div>
 
       {/* ─── TABLET / DESKTOP (>= 768px) ─── */}
@@ -301,7 +304,7 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
         </div>
 
         {/* Attendance — flex grow */}
-        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+        {mode === "attendance" && <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {ATTENDANCE_OPTIONS.map((opt) => (
             <StatusChip
               key={opt.value}
@@ -311,10 +314,10 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
               disabled={disabled}
             />
           ))}
-        </div>
+        </div>}
 
         {/* Justification — fixed width */}
-        <div style={{ width: 180, flexShrink: 0 }}>
+        {mode === "attendance" && <div style={{ width: 180, flexShrink: 0 }}>
           {needsJust && (
             <JustInput
               studentId={student.id}
@@ -324,20 +327,21 @@ const StudentRow = memo(({ student, attendance, onAttendanceChange, searchTerm, 
               disabled={disabled}
             />
           )}
-        </div>
+        </div>}
 
         {/* Payment — flex grow */}
-        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+        {mode === "payment" && <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {PAYMENT_OPTIONS.map((opt) => (
             <StatusChip
               key={opt.value}
               option={opt}
               isActive={curPayment === opt.value}
               onClick={() => onAttendanceChange(student.id, "paymentStatus", opt.value)}
-              disabled={disabled}
+              disabled={disabled || !curAttendance}
             />
           ))}
-        </div>
+          {!curAttendance && <span className="self-center text-xs font-medium text-amber-700">Asistencia pendiente</span>}
+        </div>}
       </div>
     </div>
   );
@@ -411,6 +415,7 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [mode, setMode] = useState("attendance");
   const searchRef = useRef(null);
   const validDate =
     selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime()) ? selectedDate : null;
@@ -494,11 +499,19 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
       present: records.filter((record) => record?.attendanceStatus === "Presente").length,
       absent: records.filter((record) => record?.attendanceStatus?.includes("Ausencia")).length,
       paid: records.filter((record) => record?.paymentStatus === "Pagado").length,
+      pending: students.filter((student) => !attendanceData[String(student.id)]?.attendanceStatus).length,
     };
-  }, [attendanceData, students.length]);
+  }, [attendanceData, students]);
   const unsavedCount = useMemo(
     () => Object.values(attendanceData).filter((record) => record?.isSaved === false).length,
     [attendanceData]
+  );
+  const visiblePendingCount = useMemo(
+    () =>
+      filteredStudents.filter(
+        (student) => !attendanceData[String(student.id)]?.attendanceStatus
+      ).length,
+    [attendanceData, filteredStudents]
   );
 
   const closeToast = useCallback(() => setToast(null), []);
@@ -532,7 +545,7 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
           ...prev,
           [studentId]: {
             ...current,
-            attendanceStatus: current.attendanceStatus || "Presente",
+            attendanceStatus: current.attendanceStatus || "",
             paymentStatus: current.paymentStatus || "Pendiente",
             justification: current.justification || "",
             [field]: value,
@@ -544,8 +557,39 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
     [onDirtyChange]
   );
 
+  const handleCompleteVisible = useCallback(() => {
+    const pendingIds = new Set(
+      filteredStudents
+        .filter((student) => !attendanceData[String(student.id)]?.attendanceStatus)
+        .map((student) => String(student.id))
+    );
+    setAttendanceData((previous) => {
+      const next = { ...previous };
+      pendingIds.forEach((studentId) => {
+        const current = next[studentId] || EMPTY_ATTENDANCE;
+        next[studentId] = {
+          ...current,
+          attendanceStatus: "Presente",
+          paymentStatus: current.paymentStatus || "Pendiente",
+          justification: current.justification || "",
+          isSaved: false,
+        };
+      });
+      return next;
+    });
+    if (pendingIds.size > 0) onDirtyChange(true);
+  }, [attendanceData, filteredStudents, onDirtyChange]);
+
   const handleSaveAll = async () => {
     if (!selectedDateIso || isSaving) return;
+    if (stats.pending > 0) {
+      setToast({
+        message: `Falta revisar ${stats.pending} estudiante${stats.pending === 1 ? "" : "s"}.`,
+        type: "error",
+      });
+      setMode("attendance");
+      return;
+    }
     const unsaved = Object.entries(attendanceData).filter(
       ([, record]) => record?.isSaved === false
     );
@@ -553,6 +597,14 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
       ([, record]) =>
         record.attendanceStatus === "Ausencia Justificada" && !record.justification?.trim()
     );
+    const missingAttendance = unsaved.filter(([, record]) => !record.attendanceStatus);
+    if (missingAttendance.length) {
+      setToast({
+        message: `Falta marcar la asistencia de ${missingAttendance.length} estudiante${missingAttendance.length === 1 ? "" : "s"}.`,
+        type: "error",
+      });
+      return;
+    }
     if (invalid.length) {
       setToast({
         message: `Falta justificar ${invalid.length} ausencia${invalid.length === 1 ? "" : "s"}.`,
@@ -569,7 +621,7 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
             variables: {
               input: {
                 studentId,
-                attendanceStatus: record.attendanceStatus || "Presente",
+                attendanceStatus: record.attendanceStatus,
                 paymentStatus: record.paymentStatus || "Pendiente",
                 justification: record.justification?.trim() || "",
                 date: selectedDateIso,
@@ -671,26 +723,44 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
 
       {/* ── Stats ── */}
       <div
-        className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 sm:px-6 py-3 bg-gray-50 border-b border-gray-100"
+        className="grid grid-cols-5 divide-x divide-slate-200 border-b border-slate-100 bg-slate-50 px-2 py-3 sm:px-6"
         aria-label="Resumen de asistencia"
       >
         {[
           { label: "Total", value: stats.total, color: "text-gray-700" },
           { label: "Presentes", value: stats.present, color: "text-emerald-600" },
           { label: "Ausentes", value: stats.absent, color: "text-amber-600" },
+          { label: "Pendientes", value: stats.pending, color: "text-rose-600" },
           { label: "Pagados", value: stats.paid, color: "text-blue-600" },
         ].map((s) => (
-          <div key={s.label} className="flex items-baseline gap-1.5">
-            <span className={`text-base font-bold ${s.color}`}>{s.value}</span>
-            <span className="text-xs text-gray-400 font-medium">{s.label}</span>
+          <div key={s.label} className="min-w-0 text-center">
+            <span className={`block text-lg font-bold ${s.color}`}>{s.value}</span>
+            <span className="block truncate text-[10px] font-semibold text-slate-500 sm:text-xs">{s.label}</span>
           </div>
         ))}
-        {unsavedCount > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
-            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-            <span className="text-xs font-semibold text-amber-700">{unsavedCount} sin guardar</span>
-          </div>
-        )}
+      </div>
+
+      <div className="border-b border-slate-100 bg-white px-5 py-3 sm:px-6">
+        <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Tipo de registro">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "attendance"}
+            onClick={() => setMode("attendance")}
+            className={`min-h-10 rounded-lg px-3 text-sm font-bold transition-colors ${mode === "attendance" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
+          >
+            Asistencia
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "payment"}
+            onClick={() => setMode("payment")}
+            className={`min-h-10 rounded-lg px-3 text-sm font-bold transition-colors ${mode === "payment" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
+          >
+            Pagos
+          </button>
+        </div>
       </div>
 
       {/* ── Search ── */}
@@ -733,6 +803,21 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
         )}
       </div>
 
+      {mode === "attendance" && visiblePendingCount > 0 && (
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-3 sm:px-6">
+          <p className="text-xs font-semibold text-slate-600">
+            {visiblePendingCount} visible{visiblePendingCount !== 1 ? "s" : ""} sin marcar
+          </p>
+          <button
+            type="button"
+            onClick={handleCompleteVisible}
+            className="min-h-10 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700"
+          >
+            Completar visibles como presentes
+          </button>
+        </div>
+      )}
+
       {/* ── Column headers — tablet/desktop only ── */}
       <div className="hidden md:flex md:flex-row md:gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-100">
         <div style={{ width: 200, flexShrink: 0 }}>
@@ -740,21 +825,21 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
             Estudiante
           </span>
         </div>
-        <div className="flex-1 min-w-0">
+        {mode === "attendance" && <div className="flex-1 min-w-0">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Asistencia
           </span>
-        </div>
-        <div style={{ width: 180, flexShrink: 0 }}>
+        </div>}
+        {mode === "attendance" && <div style={{ width: 180, flexShrink: 0 }}>
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Justificación
           </span>
-        </div>
-        <div className="flex-1 min-w-0">
+        </div>}
+        {mode === "payment" && <div className="flex-1 min-w-0">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Estado de Pago
           </span>
-        </div>
+        </div>}
       </div>
 
       {/* ── Rows ── */}
@@ -788,6 +873,7 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
               onAttendanceChange={handleChange}
               searchTerm={searchTerm}
               disabled={isSaving}
+              mode={mode}
             />
           ))
         )}
@@ -825,7 +911,7 @@ const InstructorAttendanceTable = ({ students, onDirtyChange }) => {
                   <polyline points="17 21 17 13 7 13 7 21" />
                   <polyline points="7 3 7 8 15 8" />
                 </svg>
-                Guardar cambios
+                Guardar {unsavedCount} cambio{unsavedCount !== 1 ? "s" : ""}
               </>
             )}
           </button>
@@ -857,6 +943,7 @@ StudentRow.propTypes = {
   onAttendanceChange: PropTypes.func.isRequired,
   searchTerm: PropTypes.string,
   disabled: PropTypes.bool,
+  mode: PropTypes.oneOf(["attendance", "payment"]).isRequired,
 };
 AvatarCircle.propTypes = {
   student: PropTypes.object.isRequired,

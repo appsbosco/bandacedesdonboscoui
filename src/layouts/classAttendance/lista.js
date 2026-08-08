@@ -37,6 +37,11 @@ const avatarColors = (str = "") => {
 const getInitials = (u) =>
   (safeStr(u?.name).charAt(0) + safeStr(u?.firstSurName).charAt(0)).toUpperCase() || "?";
 
+const sortUsersByName = (users = []) =>
+  [...users].sort((a, b) =>
+    getFullName(a).localeCompare(getFullName(b), "es", { sensitivity: "base" })
+  );
+
 const userShape = PropTypes.shape({
   id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   name: PropTypes.string,
@@ -159,6 +164,7 @@ const StudentSearchDropdown = ({ students, value, onChange }) => {
   }, [query, filtered.length]);
 
   const handleKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
@@ -451,9 +457,23 @@ const ClassAttendance = () => {
   const [toast, setToast] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [attendanceDirty, setAttendanceDirty] = useState(false);
+  const [activeView, setActiveView] = useState("attendance");
 
   const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
   const closeToast = useCallback(() => setToast(null), []);
+  const handleViewChange = useCallback(
+    (nextView) => {
+      if (
+        nextView === "manage" &&
+        attendanceDirty &&
+        !window.confirm("Hay cambios de asistencia sin guardar. ¿Quieres ir a gestionar estudiantes?")
+      ) {
+        return;
+      }
+      setActiveView(nextView);
+    },
+    [attendanceDirty]
+  );
 
   const { loading: userLoading, error: userError, data: userData } = useQuery(GET_USERS_BY_ID);
   const { loading: usersLoading, error: usersError, data: usersData } = useQuery(GET_USERS);
@@ -487,7 +507,7 @@ const ClassAttendance = () => {
       : [];
     const assignedIds = new Set(instructorStudents.map((s) => String(s.id)));
 
-    setAvailableStudents(
+    setAvailableStudents(sortUsersByName(
       allUsers.filter(
         (u) =>
           u?.id &&
@@ -496,9 +516,11 @@ const ClassAttendance = () => {
           u.firstSurName &&
           !assignedIds.has(String(u.id))
       )
-    );
+    ));
 
-    setAssignedStudents(instructorStudents.filter((s) => s?.name && s?.firstSurName));
+    setAssignedStudents(
+      sortUsersByName(instructorStudents.filter((s) => s?.name && s?.firstSurName))
+    );
   }, [usersData, userData]);
 
   const handleAssign = async () => {
@@ -509,7 +531,7 @@ const ClassAttendance = () => {
 
       const student = availableStudents.find((s) => String(s.id) === String(selectedStudent));
       if (student) {
-        setAssignedStudents((p) => [...p, student]);
+        setAssignedStudents((p) => sortUsersByName([...p, student]));
         setAvailableStudents((p) => p.filter((s) => s.id !== selectedStudent));
       }
 
@@ -538,7 +560,7 @@ const ClassAttendance = () => {
       const student = assignedStudents.find((s) => String(s.id) === String(studentId));
       if (student) {
         setAssignedStudents((p) => p.filter((s) => String(s.id) !== String(studentId)));
-        setAvailableStudents((p) => [...p, student]);
+        setAvailableStudents((p) => sortUsersByName([...p, student]));
       }
 
       showToast("Estudiante desasignado");
@@ -580,14 +602,43 @@ const ClassAttendance = () => {
 
       <main className="max-w-5xl mx-auto px-3 sm:px-5 py-6 pb-16 space-y-5">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mis estudiantes</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {assignedStudents.length} estudiante{assignedStudents.length !== 1 ? "s" : ""} asignado
-            {assignedStudents.length !== 1 ? "s" : ""}
-          </p>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+              Clases individuales
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              Asistencia de clase
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {assignedStudents.length} estudiante{assignedStudents.length !== 1 ? "s" : ""} en tu lista
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 rounded-2xl bg-slate-100 p-1" role="tablist" aria-label="Secciones de asistencia de clase">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === "attendance"}
+              onClick={() => handleViewChange("attendance")}
+              className={`min-h-11 rounded-xl px-4 text-sm font-bold transition-colors ${activeView === "attendance" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+            >
+              Pasar lista
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === "manage"}
+              onClick={() => handleViewChange("manage")}
+              className={`min-h-11 rounded-xl px-4 text-sm font-bold transition-colors ${activeView === "manage" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+            >
+              Gestionar estudiantes
+            </button>
+          </div>
         </div>
 
+        {activeView === "manage" && (
+          <>
         {/* Assign */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-start gap-3 mb-4">
@@ -625,7 +676,7 @@ const ClassAttendance = () => {
               type="button"
               onClick={handleAssign}
               disabled={!selectedStudent || assignLoading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 w-full sm:w-auto justify-center"
+              className="flex w-full flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
             >
               {assignLoading ? (
                 <>
@@ -710,10 +761,27 @@ const ClassAttendance = () => {
           )}
         </div>
 
+          </>
+        )}
+
         {/* Attendance table */}
-        {assignedStudents.length > 0 && (
+        {activeView === "attendance" && assignedStudents.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <AttendanceTable students={assignedStudents} onDirtyChange={setAttendanceDirty} />
+          </div>
+        )}
+
+        {activeView === "attendance" && assignedStudents.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+            <p className="text-sm font-bold text-slate-800">Aún no tienes estudiantes asignados</p>
+            <p className="mt-1 text-xs text-slate-500">Agrégalos para comenzar a pasar asistencia.</p>
+            <button
+              type="button"
+              onClick={() => handleViewChange("manage")}
+              className="mt-5 min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white hover:bg-slate-800"
+            >
+              Gestionar estudiantes
+            </button>
           </div>
         )}
       </main>

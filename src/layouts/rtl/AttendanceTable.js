@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+
 import { useMutation, useQuery } from "@apollo/client";
 import { TAKE_ATTENDANCE_REHEARSAL, CLOSE_SESSION } from "graphql/mutations";
 import { GET_USERS, GET_ACTIVE_SESSION, GET_USERS_BY_ID } from "graphql/queries";
@@ -57,7 +59,8 @@ const STATUS_OPTIONS = Object.values(ATTENDANCE_STATUS);
 const PRIMARY_STATUSES = ["PRESENT", "ABSENT_UNJUSTIFIED", "ABSENT_JUSTIFIED"];
 const SECONDARY_STATUSES = ["LATE", "JUSTIFIED_WITHDRAWAL", "UNJUSTIFIED_WITHDRAWAL"];
 
-const DEFAULT_STATUS = "PRESENT";
+// Estado exclusivamente local. Nunca se envía al API.
+const DEFAULT_STATUS = "UNMARKED";
 
 // Posicionamiento del menú móvil (portal + fixed)
 const MOBILE_SELECTOR_WIDTH = 280; // coincide con min-w-[280px]
@@ -146,16 +149,16 @@ const StatusButton = ({ status, isActive, onClick, compact = false, disabled = f
       aria-label={`Marcar como ${statusConfig.label}`}
       disabled={disabled}
       className={`
-        ${compact ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"}
-        font-medium rounded-lg transition-all duration-200
+        ${compact ? "min-w-12 px-3.5 py-2.5 text-xs" : "px-3 py-2 text-sm"}
+        min-h-10 font-semibold rounded-xl transition-all duration-200
         ${
           disabled
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
             : isActive
             ? `${statusConfig.color} text-white shadow-md scale-105`
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
         }
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+        focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1
       `}
     >
       {compact ? statusConfig.shortLabel : statusConfig.label}
@@ -194,7 +197,7 @@ const MobileStatusSelector = ({
   const menu = (
     <div
       ref={ref}
-      className="fixed z-[80] bg-white rounded-lg shadow-2xl border border-gray-200 py-3 px-4 min-w-[280px]"
+      className="fixed z-[80] min-w-[280px] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xl"
       style={{
         top: position.top,
         left: position.left,
@@ -322,26 +325,39 @@ const StudentRow = ({
   const initials = `${(student?.name || " ")[0] || ""}${(student?.firstSurName || " ")[0] || ""}`;
 
   return (
-    <div className="group flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors gap-3">
+    <div
+      className={`group mx-3 mb-2 flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3 transition-colors sm:mx-0 sm:mb-0 sm:flex-row sm:items-center sm:justify-between sm:rounded-none sm:border-x-0 sm:border-t-0 ${
+        currentStatus === DEFAULT_STATUS
+          ? "border-amber-200 sm:bg-amber-50/40"
+          : "border-slate-200 hover:border-slate-300"
+      }`}
+    >
       <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
           {initials}
         </div>
 
         <div className="flex-1 min-w-0">
           <p
-            className="text-sm font-semibold text-gray-900 text-left break-words"
+            className="break-words text-left text-sm font-semibold text-slate-950"
             dir="ltr"
             style={{ unicodeBidi: "isolate" }}
             dangerouslySetInnerHTML={{ __html: highlightText(fullName) }}
           />
-          <p className="text-xs text-gray-500 mt-0.5">{student.instrument}</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-500">{student.instrument}</p>
+            {currentStatus === DEFAULT_STATUS && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                Sin marcar
+              </span>
+            )}
+          </div>
           <StudentPermissionBadge permission={permission} />
           {canEdit && permission?.suggestedAttendanceStatus && (
             <button
               type="button"
               onClick={() => onStatusChange(permission.suggestedAttendanceStatus)}
-              className="mt-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              className="mt-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200"
             >
               Aplicar permiso aprobado
             </button>
@@ -350,7 +366,7 @@ const StudentRow = ({
       </div>
 
       {/* Desktop: Full segmented control */}
-      <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+      <div className="hidden lg:flex items-center gap-2.5 flex-shrink-0">
         {STATUS_OPTIONS.map((status) => (
           <StatusButton
             key={status.value}
@@ -380,7 +396,7 @@ const StudentRow = ({
       </div>
 
       {/* Mobile/Tablet: Primary buttons + More */}
-      <div className="flex lg:hidden items-center gap-2 flex-wrap">
+      <div className="flex lg:hidden items-center gap-3 flex-wrap">
         {PRIMARY_STATUSES.map((status) => (
           <StatusButton
             key={status}
@@ -397,7 +413,7 @@ const StudentRow = ({
           onClick={handleMoreClick}
           disabled={!canEdit}
           className={`
-            px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+            min-h-10 px-4 py-2.5 text-xs font-medium rounded-xl transition-colors
             ${
               !canEdit
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
@@ -444,12 +460,21 @@ const AttendanceHeader = ({
   canEdit,
   canCloseSession,
   onCloseSession,
+  visibleCount,
 }) => {
+  const reviewed = stats.total - stats.pending;
+  const progress = stats.total ? Math.round((reviewed / stats.total) * 100) : 0;
+
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <section className="bg-white px-4 pb-4 sm:rounded-t-3xl sm:border sm:border-slate-200 sm:px-6 sm:pt-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Toma de asistencia</h1>
+          <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+            Ensayo de hoy
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            Toma de asistencia
+          </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString("es-CR", {
               weekday: "long",
@@ -488,52 +513,68 @@ const AttendanceHeader = ({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-50 rounded-lg">
-          <span className="text-xs font-medium text-gray-600">Total:</span>
-          <span className="text-base sm:text-lg font-bold text-gray-900">{stats.total}</span>
+      <div className="mb-3 grid grid-cols-4 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-3">
+        <div className="text-center">
+          <span className="block text-xl font-bold text-slate-950">{stats.total}</span>
+          <span className="text-xs font-semibold text-slate-500">Personas</span>
         </div>
-
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-50 rounded-lg">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-          <span className="text-xs font-medium text-emerald-700">Presentes:</span>
-          <span className="text-base sm:text-lg font-bold text-emerald-900">{stats.present}</span>
+        <div className="text-center">
+          <span className="block text-xl font-bold text-emerald-700">{stats.present}</span>
+          <span className="text-xs font-semibold text-slate-500">Presentes</span>
         </div>
-
-        <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 rounded-lg">
-          <div className="w-2 h-2 bg-red-500 rounded-full" />
-          <span className="text-xs font-medium text-red-700">Ausentes:</span>
-          <span className="text-base sm:text-lg font-bold text-red-900">{stats.absent}</span>
+        <div className="text-center">
+          <span className="block text-xl font-bold text-rose-700">{stats.absent}</span>
+          <span className="text-xs font-semibold text-slate-500">Ausentes</span>
+        </div>
+        <div className="text-center">
+          <span className="block text-xl font-bold text-amber-700">{stats.pending}</span>
+          <span className="text-xs font-semibold text-slate-500">Pendientes</span>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mb-4" aria-label={`${reviewed} de ${stats.total} personas revisadas`}>
+        <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-slate-600">
+          <span>
+            {reviewed} de {stats.total} revisados
+          </span>
+          <span>{progress}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-emerald-600 transition-[width] duration-200"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={onMarkAllPresent}
           disabled={!canEdit}
-          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-500 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-11 shrink-0 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Marcar todos presentes
+          Marcar {visibleCount} visible{visibleCount !== 1 ? "s" : ""} presente
+          {visibleCount !== 1 ? "s" : ""}
         </button>
 
         <button
           onClick={onReset}
           disabled={!canEdit}
-          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-11 shrink-0 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Resetear
+          Descartar cambios
         </button>
 
         {canCloseSession && (
           <button
             onClick={onCloseSession}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-700 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="min-h-11 shrink-0 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
           >
             Cerrar sesión
           </button>
         )}
       </div>
-    </div>
+    </section>
   );
 };
 
@@ -545,6 +586,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults, onQuickMar
   }, []);
 
   const handleKeyDown = (e) => {
+    if (e.nativeEvent?.isComposing) return;
     if (e.key === "Enter" && searchTerm && totalResults > 0) {
       e.preventDefault();
       onQuickMark();
@@ -552,7 +594,7 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults, onQuickMar
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <div className="sticky top-0 z-20 bg-white px-4 py-3 sm:border-x sm:border-slate-200 sm:px-6">
       <div className="relative">
         <input
           ref={inputRef}
@@ -560,9 +602,9 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults, onQuickMar
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar estudiante... (presiona Enter para marcar presente)"
-          className="block w-full pl-10 pr-10 py-2.5 sm:py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-          aria-label="Buscar estudiante"
+          placeholder="Buscar integrante..."
+          className="block min-h-12 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 pr-10 text-sm leading-5 text-slate-950 placeholder-slate-500 transition-colors focus:border-slate-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10"
+          aria-label="Buscar integrante"
         />
         {searchTerm && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -595,14 +637,22 @@ const SearchAndFilters = ({ searchTerm, onSearchChange, totalResults, onQuickMar
   );
 };
 
-const ActionBar = ({ onSave, onCancel, isSaving, hasUnsavedChanges, canEdit }) => {
+const ActionBar = ({
+  onSave,
+  onCancel,
+  isSaving,
+  hasUnsavedChanges,
+  canEdit,
+  unsavedCount,
+  pendingCount,
+}) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shadow-lg z-[1200]">
-      <div className="max-w-7xl mx-auto flex items-center justify-end gap-2 sm:gap-3">
+    <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-10px_35px_rgba(15,23,42,0.08)] backdrop-blur sm:mx-4 sm:rounded-b-2xl sm:border-x sm:px-6 sm:py-4">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 sm:justify-end sm:gap-3">
         <button
           onClick={onCancel}
           disabled={isSaving}
-          className="px-4 sm:px-6 py-2 sm:py-2.5 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-12 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 sm:px-6"
         >
           Cancelar
         </button>
@@ -610,7 +660,7 @@ const ActionBar = ({ onSave, onCancel, isSaving, hasUnsavedChanges, canEdit }) =
         <button
           onClick={onSave}
           disabled={isSaving || !hasUnsavedChanges || !canEdit}
-          className="px-5 sm:px-8 py-2 sm:py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:px-8"
         >
           {isSaving ? (
             <>
@@ -636,8 +686,10 @@ const ActionBar = ({ onSave, onCancel, isSaving, hasUnsavedChanges, canEdit }) =
               </svg>
               <span className="hidden sm:inline">Guardando...</span>
             </>
+          ) : pendingCount > 0 ? (
+            `${pendingCount} pendiente${pendingCount !== 1 ? "s" : ""}`
           ) : (
-            "Guardar asistencia"
+            `Guardar ${unsavedCount} cambio${unsavedCount !== 1 ? "s" : ""}`
           )}
         </button>
       </div>
@@ -669,7 +721,7 @@ const Toast = ({ message, type = "success", onClose }) => {
         </svg>
       )}
       <span className="font-medium text-sm sm:text-base">{message}</span>
-      <button onClick={onClose} className="ml-auto hover:opacity-75">
+      <button onClick={onClose} aria-label="Cerrar notificación" className="ml-auto hover:opacity-75">
         <svg
           className="w-4 h-4 sm:w-5 sm:h-5"
           fill="none"
@@ -833,7 +885,9 @@ const AttendancePage = () => {
         user.role !== "Instructor de instrumento" &&
         user.role !== "ADMIN"
       );
-    });
+    }).sort((a, b) =>
+      normalizeFullName(a).localeCompare(normalizeFullName(b), "es", { sensitivity: "base" })
+    );
   }, [users, userSection, currentUser?.instrument]);
 
   // Inicializar/precargar registros según sesión (sin pisar cambios del usuario)
@@ -884,8 +938,25 @@ const AttendancePage = () => {
       ].includes(r.status)
     ).length;
 
-    return { total, present, absent };
+    const pending = attendanceRecords.filter((r) => r.status === DEFAULT_STATUS).length;
+
+    return { total, present, absent, pending };
   }, [attendanceRecords]);
+
+  const baselineRecords = useMemo(
+    () =>
+      activeSession
+        ? buildRecordsFromSession(students, activeSession)
+        : buildDefaultRecords(students),
+    [activeSession, students]
+  );
+  const unsavedCount = useMemo(() => {
+    const baseline = new Map(baselineRecords.map((record) => [String(record.userId), record]));
+    return attendanceRecords.filter((record) => {
+      const previous = baseline.get(String(record.userId));
+      return previous?.status !== record.status || (previous?.notes || "") !== (record.notes || "");
+    }).length;
+  }, [attendanceRecords, baselineRecords]);
 
   // Info de sesión
   const sessionInfo = {
@@ -950,8 +1021,13 @@ const AttendancePage = () => {
   const handleMarkAllPresent = () => {
     if (!guardEdit()) return;
 
-    if (window.confirm("¿Marcar todos los estudiantes como presentes?")) {
-      setAttendanceRecords((prev) => prev.map((record) => ({ ...record, status: "PRESENT" })));
+    const visibleIds = new Set(filteredStudents.map((student) => String(student.id)));
+    if (window.confirm(`¿Marcar como presentes las ${visibleIds.size} personas visibles?`)) {
+      setAttendanceRecords((prev) =>
+        prev.map((record) =>
+          visibleIds.has(String(record.userId)) ? { ...record, status: "PRESENT" } : record
+        )
+      );
       setHasUnsavedChanges(true);
       setToast({ message: "Todos marcados como presentes", type: "success" });
     }
@@ -960,10 +1036,10 @@ const AttendancePage = () => {
   const handleReset = () => {
     if (!guardEdit()) return;
 
-    if (window.confirm('¿Resetear toda la asistencia a "Presente"?')) {
-      setAttendanceRecords((prev) => prev.map((record) => ({ ...record, status: "PRESENT" })));
+    if (window.confirm("¿Descartar todos los cambios sin guardar?")) {
+      setAttendanceRecords(baselineRecords);
       setHasUnsavedChanges(false);
-      setToast({ message: "Asistencia reseteada", type: "info" });
+      setToast({ message: "Cambios descartados", type: "info" });
     }
   };
 
@@ -973,6 +1049,17 @@ const AttendancePage = () => {
     if (!canCloseSession) {
       setToast({
         message: "Solo administradores o el encargado pueden cerrar la sesión.",
+        type: "error",
+      });
+      return;
+    }
+
+    if (stats.pending > 0 || hasUnsavedChanges) {
+      setToast({
+        message:
+          stats.pending > 0
+            ? `Revisa las ${stats.pending} personas pendientes antes de cerrar.`
+            : "Guarda o descarta los cambios antes de cerrar la sesión.",
         type: "error",
       });
       return;
@@ -991,6 +1078,17 @@ const AttendancePage = () => {
 
   const handleSave = async () => {
     if (!guardEdit()) return;
+
+    const pendingCount = attendanceRecords.filter(
+      (record) => record.status === DEFAULT_STATUS
+    ).length;
+    if (pendingCount > 0) {
+      setToast({
+        message: `Falta revisar ${pendingCount} persona${pendingCount !== 1 ? "s" : ""}.`,
+        type: "error",
+      });
+      return;
+    }
 
     setIsSaving(true);
 
@@ -1013,8 +1111,6 @@ const AttendancePage = () => {
 
       setToast({ message: "¡Asistencia guardada correctamente!", type: "success" });
       setHasUnsavedChanges(false);
-
-      setTimeout(() => navigate("/attendance-history"), 1200);
     } catch (err) {
       setToast({ message: err.message || "Error al guardar asistencia", type: "error" });
     } finally {
@@ -1077,7 +1173,7 @@ const AttendancePage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <AttendanceHeader
-          stats={{ total: 0, present: 0, absent: 0 }}
+          stats={{ total: 0, present: 0, absent: 0, pending: 0 }}
           sessionInfo={{
             section: userSection || "NO_APLICA",
             alreadyTaken: false,
@@ -1089,6 +1185,7 @@ const AttendancePage = () => {
           canEdit={false}
           canCloseSession={false}
           onCloseSession={() => {}}
+          visibleCount={0}
         />
         <div className="py-12 text-center text-gray-500 text-sm">
           Tu instrumento no está asociado a una sección válida.
@@ -1102,7 +1199,7 @@ const AttendancePage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <AttendanceHeader
-          stats={{ total: 0, present: 0, absent: 0 }}
+          stats={{ total: 0, present: 0, absent: 0, pending: 0 }}
           sessionInfo={sessionInfo}
           hasUnsavedChanges={hasUnsavedChanges}
           onMarkAllPresent={handleMarkAllPresent}
@@ -1110,6 +1207,7 @@ const AttendancePage = () => {
           canEdit={canEdit}
           canCloseSession={canCloseSession}
           onCloseSession={handleCloseSession}
+          visibleCount={0}
         />
         <EmptyState />
       </div>
@@ -1117,7 +1215,7 @@ const AttendancePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-24">
+    <div className="min-h-screen bg-white pb-4 sm:rounded-3xl sm:bg-slate-50 sm:pb-6">
       <AttendanceHeader
         stats={stats}
         onMarkAllPresent={handleMarkAllPresent}
@@ -1127,6 +1225,7 @@ const AttendancePage = () => {
         canEdit={canEdit}
         canCloseSession={canCloseSession}
         onCloseSession={handleCloseSession}
+        visibleCount={filteredStudents.length}
       />
 
       <SearchAndFilters
@@ -1136,8 +1235,8 @@ const AttendancePage = () => {
         onQuickMark={handleQuickMark}
       />
 
-      <div className="sm:py-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="pb-3 sm:px-4 sm:pb-6">
+        <div className="overflow-hidden bg-white sm:rounded-2xl sm:border sm:border-slate-200">
           {filteredStudents.length === 0 ? (
             <div className="py-12 text-center text-gray-500 text-sm">
               No se encontraron resultados para &quot;{searchTerm}&quot;
@@ -1172,6 +1271,8 @@ const AttendancePage = () => {
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
         canEdit={canEdit}
+        unsavedCount={unsavedCount}
+        pendingCount={stats.pending}
       />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -1241,6 +1342,7 @@ AttendanceHeader.propTypes = {
     total: PropTypes.number.isRequired,
     present: PropTypes.number.isRequired,
     absent: PropTypes.number.isRequired,
+    pending: PropTypes.number.isRequired,
   }).isRequired,
   onMarkAllPresent: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
@@ -1256,6 +1358,7 @@ AttendanceHeader.propTypes = {
   canEdit: PropTypes.bool.isRequired,
   canCloseSession: PropTypes.bool.isRequired,
   onCloseSession: PropTypes.func.isRequired,
+  visibleCount: PropTypes.number.isRequired,
 };
 
 SearchAndFilters.propTypes = {
@@ -1271,6 +1374,8 @@ ActionBar.propTypes = {
   isSaving: PropTypes.bool.isRequired,
   hasUnsavedChanges: PropTypes.bool.isRequired,
   canEdit: PropTypes.bool.isRequired,
+  unsavedCount: PropTypes.number.isRequired,
+  pendingCount: PropTypes.number.isRequired,
 };
 
 Toast.propTypes = {
